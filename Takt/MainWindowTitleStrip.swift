@@ -92,21 +92,9 @@ struct WorkspaceModeStrip: View {
           model.requestKeyboardFocus(.tasks)
         }
       }
-      // Set apart by a rule: neither projects the tasks another way. Focus
-      // is not a pane at all — it raises the panel — so it is never current.
-      Rectangle()
-        .fill(theme.border)
-        .frame(width: theme.hairline, height: theme.space.lg)
-        .padding(.horizontal, theme.space.xs)
-      WorkspaceModeSegment(title: "Focus", command: .goFocus, isCurrent: false) {
-        model.openFocusPanel()
-      }
-      WorkspaceModeSegment(
-        title: "Timeline", command: .goTimeline,
-        isCurrent: model.showsTimelineScreen
-      ) {
-        if model.showsTimelineScreen { model.dismissTimelineScreen() } else { model.presentTimelineScreen() }
-      }
+      // Focus and the timeline used to sit here too, after a rule. Neither
+      // is a way of drawing the list, and they are tabs in the right dock
+      // (⌘8, ⌘9), so the strip is only the three views.
     }
   }
 }

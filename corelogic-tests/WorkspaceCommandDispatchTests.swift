@@ -97,7 +97,7 @@ final class WorkspaceCommandDispatchTests: XCTestCase {
 
   func testTheWindowsOwnKeysStillWorkOnAScreenThatOwnsTheKeyboard() {
     for surface: WorkspaceCommandSurface in [.timeline] {
-      XCTAssertEqual(WorkspaceCommandCatalog.command(forKey: "cmd+1", on: surface)?.id, .goToday)
+      XCTAssertEqual(WorkspaceCommandCatalog.command(forKey: "cmd+t", on: surface)?.id, .goToday)
       XCTAssertEqual(WorkspaceCommandCatalog.command(forKey: "cmd+k", on: surface)?.id, .goCommandPalette)
       XCTAssertEqual(WorkspaceCommandCatalog.command(forKey: "?", on: surface)?.id, .goKeyboardReference)
       XCTAssertEqual(WorkspaceCommandCatalog.command(forKey: "cmd+z", on: surface)?.id, .windowUndo)

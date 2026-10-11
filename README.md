@@ -69,7 +69,8 @@ something you already have to know.
 
 | Key | Action |
 | --- | --- |
-| `Cmd+1`–`Cmd+4` | Today, Board, Outline, Matrix (`Cmd+T` is Today too) |
+| `Cmd+1` / `Cmd+2` / `Cmd+3` | Show the list as a board / outline / matrix |
+| `Cmd+T` | Today |
 | `Cmd+8` / `Cmd+9` | The focus panel / the timeline, a tab in the right dock |
 | `Cmd+0` / `Cmd+E` / `gh` | Everything, across all active lists |
 | `Cmd+I` | The Inbox |
@@ -267,7 +268,7 @@ dock beside them — so none of it is reachable only by a key you have to alread
 
 | Key | Action |
 | --- | --- |
-| `Cmd+1` / `Cmd+T` | Today |
+| `Cmd+T` | Today |
 | `Cmd+2` | Board |
 | `Cmd+3` | Outline |
 | `Cmd+4` | Matrix |
@@ -466,17 +467,17 @@ that has not finished migrating, reachable by nothing.
 
 ## Views
 
-Four planning modes and one timeline, plus the focus panel. The mode strip in
-the title bar names the one you are in — in ink, on a quiet fill, the others
-muted — and its tooltips give every key that reaches the others; Focus and
-Timeline sit at its end, set apart by a rule.
+A list is drawn one of three ways — board, outline or matrix — and the mode
+strip in the title bar names the one you are in, in ink on a quiet fill, the
+others muted. Today is a list of its own in the sidebar, drawn as the day. The
+focus panel and the timeline are tabs in the right dock.
 
 | Mode | Key | What it shows |
 | --- | --- | --- |
-| **Today** | `Cmd+1` | The day as a numbered list of cards — see [Today](#today) |
-| **Board** | `Cmd+2` | Columns of cards, dragged between and within |
-| **Outline** | `Cmd+3` | The list as a tree, indented, with each branch folding in place |
-| **Matrix** | `Cmd+4` | Eisenhower quadrants by importance and urgency |
+| **Today** | `Cmd+T` | The day as a numbered list of cards — see [Today](#today) |
+| **Board** | `Cmd+1` | Columns of cards, dragged between and within |
+| **Outline** | `Cmd+2` | The list as a tree, indented, with each branch folding in place |
+| **Matrix** | `Cmd+3` | Eisenhower quadrants by importance and urgency |
 | **Focus** | `Cmd+8` | Raises the floating focus panel — the day, or the block that is running |
 | **Timeline** | `Cmd+9` | The day as elapsed time rather than as a list |
 

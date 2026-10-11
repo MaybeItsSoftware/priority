@@ -87,7 +87,7 @@ final class WorkspaceCommandCatalogTests: XCTestCase {
   }
 
   func testNamedKeysRenderAsSymbols() {
-    XCTAssertEqual(WorkspaceCommandCatalog[.goToday].displayKeys, ["⌘1", "⌘T"])
+    XCTAssertEqual(WorkspaceCommandCatalog[.goToday].displayKeys, ["⌘T"])
     XCTAssertEqual(WorkspaceCommandCatalog[.taskRename].displayKeys, ["E E", "F2", "⌘⌃E"])
     XCTAssertEqual(
       WorkspaceCommandCatalog[.motionSelectEnds].displayKeys, ["Home", "End", "⌘↑", "⌘↓", "G G", "⇧G"])

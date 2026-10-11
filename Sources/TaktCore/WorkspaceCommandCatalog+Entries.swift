@@ -45,7 +45,7 @@ public enum WorkspaceCommandCatalog {
   // MARK: - Go
 
   private static let go: [WorkspaceCommand] = [
-    .init(id: .goToday, title: "Go to Today", group: "Go", keys: ["cmd+1", "cmd+t"]),
+    .init(id: .goToday, title: "Go to Today", group: "Go", keys: ["cmd+t"]),
     // Up and down the sidebar's lists without going to the sidebar, and
     // Zed's previous / next tab (`cmd-{` / `cmd-}`), a list being what a tab is.
     .init(
@@ -59,9 +59,12 @@ public enum WorkspaceCommandCatalog {
       id: .goBack, title: "Back to the list you were in", group: "Go", keys: ["ctrl+-"],
       note: "Like a browser's back: again goes further back"),
     .init(id: .goForward, title: "Forward again", group: "Go", keys: ["ctrl+shift+-"]),
-    .init(id: .goBoard, title: "Go to Board", group: "Go", keys: ["cmd+2"]),
-    .init(id: .goOutline, title: "Go to Outline", group: "Go", keys: ["cmd+3"]),
-    .init(id: .goMatrix, title: "Go to Matrix", group: "Go", keys: ["cmd+4"]),
+    // The three ways to draw a list, on ⌘1–⌘3. Today is a list, in the
+    // sidebar beside Everything and the inbox, not a way of drawing one, so
+    // it is ⌘T rather than a fourth view.
+    .init(id: .goBoard, title: "Show as a board", group: "Go", keys: ["cmd+1"]),
+    .init(id: .goOutline, title: "Show as an outline", group: "Go", keys: ["cmd+2"]),
+    .init(id: .goMatrix, title: "Show as a matrix", group: "Go", keys: ["cmd+3"]),
     .init(
       id: .goEverything, title: "Open Everything", group: "Go", keys: ["cmd+e", "cmd+0", "gh"],
       note: "Every task across all active lists"),

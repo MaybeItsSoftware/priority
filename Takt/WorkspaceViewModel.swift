@@ -64,7 +64,10 @@ enum WorkspaceViewMode: String, CaseIterable, Identifiable {
   /// an ordinary task — that it be contributed to each day — not a kind of item
   /// with a room of its own. Such a task appears in Today like anything else
   /// today has a claim on, badged for what it owes.
-  static let planningModes: [WorkspaceViewMode] = [.today, .board, .outline, .matrix]
+  ///
+  /// Today is not among them either: it is a list — every task the day has a
+  /// claim on — chosen in the sidebar, and drawn its own way.
+  static let planningModes: [WorkspaceViewMode] = [.board, .outline, .matrix]
 
   var id: String { rawValue }
   var title: String {

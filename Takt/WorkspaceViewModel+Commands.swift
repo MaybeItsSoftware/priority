@@ -89,7 +89,7 @@ extension WorkspaceViewModel {
     case .goOutline: goToMode(.outline)
     case .goMatrix: goToMode(.matrix)
     case .goEverything:
-      // A place to be, like ⌘1–⌘4, so it leaves a full-pane screen the same
+      // A place to be, like ⌘1–⌘3 and ⌘T, so it leaves a full-pane screen the same
       // way rather than changing the list behind one.
       selectEverything()
       requestKeyboardFocus(.tasks)
