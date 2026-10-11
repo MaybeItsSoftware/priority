@@ -116,47 +116,8 @@ extension WorkspaceViewModel {
 
   /// Every subtask row the card's folds leave showing, before the row limit.
   func boardTreeUnfoldedRows(of card: WorkspaceTask) -> [TaskOutlineItem] {
-    let rows = boardTreeRowsBeforeLifting(of: card)
-    guard let lifted = boardHeadingSubtasks[card.id], let start = rows.firstIndex(where: { $0.id == lifted }) else {
-      return rows
-    }
-    // The subtask's own subtree goes with it: its card further on draws that.
-    var end = start + 1
-    while end < rows.count, rows[end].depth > rows[start].depth { end += 1 }
-    return Array(rows[..<start] + rows[end...])
-  }
-
-  private func boardTreeRowsBeforeLifting(of card: WorkspaceTask) -> [TaskOutlineItem] {
     guard !foldedTaskIDs.contains(card.id) else { return [] }
     return TaskOutlineFolding.visible(descendants(of: card), folded: foldedTaskIDs)
-  }
-
-  /// Each card's first subtask filed as a card in a later column, which the
-  /// card links to from its heading rather than from a row of its own. Drawn
-  /// as a row it was a whole line holding nothing but `└` and the hairline
-  /// out; from the heading the card stays one line, and the subtask's card
-  /// sits level with its parent's title. Only the first: a heading holds one
-  /// link, so any further ones keep their rows. Not on a card that is itself
-  /// a subtask filed apart, whose heading its own parent's link holds.
-  private func boardHeadingSubtasks(crossColumnIDs: Set<String>) -> [String: String] {
-    guard !crossColumnIDs.isEmpty else { return [:] }
-    var columnOfCard: [String: Int] = [:]
-    for (index, column) in boardColumns.enumerated() {
-      for card in tasks(in: column) where columnOfCard[card.id] == nil { columnOfCard[card.id] = index }
-    }
-    var lifted: [String: String] = [:]
-    for (index, column) in boardColumns.enumerated() {
-      for card in tasks(in: column) where !crossColumnIDs.contains(card.id) {
-        let first = boardTreeRowsBeforeLifting(of: card).first { row in
-          crossColumnIDs.contains(row.id)
-            && boardTaskParents[row.id].flatMap { boardCardID(owning: $0) } == card.id
-        }
-        if let first, let childColumn = columnOfCard[first.id], childColumn > index {
-          lifted[card.id] = first.id
-        }
-      }
-    }
-    return lifted
   }
 
   /// Every row the arrow keys stop on in a column, top to bottom: each card,
@@ -177,8 +138,6 @@ extension WorkspaceViewModel {
   func rebuildBoardRowIndex() {
     // A fold changes the rows outside any kept index.
     appliedBoardIndexKey = nil
-    let lifted = boardHeadingSubtasks(crossColumnIDs: Set(boardCrossColumnTasks.map(\.id)))
-    if boardHeadingSubtasks != lifted { boardHeadingSubtasks = lifted }
     var index: [String: BoardColumnRows] = [:]
     var columns: [[(id: String, rowIDs: [String])]] = []
     for column in boardColumns {
@@ -360,7 +319,6 @@ extension WorkspaceViewModel {
       boardTasksByColumn = memo.byColumn
       matrixQuadrants = memo.quadrants
       boardRowsByColumn = memo.rowsByColumn
-      if boardHeadingSubtasks != memo.headingSubtasks { boardHeadingSubtasks = memo.headingSubtasks }
       if boardLinks != memo.links { boardLinks = memo.links }
       settleBoardLinks()
       appliedBoardIndexKey = key
@@ -386,7 +344,7 @@ extension WorkspaceViewModel {
     boardIndexMemos.removeAll { $0.key.generation == key.generation }
     boardIndexMemos.append(BoardIndexMemo(
       key: key, columnsByID: byID, visible: visible, byColumn: grouped, quadrants: quadrants,
-      rowsByColumn: boardRowsByColumn, links: boardLinks, headingSubtasks: boardHeadingSubtasks))
+      rowsByColumn: boardRowsByColumn, links: boardLinks))
     if boardIndexMemos.count > scopeCache.capacity { boardIndexMemos.removeFirst() }
   }
 

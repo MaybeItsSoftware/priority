@@ -274,9 +274,6 @@ enum WorkspaceSidebarItem: Identifiable {
   var redoLabel: String?
   var listTaskCounts: [String: Int] = [:]
   var boardCrossColumnTasks: [WorkspaceTask] = []
-  /// The subtask, filed in a later column, that each card's heading links to
-  /// in place of drawing it as a row; see `rebuildBoardRowIndex()`.
-  var boardHeadingSubtasks: [String: String] = [:]
   var boardDescendants: [String: [TaskOutlineItem]] = [:]
   /// Each board task's parent, by id; see `boardParent(of:)`.
   var boardTaskParents: [String: String] = [:]

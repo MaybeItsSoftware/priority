@@ -699,9 +699,19 @@ struct WorkspaceKanbanCard: View {
       Button {
         if item.task.isList { model.openItemList(item.task) } else { model.toggleTask(item.task) }
       } label: {
-        WorkspaceTaskMarker(task: item.task, isSubtask: true)
-          .frame(width: step)
-          .contentShape(Rectangle())
+        if let rowLink, leadsOut {
+          // The `└` drawn as the start of the hairline itself, so the mark
+          // and the line out to the subtask's card are one stroke rather
+          // than a glyph with a gap after it.
+          WorkspaceBoardLinkElbow(colour: linkColour(rowLink.childID))
+            .frame(width: step)
+            .frame(maxHeight: .infinity)
+            .contentShape(Rectangle())
+        } else {
+          WorkspaceTaskMarker(task: item.task, isSubtask: true)
+            .frame(width: step)
+            .contentShape(Rectangle())
+        }
       }
       .buttonStyle(.plain)
       .accessibilityLabel(
@@ -719,7 +729,7 @@ struct WorkspaceKanbanCard: View {
           model.selectTask(item.task)
           model.reportKeyboardFocus(.tasks)
         } label: {
-          WorkspaceBoardLinkLeader(colour: linkColour(rowLink.childID))
+          WorkspaceBoardLinkLeader(colour: linkColour(rowLink.childID), joinsMark: isFolded == nil)
             .frame(maxHeight: .infinity)
             .contentShape(Rectangle())
         }
@@ -848,6 +858,8 @@ enum WorkspaceTaskDrag {
 struct WorkspaceBoardLinkLeader: View {
   @Environment(\.theme) private var theme
   let colour: Color
+  /// Carries straight on from the elbow before it, with no space between.
+  var joinsMark = false
 
   var body: some View {
     let margin = WorkspaceBoardMetrics.columnPadding(theme)
@@ -861,8 +873,32 @@ struct WorkspaceBoardLinkLeader: View {
           .frame(width: margin, height: theme.hairline)
           .offset(x: margin)
       }
-      .padding(.leading, theme.space.xs)
+      .padding(.leading, joinsMark ? 0 : theme.space.xs)
       .allowsHitTesting(false)
       .accessibilityHidden(true)
+  }
+}
+
+/// The `└` a subtask row leading out to its own card starts with: down from
+/// the row's top to its middle, then across to the leader that runs on.
+struct WorkspaceBoardLinkElbow: View {
+  @Environment(\.theme) private var theme
+  let colour: Color
+
+  var body: some View {
+    GeometryReader { proxy in
+      let hairline = theme.hairline
+      let x = (proxy.size.width - hairline) / 2
+      let y = (proxy.size.height - hairline) / 2
+      ZStack(alignment: .topLeading) {
+        Rectangle().fill(colour)
+          .frame(width: hairline, height: y + hairline)
+          .offset(x: x)
+        Rectangle().fill(colour)
+          .frame(width: proxy.size.width - x, height: hairline)
+          .offset(x: x, y: y)
+      }
+    }
+    .accessibilityHidden(true)
   }
 }
