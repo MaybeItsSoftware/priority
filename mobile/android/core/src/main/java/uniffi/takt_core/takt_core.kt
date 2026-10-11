@@ -1059,6 +1059,8 @@ internal object IntegrityCheckingUniffiLib {
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_actionable_tasks_packed(
     ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_add_task_blocker(
+    ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_add_to_focus_queue(
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_apply_planning_to_descendants(
@@ -1072,6 +1074,8 @@ internal object IntegrityCheckingUniffiLib {
     external fun uniffi_takt_core_checksum_method_coreworkspace_arrange_day(
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_begin_sync(
+    ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_blocked_task_ids(
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_bootstrap(
     ): Int
@@ -1130,6 +1134,8 @@ internal object IntegrityCheckingUniffiLib {
     external fun uniffi_takt_core_checksum_method_coreworkspace_inbox(
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_indent_task(
+    ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_is_task_blocked(
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_kanban_board_baseline(
     ): Int
@@ -1199,6 +1205,8 @@ internal object IntegrityCheckingUniffiLib {
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_redoable_label(
     ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_remove_task_blocker(
+    ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_rename_folder(
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_rename_list(
@@ -1254,6 +1262,10 @@ internal object IntegrityCheckingUniffiLib {
     external fun uniffi_takt_core_checksum_method_coreworkspace_sync_state(
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_task(
+    ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_task_blockers(
+    ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_tasks_blocked_by(
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_tasks_by_id(
     ): Int
@@ -1439,6 +1451,8 @@ internal object UniffiLib {
     ): Unit
     external fun uniffi_takt_core_fn_method_coreworkspace_actionable_tasks_packed(`ptr`: Long,`listIds`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_method_coreworkspace_add_task_blocker(`ptr`: Long,`taskId`: RustBuffer.ByValue,`blockedByTaskId`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Byte
     external fun uniffi_takt_core_fn_method_coreworkspace_add_to_focus_queue(`ptr`: Long,`sessionId`: RustBuffer.ByValue,`taskId`: RustBuffer.ByValue,`plannedSeconds`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
     external fun uniffi_takt_core_fn_method_coreworkspace_apply_planning_to_descendants(`ptr`: Long,`taskId`: RustBuffer.ByValue,`nowMs`: Long,`zone`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
@@ -1453,6 +1467,8 @@ internal object UniffiLib {
     ): Unit
     external fun uniffi_takt_core_fn_method_coreworkspace_begin_sync(`ptr`: Long,`deviceId`: RustBuffer.ByValue,`serverUrl`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
+    external fun uniffi_takt_core_fn_method_coreworkspace_blocked_task_ids(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_method_coreworkspace_bootstrap(`ptr`: Long,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_method_coreworkspace_checkpoint_focus_session(`ptr`: Long,`id`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
@@ -1511,6 +1527,8 @@ internal object UniffiLib {
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_method_coreworkspace_indent_task(`ptr`: Long,`id`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
+    external fun uniffi_takt_core_fn_method_coreworkspace_is_task_blocked(`ptr`: Long,`taskId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): Byte
     external fun uniffi_takt_core_fn_method_coreworkspace_kanban_board_baseline(`ptr`: Long,`legacy`: RustBuffer.ByValue,`currentKey`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_method_coreworkspace_latest_sync_outbox_seq(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus, 
@@ -1579,6 +1597,8 @@ internal object UniffiLib {
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_method_coreworkspace_redoable_label(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_method_coreworkspace_remove_task_blocker(`ptr`: Long,`taskId`: RustBuffer.ByValue,`blockedByTaskId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): Byte
     external fun uniffi_takt_core_fn_method_coreworkspace_rename_folder(`ptr`: Long,`id`: RustBuffer.ByValue,`name`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
     external fun uniffi_takt_core_fn_method_coreworkspace_rename_list(`ptr`: Long,`id`: RustBuffer.ByValue,`name`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
@@ -1634,6 +1654,10 @@ internal object UniffiLib {
     external fun uniffi_takt_core_fn_method_coreworkspace_sync_state(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_method_coreworkspace_task(`ptr`: Long,`id`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_method_coreworkspace_task_blockers(`ptr`: Long,`taskId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_method_coreworkspace_tasks_blocked_by(`ptr`: Long,`taskId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_method_coreworkspace_tasks_by_id(`ptr`: Long,`ids`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
@@ -2638,6 +2662,9 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_actionable_tasks_packed() and 0xFFFF) != 11098) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_add_task_blocker() and 0xFFFF) != 26156) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_add_to_focus_queue() and 0xFFFF) != 31877) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
@@ -2657,6 +2684,9 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_begin_sync() and 0xFFFF) != 42313) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_blocked_task_ids() and 0xFFFF) != 49328) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_bootstrap() and 0xFFFF) != 4874) {
@@ -2744,6 +2774,9 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_indent_task() and 0xFFFF) != 14168) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_is_task_blocked() and 0xFFFF) != 4122) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_kanban_board_baseline() and 0xFFFF) != 21099) {
@@ -2848,6 +2881,9 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_redoable_label() and 0xFFFF) != 40840) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_remove_task_blocker() and 0xFFFF) != 29980) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_rename_folder() and 0xFFFF) != 13587) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
@@ -2930,6 +2966,12 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_task() and 0xFFFF) != 3486) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_task_blockers() and 0xFFFF) != 53482) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_tasks_blocked_by() and 0xFFFF) != 18723) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_tasks_by_id() and 0xFFFF) != 674) {
@@ -4170,6 +4212,13 @@ public interface CoreWorkspaceInterface {
     fun `actionableTasksPacked`(`listIds`: List<kotlin.String>): kotlin.ByteArray
     
     /**
+     * Makes `task_id` wait on `blocked_by_task_id` as one "Add Blocker" step.
+     * Returns whether it was new. A task waiting on itself, or an edge that
+     * would close a cycle, is refused (`dependencies::add_blocker`).
+     */
+    fun `addTaskBlocker`(`taskId`: kotlin.String, `blockedByTaskId`: kotlin.String, `nowMs`: kotlin.Long): kotlin.Boolean
+    
+    /**
      * Queues a task in a focus session.
      */
     fun `addToFocusQueue`(`sessionId`: kotlin.String, `taskId`: kotlin.String, `plannedSeconds`: kotlin.Long?, `nowMs`: kotlin.Long)
@@ -4203,6 +4252,11 @@ public interface CoreWorkspaceInterface {
      * Pairs the store with a sync server.
      */
     fun `beginSync`(`deviceId`: kotlin.String, `serverUrl`: kotlin.String)
+    
+    /**
+     * Every open task waiting on an open task: what a client draws dimmed.
+     */
+    fun `blockedTaskIds`(): List<kotlin.String>
     
     /**
      * The workspace, made on first launch with its Inbox and conditions;
@@ -4355,6 +4409,11 @@ public interface CoreWorkspaceInterface {
      * Indents a task under the sibling above as one "Indent Task" step.
      */
     fun `indentTask`(`id`: kotlin.String, `nowMs`: kotlin.Long)
+    
+    /**
+     * Whether `task_id` waits on an open task now.
+     */
+    fun `isTaskBlocked`(`taskId`: kotlin.String): kotlin.Boolean
     
     /**
      * Seeds the saved boards from the old preferences and the defaults;
@@ -4536,6 +4595,12 @@ public interface CoreWorkspaceInterface {
     fun `redoableLabel`(): kotlin.String?
     
     /**
+     * Stops `task_id` waiting on `blocked_by_task_id` as one "Remove
+     * Blocker" step. Returns whether there was such a dependency.
+     */
+    fun `removeTaskBlocker`(`taskId`: kotlin.String, `blockedByTaskId`: kotlin.String): kotlin.Boolean
+    
+    /**
      * Renames a folder as one "Rename Folder" step.
      */
     fun `renameFolder`(`id`: kotlin.String, `name`: kotlin.String, `nowMs`: kotlin.Long)
@@ -4679,6 +4744,16 @@ public interface CoreWorkspaceInterface {
      * One task, if it exists.
      */
     fun `task`(`id`: kotlin.String): TaskRow?
+    
+    /**
+     * The tasks `task_id` waits on, open ones first.
+     */
+    fun `taskBlockers`(`taskId`: kotlin.String): List<TaskRow>
+    
+    /**
+     * The tasks waiting on `task_id`, open ones first.
+     */
+    fun `tasksBlockedBy`(`taskId`: kotlin.String): List<TaskRow>
     
     /**
      * Tasks by id; missing ids are absent.
@@ -5632,6 +5707,28 @@ open class CoreWorkspace: Disposable, AutoCloseable, CoreWorkspaceInterface
 
     
     /**
+     * Makes `task_id` wait on `blocked_by_task_id` as one "Add Blocker" step.
+     * Returns whether it was new. A task waiting on itself, or an edge that
+     * would close a cycle, is refused (`dependencies::add_blocker`).
+     */
+    @Throws(CoreException::class)override fun `addTaskBlocker`(`taskId`: kotlin.String, `blockedByTaskId`: kotlin.String, `nowMs`: kotlin.Long): kotlin.Boolean {
+            return FfiConverterBoolean.lift(
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_add_task_blocker(
+        it,
+        
+        FfiConverterString.lower(`taskId`),
+        FfiConverterString.lower(`blockedByTaskId`),
+        FfiConverterLong.lower(`nowMs`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
      * Queues a task in a focus session.
      */
     @Throws(CoreException::class)override fun `addToFocusQueue`(`sessionId`: kotlin.String, `taskId`: kotlin.String, `plannedSeconds`: kotlin.Long?, `nowMs`: kotlin.Long)
@@ -5762,6 +5859,23 @@ open class CoreWorkspace: Disposable, AutoCloseable, CoreWorkspaceInterface
 }
     }
     
+    
+
+    
+    /**
+     * Every open task waiting on an open task: what a client draws dimmed.
+     */
+    @Throws(CoreException::class)override fun `blockedTaskIds`(): List<kotlin.String> {
+            return FfiConverterSequenceString.lift(
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_blocked_task_ids(
+        it,
+        _status)
+}
+    }
+    )
+    }
     
 
     
@@ -6315,6 +6429,24 @@ open class CoreWorkspace: Disposable, AutoCloseable, CoreWorkspaceInterface
 }
     }
     
+    
+
+    
+    /**
+     * Whether `task_id` waits on an open task now.
+     */
+    @Throws(CoreException::class)override fun `isTaskBlocked`(`taskId`: kotlin.String): kotlin.Boolean {
+            return FfiConverterBoolean.lift(
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_is_task_blocked(
+        it,
+        
+        FfiConverterString.lower(`taskId`),_status)
+}
+    }
+    )
+    }
     
 
     
@@ -6974,6 +7106,26 @@ open class CoreWorkspace: Disposable, AutoCloseable, CoreWorkspaceInterface
 
     
     /**
+     * Stops `task_id` waiting on `blocked_by_task_id` as one "Remove
+     * Blocker" step. Returns whether there was such a dependency.
+     */
+    @Throws(CoreException::class)override fun `removeTaskBlocker`(`taskId`: kotlin.String, `blockedByTaskId`: kotlin.String): kotlin.Boolean {
+            return FfiConverterBoolean.lift(
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_remove_task_blocker(
+        it,
+        
+        FfiConverterString.lower(`taskId`),
+        FfiConverterString.lower(`blockedByTaskId`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
      * Renames a folder as one "Rename Folder" step.
      */
     @Throws(CoreException::class)override fun `renameFolder`(`id`: kotlin.String, `name`: kotlin.String, `nowMs`: kotlin.Long)
@@ -7522,6 +7674,42 @@ open class CoreWorkspace: Disposable, AutoCloseable, CoreWorkspaceInterface
         it,
         
         FfiConverterString.lower(`id`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * The tasks `task_id` waits on, open ones first.
+     */
+    @Throws(CoreException::class)override fun `taskBlockers`(`taskId`: kotlin.String): List<TaskRow> {
+            return FfiConverterSequenceTypeTaskRow.lift(
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_task_blockers(
+        it,
+        
+        FfiConverterString.lower(`taskId`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * The tasks waiting on `task_id`, open ones first.
+     */
+    @Throws(CoreException::class)override fun `tasksBlockedBy`(`taskId`: kotlin.String): List<TaskRow> {
+            return FfiConverterSequenceTypeTaskRow.lift(
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_tasks_blocked_by(
+        it,
+        
+        FfiConverterString.lower(`taskId`),_status)
 }
     }
     )
@@ -16875,6 +17063,12 @@ sealed class CoreException: kotlin.Exception() {
             get() = ""
     }
     
+    class DependencyCycle(
+        ) : CoreException() {
+        override val message
+            get() = ""
+    }
+    
     class File(
         
         val `detail`: kotlin.String
@@ -16939,7 +17133,8 @@ public object FfiConverterTypeCoreError : FfiConverterRustBuffer<CoreException> 
             20 -> CoreException.NoActiveFocusTask()
             21 -> CoreException.Unavailable()
             22 -> CoreException.InvalidTaskMove()
-            23 -> CoreException.File(
+            23 -> CoreException.DependencyCycle()
+            24 -> CoreException.File(
                 FfiConverterString.read(buf),
                 )
             else -> throw RuntimeException("invalid error enum value, something is very wrong!!")
@@ -17041,6 +17236,10 @@ public object FfiConverterTypeCoreError : FfiConverterRustBuffer<CoreException> 
                 4UL
             )
             is CoreException.InvalidTaskMove -> (
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                4UL
+            )
+            is CoreException.DependencyCycle -> (
                 // Add the size for the Int that specifies the variant plus the size needed for all fields
                 4UL
             )
@@ -17150,8 +17349,12 @@ public object FfiConverterTypeCoreError : FfiConverterRustBuffer<CoreException> 
                 buf.putInt(22)
                 Unit
             }
-            is CoreException.File -> {
+            is CoreException.DependencyCycle -> {
                 buf.putInt(23)
+                Unit
+            }
+            is CoreException.File -> {
+                buf.putInt(24)
                 FfiConverterString.write(value.`detail`, buf)
                 Unit
             }

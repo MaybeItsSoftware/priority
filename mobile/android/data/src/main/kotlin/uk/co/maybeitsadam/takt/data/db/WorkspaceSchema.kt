@@ -17,6 +17,8 @@ object WorkspaceSchema {
         "tasks" to "id",
         "task_metadata" to "taskId",
         "task_conditions" to "id",
+        // `v21_task_dependencies`.
+        "task_dependencies" to "id",
         "dailies" to "id",
         "daily_contributions" to "id",
         "kanban_boards" to "id",
@@ -30,6 +32,7 @@ object WorkspaceSchema {
         "tasks" to "id",
         "task_metadata" to "taskId",
         "task_conditions" to "id",
+        "task_dependencies" to "id",
         "kanban_boards" to "id",
         "dailies" to "id",
         "daily_contributions" to "id",

@@ -16,6 +16,7 @@ use crate::board::{self, BoardRead};
 use crate::conditions;
 use crate::conversions::{self, BoardColumn};
 use crate::dailies::{self, DailyEdit};
+use crate::dependencies;
 use crate::editor::{self, EditorMetadata, EditorSnapshot};
 use crate::focus::Unavailable;
 use crate::focus::{self, BlockFinished, Candidate, FocusContext};
@@ -238,6 +239,52 @@ impl CoreWorkspace {
         journal::journalled(&mut self.lock(), "Delete Task", |tx| {
             tasks::delete_task(tx, &id)
         })
+    }
+
+    /// Makes `task_id` wait on `blocked_by_task_id` as one "Add Blocker" step.
+    /// Returns whether it was new. A task waiting on itself, or an edge that
+    /// would close a cycle, is refused (`dependencies::add_blocker`).
+    pub fn add_task_blocker(
+        &self,
+        task_id: String,
+        blocked_by_task_id: String,
+        now_ms: i64,
+    ) -> Result<bool, CoreError> {
+        journal::journalled(&mut self.lock(), "Add Blocker", |tx| {
+            dependencies::add_blocker(tx, &task_id, &blocked_by_task_id, now_ms)
+        })
+    }
+
+    /// Stops `task_id` waiting on `blocked_by_task_id` as one "Remove
+    /// Blocker" step. Returns whether there was such a dependency.
+    pub fn remove_task_blocker(
+        &self,
+        task_id: String,
+        blocked_by_task_id: String,
+    ) -> Result<bool, CoreError> {
+        journal::journalled(&mut self.lock(), "Remove Blocker", |tx| {
+            dependencies::remove_blocker(tx, &task_id, &blocked_by_task_id)
+        })
+    }
+
+    /// The tasks `task_id` waits on, open ones first.
+    pub fn task_blockers(&self, task_id: String) -> Result<Vec<TaskRow>, CoreError> {
+        dependencies::blockers(&self.lock(), &task_id)
+    }
+
+    /// The tasks waiting on `task_id`, open ones first.
+    pub fn tasks_blocked_by(&self, task_id: String) -> Result<Vec<TaskRow>, CoreError> {
+        dependencies::blocked_by(&self.lock(), &task_id)
+    }
+
+    /// Every open task waiting on an open task: what a client draws dimmed.
+    pub fn blocked_task_ids(&self) -> Result<Vec<String>, CoreError> {
+        dependencies::blocked_task_ids(&self.read())
+    }
+
+    /// Whether `task_id` waits on an open task now.
+    pub fn is_task_blocked(&self, task_id: String) -> Result<bool, CoreError> {
+        dependencies::is_blocked(&self.lock(), &task_id)
     }
 
     /// Deletes a list and its tasks as one "Delete List" step.

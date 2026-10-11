@@ -431,6 +431,7 @@ class WorkspaceRepository(
             is CoreException.NoActiveFocusTask -> fail(WorkspaceStoreError.NO_ACTIVE_FOCUS_TASK)
             is CoreException.Unavailable -> planningFail(TaskPlanningError.UNAVAILABLE)
             is CoreException.InvalidTaskMove -> fail(WorkspaceStoreError.INVALID_TASK_MOVE)
+            is CoreException.DependencyCycle -> fail(WorkspaceStoreError.DEPENDENCY_CYCLE)
             else -> throw error
         }
     }

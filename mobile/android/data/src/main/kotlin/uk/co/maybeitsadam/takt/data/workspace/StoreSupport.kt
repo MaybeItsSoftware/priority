@@ -23,6 +23,7 @@ enum class WorkspaceStoreError(val message: String) {
     MISSING_LIST("That list is no longer available."),
     MISSING_FOLDER("That folder is no longer available."),
     INVALID_TASK_MOVE("A task cannot be moved into itself or one of its subtasks."),
+    DEPENDENCY_CYCLE("A task cannot wait on itself, or on a task that already waits on it."),
     INVALID_FOLDER_MOVE("A folder cannot be moved into itself or one of its subfolders."),
     SYSTEM_LIST_IS_PERMANENT("The Inbox cannot be archived or deleted. You can rename it instead."),
     ;

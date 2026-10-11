@@ -197,6 +197,11 @@ pub fn candidates(
         "SELECT DISTINCT parentTaskId FROM tasks WHERE parentTaskId IS NOT NULL AND status = 'open'",
     )?;
     let inactive = inactive_container_items(connection, None)?;
+    // A task waiting on an open task is not next, whatever else it has going
+    // for it (`dependencies`).
+    let blocked: HashSet<String> = crate::dependencies::blocked_task_ids(connection)?
+        .into_iter()
+        .collect();
     let mut work: HashMap<String, i64> = HashMap::new();
     {
         let mut statement = connection.prepare(
@@ -260,6 +265,7 @@ pub fn candidates(
             || wrappers.contains(&row.id)
             || closed_lists.contains(&row.list_id)
             || parents.contains(&row.id)
+            || blocked.contains(&row.id)
         {
             continue;
         }

@@ -25,6 +25,17 @@ pub(super) fn apply(transaction: &Transaction, identifier: &str) -> Result<(), C
     }
 }
 
+/// Runs what a step does after its statements, if anything. A migration
+/// written for the core rather than captured from GRDB ends here when it adds
+/// a journalled or synced table, or a column on one: the triggers name every
+/// column, so they are reinstalled from the schema as it now stands.
+pub(super) fn finish(transaction: &Transaction, identifier: &str) -> Result<(), CoreError> {
+    match identifier {
+        "v21_task_dependencies" => Ok(super::triggers::reinstall(transaction)?),
+        _ => Ok(()),
+    }
+}
+
 /// v11 and v13: a list whose only root task is a wrapper named like the list
 /// itself shows that wrapper's children instead, so `visibleRootTaskId`
 /// points at the wrapper.

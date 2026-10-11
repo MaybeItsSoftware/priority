@@ -19,6 +19,7 @@ pub mod conditions;
 pub mod conversions;
 pub mod dailies;
 pub mod day_log;
+pub mod dependencies;
 pub mod editor;
 pub mod error;
 pub mod export;

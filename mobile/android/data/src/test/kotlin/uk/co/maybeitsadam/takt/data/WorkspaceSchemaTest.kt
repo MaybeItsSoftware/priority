@@ -61,11 +61,12 @@ class WorkspaceSchemaTest {
             assertTrue("missing: ${expected - present}", present.containsAll(expected))
 
             val migrations = workspace.database.read { it.strings("SELECT identifier FROM grdb_migrations") }
-            assertEquals(20, migrations.size)
+            assertEquals(21, migrations.size)
             assertTrue("v17_sync" in migrations)
             assertTrue("v18_themes_and_preferences" in migrations)
             assertTrue("v19_habit_options" in migrations)
             assertTrue("v20_waiting_follow_ups" in migrations)
+            assertTrue("v21_task_dependencies" in migrations)
             assertEquals(listOf(0L to 0L), workspace.database.read { db ->
                 db.query("SELECT recording, applying FROM sync_control") { it.long("recording") to it.long("applying") }
             })
@@ -82,7 +83,7 @@ class WorkspaceSchemaTest {
         val count = reopened.read { it.long("SELECT COUNT(*) FROM grdb_migrations WHERE identifier = 'v17_sync'") }
         assertEquals(1L, count)
         // The sync triggers are the core's, installed once each.
-        assertEquals(45L, reopened.read {
+        assertEquals(48L, reopened.read {
             it.long("SELECT COUNT(*) FROM sqlite_master WHERE name LIKE 'sync_outbox_%' AND type = 'trigger'")
         })
         reopened.close()
@@ -93,7 +94,14 @@ class WorkspaceSchemaTest {
     // install that lacks one migration lacks every later one too, since they
     // only ever apply in order, so each rewind takes the later ones off first.
 
+    private fun rewindV21(connection: SQLiteConnection) {
+        // Dropping the table drops its journal and outbox triggers with it.
+        connection.execSQL("DROP TABLE task_dependencies")
+        connection.execSQL("DELETE FROM grdb_migrations WHERE identifier = 'v21_task_dependencies'")
+    }
+
     private fun rewindV20(connection: SQLiteConnection) {
+        rewindV21(connection)
         for (op in listOf("insert", "update", "delete")) {
             connection.execSQL("DROP TRIGGER change_log_task_metadata_$op")
             connection.execSQL("DROP TRIGGER sync_outbox_task_metadata_$op")
@@ -148,13 +156,17 @@ class WorkspaceSchemaTest {
         try {
             assertEquals(expected, upgraded.read { schema(it) })
             val migrations = upgraded.read { it.strings("SELECT identifier FROM grdb_migrations") }
-            assertEquals(20, migrations.size)
-            assertEquals(20, migrations.toSet().size)
+            assertEquals(21, migrations.size)
+            assertEquals(21, migrations.toSet().size)
         } finally {
             upgraded.close()
             dir.deleteRecursively()
         }
     }
+
+    /** A v20 database takes `task_dependencies` and its triggers. */
+    @Test
+    fun aV20DatabaseUpgradesToTheFixture() = assertUpgradesToTheFixture("v20", ::rewindV21)
 
     /** A v19 database takes the four waiting columns on `task_metadata`. */
     @Test

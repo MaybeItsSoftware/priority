@@ -21,6 +21,8 @@ extension WorkspaceStore {
     ("tasks", "id"),
     ("task_metadata", "taskId"),
     ("task_conditions", "id"),
+    // `v21_task_dependencies`: after `tasks`, both of whose ends it names.
+    ("task_dependencies", "id"),
     ("kanban_boards", "id"),
     ("dailies", "id"),
     ("daily_contributions", "id"),

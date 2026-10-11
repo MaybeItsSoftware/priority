@@ -550,9 +550,12 @@ fn task_siblings(
     list_id: &str,
     parent: Option<&str>,
 ) -> Result<Vec<String>, CoreError> {
-    let mut statement = transaction.prepare(
-        "SELECT id FROM tasks WHERE listId = ?1 AND parentTaskId IS ?2 ORDER BY sortOrder, createdAt, id",
-    )?;
+    // The order the siblings are drawn in, blocked ones last, so a reorder
+    // moves a task past the row the user sees beside it.
+    let blocked = crate::dependencies::blocked_last(transaction)?;
+    let mut statement = transaction.prepare(&format!(
+        "SELECT id FROM tasks WHERE listId = ?1 AND parentTaskId IS ?2 ORDER BY {blocked}, sortOrder, createdAt, id"
+    ))?;
     let ids = statement
         .query_map(params![list_id, parent], |row| row.get(0))?
         .collect::<Result<_, _>>()?;

@@ -1156,6 +1156,13 @@ public protocol CoreWorkspaceProtocol: AnyObject, Sendable {
     func actionableTasksPacked(listIds: [String]) throws  -> Data
     
     /**
+     * Makes `task_id` wait on `blocked_by_task_id` as one "Add Blocker" step.
+     * Returns whether it was new. A task waiting on itself, or an edge that
+     * would close a cycle, is refused (`dependencies::add_blocker`).
+     */
+    func addTaskBlocker(taskId: String, blockedByTaskId: String, nowMs: Int64) throws  -> Bool
+    
+    /**
      * Queues a task in a focus session.
      */
     func addToFocusQueue(sessionId: String, taskId: String, plannedSeconds: Int64?, nowMs: Int64) throws 
@@ -1189,6 +1196,11 @@ public protocol CoreWorkspaceProtocol: AnyObject, Sendable {
      * Pairs the store with a sync server.
      */
     func beginSync(deviceId: String, serverUrl: String) throws 
+    
+    /**
+     * Every open task waiting on an open task: what a client draws dimmed.
+     */
+    func blockedTaskIds() throws  -> [String]
     
     /**
      * The workspace, made on first launch with its Inbox and conditions;
@@ -1341,6 +1353,11 @@ public protocol CoreWorkspaceProtocol: AnyObject, Sendable {
      * Indents a task under the sibling above as one "Indent Task" step.
      */
     func indentTask(id: String, nowMs: Int64) throws 
+    
+    /**
+     * Whether `task_id` waits on an open task now.
+     */
+    func isTaskBlocked(taskId: String) throws  -> Bool
     
     /**
      * Seeds the saved boards from the old preferences and the defaults;
@@ -1522,6 +1539,12 @@ public protocol CoreWorkspaceProtocol: AnyObject, Sendable {
     func redoableLabel() throws  -> String?
     
     /**
+     * Stops `task_id` waiting on `blocked_by_task_id` as one "Remove
+     * Blocker" step. Returns whether there was such a dependency.
+     */
+    func removeTaskBlocker(taskId: String, blockedByTaskId: String) throws  -> Bool
+    
+    /**
      * Renames a folder as one "Rename Folder" step.
      */
     func renameFolder(id: String, name: String, nowMs: Int64) throws 
@@ -1665,6 +1688,16 @@ public protocol CoreWorkspaceProtocol: AnyObject, Sendable {
      * One task, if it exists.
      */
     func task(id: String) throws  -> TaskRow?
+    
+    /**
+     * The tasks `task_id` waits on, open ones first.
+     */
+    func taskBlockers(taskId: String) throws  -> [TaskRow]
+    
+    /**
+     * The tasks waiting on `task_id`, open ones first.
+     */
+    func tasksBlockedBy(taskId: String) throws  -> [TaskRow]
     
     /**
      * Tasks by id; missing ids are absent.
@@ -2375,6 +2408,23 @@ open func actionableTasksPacked(listIds: [String])throws  -> Data  {
 }
     
     /**
+     * Makes `task_id` wait on `blocked_by_task_id` as one "Add Blocker" step.
+     * Returns whether it was new. A task waiting on itself, or an edge that
+     * would close a cycle, is refused (`dependencies::add_blocker`).
+     */
+open func addTaskBlocker(taskId: String, blockedByTaskId: String, nowMs: Int64)throws  -> Bool  {
+    return try  FfiConverterBool.lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_add_task_blocker(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(taskId),
+        FfiConverterString.lower(blockedByTaskId),
+        FfiConverterInt64.lower(nowMs),uniffiCallStatus
+    )
+})
+}
+    
+    /**
      * Queues a task in a focus session.
      */
 open func addToFocusQueue(sessionId: String, taskId: String, plannedSeconds: Int64?, nowMs: Int64)throws   {try rustCallWithError(FfiConverterTypeCoreError_lift) {
@@ -2471,6 +2521,18 @@ open func beginSync(deviceId: String, serverUrl: String)throws   {try rustCallWi
         FfiConverterString.lower(serverUrl),uniffiCallStatus
     )
 }
+}
+    
+    /**
+     * Every open task waiting on an open task: what a client draws dimmed.
+     */
+open func blockedTaskIds()throws  -> [String]  {
+    return try  FfiConverterSequenceString.lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_blocked_task_ids(
+            self.uniffiCloneHandle(),uniffiCallStatus
+    )
+})
 }
     
     /**
@@ -2879,6 +2941,19 @@ open func indentTask(id: String, nowMs: Int64)throws   {try rustCallWithError(Ff
         FfiConverterInt64.lower(nowMs),uniffiCallStatus
     )
 }
+}
+    
+    /**
+     * Whether `task_id` waits on an open task now.
+     */
+open func isTaskBlocked(taskId: String)throws  -> Bool  {
+    return try  FfiConverterBool.lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_is_task_blocked(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(taskId),uniffiCallStatus
+    )
+})
 }
     
     /**
@@ -3367,6 +3442,21 @@ open func redoableLabel()throws  -> String?  {
 }
     
     /**
+     * Stops `task_id` waiting on `blocked_by_task_id` as one "Remove
+     * Blocker" step. Returns whether there was such a dependency.
+     */
+open func removeTaskBlocker(taskId: String, blockedByTaskId: String)throws  -> Bool  {
+    return try  FfiConverterBool.lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_remove_task_blocker(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(taskId),
+        FfiConverterString.lower(blockedByTaskId),uniffiCallStatus
+    )
+})
+}
+    
+    /**
      * Renames a folder as one "Rename Folder" step.
      */
 open func renameFolder(id: String, name: String, nowMs: Int64)throws   {try rustCallWithError(FfiConverterTypeCoreError_lift) {
@@ -3778,6 +3868,32 @@ open func task(id: String)throws  -> TaskRow?  {
     uniffi_takt_core_fn_method_coreworkspace_task(
             self.uniffiCloneHandle(),
         FfiConverterString.lower(id),uniffiCallStatus
+    )
+})
+}
+    
+    /**
+     * The tasks `task_id` waits on, open ones first.
+     */
+open func taskBlockers(taskId: String)throws  -> [TaskRow]  {
+    return try  FfiConverterSequenceTypeTaskRow.lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_task_blockers(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(taskId),uniffiCallStatus
+    )
+})
+}
+    
+    /**
+     * The tasks waiting on `task_id`, open ones first.
+     */
+open func tasksBlockedBy(taskId: String)throws  -> [TaskRow]  {
+    return try  FfiConverterSequenceTypeTaskRow.lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_tasks_blocked_by(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(taskId),uniffiCallStatus
     )
 })
 }
@@ -15173,6 +15289,7 @@ enum CoreError: Swift.Error, Equatable, Hashable, Foundation.LocalizedError {
     case NoActiveFocusTask
     case Unavailable
     case InvalidTaskMove
+    case DependencyCycle
     case File(detail: String
     )
 
@@ -15241,7 +15358,8 @@ public struct FfiConverterTypeCoreError: FfiConverterRustBuffer {
         case 20: return .NoActiveFocusTask
         case 21: return .Unavailable
         case 22: return .InvalidTaskMove
-        case 23: return .File(
+        case 23: return .DependencyCycle
+        case 24: return .File(
             detail: try FfiConverterString.read(from: &buf)
             )
 
@@ -15352,8 +15470,12 @@ public struct FfiConverterTypeCoreError: FfiConverterRustBuffer {
             writeInt(&buf, Int32(22))
         
         
-        case let .File(detail):
+        case .DependencyCycle:
             writeInt(&buf, Int32(23))
+        
+        
+        case let .File(detail):
+            writeInt(&buf, Int32(24))
             FfiConverterString.write(detail, into: &buf)
             
         }
@@ -23100,6 +23222,9 @@ private let initializationResult: InitializationResult = {
     if (uniffi_takt_core_checksum_method_coreworkspace_actionable_tasks_packed() != 11098) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_takt_core_checksum_method_coreworkspace_add_task_blocker() != 26156) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_takt_core_checksum_method_coreworkspace_add_to_focus_queue() != 31877) {
         return InitializationResult.apiChecksumMismatch
     }
@@ -23119,6 +23244,9 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_method_coreworkspace_begin_sync() != 42313) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_blocked_task_ids() != 49328) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_method_coreworkspace_bootstrap() != 4874) {
@@ -23206,6 +23334,9 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_method_coreworkspace_indent_task() != 14168) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_is_task_blocked() != 4122) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_method_coreworkspace_kanban_board_baseline() != 21099) {
@@ -23310,6 +23441,9 @@ private let initializationResult: InitializationResult = {
     if (uniffi_takt_core_checksum_method_coreworkspace_redoable_label() != 40840) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_takt_core_checksum_method_coreworkspace_remove_task_blocker() != 29980) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_takt_core_checksum_method_coreworkspace_rename_folder() != 13587) {
         return InitializationResult.apiChecksumMismatch
     }
@@ -23392,6 +23526,12 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_method_coreworkspace_task() != 3486) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_task_blockers() != 53482) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_tasks_blocked_by() != 18723) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_method_coreworkspace_tasks_by_id() != 674) {

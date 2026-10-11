@@ -102,6 +102,10 @@ pub const MIGRATIONS: &[(&str, &str)] = &[
         "v20_waiting_follow_ups",
         include_str!("migrations/v20_waiting_follow_ups.sql"),
     ),
+    (
+        "v21_task_dependencies",
+        include_str!("migrations/v21_task_dependencies.sql"),
+    ),
 ];
 
 /// Brings the database at `path` up to date, creating it if it does not
@@ -181,6 +185,7 @@ fn apply_pending(connection: &mut Connection, last: Option<&str>) -> Result<Stri
         for statement in rest {
             transaction.execute_batch(statement)?;
         }
+        data::finish(&transaction, identifier)?;
         let broken: u32 =
             transaction.query_row("SELECT COUNT(*) FROM pragma_foreign_key_check", [], |row| {
                 row.get(0)

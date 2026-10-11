@@ -28,6 +28,7 @@ Every row of these tables, keyed by the column shown:
 | `tasks` | `id` |
 | `task_metadata` | `taskId` |
 | `task_conditions` | `id` |
+| `task_dependencies` | `id` |
 | `kanban_boards` | `id` |
 | `dailies` | `id` |
 | `daily_contributions` | `id` |
@@ -69,6 +70,23 @@ derived from the source's id and the follow-up time:
 formatted as an uppercase UUID with the version-5 and RFC 4122 variant bits set.
 Two devices that both make the same follow-up therefore write the same `tasks`
 and `task_metadata` rows, which merge rather than duplicate.
+
+`v21_task_dependencies` adds `task_dependencies(id TEXT PRIMARY KEY, taskId,
+blockedByTaskId, createdAt)`: `taskId` waits on `blockedByTaskId` until that
+task is completed or cancelled. Both ends reference `tasks(id) ON DELETE
+CASCADE`, so deleting either task deletes the edge, and the tombstone syncs;
+an edge that arrives before one of its tasks, or after it was deleted, is an
+orphan the pull removes. It is the first migration written for the Rust core
+rather than captured from GRDB, and it ends by reinstalling every journal and
+outbox trigger (`schema::data::finish`). An edge's id is derived from its two
+ends — `SHA-256("takt.dependency:<taskId>:<blockedByTaskId>")`, formatted like
+a follow-up's id — so two devices that add the same dependency write one row.
+The core refuses an edge that would close a cycle, but two devices offline can
+each add half of one; nothing walks the graph beyond that check, so such a
+cycle only leaves its tasks blocked (dimmed and sunk) until an edge is
+removed. A client older than v21 skips the table's rows on pull, as it skips
+any table it does not know. The rules the clients draw from it live in
+`core/src/dependencies.rs`.
 
 The following are not synced: the undo journal (`undo_control`, `change_log`), the FTS index
 (rebuilt by its own triggers as synced rows land), `grdb_migrations`, and the

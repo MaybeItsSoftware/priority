@@ -50,6 +50,8 @@ pub enum CoreError {
     Unavailable,
     #[error("A task cannot be moved into itself or one of its subtasks.")]
     InvalidTaskMove,
+    #[error("A task cannot wait on itself, or on a task that already waits on it.")]
+    DependencyCycle,
     #[error("{detail}")]
     File { detail: String },
 }

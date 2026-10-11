@@ -341,16 +341,20 @@ pub fn children(
     list_id: &str,
     parent: Option<&str>,
 ) -> Result<Vec<TaskRow>, CoreError> {
+    let blocked = crate::dependencies::blocked_last(connection)?;
     all(
         connection,
-        "SELECT * FROM tasks WHERE listId = ?1 AND parentTaskId IS ?2 ORDER BY sortOrder, createdAt",
+        &format!(
+            "SELECT * FROM tasks WHERE listId = ?1 AND parentTaskId IS ?2 ORDER BY {blocked}, sortOrder, createdAt"
+        ),
         rusqlite::params![list_id, parent],
         TaskRow::from_row,
     )
 }
 
 /// Every task in the given lists, each list's rows in outline order (by
-/// list, then sort order, then age). `WorkspaceStore.listTrees`.
+/// list, then sort order, then age), blocked tasks after their unblocked
+/// siblings (`dependencies`). `WorkspaceStore.listTrees`.
 pub fn tasks_in_lists(
     connection: &Connection,
     list_ids: &[String],
@@ -358,11 +362,12 @@ pub fn tasks_in_lists(
     let mut unique: Vec<&String> = list_ids.iter().collect();
     unique.sort();
     unique.dedup();
+    let blocked = crate::dependencies::blocked_last(connection)?;
     let mut result = Vec::new();
     for chunk in unique.chunks(500) {
         let marks = vec!["?"; chunk.len()].join(", ");
         let mut statement = connection.prepare_cached(&format!(
-            "SELECT * FROM tasks WHERE listId IN ({marks}) ORDER BY listId, sortOrder, createdAt"
+            "SELECT * FROM tasks WHERE listId IN ({marks}) ORDER BY listId, {blocked}, sortOrder, createdAt"
         ))?;
         let columns = TaskColumns::of(&statement)?;
         let mut rows = statement.query(rusqlite::params_from_iter(chunk))?;

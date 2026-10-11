@@ -26,6 +26,7 @@ public enum CoreFailure: Equatable, Sendable {
   case duplicateSourceId
   case unavailable
   case invalidTaskMove
+  case dependencyCycle
   case noJournal
   /// Anything a caller only reports; its message is the error's own.
   case other
@@ -55,6 +56,7 @@ extension Error {
     case .DuplicateSourceId: return .duplicateSourceId
     case .Unavailable: return .unavailable
     case .InvalidTaskMove: return .invalidTaskMove
+    case .DependencyCycle: return .dependencyCycle
     case .NoJournal: return .noJournal
     default: return .other
     }
