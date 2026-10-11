@@ -34,6 +34,9 @@ struct BoardCard: Identifiable, Equatable, Sendable {
 /// What the board reads for a scope: its columns and the cards in each.
 struct BoardSnapshot: Equatable, Sendable {
   var columns: [WorkspaceKanbanColumn] = WorkspaceKanbanColumn.blitzitDefaults
+  /// The layout an edit saves, as the core resolved it: the board's own,
+  /// its list's or the default, columns an entered card hides included.
+  var layout: [WorkspaceKanbanColumn] = WorkspaceKanbanColumn.blitzitDefaults
   /// Cards by column id, in sibling order. Every column in `columns` has an
   /// entry, possibly empty.
   var cards: [String: [BoardCard]] = [:]
@@ -61,27 +64,31 @@ struct BoardSnapshot: Equatable, Sendable {
       scopeTaskID: nil, registeredRootTaskID: nil, hidesCompletedTasks: hidesCompleted)
     let open = structure.lists.filter { $0.completedAt == nil }.map(\.id)
     let read: WorkspaceScopeRead
+    let listIDs: [String]
     let cutoff = hidesCompleted ? now : nil
     switch scope {
     case .everything:
+      listIDs = open
       read = try store.scopeRead(.combined(open), hidingCompletedBefore: cutoff)
     case .folder(let folderID):
       let openIDs = Set(open)
-      read = try store.scopeRead(
-        .combined(structure.listIDs(inFolder: folderID).filter { openIDs.contains($0) }),
-        hidingCompletedBefore: cutoff)
+      listIDs = structure.listIDs(inFolder: folderID).filter { openIDs.contains($0) }
+      read = try store.scopeRead(.combined(listIDs), hidingCompletedBefore: cutoff)
     case .filter(let filterID):
       // A filter list that asks for finished work shows it whatever the
       // toggle says, as on the Mac.
       let show = try store.filterList(id: filterID)?.definition.show
       let hides = hidesCompleted && (show ?? .open) == .open
       options.hidesCompletedTasks = hides
+      listIDs = open
       read = try store.scopeRead(.filter(filterID, open), hidingCompletedBefore: hides ? now : nil)
     case .list(let listID):
       options.registeredRootTaskID = structure.list(listID)?.visibleRootTaskId
+      listIDs = [listID]
       read = try store.scopeRead(.list(listID), hidingCompletedBefore: cutoff)
     case .nested(let listID, let taskID):
       options.scopeTaskID = taskID
+      listIDs = [listID]
       read = try store.scopeRead(.list(listID), hidingCompletedBefore: cutoff)
     }
     // The phone hides a finished task at once rather than letting it linger.
@@ -91,18 +98,20 @@ struct BoardSnapshot: Equatable, Sendable {
     let cardIDs = Set(board.cards.map(\.id))
 
     var snapshot = BoardSnapshot()
-    snapshot.columns = try resolvedColumns(
-      store: store, scope: scope, structure: structure, usedColumnIDs: Set(filed.values))
+    // The columns and where rule columns and an entered card's floor put
+    // each card are the core's (`board_columns`), so the Mac and the phones
+    // draw the same board.
+    // The baseline call drops the stock copies older builds seeded per scope.
+    _ = try store.kanbanBoardConfigurations(legacy: [:], currentKey: scope.boardKey)
+    let columnRead = try store.boardColumns(key: scope.boardKey, listIDs: listIDs, now: now)
+    snapshot.columns = columnRead.columns
+    snapshot.layout = columnRead.layout
     snapshot.positions = board.positions
-    let fallbackID = WorkspaceKanbanColumn.blitzitDefaults[0].id
-    let columnIDs = Set(snapshot.columns.map(\.id))
-    let firstColumn = snapshot.columns.first?.id ?? fallbackID
     let listNames = scope.isSingleTree
       ? [:] : Dictionary(structure.lists.map { ($0.id, $0.name) }, uniquingKeysWith: { first, _ in first })
     for column in snapshot.columns { snapshot.cards[column.id] = [] }
     for task in board.cards + board.crossColumnTasks {
-      let wanted = filed[task.id] ?? fallbackID
-      let column = columnIDs.contains(wanted) ? wanted : firstColumn
+      guard let column = columnRead.columnID(forTaskID: task.id, filed: filed[task.id]) else { continue }
       let isCross = !cardIDs.contains(task.id)
       snapshot.cards[column, default: []].append(BoardCard(
         id: task.id, title: task.title, status: task.status, isList: task.isList,
@@ -113,28 +122,6 @@ struct BoardSnapshot: Equatable, Sendable {
         subtasks: board.descendants[task.id] ?? []))
     }
     return snapshot
-  }
-
-  /// The scope's own layout, plus any column a card here is filed under that
-  /// the layout does not list — so nothing filed elsewhere disappears.
-  static func resolvedColumns(
-    store: WorkspaceStore, scope: ListScope, structure: WorkspaceStructure, usedColumnIDs: Set<String>
-  ) throws -> [WorkspaceKanbanColumn] {
-    let configurations = try store.kanbanBoardConfigurations(legacy: [:], currentKey: scope.boardKey)
-    func decode(_ key: String) -> [WorkspaceKanbanColumn]? {
-      configurations[key].flatMap { try? JSONDecoder().decode([WorkspaceKanbanColumn].self, from: $0) }
-    }
-    var columns = decode(scope.boardKey).flatMap { $0.isEmpty ? nil : $0 } ?? WorkspaceKanbanColumn.blitzitDefaults
-    let extras: [WorkspaceKanbanColumn]
-    if scope == .everything || scope.filterListID != nil {
-      extras = structure.lists.flatMap { decode("\($0.id)/root") ?? [] }
-    } else {
-      extras = (decode("everything/root") ?? []) + WorkspaceKanbanColumn.blitzitDefaults
-    }
-    for column in extras where usedColumnIDs.contains(column.id) && !columns.contains(where: { $0.id == column.id }) {
-      columns.append(column)
-    }
-    return columns
   }
 }
 
@@ -211,7 +198,10 @@ final class BoardModel {
 
   func move(_ cardID: String, toColumn columnID: String, model: WorkspaceModel) {
     guard snapshot.column(ofCard: cardID)?.id != columnID else { return }
-    if model.perform({ try $0.setKanbanColumn(columnID, for: cardID) }) {
+    // Through the core, which edits a card dropped into a rule column to
+    // match it and refuses a move the rules would put straight back.
+    let key = scope.boardKey
+    if model.perform({ try $0.moveToBoardColumn(key: key, taskIDs: [cardID], columnID: columnID) }) {
       applyOptimisticMove(cardID, to: columnID, before: nil)
     }
   }
@@ -222,7 +212,7 @@ final class BoardModel {
     guard cardID != targetID, let column = snapshot.column(ofCard: targetID) else { return }
     let card = snapshot.allCards.first { $0.id == cardID }
     let target = snapshot.allCards.first { $0.id == targetID }
-    if let card, let target, card.listID == target.listID, card.parentID == target.parentID {
+    if let card, let target, card.listID == target.listID, card.parentID == target.parentID, !column.isRuleColumn {
       if model.perform({ try $0.moveTaskBefore(id: cardID, targetId: targetID, kanbanColumn: column.id) }) {
         applyOptimisticMove(cardID, to: column.id, before: targetID)
       }
@@ -263,6 +253,14 @@ final class BoardModel {
 
   // MARK: - Columns
 
+  /// What an edit saves: the layout, hidden columns and rules included, plus
+  /// any column drawn only because a card here is filed in it. A board
+  /// following its list's or the default columns gets its own on its first
+  /// edit.
+  private var editableColumns: [WorkspaceKanbanColumn] {
+    snapshot.layout + columns.filter { column in !snapshot.layout.contains { $0.id == column.id } }
+  }
+
   @discardableResult
   func addColumn(named name: String, model: WorkspaceModel) -> WorkspaceKanbanColumn? {
     let title = name.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -270,11 +268,13 @@ final class BoardModel {
     let base = title.lowercased()
       .replacingOccurrences(of: "[^a-z0-9]+", with: "-", options: .regularExpression)
       .trimmingCharacters(in: CharacterSet(charactersIn: "-"))
-    let column = WorkspaceKanbanColumn(id: Self.uniqueColumnID(base: base.isEmpty ? "column" : base, in: columns), title: title)
-    let updated = columns + [column]
+    let column = WorkspaceKanbanColumn(
+      id: Self.uniqueColumnID(base: base.isEmpty ? "column" : base, in: editableColumns), title: title)
+    let updated = editableColumns + [column]
     guard model.perform({ try $0.setKanbanBoardColumns(updated, for: scope.boardKey, label: "Add Board Column") })
     else { return nil }
-    snapshot.columns = updated
+    snapshot.layout = updated
+    snapshot.columns.append(column)
     snapshot.cards[column.id] = []
     return column
   }
@@ -282,35 +282,59 @@ final class BoardModel {
   func renameColumn(_ columnID: String, to name: String, model: WorkspaceModel) {
     let title = name.trimmingCharacters(in: .whitespacesAndNewlines)
     guard !title.isEmpty else { return }
-    let updated = columns.map { $0.id == columnID ? WorkspaceKanbanColumn(id: $0.id, title: title) : $0 }
-    guard updated != columns else { return }
+    let rename = { (column: WorkspaceKanbanColumn) -> WorkspaceKanbanColumn in
+      var renamed = column
+      if column.id == columnID { renamed.title = title }
+      return renamed
+    }
+    let updated = editableColumns.map(rename)
+    guard updated != editableColumns else { return }
     if model.perform({ try $0.setKanbanBoardColumns(updated, for: scope.boardKey, label: "Rename Board Column") }) {
-      snapshot.columns = updated
+      snapshot.layout = updated
+      snapshot.columns = columns.map(rename)
     }
   }
 
-  /// Removes a column, moving its cards into the first remaining column in
-  /// the same undo step. The last column cannot go.
+  /// Deletes a column, moving the cards filed in it into the first column
+  /// that remains, in the same undo step: the core's `delete_board_column`.
+  /// A rule column, Today and Waiting on move nothing. The last column
+  /// cannot go.
   func removeColumn(_ columnID: String, model: WorkspaceModel) {
-    guard columns.count > 1 else { return }
-    let remaining = columns.filter { $0.id != columnID }
-    guard let fallback = remaining.first else { return }
-    let moving = cards(in: columnID).map(\.id)
+    guard editableColumns.count > 1 else { return }
+    let fallback = editableColumns.first { $0.id != columnID && !$0.isRuleColumn }
+    let key = scope.boardKey
+    let scopedListIDs: [String] = switch scope {
+    case .list(let id), .nested(let id, _): [id]
+    case .folder(let id): model.structure.listIDs(inFolder: id)
+    case .everything, .filter: model.structure.lists.map(\.id)
+    }
+    let inLayout = snapshot.layout.contains { $0.id == columnID }
+    let drawnHere = cards(in: columnID).map(\.id)
     model.perform {
-      try $0.setKanbanBoardColumns(
-        remaining, for: scope.boardKey, movingTaskIDs: moving, toColumn: fallback.id, label: "Remove Board Column")
+      if inLayout {
+        try $0.deleteBoardColumn(key: key, listIDs: scopedListIDs, columnID: columnID, toColumn: fallback?.id)
+      } else {
+        try $0.setKanbanColumn(fallback?.id, for: drawnHere)
+      }
     }
   }
 
-  /// Moves a column one place left or right.
+  /// Moves a column past its neighbour on screen.
   func moveColumn(_ columnID: String, by offset: Int, model: WorkspaceModel) {
     guard let index = columns.firstIndex(where: { $0.id == columnID }) else { return }
     let destination = index + offset
     guard columns.indices.contains(destination) else { return }
-    var updated = columns
-    updated.swapAt(index, destination)
+    let neighbourID = columns[destination].id
+    var updated = editableColumns
+    guard let from = updated.firstIndex(where: { $0.id == columnID }) else { return }
+    let moving = updated.remove(at: from)
+    guard let neighbour = updated.firstIndex(where: { $0.id == neighbourID }) else { return }
+    updated.insert(moving, at: offset > 0 ? neighbour + 1 : neighbour)
     if model.perform({ try $0.setKanbanBoardColumns(updated, for: scope.boardKey, label: "Move Board Column") }) {
-      snapshot.columns = updated
+      snapshot.layout = updated
+      var drawn = columns
+      drawn.swapAt(index, destination)
+      snapshot.columns = drawn
     }
   }
 

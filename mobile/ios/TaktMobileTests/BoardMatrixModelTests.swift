@@ -43,6 +43,34 @@ final class BoardMatrixModelTests: XCTestCase {
     XCTAssertEqual(board.cards(in: "backlog").map(\.id), [task.id])
   }
 
+  func testARuleColumnHoldsTheCardsItsRulesMatch() async throws {
+    let tagged = try XCTUnwrap(model.createTask("Tagged", listID: list.id))
+    _ = model.createTask("Plain", listID: list.id)
+    let rules = WorkspaceFilterDefinition(show: .all, rules: [WorkspaceFilterRule(field: "tag", op: "has", value: "ship")])
+    let key = ListScope.list(list.id).boardKey
+    model.perform {
+      try $0.setKanbanBoardColumns(
+        WorkspaceKanbanColumn.blitzitDefaults + [WorkspaceKanbanColumn(id: "ship", title: "Ship", rules: rules)],
+        for: key)
+      try $0.moveToBoardColumn(key: key, taskIDs: [tagged.id], columnID: "ship")
+    }
+    let board = await board()
+    XCTAssertEqual(board.cards(in: "ship").map(\.title), ["Tagged"])
+    XCTAssertEqual(board.cards(in: "backlog").map(\.title), ["Plain"])
+  }
+
+  func testEnteringACardHidesTheColumnsBeforeItsOwnAndDrawsItsChildrenThere() async throws {
+    let week = try XCTUnwrap(model.createTask("Week 1", listID: list.id))
+    let drill = try XCTUnwrap(model.createTask("Drill", listID: list.id, parentTaskID: week.id))
+    model.perform { try $0.setKanbanColumn("this-week", for: week.id) }
+    let entered = BoardModel(scope: .nested(listID: list.id, taskID: week.id))
+    await entered.load(model)
+    XCTAssertEqual(entered.columns.map(\.id), ["this-week", "waiting-on", "today"])
+    XCTAssertEqual(entered.cards(in: "this-week").map(\.id), [drill.id])
+    // Drawn there, not refiled: leaving the card changes nothing.
+    XCTAssertNil(try model.store.kanbanColumn(for: drill.id))
+  }
+
   func testASubtaskFiledInAnotherColumnShowsThereAsItsOwnCard() async throws {
     let parent = try XCTUnwrap(model.createTask("Parent", listID: list.id))
     let child = try XCTUnwrap(model.createTask("Child", listID: list.id, parentTaskID: parent.id))

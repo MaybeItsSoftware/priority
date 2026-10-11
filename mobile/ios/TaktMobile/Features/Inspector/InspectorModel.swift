@@ -102,12 +102,12 @@ final class InspectorModel {
     progress = (try? TaskProgress.load(store: store, taskID: taskID)) ?? TaskProgress()
     loggedSeconds = progress.loggedSeconds
     let key = "\(task.listId)/\(task.parentTaskId ?? "root")"
-    if let configurations = try? store.kanbanBoardConfigurations(legacy: [:], currentKey: key) {
-      let scoped = configurations[key] ?? configurations["\(task.listId)/root"]
-      if let data = scoped, let columns = try? JSONDecoder().decode([WorkspaceKanbanColumn].self, from: data),
-        !columns.isEmpty {
-        boardColumns = columns
-      }
+    // The board the task is a card on, as the core resolves it: its own
+    // layout, its list's or the default. Rule columns are left out — a task
+    // is not filed into one, it matches it.
+    if let read = try? store.boardColumns(key: key, listIDs: [task.listId]) {
+      let filable = read.columns.filter { !$0.isRuleColumn }
+      if !filable.isEmpty { boardColumns = filable }
     }
   }
 
