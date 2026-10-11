@@ -1215,6 +1215,11 @@ public protocol CoreWorkspaceProtocol: AnyObject, Sendable {
     func addToFocusQueue(sessionId: String, taskId: String, plannedSeconds: Int64?, nowMs: Int64) throws 
     
     /**
+     * Every live commitment in the workspace.
+     */
+    func allCommitments() throws  -> [Commitment]
+    
+    /**
      * Copies a task's planning onto its subtasks as one step.
      */
     func applyPlanningToDescendants(taskId: String, nowMs: Int64, zone: String) throws 
@@ -1280,6 +1285,16 @@ public protocol CoreWorkspaceProtocol: AnyObject, Sendable {
      * walked here, so only the rows it draws cross. See `board.rs`.
      */
     func combinedBoard(listIds: [String], hideCompletedBeforeMs: Int64?) throws  -> BoardRead
+    
+    /**
+     * The live commitment a subtask carries, if it is one.
+     */
+    func commitment(taskId: String) throws  -> Commitment?
+    
+    /**
+     * The live commitments on a task, in the order of its subtasks.
+     */
+    func commitments(taskId: String) throws  -> [Commitment]
     
     /**
      * Turns a standalone list into a task in the Inbox; returns the task's id.
@@ -1618,6 +1633,12 @@ public protocol CoreWorkspaceProtocol: AnyObject, Sendable {
     func resumeFocusSession(id: String, nowMs: Int64) throws 
     
     /**
+     * Commits to `task_id` periodically, or rewrites the commitment on
+     * `commitment_task_id`, as one step; returns the subtask's id.
+     */
+    func saveCommitment(taskId: String, draft: CommitmentDraft, commitmentTaskId: String?, nowMs: Int64, zone: String) throws  -> String
+    
+    /**
      * Saves a condition as one "Edit Condition" step.
      */
     func saveCondition(id: String, name: String, isLocation: Bool, isArchived: Bool, nowMs: Int64) throws 
@@ -1731,6 +1752,11 @@ public protocol CoreWorkspaceProtocol: AnyObject, Sendable {
      * Starts a focus session on a task, or returns the one running.
      */
     func startFocusSession(taskId: String, plannedSeconds: Int64?, workSeconds: Int64, breakSeconds: Int64, context: FocusContext?, overrideAvailability: Bool, nowMs: Int64, zone: String) throws  -> String
+    
+    /**
+     * Stops the commitment on `commitment_task_id` as one step.
+     */
+    func stopCommitment(commitmentTaskId: String, nowMs: Int64, zone: String) throws 
     
     /**
      * The device's sync state, or nothing while it has never been paired.
@@ -2630,6 +2656,18 @@ open func addToFocusQueue(sessionId: String, taskId: String, plannedSeconds: Int
 }
     
     /**
+     * Every live commitment in the workspace.
+     */
+open func allCommitments()throws  -> [Commitment]  {
+    return try  FfiConverterSequenceTypeCommitment.lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_all_commitments(
+            self.uniffiCloneHandle(),uniffiCallStatus
+    )
+})
+}
+    
+    /**
      * Copies a task's planning onto its subtasks as one step.
      */
 open func applyPlanningToDescendants(taskId: String, nowMs: Int64, zone: String)throws   {try rustCallWithError(FfiConverterTypeCoreError_lift) {
@@ -2803,6 +2841,32 @@ open func combinedBoard(listIds: [String], hideCompletedBeforeMs: Int64?)throws 
             self.uniffiCloneHandle(),
         FfiConverterSequenceString.lower(listIds),
         FfiConverterOptionInt64.lower(hideCompletedBeforeMs),uniffiCallStatus
+    )
+})
+}
+    
+    /**
+     * The live commitment a subtask carries, if it is one.
+     */
+open func commitment(taskId: String)throws  -> Commitment?  {
+    return try  FfiConverterOptionTypeCommitment.lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_commitment(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(taskId),uniffiCallStatus
+    )
+})
+}
+    
+    /**
+     * The live commitments on a task, in the order of its subtasks.
+     */
+open func commitments(taskId: String)throws  -> [Commitment]  {
+    return try  FfiConverterSequenceTypeCommitment.lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_commitments(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(taskId),uniffiCallStatus
     )
 })
 }
@@ -3720,6 +3784,24 @@ open func resumeFocusSession(id: String, nowMs: Int64)throws   {try rustCallWith
 }
     
     /**
+     * Commits to `task_id` periodically, or rewrites the commitment on
+     * `commitment_task_id`, as one step; returns the subtask's id.
+     */
+open func saveCommitment(taskId: String, draft: CommitmentDraft, commitmentTaskId: String?, nowMs: Int64, zone: String)throws  -> String  {
+    return try  FfiConverterString.lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_save_commitment(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(taskId),
+        FfiConverterTypeCommitmentDraft_lower(draft),
+        FfiConverterOptionString.lower(commitmentTaskId),
+        FfiConverterInt64.lower(nowMs),
+        FfiConverterString.lower(zone),uniffiCallStatus
+    )
+})
+}
+    
+    /**
      * Saves a condition as one "Edit Condition" step.
      */
 open func saveCondition(id: String, name: String, isLocation: Bool, isArchived: Bool, nowMs: Int64)throws   {try rustCallWithError(FfiConverterTypeCoreError_lift) {
@@ -4052,6 +4134,20 @@ open func startFocusSession(taskId: String, plannedSeconds: Int64?, workSeconds:
         FfiConverterString.lower(zone),uniffiCallStatus
     )
 })
+}
+    
+    /**
+     * Stops the commitment on `commitment_task_id` as one step.
+     */
+open func stopCommitment(commitmentTaskId: String, nowMs: Int64, zone: String)throws   {try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_stop_commitment(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(commitmentTaskId),
+        FfiConverterInt64.lower(nowMs),
+        FfiConverterString.lower(zone),uniffiCallStatus
+    )
+}
 }
     
     /**
@@ -5610,6 +5706,251 @@ public func FfiConverterTypeCliCredentials_lift(_ buf: RustBuffer) throws -> Cli
 #endif
 public func FfiConverterTypeCliCredentials_lower(_ value: CliCredentials) -> RustBuffer {
     return FfiConverterTypeCliCredentials.lower(value)
+}
+
+
+/**
+ * One live commitment.
+ */
+public struct Commitment: Equatable, Hashable {
+    public var dailyId: String
+    /**
+     * The subtask that carries it.
+     */
+    public var taskId: String
+    /**
+     * The task it advances.
+     */
+    public var parentTaskId: String
+    public var title: String
+    /**
+     * Its schedule, as [`rule_text`] writes it.
+     */
+    public var rule: String
+    public var schedule: CommitmentSchedule
+    /**
+     * The start of the day it stops appearing, if it has one.
+     */
+    public var expiresAtMs: Int64?
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(dailyId: String, 
+        /**
+         * The subtask that carries it.
+         */taskId: String, 
+        /**
+         * The task it advances.
+         */parentTaskId: String, title: String, 
+        /**
+         * Its schedule, as [`rule_text`] writes it.
+         */rule: String, schedule: CommitmentSchedule, 
+        /**
+         * The start of the day it stops appearing, if it has one.
+         */expiresAtMs: Int64?) {
+        self.dailyId = dailyId
+        self.taskId = taskId
+        self.parentTaskId = parentTaskId
+        self.title = title
+        self.rule = rule
+        self.schedule = schedule
+        self.expiresAtMs = expiresAtMs
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension Commitment: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeCommitment: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> Commitment {
+        return
+            try Commitment(
+                dailyId: FfiConverterString.read(from: &buf), 
+                taskId: FfiConverterString.read(from: &buf), 
+                parentTaskId: FfiConverterString.read(from: &buf), 
+                title: FfiConverterString.read(from: &buf), 
+                rule: FfiConverterString.read(from: &buf), 
+                schedule: FfiConverterTypeCommitmentSchedule.read(from: &buf), 
+                expiresAtMs: FfiConverterOptionInt64.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: Commitment, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.dailyId, into: &buf)
+        FfiConverterString.write(value.taskId, into: &buf)
+        FfiConverterString.write(value.parentTaskId, into: &buf)
+        FfiConverterString.write(value.title, into: &buf)
+        FfiConverterString.write(value.rule, into: &buf)
+        FfiConverterTypeCommitmentSchedule.write(value.schedule, into: &buf)
+        FfiConverterOptionInt64.write(value.expiresAtMs, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCommitment_lift(_ buf: RustBuffer) throws -> Commitment {
+    return try FfiConverterTypeCommitment.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCommitment_lower(_ value: Commitment) -> RustBuffer {
+    return FfiConverterTypeCommitment.lower(value)
+}
+
+
+/**
+ * What the commitment form saves.
+ */
+public struct CommitmentDraft: Equatable, Hashable {
+    public var title: String
+    /**
+     * In the syntax [`schedule`] reads.
+     */
+    public var rule: String
+    /**
+     * The day it stops appearing, from its start; `None` runs until the
+     * task is done.
+     */
+    public var expiresAtMs: Int64?
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(title: String, 
+        /**
+         * In the syntax [`schedule`] reads.
+         */rule: String, 
+        /**
+         * The day it stops appearing, from its start; `None` runs until the
+         * task is done.
+         */expiresAtMs: Int64?) {
+        self.title = title
+        self.rule = rule
+        self.expiresAtMs = expiresAtMs
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension CommitmentDraft: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeCommitmentDraft: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> CommitmentDraft {
+        return
+            try CommitmentDraft(
+                title: FfiConverterString.read(from: &buf), 
+                rule: FfiConverterString.read(from: &buf), 
+                expiresAtMs: FfiConverterOptionInt64.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: CommitmentDraft, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.title, into: &buf)
+        FfiConverterString.write(value.rule, into: &buf)
+        FfiConverterOptionInt64.write(value.expiresAtMs, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCommitmentDraft_lift(_ buf: RustBuffer) throws -> CommitmentDraft {
+    return try FfiConverterTypeCommitmentDraft.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCommitmentDraft_lower(_ value: CommitmentDraft) -> RustBuffer {
+    return FfiConverterTypeCommitmentDraft.lower(value)
+}
+
+
+/**
+ * A schedule as a daily stores it: weekdays (1 = Sunday) and an interval.
+ */
+public struct CommitmentSchedule: Equatable, Hashable {
+    /**
+     * 1 = Sunday through 7 = Saturday. All seven is every day.
+     */
+    public var weekdays: [UInt32]
+    /**
+     * Every this many days from the day it was made; overrides `weekdays`.
+     */
+    public var intervalDays: Int64?
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(
+        /**
+         * 1 = Sunday through 7 = Saturday. All seven is every day.
+         */weekdays: [UInt32], 
+        /**
+         * Every this many days from the day it was made; overrides `weekdays`.
+         */intervalDays: Int64?) {
+        self.weekdays = weekdays
+        self.intervalDays = intervalDays
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension CommitmentSchedule: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeCommitmentSchedule: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> CommitmentSchedule {
+        return
+            try CommitmentSchedule(
+                weekdays: FfiConverterSequenceUInt32.read(from: &buf), 
+                intervalDays: FfiConverterOptionInt64.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: CommitmentSchedule, into buf: inout [UInt8]) {
+        FfiConverterSequenceUInt32.write(value.weekdays, into: &buf)
+        FfiConverterOptionInt64.write(value.intervalDays, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCommitmentSchedule_lift(_ buf: RustBuffer) throws -> CommitmentSchedule {
+    return try FfiConverterTypeCommitmentSchedule.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCommitmentSchedule_lower(_ value: CommitmentSchedule) -> RustBuffer {
+    return FfiConverterTypeCommitmentSchedule.lower(value)
 }
 
 
@@ -15900,6 +16241,8 @@ enum CoreError: Swift.Error, Equatable, Hashable, Foundation.LocalizedError {
     )
     case File(detail: String
     )
+    case InvalidRecurrence(rule: String
+    )
 
     
 
@@ -15975,6 +16318,9 @@ public struct FfiConverterTypeCoreError: FfiConverterRustBuffer {
             )
         case 26: return .File(
             detail: try FfiConverterString.read(from: &buf)
+            )
+        case 27: return .InvalidRecurrence(
+            rule: try FfiConverterString.read(from: &buf)
             )
 
          default: throw UniffiInternalError.unexpectedEnumCase
@@ -16101,6 +16447,11 @@ public struct FfiConverterTypeCoreError: FfiConverterRustBuffer {
         case let .File(detail):
             writeInt(&buf, Int32(26))
             FfiConverterString.write(detail, into: &buf)
+            
+        
+        case let .InvalidRecurrence(rule):
+            writeInt(&buf, Int32(27))
+            FfiConverterString.write(rule, into: &buf)
             
         }
     }
@@ -18576,6 +18927,54 @@ fileprivate struct FfiConverterOptionTypeAwardRow: FfiConverterRustBuffer {
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterOptionTypeCommitment: FfiConverterRustBuffer {
+    typealias SwiftType = Commitment?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterTypeCommitment.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterTypeCommitment.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterOptionTypeCommitmentSchedule: FfiConverterRustBuffer {
+    typealias SwiftType = CommitmentSchedule?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterTypeCommitmentSchedule.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterTypeCommitmentSchedule.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterOptionTypeConditionRow: FfiConverterRustBuffer {
     typealias SwiftType = ConditionRow?
 
@@ -19803,6 +20202,31 @@ fileprivate struct FfiConverterSequenceTypeCandidate: FfiConverterRustBuffer {
         seq.reserveCapacity(Int(len))
         for _ in 0 ..< len {
             seq.append(try FfiConverterTypeCandidate.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterSequenceTypeCommitment: FfiConverterRustBuffer {
+    typealias SwiftType = [Commitment]
+
+    public static func write(_ value: [Commitment], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeCommitment.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [Commitment] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [Commitment]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeCommitment.read(from: &buf))
         }
         return seq
     }
@@ -22640,6 +23064,40 @@ public func taskProgressInterval(days: UInt32, nowMs: Int64, zone: String) -> Mi
 })
 }
 /**
+ * The name a new commitment on a task is offered: "Work on <task>".
+ */
+public func commitmentDefaultTitle(taskTitle: String) -> String  {
+    return try!  FfiConverterString.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_commitment_default_title(
+        FfiConverterString.lower(taskTitle),uniffiCallStatus
+    )
+})
+}
+/**
+ * A schedule written back in the syntax `commitment_schedule` reads.
+ */
+public func commitmentRuleText(schedule: CommitmentSchedule) -> String  {
+    return try!  FfiConverterString.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_commitment_rule_text(
+        FfiConverterTypeCommitmentSchedule_lower(schedule),uniffiCallStatus
+    )
+})
+}
+/**
+ * Reads a commitment's schedule ("daily", "weekdays", "every friday",
+ * "every 2 weeks", "mon, wed, fri"); `None` for anything else.
+ */
+public func commitmentSchedule(rule: String) -> CommitmentSchedule?  {
+    return try!  FfiConverterOptionTypeCommitmentSchedule.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_commitment_schedule(
+        FfiConverterString.lower(rule),uniffiCallStatus
+    )
+})
+}
+/**
  * Where the habit stands on the day `day_ms` falls on; `None` when it should
  * not be showing. `HabitPolicy.appearance`.
  */
@@ -23726,6 +24184,15 @@ private let initializationResult: InitializationResult = {
     if (uniffi_takt_core_checksum_func_task_progress_interval() != 34256) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_takt_core_checksum_func_commitment_default_title() != 16068) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_commitment_rule_text() != 2492) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_commitment_schedule() != 15213) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_takt_core_checksum_func_habit_appearance() != 19473) {
         return InitializationResult.apiChecksumMismatch
     }
@@ -24122,6 +24589,9 @@ private let initializationResult: InitializationResult = {
     if (uniffi_takt_core_checksum_method_coreworkspace_add_to_focus_queue() != 31877) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_takt_core_checksum_method_coreworkspace_all_commitments() != 34909) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_takt_core_checksum_method_coreworkspace_apply_planning_to_descendants() != 40638) {
         return InitializationResult.apiChecksumMismatch
     }
@@ -24159,6 +24629,12 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_method_coreworkspace_combined_board() != 39253) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_commitment() != 61483) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_commitments() != 45393) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_method_coreworkspace_convert_list_to_task() != 37246) {
@@ -24353,6 +24829,9 @@ private let initializationResult: InitializationResult = {
     if (uniffi_takt_core_checksum_method_coreworkspace_resume_focus_session() != 21689) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_takt_core_checksum_method_coreworkspace_save_commitment() != 40482) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_takt_core_checksum_method_coreworkspace_save_condition() != 40969) {
         return InitializationResult.apiChecksumMismatch
     }
@@ -24417,6 +24896,9 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_method_coreworkspace_start_focus_session() != 4001) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_stop_commitment() != 16726) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_method_coreworkspace_sync_state() != 5326) {

@@ -13,6 +13,7 @@ use rusqlite::Connection;
 
 use crate::CoreError;
 use crate::board::{self, BoardRead};
+use crate::commitments::{self, Commitment, CommitmentDraft};
 use crate::conditions;
 use crate::conversions::{self, BoardColumn};
 use crate::dailies::{self, DailyEdit};
@@ -815,6 +816,60 @@ impl CoreWorkspace {
         journal::journalled(&mut self.lock(), label, |tx| {
             habits::save_habit(tx, &draft, habit_task_id.as_deref(), now_ms, &zone)
         })
+    }
+
+    /// Commits to `task_id` periodically, or rewrites the commitment on
+    /// `commitment_task_id`, as one step; returns the subtask's id.
+    pub fn save_commitment(
+        &self,
+        task_id: String,
+        draft: CommitmentDraft,
+        commitment_task_id: Option<String>,
+        now_ms: i64,
+        zone: String,
+    ) -> Result<String, CoreError> {
+        let label = if commitment_task_id.is_none() {
+            "Commit to Task"
+        } else {
+            "Edit Commitment"
+        };
+        journal::journalled(&mut self.lock(), label, |tx| {
+            commitments::save_commitment(
+                tx,
+                &task_id,
+                &draft,
+                commitment_task_id.as_deref(),
+                now_ms,
+                &zone,
+            )
+        })
+    }
+
+    /// Stops the commitment on `commitment_task_id` as one step.
+    pub fn stop_commitment(
+        &self,
+        commitment_task_id: String,
+        now_ms: i64,
+        zone: String,
+    ) -> Result<(), CoreError> {
+        journal::journalled(&mut self.lock(), "Stop Commitment", |tx| {
+            commitments::stop_commitment(tx, &commitment_task_id, now_ms, &zone)
+        })
+    }
+
+    /// The live commitments on a task, in the order of its subtasks.
+    pub fn commitments(&self, task_id: String) -> Result<Vec<Commitment>, CoreError> {
+        commitments::commitments(&self.read(), &task_id)
+    }
+
+    /// Every live commitment in the workspace.
+    pub fn all_commitments(&self) -> Result<Vec<Commitment>, CoreError> {
+        commitments::all_commitments(&self.read())
+    }
+
+    /// The live commitment a subtask carries, if it is one.
+    pub fn commitment(&self, task_id: String) -> Result<Option<Commitment>, CoreError> {
+        commitments::commitment(&self.read(), &task_id)
     }
 
     /// Applies every placed habit's options for `now`, outside the undo

@@ -925,7 +925,8 @@ struct Occurrence {
 }
 
 /// Ends the habits made from a task that is set to end when it is done, and
-/// takes them out of the board column they were placed in if they are still
+/// its commitments (habits on its own subtasks; see `commitments.rs`)
+/// whatever end they were given, and takes them out of the board column they were placed in if they are still
 /// there. `WorkspaceStore.expireHabits`.
 fn expire_habits(
     transaction: &Transaction,
@@ -935,7 +936,8 @@ fn expire_habits(
     let now = stored(now_ms);
     let mut statement = transaction.prepare(
         "SELECT id, taskId, placementColumn FROM dailies
-         WHERE sourceTaskId = ?1 AND archivedAt IS NULL AND expiryRule = 'source'",
+         WHERE sourceTaskId = ?1 AND archivedAt IS NULL
+           AND (expiryRule = 'source' OR taskId IN (SELECT id FROM tasks WHERE parentTaskId = ?1))",
     )?;
     let habits: Vec<(String, String, Option<String>)> = statement
         .query_map([source_task_id], |row| {

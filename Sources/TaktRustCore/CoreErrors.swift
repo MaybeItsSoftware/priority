@@ -30,6 +30,8 @@ public enum CoreFailure: Equatable, Sendable {
   case missingFilterList(id: String)
   /// A filter list's rules that cannot be saved; the message says why.
   case invalidFilter(detail: String)
+  /// A commitment's schedule the recurrence syntax cannot read.
+  case invalidRecurrence(rule: String)
   case noJournal
   /// Anything a caller only reports; its message is the error's own.
   case other
@@ -62,6 +64,7 @@ extension Error {
     case .DependencyCycle: return .dependencyCycle
     case .MissingFilterList(let id): return .missingFilterList(id: id)
     case .InvalidFilter(let detail): return .invalidFilter(detail: detail)
+    case .InvalidRecurrence(let rule): return .invalidRecurrence(rule: rule)
     case .NoJournal: return .noJournal
     default: return .other
     }

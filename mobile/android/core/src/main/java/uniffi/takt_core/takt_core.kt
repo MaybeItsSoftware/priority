@@ -831,6 +831,12 @@ internal object IntegrityCheckingUniffiLib {
     ): Int
     external fun uniffi_takt_core_checksum_func_task_progress_interval(
     ): Int
+    external fun uniffi_takt_core_checksum_func_commitment_default_title(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_commitment_rule_text(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_commitment_schedule(
+    ): Int
     external fun uniffi_takt_core_checksum_func_habit_appearance(
     ): Int
     external fun uniffi_takt_core_checksum_func_habit_is_expired(
@@ -1095,6 +1101,8 @@ internal object IntegrityCheckingUniffiLib {
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_add_to_focus_queue(
     ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_all_commitments(
+    ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_apply_planning_to_descendants(
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_apply_remote_rows(
@@ -1120,6 +1128,10 @@ internal object IntegrityCheckingUniffiLib {
     external fun uniffi_takt_core_checksum_method_coreworkspace_clear_focus_order(
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_combined_board(
+    ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_commitment(
+    ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_commitments(
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_convert_list_to_task(
     ): Int
@@ -1249,6 +1261,8 @@ internal object IntegrityCheckingUniffiLib {
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_resume_focus_session(
     ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_save_commitment(
+    ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_save_condition(
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_save_editor(
@@ -1292,6 +1306,8 @@ internal object IntegrityCheckingUniffiLib {
     external fun uniffi_takt_core_checksum_method_coreworkspace_sidebar_index_with_open_counts(
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_start_focus_session(
+    ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_stop_commitment(
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_sync_state(
     ): Int
@@ -1507,6 +1523,8 @@ internal object UniffiLib {
     ): Byte
     external fun uniffi_takt_core_fn_method_coreworkspace_add_to_focus_queue(`ptr`: Long,`sessionId`: RustBuffer.ByValue,`taskId`: RustBuffer.ByValue,`plannedSeconds`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
+    external fun uniffi_takt_core_fn_method_coreworkspace_all_commitments(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_method_coreworkspace_apply_planning_to_descendants(`ptr`: Long,`taskId`: RustBuffer.ByValue,`nowMs`: Long,`zone`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
     external fun uniffi_takt_core_fn_method_coreworkspace_apply_remote_rows(`ptr`: Long,`rows`: RustBuffer.ByValue,`cursor`: Long,`hlc`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
@@ -1532,6 +1550,10 @@ internal object UniffiLib {
     external fun uniffi_takt_core_fn_method_coreworkspace_clear_focus_order(`ptr`: Long,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
     external fun uniffi_takt_core_fn_method_coreworkspace_combined_board(`ptr`: Long,`listIds`: RustBuffer.ByValue,`hideCompletedBeforeMs`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_method_coreworkspace_commitment(`ptr`: Long,`taskId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_method_coreworkspace_commitments(`ptr`: Long,`taskId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_method_coreworkspace_convert_list_to_task(`ptr`: Long,`id`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
@@ -1661,6 +1683,8 @@ internal object UniffiLib {
     ): Byte
     external fun uniffi_takt_core_fn_method_coreworkspace_resume_focus_session(`ptr`: Long,`id`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
+    external fun uniffi_takt_core_fn_method_coreworkspace_save_commitment(`ptr`: Long,`taskId`: RustBuffer.ByValue,`draft`: RustBuffer.ByValue,`commitmentTaskId`: RustBuffer.ByValue,`nowMs`: Long,`zone`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_method_coreworkspace_save_condition(`ptr`: Long,`id`: RustBuffer.ByValue,`name`: RustBuffer.ByValue,`isLocation`: Byte,`isArchived`: Byte,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
     external fun uniffi_takt_core_fn_method_coreworkspace_save_editor(`ptr`: Long,`edit`: RustBuffer.ByValue,`baseline`: RustBuffer.ByValue,`nowMs`: Long,`zone`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
@@ -1705,6 +1729,8 @@ internal object UniffiLib {
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_method_coreworkspace_start_focus_session(`ptr`: Long,`taskId`: RustBuffer.ByValue,`plannedSeconds`: RustBuffer.ByValue,`workSeconds`: Long,`breakSeconds`: Long,`context`: RustBuffer.ByValue,`overrideAvailability`: Byte,`nowMs`: Long,`zone`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_method_coreworkspace_stop_commitment(`ptr`: Long,`commitmentTaskId`: RustBuffer.ByValue,`nowMs`: Long,`zone`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): Unit
     external fun uniffi_takt_core_fn_method_coreworkspace_sync_state(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_method_coreworkspace_task(`ptr`: Long,`id`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
@@ -1900,6 +1926,12 @@ internal object UniffiLib {
     external fun uniffi_takt_core_fn_func_task_progress_days(`days`: Int,`completionsMs`: RustBuffer.ByValue,`creationsMs`: RustBuffer.ByValue,`nowMs`: Long,`zone`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_func_task_progress_interval(`days`: Int,`nowMs`: Long,`zone`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_commitment_default_title(`taskTitle`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_commitment_rule_text(`schedule`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_commitment_schedule(`rule`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_func_habit_appearance(`rule`: RustBuffer.ByValue,`dayMs`: Long,`lastDoneMs`: RustBuffer.ByValue,`sourceCompleted`: Byte,`zone`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
@@ -2388,6 +2420,15 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
     if ((lib.uniffi_takt_core_checksum_func_task_progress_interval() and 0xFFFF) != 34256) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if ((lib.uniffi_takt_core_checksum_func_commitment_default_title() and 0xFFFF) != 16068) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_commitment_rule_text() and 0xFFFF) != 2492) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_commitment_schedule() and 0xFFFF) != 15213) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if ((lib.uniffi_takt_core_checksum_func_habit_appearance() and 0xFFFF) != 19473) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
@@ -2784,6 +2825,9 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_add_to_focus_queue() and 0xFFFF) != 31877) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_all_commitments() and 0xFFFF) != 34909) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_apply_planning_to_descendants() and 0xFFFF) != 40638) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
@@ -2821,6 +2865,12 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_combined_board() and 0xFFFF) != 39253) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_commitment() and 0xFFFF) != 61483) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_commitments() and 0xFFFF) != 45393) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_convert_list_to_task() and 0xFFFF) != 37246) {
@@ -3015,6 +3065,9 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_resume_focus_session() and 0xFFFF) != 21689) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_save_commitment() and 0xFFFF) != 40482) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_save_condition() and 0xFFFF) != 40969) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
@@ -3079,6 +3132,9 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_start_focus_session() and 0xFFFF) != 4001) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_stop_commitment() and 0xFFFF) != 16726) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_sync_state() and 0xFFFF) != 5326) {
@@ -4390,6 +4446,11 @@ public interface CoreWorkspaceInterface {
     fun `addToFocusQueue`(`sessionId`: kotlin.String, `taskId`: kotlin.String, `plannedSeconds`: kotlin.Long?, `nowMs`: kotlin.Long)
     
     /**
+     * Every live commitment in the workspace.
+     */
+    fun `allCommitments`(): List<Commitment>
+    
+    /**
      * Copies a task's planning onto its subtasks as one step.
      */
     fun `applyPlanningToDescendants`(`taskId`: kotlin.String, `nowMs`: kotlin.Long, `zone`: kotlin.String)
@@ -4455,6 +4516,16 @@ public interface CoreWorkspaceInterface {
      * walked here, so only the rows it draws cross. See `board.rs`.
      */
     fun `combinedBoard`(`listIds`: List<kotlin.String>, `hideCompletedBeforeMs`: kotlin.Long?): BoardRead
+    
+    /**
+     * The live commitment a subtask carries, if it is one.
+     */
+    fun `commitment`(`taskId`: kotlin.String): Commitment?
+    
+    /**
+     * The live commitments on a task, in the order of its subtasks.
+     */
+    fun `commitments`(`taskId`: kotlin.String): List<Commitment>
     
     /**
      * Turns a standalone list into a task in the Inbox; returns the task's id.
@@ -4793,6 +4864,12 @@ public interface CoreWorkspaceInterface {
     fun `resumeFocusSession`(`id`: kotlin.String, `nowMs`: kotlin.Long)
     
     /**
+     * Commits to `task_id` periodically, or rewrites the commitment on
+     * `commitment_task_id`, as one step; returns the subtask's id.
+     */
+    fun `saveCommitment`(`taskId`: kotlin.String, `draft`: CommitmentDraft, `commitmentTaskId`: kotlin.String?, `nowMs`: kotlin.Long, `zone`: kotlin.String): kotlin.String
+    
+    /**
      * Saves a condition as one "Edit Condition" step.
      */
     fun `saveCondition`(`id`: kotlin.String, `name`: kotlin.String, `isLocation`: kotlin.Boolean, `isArchived`: kotlin.Boolean, `nowMs`: kotlin.Long)
@@ -4906,6 +4983,11 @@ public interface CoreWorkspaceInterface {
      * Starts a focus session on a task, or returns the one running.
      */
     fun `startFocusSession`(`taskId`: kotlin.String, `plannedSeconds`: kotlin.Long?, `workSeconds`: kotlin.Long, `breakSeconds`: kotlin.Long, `context`: FocusContext?, `overrideAvailability`: kotlin.Boolean, `nowMs`: kotlin.Long, `zone`: kotlin.String): kotlin.String
+    
+    /**
+     * Stops the commitment on `commitment_task_id` as one step.
+     */
+    fun `stopCommitment`(`commitmentTaskId`: kotlin.String, `nowMs`: kotlin.Long, `zone`: kotlin.String)
     
     /**
      * The device's sync state, or nothing while it has never been paired.
@@ -6103,6 +6185,23 @@ open class CoreWorkspace: Disposable, AutoCloseable, CoreWorkspaceInterface
 
     
     /**
+     * Every live commitment in the workspace.
+     */
+    @Throws(CoreException::class)override fun `allCommitments`(): List<Commitment> {
+            return FfiConverterSequenceTypeCommitment.lift(
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_all_commitments(
+        it,
+        _status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
      * Copies a task's planning onto its subtasks as one step.
      */
     @Throws(CoreException::class)override fun `applyPlanningToDescendants`(`taskId`: kotlin.String, `nowMs`: kotlin.Long, `zone`: kotlin.String)
@@ -6338,6 +6437,42 @@ open class CoreWorkspace: Disposable, AutoCloseable, CoreWorkspaceInterface
         
         FfiConverterSequenceString.lower(`listIds`),
         FfiConverterOptionalLong.lower(`hideCompletedBeforeMs`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * The live commitment a subtask carries, if it is one.
+     */
+    @Throws(CoreException::class)override fun `commitment`(`taskId`: kotlin.String): Commitment? {
+            return FfiConverterOptionalTypeCommitment.lift(
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_commitment(
+        it,
+        
+        FfiConverterString.lower(`taskId`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * The live commitments on a task, in the order of its subtasks.
+     */
+    @Throws(CoreException::class)override fun `commitments`(`taskId`: kotlin.String): List<Commitment> {
+            return FfiConverterSequenceTypeCommitment.lift(
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_commitments(
+        it,
+        
+        FfiConverterString.lower(`taskId`),_status)
 }
     }
     )
@@ -7578,6 +7713,29 @@ open class CoreWorkspace: Disposable, AutoCloseable, CoreWorkspaceInterface
 
     
     /**
+     * Commits to `task_id` periodically, or rewrites the commitment on
+     * `commitment_task_id`, as one step; returns the subtask's id.
+     */
+    @Throws(CoreException::class)override fun `saveCommitment`(`taskId`: kotlin.String, `draft`: CommitmentDraft, `commitmentTaskId`: kotlin.String?, `nowMs`: kotlin.Long, `zone`: kotlin.String): kotlin.String {
+            return FfiConverterString.lift(
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_save_commitment(
+        it,
+        
+        FfiConverterString.lower(`taskId`),
+        FfiConverterTypeCommitmentDraft.lower(`draft`),
+        FfiConverterOptionalString.lower(`commitmentTaskId`),
+        FfiConverterLong.lower(`nowMs`),
+        FfiConverterString.lower(`zone`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
      * Saves a condition as one "Edit Condition" step.
      */
     @Throws(CoreException::class)override fun `saveCondition`(`id`: kotlin.String, `name`: kotlin.String, `isLocation`: kotlin.Boolean, `isArchived`: kotlin.Boolean, `nowMs`: kotlin.Long)
@@ -8019,6 +8177,25 @@ open class CoreWorkspace: Disposable, AutoCloseable, CoreWorkspaceInterface
     }
     )
     }
+    
+
+    
+    /**
+     * Stops the commitment on `commitment_task_id` as one step.
+     */
+    @Throws(CoreException::class)override fun `stopCommitment`(`commitmentTaskId`: kotlin.String, `nowMs`: kotlin.Long, `zone`: kotlin.String)
+        = 
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_stop_commitment(
+        it,
+        
+        FfiConverterString.lower(`commitmentTaskId`),
+        FfiConverterLong.lower(`nowMs`),
+        FfiConverterString.lower(`zone`),_status)
+}
+    }
+    
     
 
     
@@ -9588,6 +9765,184 @@ public object FfiConverterTypeCliCredentials: FfiConverterRustBuffer<CliCredenti
             FfiConverterString.write(value.`username`, buf)
             FfiConverterString.write(value.`remoteKey`, buf)
             FfiConverterString.write(value.`listId`, buf)
+    }
+}
+
+
+
+/**
+ * One live commitment.
+ */
+data class Commitment (
+    var `dailyId`: kotlin.String
+    , 
+    /**
+     * The subtask that carries it.
+     */
+    var `taskId`: kotlin.String
+    , 
+    /**
+     * The task it advances.
+     */
+    var `parentTaskId`: kotlin.String
+    , 
+    var `title`: kotlin.String
+    , 
+    /**
+     * Its schedule, as [`rule_text`] writes it.
+     */
+    var `rule`: kotlin.String
+    , 
+    var `schedule`: CommitmentSchedule
+    , 
+    /**
+     * The start of the day it stops appearing, if it has one.
+     */
+    var `expiresAtMs`: kotlin.Long?
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeCommitment: FfiConverterRustBuffer<Commitment> {
+    override fun read(buf: ByteBuffer): Commitment {
+        return Commitment(
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterTypeCommitmentSchedule.read(buf),
+            FfiConverterOptionalLong.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: Commitment) = (
+            FfiConverterString.allocationSize(value.`dailyId`) +
+            FfiConverterString.allocationSize(value.`taskId`) +
+            FfiConverterString.allocationSize(value.`parentTaskId`) +
+            FfiConverterString.allocationSize(value.`title`) +
+            FfiConverterString.allocationSize(value.`rule`) +
+            FfiConverterTypeCommitmentSchedule.allocationSize(value.`schedule`) +
+            FfiConverterOptionalLong.allocationSize(value.`expiresAtMs`)
+    )
+
+    override fun write(value: Commitment, buf: ByteBuffer) {
+            FfiConverterString.write(value.`dailyId`, buf)
+            FfiConverterString.write(value.`taskId`, buf)
+            FfiConverterString.write(value.`parentTaskId`, buf)
+            FfiConverterString.write(value.`title`, buf)
+            FfiConverterString.write(value.`rule`, buf)
+            FfiConverterTypeCommitmentSchedule.write(value.`schedule`, buf)
+            FfiConverterOptionalLong.write(value.`expiresAtMs`, buf)
+    }
+}
+
+
+
+/**
+ * What the commitment form saves.
+ */
+data class CommitmentDraft (
+    var `title`: kotlin.String
+    , 
+    /**
+     * In the syntax [`schedule`] reads.
+     */
+    var `rule`: kotlin.String
+    , 
+    /**
+     * The day it stops appearing, from its start; `None` runs until the
+     * task is done.
+     */
+    var `expiresAtMs`: kotlin.Long?
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeCommitmentDraft: FfiConverterRustBuffer<CommitmentDraft> {
+    override fun read(buf: ByteBuffer): CommitmentDraft {
+        return CommitmentDraft(
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterOptionalLong.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: CommitmentDraft) = (
+            FfiConverterString.allocationSize(value.`title`) +
+            FfiConverterString.allocationSize(value.`rule`) +
+            FfiConverterOptionalLong.allocationSize(value.`expiresAtMs`)
+    )
+
+    override fun write(value: CommitmentDraft, buf: ByteBuffer) {
+            FfiConverterString.write(value.`title`, buf)
+            FfiConverterString.write(value.`rule`, buf)
+            FfiConverterOptionalLong.write(value.`expiresAtMs`, buf)
+    }
+}
+
+
+
+/**
+ * A schedule as a daily stores it: weekdays (1 = Sunday) and an interval.
+ */
+data class CommitmentSchedule (
+    /**
+     * 1 = Sunday through 7 = Saturday. All seven is every day.
+     */
+    var `weekdays`: List<kotlin.UInt>
+    , 
+    /**
+     * Every this many days from the day it was made; overrides `weekdays`.
+     */
+    var `intervalDays`: kotlin.Long?
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeCommitmentSchedule: FfiConverterRustBuffer<CommitmentSchedule> {
+    override fun read(buf: ByteBuffer): CommitmentSchedule {
+        return CommitmentSchedule(
+            FfiConverterSequenceUInt.read(buf),
+            FfiConverterOptionalLong.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: CommitmentSchedule) = (
+            FfiConverterSequenceUInt.allocationSize(value.`weekdays`) +
+            FfiConverterOptionalLong.allocationSize(value.`intervalDays`)
+    )
+
+    override fun write(value: CommitmentSchedule, buf: ByteBuffer) {
+            FfiConverterSequenceUInt.write(value.`weekdays`, buf)
+            FfiConverterOptionalLong.write(value.`intervalDays`, buf)
     }
 }
 
@@ -17773,6 +18128,14 @@ sealed class CoreException: kotlin.Exception() {
             get() = "detail=${ `detail` }"
     }
     
+    class InvalidRecurrence(
+        
+        val `rule`: kotlin.String
+        ) : CoreException() {
+        override val message
+            get() = "rule=${ `rule` }"
+    }
+    
 
     
 
@@ -17837,6 +18200,9 @@ public object FfiConverterTypeCoreError : FfiConverterRustBuffer<CoreException> 
                 FfiConverterString.read(buf),
                 )
             26 -> CoreException.File(
+                FfiConverterString.read(buf),
+                )
+            27 -> CoreException.InvalidRecurrence(
                 FfiConverterString.read(buf),
                 )
             else -> throw RuntimeException("invalid error enum value, something is very wrong!!")
@@ -17960,6 +18326,11 @@ public object FfiConverterTypeCoreError : FfiConverterRustBuffer<CoreException> 
                 4UL
                 + FfiConverterString.allocationSize(value.`detail`)
             )
+            is CoreException.InvalidRecurrence -> (
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                4UL
+                + FfiConverterString.allocationSize(value.`rule`)
+            )
         }
     }
 
@@ -18078,6 +18449,11 @@ public object FfiConverterTypeCoreError : FfiConverterRustBuffer<CoreException> 
             is CoreException.File -> {
                 buf.putInt(26)
                 FfiConverterString.write(value.`detail`, buf)
+                Unit
+            }
+            is CoreException.InvalidRecurrence -> {
+                buf.putInt(27)
+                FfiConverterString.write(value.`rule`, buf)
                 Unit
             }
         }.let { /* this makes the `when` an expression, which ensures it is exhaustive */ }
@@ -21063,6 +21439,70 @@ public object FfiConverterOptionalTypeAwardRow: FfiConverterRustBuffer<AwardRow?
 /**
  * @suppress
  */
+public object FfiConverterOptionalTypeCommitment: FfiConverterRustBuffer<Commitment?> {
+    override fun read(buf: ByteBuffer): Commitment? {
+        if (buf.get().toInt() == 0) {
+            return null
+        }
+        return FfiConverterTypeCommitment.read(buf)
+    }
+
+    override fun allocationSize(value: Commitment?): ULong {
+        if (value == null) {
+            return 1UL
+        } else {
+            return 1UL + FfiConverterTypeCommitment.allocationSize(value)
+        }
+    }
+
+    override fun write(value: Commitment?, buf: ByteBuffer) {
+        if (value == null) {
+            buf.put(0)
+        } else {
+            buf.put(1)
+            FfiConverterTypeCommitment.write(value, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterOptionalTypeCommitmentSchedule: FfiConverterRustBuffer<CommitmentSchedule?> {
+    override fun read(buf: ByteBuffer): CommitmentSchedule? {
+        if (buf.get().toInt() == 0) {
+            return null
+        }
+        return FfiConverterTypeCommitmentSchedule.read(buf)
+    }
+
+    override fun allocationSize(value: CommitmentSchedule?): ULong {
+        if (value == null) {
+            return 1UL
+        } else {
+            return 1UL + FfiConverterTypeCommitmentSchedule.allocationSize(value)
+        }
+    }
+
+    override fun write(value: CommitmentSchedule?, buf: ByteBuffer) {
+        if (value == null) {
+            buf.put(0)
+        } else {
+            buf.put(1)
+            FfiConverterTypeCommitmentSchedule.write(value, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
 public object FfiConverterOptionalTypeConditionRow: FfiConverterRustBuffer<ConditionRow?> {
     override fun read(buf: ByteBuffer): ConditionRow? {
         if (buf.get().toInt() == 0) {
@@ -22641,6 +23081,34 @@ public object FfiConverterSequenceTypeCandidate: FfiConverterRustBuffer<List<Can
         buf.putInt(value.size)
         value.iterator().forEach {
             FfiConverterTypeCandidate.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceTypeCommitment: FfiConverterRustBuffer<List<Commitment>> {
+    override fun read(buf: ByteBuffer): List<Commitment> {
+        val len = buf.getInt()
+        return List<Commitment>(len) {
+            FfiConverterTypeCommitment.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<Commitment>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeCommitment.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<Commitment>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeCommitment.write(it, buf)
         }
     }
 }
@@ -25970,6 +26438,49 @@ public object FfiConverterMapStringTypeSyncValue: FfiConverterRustBuffer<Map<kot
         FfiConverterUInt.lower(`days`),
         FfiConverterLong.lower(`nowMs`),
         FfiConverterString.lower(`zone`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * The name a new commitment on a task is offered: "Work on <task>".
+         */ fun `commitmentDefaultTitle`(`taskTitle`: kotlin.String): kotlin.String {
+            return FfiConverterString.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_commitment_default_title(
+    
+        
+        FfiConverterString.lower(`taskTitle`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * A schedule written back in the syntax `commitment_schedule` reads.
+         */ fun `commitmentRuleText`(`schedule`: CommitmentSchedule): kotlin.String {
+            return FfiConverterString.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_commitment_rule_text(
+    
+        
+        FfiConverterTypeCommitmentSchedule.lower(`schedule`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * Reads a commitment's schedule ("daily", "weekdays", "every friday",
+         * "every 2 weeks", "mon, wed, fri"); `None` for anything else.
+         */ fun `commitmentSchedule`(`rule`: kotlin.String): CommitmentSchedule? {
+            return FfiConverterOptionalTypeCommitmentSchedule.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_commitment_schedule(
+    
+        
+        FfiConverterString.lower(`rule`),_status)
 }
     )
     }

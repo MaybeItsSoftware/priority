@@ -494,6 +494,7 @@ public final class WorkspaceStore: @unchecked Sendable {
       case .dependencyCycle: throw WorkspaceStoreError.dependencyCycle
       case .missingFilterList: throw WorkspaceStoreError.missingFilterList
       case .invalidFilter(let detail): throw WorkspaceStoreError.invalidFilter(detail)
+      case .invalidRecurrence(let rule): throw WorkspaceStoreError.invalidRecurrence(rule)
       case .noJournal, .other, nil: throw error
       }
     }
@@ -512,6 +513,7 @@ public enum WorkspaceStoreError: LocalizedError, Equatable {
   case dependencyCycle
   case missingFilterList
   case invalidFilter(String)
+  case invalidRecurrence(String)
   case invalidFolderMove
   case systemListIsPermanent
 
@@ -528,6 +530,8 @@ public enum WorkspaceStoreError: LocalizedError, Equatable {
     case .dependencyCycle: return "A task cannot wait on itself, or on a task that already waits on it."
     case .missingFilterList: return "That filter list is no longer available."
     case .invalidFilter(let detail): return detail
+    case .invalidRecurrence(let rule):
+      return "“\(rule)” is not a schedule. Try daily, weekdays, every friday, every 2 weeks or mon, wed, fri."
     case .invalidFolderMove: return "A folder cannot be moved into itself or one of its subfolders."
     case .systemListIsPermanent: return "The Inbox cannot be archived or deleted. You can rename it instead."
     }

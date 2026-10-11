@@ -58,6 +58,10 @@ pub enum CoreError {
     InvalidFilter { detail: String },
     #[error("{detail}")]
     File { detail: String },
+    #[error(
+        "“{rule}” is not a schedule. Try daily, weekdays, every friday, every 2 weeks or mon, wed, fri."
+    )]
+    InvalidRecurrence { rule: String },
 }
 
 impl From<rusqlite::Error> for CoreError {

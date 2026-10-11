@@ -336,19 +336,15 @@ pub(crate) fn habit_shows(
     now_ms: i64,
     zone: Tz,
 ) -> Result<bool, CoreError> {
-    let Some(StoredRule {
-        rule,
-        source_task_id,
-        ..
-    }) = stored_rule(connection, daily_id, zone)?
-    else {
+    let Some(stored) = stored_rule(connection, daily_id, zone)? else {
         return Ok(false);
     };
-    let source_completed = source_is_completed(connection, source_task_id.as_deref())?;
+    let source_completed = source_is_completed(connection, stored.source_task_id.as_deref())?;
     let today = local_day(now_ms, zone);
-    if is_expired(&rule, today, source_completed) {
+    if stored.is_expired(today, source_completed) {
         return Ok(false);
     }
+    let rule = stored.rule;
     if is_scheduled(&rule, today) {
         return Ok(true);
     }
@@ -393,11 +389,7 @@ fn reconcile_habit(
     let Some(stored_rule) = stored_rule(transaction, daily_id, zone)? else {
         return Ok(false);
     };
-    let StoredRule {
-        task_id,
-        rule,
-        source_task_id,
-    } = stored_rule;
+    let task_id = stored_rule.task_id.clone();
     let open: Option<String> = transaction
         .query_row(
             "SELECT status FROM tasks WHERE id = ?1",
@@ -408,19 +400,20 @@ fn reconcile_habit(
     if open.as_deref() != Some("open") {
         return Ok(false);
     }
-    let source_completed = source_is_completed(transaction, source_task_id.as_deref())?;
+    let source_completed = source_is_completed(transaction, stored_rule.source_task_id.as_deref())?;
     let today = local_day(now_ms, zone);
     let current = kanban_column(transaction, &task_id)?;
-    if is_expired(&rule, today, source_completed) {
+    if stored_rule.is_expired(today, source_completed) {
         transaction.execute(
             "UPDATE dailies SET archivedAt = ?1, updatedAt = ?1 WHERE id = ?2",
             params![stored(now_ms), daily_id],
         )?;
-        if current.as_deref() == Some(rule.placement.as_str()) {
+        if current.as_deref() == Some(stored_rule.rule.placement.as_str()) {
             write_column(transaction, &task_id, None, now_ms)?;
         }
         return Ok(true);
     }
+    let rule = stored_rule.rule;
     let last_done = last_done_day(transaction, daily_id)?;
     let showing = appearance(&rule, today, last_done, source_completed);
     match reconciled_column(current.as_deref(), showing.as_ref(), &rule.placement) {
@@ -436,6 +429,15 @@ struct StoredRule {
     task_id: String,
     rule: Rule,
     source_task_id: Option<String>,
+    /// A commitment (a habit on a subtask of its source) ends with its
+    /// source whatever its own expiry says.
+    ends_with_source: bool,
+}
+
+impl StoredRule {
+    fn is_expired(&self, day: NaiveDate, source_completed: bool) -> bool {
+        is_expired(&self.rule, day, source_completed) || (self.ends_with_source && source_completed)
+    }
 }
 
 /// A placed, unarchived habit's rule as stored; `None` for anything else.
@@ -456,11 +458,13 @@ fn stored_rule(
         Option<String>,
         String,
         Option<String>,
+        bool,
     );
     let row: Option<Row> = transaction
         .query_row(
             "SELECT taskId, activeWeekdaysMask, intervalDays, intervalAnchor, placementColumn, dropsAtDayEnd,
-                    expiryRule, expiresAt, sourceTaskId, createdAt, archivedAt
+                    expiryRule, expiresAt, sourceTaskId, createdAt, archivedAt,
+                    COALESCE((SELECT parentTaskId FROM tasks WHERE tasks.id = dailies.taskId) = sourceTaskId, 0)
              FROM dailies WHERE id = ?1",
             [daily_id],
             |row| {
@@ -476,6 +480,7 @@ fn stored_rule(
                     row.get(8)?,
                     row.get(9)?,
                     row.get(10)?,
+                    row.get(11)?,
                 ))
             },
         )
@@ -492,6 +497,7 @@ fn stored_rule(
         source,
         created,
         archived,
+        ends_with_source,
     )) = row
     else {
         return Ok(None);
@@ -531,6 +537,7 @@ fn stored_rule(
             placement,
         },
         source_task_id: source,
+        ends_with_source,
     }))
 }
 
@@ -569,7 +576,10 @@ pub(crate) fn habits_list(
     Ok(id)
 }
 
-fn kanban_column(transaction: &Transaction, task_id: &str) -> Result<Option<String>, CoreError> {
+pub(crate) fn kanban_column(
+    transaction: &Transaction,
+    task_id: &str,
+) -> Result<Option<String>, CoreError> {
     Ok(transaction
         .query_row(
             "SELECT kanbanColumn FROM task_metadata WHERE taskId = ?1",
@@ -582,7 +592,7 @@ fn kanban_column(transaction: &Transaction, task_id: &str) -> Result<Option<Stri
 
 /// `WorkspaceStore.writeKanbanColumn`: taking a card out of a column also
 /// takes it off the day's ladder.
-fn write_column(
+pub(crate) fn write_column(
     transaction: &Transaction,
     task_id: &str,
     column: Option<&str>,

@@ -121,7 +121,7 @@ pub(crate) fn resolve(zone: Tz, local: NaiveDateTime) -> DateTime<Utc> {
     }
 }
 
-fn weekday(name: &str) -> Option<Weekday> {
+pub(crate) fn weekday(name: &str) -> Option<Weekday> {
     Some(match name {
         "sunday" | "sun" => Weekday::Sun,
         "monday" | "mon" => Weekday::Mon,

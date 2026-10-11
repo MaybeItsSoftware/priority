@@ -11,6 +11,7 @@
 
 use chrono::{NaiveDate, Weekday};
 
+use crate::commitments::{self, CommitmentSchedule};
 use crate::dailies;
 use crate::habits::{self, Expiry, Rule, local_day, start_of_day_ms};
 use crate::periodic::{self, Cadence};
@@ -224,6 +225,27 @@ pub fn habit_reconciled_column(
 #[uniffi::export]
 pub fn habit_list_id(workspace_id: String) -> String {
     habits::habits_list_id(&workspace_id)
+}
+
+// MARK: - Commitments
+
+/// Reads a commitment's schedule ("daily", "weekdays", "every friday",
+/// "every 2 weeks", "mon, wed, fri"); `None` for anything else.
+#[uniffi::export]
+pub fn commitment_schedule(rule: String) -> Option<CommitmentSchedule> {
+    commitments::schedule(&rule)
+}
+
+/// A schedule written back in the syntax `commitment_schedule` reads.
+#[uniffi::export]
+pub fn commitment_rule_text(schedule: CommitmentSchedule) -> String {
+    commitments::rule_text(&schedule)
+}
+
+/// The name a new commitment on a task is offered: "Work on <task>".
+#[uniffi::export]
+pub fn commitment_default_title(task_title: String) -> String {
+    commitments::default_title(&task_title)
 }
 
 // MARK: - Waiting follow-ups
