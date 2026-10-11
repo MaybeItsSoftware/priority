@@ -241,7 +241,7 @@ final class WorkspaceCommandDispatchTests: XCTestCase {
       WorkspaceCommandCatalog.sequences(on: .outline),
       [
         "ee", "ea", "ei", "dd", "nn", "tt", "mm", "gl", "uu", "td", "tm", "cd", "cn", "ct",
-        "dr", "tc", "gb", "ww", "bb", "gh", "sd", "oo", "pc", "xx", "gg", "za", "gf", "gx",
+        "dr", "tc", "gb", "ww", "bb", "gh", "sd", "oo", "pc", "xx", "gg", "za", "gf", "gx", "ga",
       ])
     let written = Set(
       WorkspaceCommandCatalog.all.flatMap(\.allKeys).filter(WorkspaceCommandCatalog.isSequence))
@@ -363,6 +363,24 @@ final class WorkspaceCommandDispatchTests: XCTestCase {
       XCTAssertTrue(WorkspaceCommandCatalog.reachesIntoTextField("cmd+shift+enter", on: surface))
     }
     XCTAssertEqual(WorkspaceCommandCatalog[.focusStop].displayKeys, ["⌘⇧."])
+  }
+
+  /// ⌥⌘8 sits beside ⌘8 (focus) and, like ending a block, reaches past a
+  /// text field: saying where you are should not need the typing put down.
+  /// Not from the timeline, which takes only its short list: its other key
+  /// is `ga`, and admitting it would make `g` a sequence starter there.
+  func testWhatIsAvailableNowIsOptionCommandEightFromAnywhere() {
+    let key = WorkspaceCommandCatalog.key(
+      keyCode: 28, charactersIgnoringModifiers: "8", shift: false, ctrl: false, cmd: true, option: true)
+    XCTAssertEqual(key, "cmd+option+8")
+    for surface in WorkspaceCommandSurface.allCases where surface != .timeline {
+      XCTAssertEqual(
+        WorkspaceCommandCatalog.command(forKey: "cmd+option+8", on: surface)?.id, .focusSetAvailable, "\(surface)")
+      XCTAssertTrue(WorkspaceCommandCatalog.reachesIntoTextField("cmd+option+8", on: surface))
+    }
+    XCTAssertEqual(WorkspaceCommandCatalog[.focusSetAvailable].displayKeys.first, "⌘⌥8")
+    XCTAssertEqual(WorkspaceCommandCatalog.command(forKey: "ga", on: .outline)?.id, .focusSetAvailable)
+    XCTAssertTrue(WorkspaceCommandCatalog[.focusManageConditions].allKeys.isEmpty)
   }
 
   /// The full stop is spelled by its key only in a chord; bare, it is still

@@ -62,6 +62,8 @@ extension WorkspaceCommandCatalog {
     .windowDockNextTab, .windowDockPreviousTab,
     // Ending a block is not something to put the typing down for first.
     .focusFinish, .focusStop,
+    // ⌥⌘8, beside ⌘8: saying where you are is part of opening the panel.
+    .focusSetAvailable,
   ]
 
   /// Surfaces where Esc in a text field is the surface's Esc rather than the

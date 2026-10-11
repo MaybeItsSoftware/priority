@@ -20,8 +20,9 @@ enum DaySurface {
 /// has cost, and the one you are on carrying its own controls.
 ///
 /// It deliberately does *not* put you through the focus screen's questions —
-/// conditions, an available-time window, an estimate to commit to before you
-/// may begin. That ceremony belongs to deciding what a day should be. This is
+/// an available-time window, an estimate to commit to before you may begin.
+/// That ceremony belongs to deciding what a day should be. Conditions get one
+/// quiet line on the panel, since they decide what is on offer at all. This is
 /// the surface you work a day from, so a task is a row you press play on, and
 /// the row you are on grows a pause, a skip and a tick.
 struct DayView: View {
@@ -59,6 +60,10 @@ struct DayView: View {
       } else if surface.isPanel {
         header
         summary
+        FocusPanelContextLine {
+          onClose?(.toWindow)
+          AppDelegate.shared.showMainWindow()
+        }
         field
         FocusRule()
         content(rows)

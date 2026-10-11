@@ -43,6 +43,8 @@ extension WorkspaceViewModel {
     switch id {
     case .focusFinish: finishFocusBlock()
     case .focusStop: stopFocusSession()
+    case .focusSetAvailable: presentOverlay(.availability)
+    case .focusManageConditions: presentOverlay(.conditions)
     default: openFocusPanel()
     }
   }
@@ -118,7 +120,7 @@ extension WorkspaceViewModel {
       // selectList leaves a full-pane screen itself.
       if let inbox = inboxList { selectList(inbox.id) }
       requestKeyboardFocus(.tasks)
-    case .goFocus, .focusFinish, .focusStop: runFocusCommand(id)
+    case .goFocus, .focusFinish, .focusStop, .focusSetAvailable, .focusManageConditions: runFocusCommand(id)
     case .goTimeline: toggleDockTab(.timeline)
     case .goListNavigator: presentOverlay(.listNavigator)
     case .goSearch: presentSearch()

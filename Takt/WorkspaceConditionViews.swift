@@ -2,28 +2,43 @@ import TaktCore
 import TaktWorkspace
 import SwiftUI
 
+/// What is available now, in full: the conditions that hold, the time you
+/// have, what you want from it, and when to stop trusting the answer.
+///
+/// Shown in a popover from the status bar and from the focus panel's context
+/// line. ⌥⌘8 reaches the conditions alone, as a keyboard picker.
 struct WorkspaceFocusContextControls: View {
   @Environment(\.theme) private var theme
   @Environment(WorkspaceViewModel.self) private var model
-  @State private var showsConditions = false
+  /// Opens the conditions manager. The status bar presents the window's
+  /// overlay; the panel has to bring the window forward first.
+  let onManage: () -> Void
 
   var body: some View {
-    VStack(alignment: .leading, spacing: theme.space.sm) {
-      ScrollView(.horizontal) {
-        HStack(spacing: theme.space.xs) {
-          MicroLabel("Available now")
-          ForEach(model.focusConditions.filter { condition in
-            !condition.isArchived || model.focusContext.conditionIDs.contains(condition.id) ||
-              model.taskPlanningByID.values.contains { plan in
-                (plan.requirementGroups ?? []).contains { $0.contains(condition.id) }
-              }
-          }) { condition in
-            Button(condition.name) { model.toggleFocusCondition(condition) }
-              .buttonStyle(FocusChipButtonStyle(isOn: model.focusContext.conditionIDs.contains(condition.id)))
-              .help(condition.isLocation ? "Current location" : "Available capability")
-          }
-          WorkspacePaneIconButton("slider.horizontal.3", title: "Manage conditions") { showsConditions = true }
+    VStack(alignment: .leading, spacing: theme.space.md) {
+      HStack(spacing: theme.space.sm) {
+        MicroLabel("Available now")
+        Spacer(minLength: theme.space.sm)
+        if !model.focusContext.conditionIDs.isEmpty {
+          Button("Clear") { model.clearFocusConditions() }
+            .buttonStyle(.plain)
+            .font(theme.captionFont)
+            .foregroundStyle(theme.muted)
+            .help("Nothing beyond the laptop: only tasks with no conditions are offered")
         }
+        Button("Manage…") { onManage() }
+          .buttonStyle(.plain)
+          .font(theme.captionFont)
+          .foregroundStyle(theme.primary)
+          .commandHelp(.focusManageConditions, note: "Add, rename or archive conditions")
+      }
+      if model.focusConditions.isEmpty {
+        Text(WorkspaceConditionCopy.explanation + " None yet: add one with Manage.")
+          .font(theme.captionFont)
+          .foregroundStyle(theme.muted)
+          .fixedSize(horizontal: false, vertical: true)
+      } else {
+        WorkspaceConditionChips()
       }
       if !model.suggestedContextIDs.isEmpty {
         HStack(spacing: theme.space.sm) {
@@ -39,6 +54,7 @@ struct WorkspaceFocusContextControls: View {
         }
         .font(theme.captionFont)
       }
+      FocusRule()
       HStack(spacing: theme.space.sm) {
         ThemedMenu(model.availableUntil.map { "Until \($0.formatted(date: .omitted, time: .shortened))" } ?? "Available time") {
           Button("No time limit") { model.availableUntil = nil; model.focusContextChanged() }
@@ -52,14 +68,14 @@ struct WorkspaceFocusContextControls: View {
             selection: Binding(get: { model.availableUntil ?? end }, set: { model.availableUntil = $0; model.focusContextChanged() }),
             includesTime: true)
         }
-        ThemedSegmentedPicker(
-          selection: Binding(get: { model.focusContext.mode }, set: { model.focusContext.mode = $0; model.focusContextChanged() }),
-          options: [
-            ThemedPickerOption("Make progress", value: FocusTimeMode.progress),
-            ThemedPickerOption("Finish something", value: FocusTimeMode.finish),
-          ])
-        .accessibilityLabel("Goal")
       }
+      ThemedSegmentedPicker(
+        selection: Binding(get: { model.focusContext.mode }, set: { model.focusContext.mode = $0; model.focusContextChanged() }),
+        options: [
+          ThemedPickerOption("Make progress", value: FocusTimeMode.progress),
+          ThemedPickerOption("Finish something", value: FocusTimeMode.finish),
+        ])
+      .accessibilityLabel("Goal")
       HStack(spacing: theme.space.sm) {
         Toggle("Context expires", isOn: Binding(get: { model.contextExpiresAt != nil }, set: {
           model.contextExpiresAt = $0 ? Date.now.addingTimeInterval(3600) : nil; model.focusContextChanged()
@@ -70,89 +86,179 @@ struct WorkspaceFocusContextControls: View {
             includesTime: true)
         }
       }.font(theme.captionFont)
-      if model.focusContext.conditionIDs.isEmpty {
-        Text("General laptop tasks are available. Select conditions to reveal and promote matching work.")
-          .font(theme.captionFont).foregroundStyle(theme.muted)
-      }
     }
-    .sheet(isPresented: $showsConditions) { WorkspaceConditionsEditor().environment(model) }
   }
 }
 
-private struct WorkspaceConditionsEditor: View {
+/// The selectable conditions as chips: on in the accent, off on a hairline.
+/// A location replaces the last location; anything else adds.
+struct WorkspaceConditionChips: View {
+  @Environment(\.theme) private var theme
+  @Environment(WorkspaceViewModel.self) private var model
+
+  var body: some View {
+    // Wraps rather than scrolls: a popover is narrow, and a chip scrolled out
+    // of sight is a condition you cannot see is on.
+    WorkspaceChipFlow(spacing: theme.space.xs) {
+      ForEach(model.selectableFocusConditions) { condition in
+        Button { model.toggleFocusCondition(condition) } label: {
+          Label(condition.name, systemImage: condition.isLocation ? "location" : "checkmark.circle")
+            .labelStyle(.titleAndIcon)
+        }
+        .buttonStyle(FocusChipButtonStyle(isOn: model.focusContext.conditionIDs.contains(condition.id)))
+        .help(condition.isLocation ? "A place: choosing it replaces the last one" : "A circumstance: combines with the rest")
+      }
+    }
+  }
+}
+
+/// Lays chips out left to right, onto a new line when the row is full.
+struct WorkspaceChipFlow: Layout {
+  var spacing: CGFloat
+
+  func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+    let rows = arrange(subviews, width: proposal.width ?? .infinity)
+    let width = rows.map(\.width).max() ?? 0
+    let height = rows.map(\.height).reduce(0, +) + spacing * CGFloat(max(rows.count - 1, 0))
+    return CGSize(width: width, height: height)
+  }
+
+  func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+    var originY = bounds.minY
+    for row in arrange(subviews, width: bounds.width) {
+      var originX = bounds.minX
+      for index in row.indices {
+        let size = subviews[index].sizeThatFits(.unspecified)
+        subviews[index].place(at: CGPoint(x: originX, y: originY), proposal: ProposedViewSize(size))
+        originX += size.width + spacing
+      }
+      originY += row.height + spacing
+    }
+  }
+
+  private struct Row {
+    var indices: [Int] = []
+    var width: CGFloat = 0
+    var height: CGFloat = 0
+  }
+
+  private func arrange(_ subviews: Subviews, width: CGFloat) -> [Row] {
+    var rows: [Row] = []
+    var current = Row()
+    for index in subviews.indices {
+      let size = subviews[index].sizeThatFits(.unspecified)
+      if !current.indices.isEmpty, current.width + spacing + size.width > width {
+        rows.append(current)
+        current = Row()
+      }
+      current.width = current.indices.isEmpty ? size.width : current.width + spacing + size.width
+      current.height = max(current.height, size.height)
+      current.indices.append(index)
+    }
+    if !current.indices.isEmpty { rows.append(current) }
+    return rows
+  }
+}
+
+/// The words conditions are explained in, once, so the inspector, the
+/// popover and the overlays say the same thing.
+enum WorkspaceConditionCopy {
+  static let explanation = "Conditions are places or circumstances a task needs — Home, Campus, Floor space."
+  static let none = "No conditions — available whenever"
+}
+
+/// The status bar's word on where you are: the conditions on, or "Anywhere".
+/// Click for the full controls; ⌥⌘8 for the keyboard picker.
+struct WorkspaceFocusContextIndicator: View {
   @Environment(WorkspaceViewModel.self) private var model
   @Environment(\.theme) private var theme
-  @Environment(\.dismiss) private var dismiss
-  @State private var newName = ""
-  @State private var newIsLocation = false
+  @State private var showsControls = false
 
   var body: some View {
-    VStack(alignment: .leading, spacing: theme.space.lg) {
-      SheetTitle(
-        "Conditions",
-        subject: "Tasks refer to conditions by identity. Renaming keeps their requirements intact.")
-      ScrollView {
-        VStack(spacing: theme.space.md) {
-          ForEach(model.focusConditions) { condition in WorkspaceConditionEditorRow(condition: condition) }
+    let summary = model.focusContextSummary
+    Button { showsControls.toggle() } label: {
+      HStack(spacing: theme.space.xs) {
+        Image(systemName: summary == nil ? "location.slash" : "location.fill")
+          .foregroundStyle(summary == nil ? theme.dim : theme.primary)
+        if !model.focusConditions.isEmpty {
+          Text(summary ?? "Anywhere")
+            .foregroundStyle(summary == nil ? theme.dim : theme.ink)
+            .truncationMode(.tail)
+            .frame(maxWidth: 200, alignment: .leading)
+            .fixedSize(horizontal: true, vertical: false)
         }
       }
-      HStack(spacing: theme.space.sm) {
-        TextField("New condition", text: $newName)
-          .themedTextField()
-        Toggle("Location", isOn: $newIsLocation)
-          .toggleStyle(.themedSwitch)
-          .fixedSize()
-        Button("Add") {
-          model.createCondition(name: newName, isLocation: newIsLocation)
-          if model.errorMessage == nil { newName = "" }
-        }
-        .buttonStyle(FocusActionButtonStyle())
-        .disabled(newName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-      }
-      if let error = model.errorMessage {
-        Text(error).font(theme.captionFont).foregroundStyle(theme.danger)
-      }
-      HStack {
-        Spacer()
-        Button("Done") { dismiss() }
-          .buttonStyle(FocusActionButtonStyle(prominent: true))
-          .keyboardShortcut(.defaultAction)
-          .help("Done · ↩")
-      }
+      .contentShape(Rectangle())
     }
-    .padding(theme.space.xl)
-    .frame(width: 560, height: 420)
-    .background(theme.raised)
+    .buttonStyle(.plain)
+    .focusable(false)
+    .commandHelp(
+      .focusSetAvailable,
+      note: summary.map { "Available now: \($0). Click to change" }
+        ?? "Nothing set as available: only tasks with no conditions are offered. Click to change")
+    .accessibilityLabel(summary.map { "Available now: \($0)" } ?? "No conditions available")
+    .popover(isPresented: $showsControls, arrowEdge: .top) {
+      WorkspaceFocusContextControls {
+        showsControls = false
+        model.presentOverlay(.conditions)
+      }
+      .environment(model)
+      .padding(theme.space.lg)
+      .frame(width: 420)
+      .background(theme.raised)
+    }
   }
 }
 
-private struct WorkspaceConditionEditorRow: View {
+/// The focus panel's one line about where you are, above its field. Quiet
+/// until there are conditions to talk about: a workspace without any has
+/// nothing for it to say.
+struct FocusPanelContextLine: View {
   @Environment(WorkspaceViewModel.self) private var model
-  let condition: TaskCondition
-  @State private var name: String
-  @State private var location: Bool
-  @State private var archived: Bool
-
-  init(condition: TaskCondition) {
-    self.condition = condition
-    _name = State(initialValue: condition.name)
-    _location = State(initialValue: condition.isLocation)
-    _archived = State(initialValue: condition.isArchived)
-  }
+  @Environment(\.theme) private var theme
+  /// Hands the panel back so the window can take over, for Manage.
+  let onOpenWindow: () -> Void
+  @State private var showsControls = false
 
   var body: some View {
-    HStack {
-      TextField("Name", text: $name)
-        .themedTextField()
-      Toggle("Location", isOn: $location)
-        .toggleStyle(.themedSwitch)
-        .fixedSize()
-      Toggle("Archived", isOn: $archived)
-        .toggleStyle(.themedSwitch)
-        .fixedSize()
-      Button("Save") { model.saveCondition(condition, name: name, isLocation: location, isArchived: archived) }
-        .buttonStyle(FocusActionButtonStyle())
-        .disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+    if !model.focusConditions.isEmpty {
+      let summary = model.focusContextSummary
+      Button { showsControls.toggle() } label: {
+        HStack(spacing: theme.space.xs) {
+          Image(systemName: summary == nil ? "location.slash" : "location.fill")
+            .foregroundStyle(summary == nil ? theme.dim : theme.primary)
+          Text(summary ?? "Anywhere — only tasks with no conditions")
+            .foregroundStyle(summary == nil ? theme.muted : theme.ink)
+            .lineLimit(1)
+            .truncationMode(.tail)
+          if !model.suggestedContextIDs.isEmpty {
+            Text("· last context waiting").foregroundStyle(theme.warning)
+          }
+          Spacer(minLength: theme.space.sm)
+          Text(WorkspaceCommandHelpText.firstKey(for: .focusSetAvailable))
+            .font(theme.monoCaptionFont)
+            .foregroundStyle(theme.dim)
+        }
+        .font(theme.captionFont)
+        .contentShape(Rectangle())
+      }
+      .buttonStyle(.plain)
+      .focusable(false)
+      .commandHelp(.focusSetAvailable, note: "What is available now: decides which tasks the day offers")
+      .padding(.horizontal, theme.space.lg)
+      .padding(.bottom, theme.space.sm)
+      .onChange(of: model.panelContextRequest) { _, _ in showsControls.toggle() }
+      .popover(isPresented: $showsControls, arrowEdge: .bottom) {
+        WorkspaceFocusContextControls {
+          showsControls = false
+          onOpenWindow()
+          model.presentOverlay(.conditions)
+        }
+        .environment(model)
+        .padding(theme.space.lg)
+        .frame(width: 420)
+        .background(theme.raised)
+      }
     }
   }
 }
@@ -162,6 +268,10 @@ struct WorkspaceTaskPlanningEditor: View {
   @Environment(\.theme) private var theme
   let task: WorkspaceTask
   let values: TaskEditorValues
+  @State private var isAddingCondition = false
+  @State private var newConditionName = ""
+  @State private var newConditionIsLocation = false
+  @FocusState private var isNewConditionFocused: Bool
 
   var body: some View {
     VStack(alignment: .leading, spacing: theme.space.sm) {
@@ -180,7 +290,12 @@ struct WorkspaceTaskPlanningEditor: View {
       .commandHelp(.taskEditStart)
       MicroLabel("Conditions")
       if (values.requirementGroups ?? []).isEmpty {
-        Text("Anytime, on your laptop").font(theme.captionFont).foregroundStyle(theme.muted)
+        Text(WorkspaceConditionCopy.none).font(theme.captionFont).foregroundStyle(theme.muted)
+        if model.focusConditions.isEmpty {
+          Text(WorkspaceConditionCopy.explanation)
+            .font(theme.captionFont).foregroundStyle(theme.dim)
+            .fixedSize(horizontal: false, vertical: true)
+        }
       }
       ForEach(Array((values.requirementGroups ?? []).enumerated()), id: \.offset) { index, group in
         VStack(alignment: .leading, spacing: theme.space.xs) {
@@ -208,10 +323,35 @@ struct WorkspaceTaskPlanningEditor: View {
         ForEach(model.focusConditions.filter { condition in
           !condition.isArchived && !(values.requirementGroups ?? []).contains([condition.id])
         }) { condition in
-          Button(condition.name) { edit { $0.requirementGroups = ($0.requirementGroups ?? []) + [[condition.id]] } }
+          Button(condition.name) { require(condition.id) }
+        }
+        if model.focusConditions.contains(where: { !$0.isArchived }) { Divider() }
+        Button("New condition…") {
+          newConditionName = ""
+          newConditionIsLocation = false
+          isAddingCondition = true
         }
       }
       .inspectorStop("condition.add")
+      if isAddingCondition {
+        HStack(spacing: theme.space.sm) {
+          TextField("New condition", text: $newConditionName, prompt: Text("Home, Floor space…"))
+            .themedTextField()
+            .inspectorField("condition.new")
+            .focused($isNewConditionFocused)
+            .onSubmit(addNewCondition)
+            .onExitCommand { isAddingCondition = false }
+          Toggle("Place", isOn: $newConditionIsLocation)
+            .toggleStyle(.themedSwitch)
+            .fixedSize()
+            .help("A place replaces the last place when you say where you are; anything else combines")
+          Button("Add", action: addNewCondition)
+            .buttonStyle(FocusActionButtonStyle())
+            .disabled(newConditionName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+        }
+        .font(theme.captionFont)
+        .onAppear { DispatchQueue.main.async { isNewConditionFocused = true } }
+      }
       Toggle("Must finish in one sitting", isOn: Binding(get: { current.requiresSingleSitting == true }, set: { enabled in
         edit { $0.requiresSingleSitting = enabled ? true : nil }
       }))
@@ -237,6 +377,17 @@ struct WorkspaceTaskPlanningEditor: View {
 
   private var current: TaskEditorValues { model.taskEditor.draft(for: task.id)?.values ?? values }
   private func edit(_ change: (inout TaskEditorValues) -> Void) { model.taskEditor.edit(task.id, change) }
+  private func require(_ id: String) { edit { $0.requirementGroups = ($0.requirementGroups ?? []) + [[id]] } }
+
+  /// Makes the condition and requires it in one go: the menu that offers
+  /// conditions is where you find out you need one that does not exist yet.
+  private func addNewCondition() {
+    let name = newConditionName.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard !name.isEmpty, let created = model.createCondition(name: name, isLocation: newConditionIsLocation) else { return }
+    require(created.id)
+    isAddingCondition = false
+    newConditionName = ""
+  }
   private func remove(_ id: String, from index: Int) {
     edit { values in
       var groups = values.requirementGroups ?? []

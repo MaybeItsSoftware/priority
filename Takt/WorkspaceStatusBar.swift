@@ -174,6 +174,9 @@ private struct WorkspaceStatusTrailing: View {
       if model.hasFocusSessionToEnd {
         FocusStopButton(compact: true)
       }
+      // What is available now, which decides what the day and the panel
+      // offer. Click for the controls; ⌥⌘8 for the keyboard picker.
+      WorkspaceFocusContextIndicator()
       tally
       sync
     }

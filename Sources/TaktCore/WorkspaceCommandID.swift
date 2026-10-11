@@ -32,7 +32,7 @@ public enum WorkspaceCommandID: String, CaseIterable, Sendable {
   case taskMoveToPreviousList, taskMoveToNextList
 
   // Focus
-  case focusFinish, focusStop
+  case focusFinish, focusStop, focusSetAvailable, focusManageConditions
 
   // Plan
   case planEnterTask, planLeaveTask, planHideCompleted

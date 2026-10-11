@@ -925,6 +925,9 @@ enum WorkspaceSidebarItem: Identifiable {
   var taskPlanningByID: [String: TaskPlanning] = [:]
   var focusContext = FocusContext()
   var suggestedContextIDs: Set<String> = []
+  /// Moves when ⌥⌘8 is pressed in the focus panel, which opens its own
+  /// conditions popover rather than the window's overlay.
+  var panelContextRequest = 0
   var contextExpiresAt: Date?
   var availableUntil: Date?
   var blockedFocusTasks: [BlockedFocusTask] = []

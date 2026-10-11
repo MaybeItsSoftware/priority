@@ -96,6 +96,7 @@ something you already have to know.
 | `gf` | Start a focus block on the task — on Today, queue it behind a running block |
 | `Cmd+Shift+Return` | Finish the running focus block — completes its task and asks how it went, as Done does. Works from anywhere in the window, inside a field too |
 | `Cmd+Shift+.` | Stop the running focus block — the time so far is logged unscored, the task stays open and the queue is dropped. Works from anywhere, the focus panel included |
+| `Cmd+Alt+8` / `ga` | Set what's available now — the conditions (Home, Campus, Floor space…) that hold here, which decide what the day offers. See [Conditions](#conditions) |
 | `f` / `Shift+F` then a letter, `;` | Vim's find: the next / previous task (in the sidebar, list) whose title starts with that letter; `;` repeats it |
 | `gg` / `Shift+G`, `Ctrl+D` / `Ctrl+U` | First / last task, eight down / up (vim) |
 | `gx` / `Cmd+O` | Open the task's first link (vim's open-the-URL-under-the-cursor) |
@@ -326,6 +327,29 @@ running one growing live, and the day's breakdown under it. `←` / `→` (or `h
 breakdown and `o` opens the task under the cursor in its own list. `Esc` hands
 the keyboard back to the work and leaves the timeline open; `Cmd+9` or `r`
 puts it away.
+
+### Conditions
+
+A **condition** is a place or circumstance a task needs before it is worth
+starting — *Home*, *Campus*, *Floor space*. A task that requires one stays out
+of the day and the panel (its badge says what it needs) until you say that
+condition holds; a task with no conditions is available whenever.
+
+- **Saying what's available now**: `Cmd+Alt+8` (or `ga`, or **Set what's
+  available now…** in the palette) opens a picker — `↑`/`↓` choose, `Space`
+  turns a condition on or off, `Return` is done, and `Cmd+Return` makes a new
+  one from what you typed. The status bar shows the active conditions (or
+  *Anywhere*); click it for the full controls, which add an available-time
+  window, a goal (make progress or finish something) and an expiry. The focus
+  panel has the same line above its field, and `Cmd+Alt+8` there opens it.
+  A **place** replaces the last place, since you are in one at a time; other
+  conditions combine. What you set is kept across relaunches; a context that
+  expires is offered back with **Use again**.
+- **Managing them**: **Manage conditions…** in the palette, or **Manage…** in
+  the controls, adds, renames (tasks keep their requirements) and archives.
+- **Requiring one**: in the inspector's Plan section, **Add required
+  condition** — or **New condition…** at the foot of that menu, which makes it
+  and requires it at once. **Or…** widens a requirement to either of two.
 
 ### The focus panel
 

@@ -283,7 +283,9 @@ final class FocusPanelWindow: NSPanel {
   /// Finish and Stop, by whatever keys the keymap gives them, answered here
   /// because the panel is where a block runs and an accessory app has no
   /// main menu to carry their key equivalents. Finishing from here asks its
-  /// question here too.
+  /// question here too. "Set what's available now" opens the panel's own
+  /// conditions popover — or, with no conditions yet to choose from, the
+  /// window's picker, which is where the first one is made.
   @MainActor
   private func endsFocusBlock(_ event: NSEvent, flags: NSEvent.ModifierFlags) -> Bool {
     guard let key = WorkspaceCommandCatalog.key(
@@ -298,6 +300,14 @@ final class FocusPanelWindow: NSPanel {
       return true
     case .focusFinish?:
       workspace.finishFocusBlock(from: .panel)
+      return true
+    case .focusSetAvailable?:
+      if workspace.focusConditions.isEmpty {
+        AppDelegate.shared.showMainWindow()
+        workspace.presentOverlay(.availability)
+      } else {
+        workspace.panelContextRequest += 1
+      }
       return true
     default:
       return false

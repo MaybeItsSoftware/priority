@@ -57,8 +57,8 @@ final class WorkspaceCommandCatalogTests: XCTestCase {
     XCTAssertEqual(
       keyless,
       [
-        .windowOpenKeymap, .windowReloadKeymap, .windowShowDiagnostics, .windowOpenThemesFolder,
-        .windowReloadThemes, .windowExportTheme,
+        .focusManageConditions, .windowOpenKeymap, .windowReloadKeymap, .windowShowDiagnostics,
+        .windowOpenThemesFolder, .windowReloadThemes, .windowExportTheme,
       ])
   }
 

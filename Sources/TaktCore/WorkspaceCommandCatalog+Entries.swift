@@ -233,6 +233,13 @@ public enum WorkspaceCommandCatalog {
     .init(
       id: .focusStop, title: "Stop the focus block", group: "Focus", keys: ["cmd+shift+."],
       note: "Ends the session: the time so far is logged unscored, the task stays open and the queue is dropped"),
+    // Beside ⌘8, which opens the panel these conditions decide what it offers.
+    .init(
+      id: .focusSetAvailable, title: "Set what's available now…", group: "Focus", keys: ["cmd+option+8", "ga"],
+      note: "The conditions that hold here — Home, Campus, Floor space. A task that needs one waits until it is on"),
+    .init(
+      id: .focusManageConditions, title: "Manage conditions…", group: "Focus", keys: [],
+      note: "Add, rename or archive the places and circumstances tasks can require"),
   ]
 
   // MARK: - Plan
