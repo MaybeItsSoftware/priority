@@ -356,4 +356,37 @@ final class WorkspaceNestedListTests: XCTestCase {
     XCTAssertEqual(try store.visibleRootParentTaskID(for: standalone), nested.id)
     XCTAssertTrue(try store.tasks(in: standalone.id, parentTaskId: nested.id).isEmpty)
   }
+
+  /// ⌥← on a card at the top of a nested list's board moved it up a level,
+  /// out of the list, and the board then showed the list itself as a card.
+  func testOutdentStopsAtTheScopeItIsSeenIn() throws {
+    let nested = try store.createTask(listId: list.id, title: "Shakespeare", kind: .list)
+    let card = try store.createTask(listId: list.id, title: "Reimburse for posters", parentTaskId: nested.id)
+    let subtask = try store.createTask(listId: list.id, title: "Reimburse for chocolate", parentTaskId: card.id)
+
+    XCTAssertFalse(try store.outdentTask(id: card.id, within: nested.id))
+    XCTAssertEqual(try store.task(id: card.id)?.parentTaskId, nested.id)
+
+    // Below the top it still comes out a level, into the scope.
+    XCTAssertTrue(try store.outdentTask(id: subtask.id, within: nested.id))
+    XCTAssertEqual(try store.task(id: subtask.id)?.parentTaskId, nested.id)
+
+    // Seen from the list itself, the nested list's card has a level above it.
+    XCTAssertTrue(try store.outdentTask(id: card.id, within: nil))
+    XCTAssertNil(try store.task(id: card.id)?.parentTaskId)
+    XCTAssertFalse(try store.outdentTask(id: card.id, within: nil))
+  }
+
+  /// An imported list's wrapper root bounds its top level as an entered
+  /// task does.
+  func testOutdentStopsAtTheListsWrapperRoot() throws {
+    let imported = try XCTUnwrap(store.importTasks(workspaceId: workspaceID, listName: "Study", sourceSystem: "checkvist", seeds: [
+      .init(sourceId: "root", parentSourceId: nil, title: "Study", status: .open, sortOrder: 0),
+      .init(sourceId: "child", parentSourceId: "root", title: "Read", status: .open, sortOrder: 0)
+    ]))
+    let wrapperID = try XCTUnwrap(imported.list.visibleRootTaskId)
+    let child = try XCTUnwrap(store.tasks(in: imported.list.id, parentTaskId: wrapperID).first)
+    XCTAssertFalse(try store.outdentTask(id: child.id, within: nil))
+    XCTAssertEqual(try store.task(id: child.id)?.parentTaskId, wrapperID)
+  }
 }

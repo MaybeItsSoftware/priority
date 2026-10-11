@@ -109,10 +109,18 @@ extension WorkspaceViewModel {
     }
   }
 
+  /// Takes the task out a level, but never above the pane's own root: a card
+  /// at the top of a nested list's board stays in the list rather than
+  /// leaving it for the level the list sits on. A combined scope enters no
+  /// task, so there only a list's own root bounds it.
   func outdentTask(_ task: WorkspaceTask) {
     guard let store else { return }
     perform {
-      try store.outdentTask(id: task.id)
+      let moved = try store.outdentTask(id: task.id, within: isMultiListScope ? nil : scopeTaskID)
+      guard moved else {
+        onStatusMessage?("Already at the top level here")
+        return
+      }
       reloadOutline(refreshSidebar: task.isList)
     }
   }

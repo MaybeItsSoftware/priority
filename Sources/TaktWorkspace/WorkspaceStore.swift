@@ -445,6 +445,20 @@ public final class WorkspaceStore: @unchecked Sendable {
     try coreWrite { try core.outdentTask(id: id, nowMs: now.coreMilliseconds) }
   }
 
+  /// Outdents a task without taking it out of the scope it is seen in. A
+  /// task already at the top of the pane — its parent is the task entered
+  /// (`scopeTaskID`, a nested list say) or the list's own wrapper root — has
+  /// no level above it there: outdenting it carried it out of the scope, and
+  /// the scope then showed it from outside. Returns whether the task moved.
+  @discardableResult
+  public func outdentTask(id: String, within scopeTaskID: String?, now: Date = .now) throws -> Bool {
+    guard let task = try task(id: id), let parent = task.parentTaskId, parent != scopeTaskID else { return false }
+    let listRoot = try Self.mappingCoreErrors { try core.visibleRootParent(listId: task.listId) }
+    guard parent != listRoot else { return false }
+    try outdentTask(id: id, now: now)
+    return true
+  }
+
   /// Deletes a task and its subtree as one undo step. The write is the Rust
   /// core's (`tasks::delete_task`), shared with Android and the CLI.
   public func deleteTask(id: String) throws {
