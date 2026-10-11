@@ -13,10 +13,16 @@ import AppKit
 public struct SyncAuthUser: Equatable, Sendable {
   public var id: String
   public var email: String?
+  /// The name and picture the provider gave Supabase — Google's or Apple's
+  /// profile — for the account button. Nil for an email-and-password account.
+  public var name: String?
+  public var avatarURL: URL?
 
-  public init(id: String, email: String?) {
+  public init(id: String, email: String?, name: String? = nil, avatarURL: URL? = nil) {
     self.id = id
     self.email = email
+    self.name = name
+    self.avatarURL = avatarURL
   }
 }
 
@@ -149,7 +155,12 @@ public final class SupabaseSyncAuth: SyncAuthenticating {
   }
 
   private static func user(_ user: User) -> SyncAuthUser {
-    SyncAuthUser(id: user.id.uuidString.lowercased(), email: user.email)
+    // Google writes `avatar_url` and `picture`, GitHub-style providers only
+    // the first; the name is `full_name` or `name` depending on the provider.
+    let metadata = user.userMetadata
+    let avatar = (metadata["avatar_url"]?.stringValue ?? metadata["picture"]?.stringValue).flatMap(URL.init(string:))
+    let name = metadata["full_name"]?.stringValue ?? metadata["name"]?.stringValue
+    return SyncAuthUser(id: user.id.uuidString.lowercased(), email: user.email, name: name, avatarURL: avatar)
   }
 
   /// A refresh Supabase refused, or no session to refresh, is signed out.

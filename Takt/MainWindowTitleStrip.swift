@@ -51,6 +51,7 @@ struct MainWindowTitleStrip: View {
         .fixedSize()
         .layoutPriority(1)
       Spacer(minLength: 0)
+      WorkspaceAccountButton()
     }
     .padding(.leading, max(lightsInset, theme.space.md))
     .padding(.trailing, theme.space.md)

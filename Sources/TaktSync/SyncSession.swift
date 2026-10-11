@@ -121,6 +121,14 @@ public final class SyncSession {
 
   public var isSignedIn: Bool { credentials != nil }
 
+  /// Who is signed in, as the provider describes them: the name and picture
+  /// the account button shows. Read from the auth session, so it is there
+  /// after a relaunch without asking the server.
+  public var profile: SyncAuthUser? {
+    guard credentials != nil else { return nil }
+    return auth.currentUser
+  }
+
   /// The email shown as "Signed in as …": the account's, once known.
   public var email: String? { account?.email ?? credentials?.email }
 
