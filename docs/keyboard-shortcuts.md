@@ -212,7 +212,8 @@ They mean the same thing on every task surface:
 - **Space and `x` tick the task off** (or reopen it); `Shift+Space` cancels it
   instead — it stopped mattering, rather than got done. On Today, starting a
   card — a task on the day *is* a block to run — is `gf`, and `gf` again on
-  the running card finishes it.
+  the running card finishes it. From anywhere else, a field included,
+  `Cmd+Shift+Return` finishes the running block and `Cmd+Shift+.` stops it.
 - **`→` and `]` open the task** — its subtasks as a board of their own
   on the board and the matrix; in the outline `→` folds and unfolds instead
   (below). `←` and `[` leave again.

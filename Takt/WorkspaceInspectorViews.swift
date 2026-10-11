@@ -149,6 +149,8 @@ struct LocalTaskInspector: View {
             .foregroundStyle(theme.primary)
             .inspectorStop("focus.open")
             .commandHelp(.goFocus)
+          Spacer(minLength: 0)
+          FocusStopButton()
         }
       } else {
         Button { model.startFocus(on: task) } label: {

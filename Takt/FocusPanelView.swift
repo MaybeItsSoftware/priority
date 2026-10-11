@@ -44,8 +44,9 @@ struct FocusPanelView: View {
 
 /// The running block as one row: what you are doing and how long it has had.
 ///
-/// Nothing else is drawn until the pointer is over it. The keys reach
-/// everything a block needs — Space finishes and asks how it went, Return
+/// Nothing else but Stop is drawn until the pointer is over it. The keys
+/// reach everything a block needs — Space finishes and asks how it went,
+/// ⇧⌘. stops without finishing, Return
 /// opens the day to add a task, P pauses, ↓ brings the day back, Esc hides —
 /// and hovering shows the same actions as buttons beside the clock, so a
 /// mouse is not left with only a tooltip. They take no height of their own:
@@ -95,11 +96,16 @@ private struct FocusPanelStrip: View {
           .fixedSize()
       }
       .layoutPriority(1)
+      // Always drawn, unlike the hover actions: the one control a block
+      // should never make you hunt for is the way out of it.
+      FocusStopButton(iconOnly: true)
     }
     .padding(.horizontal, theme.space.lg)
     .frame(maxWidth: .infinity, maxHeight: .infinity)
     .contentShape(Rectangle())
-    .help("Space finishes · Return adds a task · P pauses · ↓ shows the day · ⌘Return opens the window · Esc hides")
+    .help(
+      "Space finishes · \(WorkspaceCommandHelpText.firstKey(for: .focusStop)) stops · Return adds a task · "
+        + "P pauses · ↓ shows the day · ⌘Return opens the window · Esc hides")
     .focusable()
     .focused($hasKeyboard)
     // The same two keys as everywhere else: Space completes the task, which

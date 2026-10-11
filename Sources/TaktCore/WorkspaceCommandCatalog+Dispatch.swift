@@ -38,6 +38,8 @@ extension WorkspaceCommandCatalog {
     .windowUndo, .windowRedo, .windowToggleSidebar, .windowToggleInspectorPane,
     .windowToggleRightDock, .windowToggleDoneRail, .windowToggleAgentPanel, .windowToggleProgressDock,
     .windowCloseAllDocks,
+    // A running block can be ended from anywhere, the timeline included.
+    .focusFinish, .focusStop,
     // The timeline sits in the right dock beside the work, so the keys that
     // move between regions have to get out of it as they get out of the rest.
     .goSidebarRegion, .goTaskRegion, .goInspectorRegion, .goCycleRegion,
@@ -58,6 +60,8 @@ extension WorkspaceCommandCatalog {
     .windowCloseAllDocks,
     // ⌘{ and ⌘} in the inspector, whose keyboard is nearly always in a field.
     .windowDockNextTab, .windowDockPreviousTab,
+    // Ending a block is not something to put the typing down for first.
+    .focusFinish, .focusStop,
   ]
 
   /// Surfaces where Esc in a text field is the surface's Esc rather than the
@@ -168,6 +172,12 @@ extension WorkspaceCommandCatalog {
     115: "home", 119: "end", 116: "pageup", 121: "pagedown",
   ]
 
+  /// The full stop's key code. In a chord it is spelled by the key rather
+  /// than its character, so ⇧⌘. reads `cmd+shift+.` and not the `>` Shift
+  /// makes of it. Only in a chord: a bare key is still its character, so a
+  /// layout that puts `:` there keeps its `:`.
+  private static let fullStopKeyCode: UInt16 = 47
+
   /// A key press spelled the way the catalogue spells its keys: modifiers in
   /// the order `cmd`, `ctrl`, `option`, `shift`, then the key.
   ///
@@ -189,7 +199,8 @@ extension WorkspaceCommandCatalog {
     option: Bool
   ) -> String? {
     let characters = rawCharacters.trimmingCharacters(in: .whitespacesAndNewlines)
-    let named = extraNameByKeyCode[keyCode] ?? ShortcutKeyToken.nameByKeyCode[keyCode]
+    let chordedFullStop = keyCode == fullStopKeyCode && (cmd || ctrl) ? "." : nil
+    let named = chordedFullStop ?? extraNameByKeyCode[keyCode] ?? ShortcutKeyToken.nameByKeyCode[keyCode]
     guard let base = named ?? (characters.isEmpty ? nil : characters.lowercased()) else {
       return nil
     }

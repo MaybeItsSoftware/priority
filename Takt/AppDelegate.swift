@@ -141,6 +141,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
       }
     }
     workspace.hasOrdinaryWindow = { [weak self] in self?.mainWindowController?.isVisible ?? false }
+    MenuBarWorkspace.shared.workspace = workspace
     // Finishing something is finishing something, whichever surface it
     // happened on. Before this the flourish only ever played on the focus
     // ladder, so the day list — the screen the app now opens on — was the one

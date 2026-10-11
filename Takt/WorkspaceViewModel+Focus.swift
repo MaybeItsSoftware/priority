@@ -261,4 +261,71 @@ extension WorkspaceViewModel {
       reloadNextUp()
     }
   }
+
+  // MARK: - Ending the block
+
+  /// Whether there is a session to end: running, on a break, or waiting on
+  /// its "how did that go?" question.
+  var hasFocusSessionToEnd: Bool {
+    guard let session = activeFocusSession else { return false }
+    return session.phase != .finished
+  }
+
+  /// Whether there is a block in hand to finish — a task on the clock and no
+  /// question already asked about it.
+  var hasFocusBlockToFinish: Bool {
+    hasFocusSessionToEnd && activeFocusTask != nil && pendingFocusCompletion == nil
+  }
+
+  /// "Finish the focus block": what Done does, from wherever the key was
+  /// pressed. It closes the task and asks how the block went. With no window
+  /// up the question goes to the panel, which is raised to ask it — a prompt
+  /// raised against a hidden surface is a block that never closes.
+  func finishFocusBlock(from surface: FocusCompletionSurface? = nil) {
+    guard hasFocusBlockToFinish else {
+      if !hasFocusSessionToEnd { onStatusMessage?("No focus block is running.") }
+      return
+    }
+    let surface = surface ?? (hasOrdinaryWindow?() == true ? .window : .panel)
+    if surface == .panel { openFocusPanel() }
+    requestFocusCompletion(from: surface)
+  }
+
+  /// "Stop the focus block": ends the session outright, as the phones' "End
+  /// session" does. The block in hand is logged as time without a score and
+  /// its task stays open; the queue behind it is dropped; nothing is asked
+  /// and nothing is celebrated. A question already up is settled the same
+  /// way, with the seconds it captured when Done was pressed.
+  func stopFocusSession(now: Date = .now) {
+    guard let store, hasFocusSessionToEnd else {
+      onStatusMessage?("No focus block is running.")
+      return
+    }
+    synchroniseFocusClock(now: now)
+    guard let session = activeFocusSession else { return }
+    let pending = pendingFocusCompletion
+    perform {
+      do {
+        if let pending {
+          try store.completeActiveFocusTask(
+            sessionId: pending.sessionID, elapsedSeconds: pending.seconds, completeTask: false,
+            expectedBlockId: pending.blockID, context: effectiveFocusContext, now: now)
+        } else if session.activeTaskId != nil {
+          try store.completeActiveFocusTask(
+            sessionId: session.id, elapsedSeconds: session.elapsedSeconds(now: now), completeTask: false,
+            expectedBlockId: session.activeBlockId, context: effectiveFocusContext, now: now)
+        }
+      } catch WorkspaceStoreError.noActiveFocusTask {
+        // Already logged or advanced elsewhere — the CLI, or the stale-block
+        // policy. There is still a session to end.
+      }
+      try store.finishFocusSession(id: session.id, now: now)
+      pendingFocusCompletion = nil
+      reloadFocus()
+      reloadOutline()
+      reloadDailies()
+      reloadNextUp()
+      onStatusMessage?("Focus stopped. The time so far is logged.")
+    }
+  }
 }

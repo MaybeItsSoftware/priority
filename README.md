@@ -94,6 +94,8 @@ something you already have to know.
 | `Shift+Space` | Cancel the task, or reinstate it — it stopped mattering, rather than got done |
 | `tc` | Hide or show completed tasks — a completed task stays put for three seconds and then leaves the list; `tc` shows them all again |
 | `gf` | Start a focus block on the task — on Today, queue it behind a running block |
+| `Cmd+Shift+Return` | Finish the running focus block — completes its task and asks how it went, as Done does. Works from anywhere in the window, inside a field too |
+| `Cmd+Shift+.` | Stop the running focus block — the time so far is logged unscored, the task stays open and the queue is dropped. Works from anywhere, the focus panel included |
 | `f` / `Shift+F` then a letter, `;` | Vim's find: the next / previous task (in the sidebar, list) whose title starts with that letter; `;` repeats it |
 | `gg` / `Shift+G`, `Ctrl+D` / `Ctrl+U` | First / last task, eight down / up (vim) |
 | `gx` / `Cmd+O` | Open the task's first link (vim's open-the-URL-under-the-cursor) |
@@ -301,6 +303,16 @@ The quality question is what turns minutes into points, so it is asked by
 default — but **Ask how each focus block went** in Settings turns it off, and
 blocks then close at ×1 without stopping.
 
+**Leaving a block** never means finding it first. `Cmd+Shift+Return` finishes
+it (Done: the task closes and the question is asked) and `Cmd+Shift+.` stops it
+(the session ends, the time so far is logged unscored and the task stays open),
+from anywhere in the window — inside a text field too — and from the focus
+panel. Both are in the **Task** menu, greyed while nothing runs, and in the
+command palette only while a block is running. A **Stop** button sits wherever
+a running block is drawn: in the status bar, on the panel's strip, on Today's
+running card and in the inspector of the task being worked on, and the menu
+bar item's menu has **Stop Focusing**. `Esc` still only hides the panel.
+
 The floating clock is a **companion, not a remote control that needs its
 station**: it names the task, draws the block's progress as a hairline, and
 carries pause, log and done, so closing the main window while a block is running
@@ -395,6 +407,7 @@ one.
 | `Space` | With the field empty, tick off the card you are on — on the running card, Done |
 | `Tab` | Start the card you are on, or queue it behind a running block |
 | `Cmd+Return` | Open it in the main window instead |
+| `Cmd+Shift+.` / `Cmd+Shift+Return` | Stop the running block / finish it |
 | `Esc` | Clear the field, then minimise to the running block's strip — or, with nothing running, hide the panel |
 | `Cmd+C` / `Cmd+V` | Copy and paste, sent straight to the field — an app with no Dock icon has no Edit menu to route them |
 

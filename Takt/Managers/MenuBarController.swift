@@ -148,9 +148,18 @@ class MenuBarController: NSObject {
   private func appendSessionItems(to menu: NSMenu) {
     guard let workspace,
       let session = workspace.activeFocusSession,
-      session.phase != .finished,
-      let task = workspace.activeFocusTask
+      session.phase != .finished
     else { return }
+    // A break, or a queue whose every task is blocked: a session with no
+    // task on the clock, which still has to be leavable from here.
+    guard let task = workspace.activeFocusTask else {
+      let header = NSMenuItem(title: "Focus session", action: nil, keyEquivalent: "")
+      header.isEnabled = false
+      menu.addItem(header)
+      menu.addItem(stopItem())
+      menu.addItem(.separator())
+      return
+    }
 
     let header = NSMenuItem(
       title: Self.truncatedFocusTitle(task.title, limit: 44), action: nil, keyEquivalent: "")
@@ -165,6 +174,7 @@ class MenuBarController: NSObject {
       prompt.target = self
       prompt.indentationLevel = 1
       menu.addItem(prompt)
+      menu.addItem(stopItem())
       menu.addItem(.separator())
       return
     }
@@ -197,7 +207,18 @@ class MenuBarController: NSObject {
     stop.indentationLevel = 1
     stop.toolTip = "Close the block and keep the task"
     menu.addItem(stop)
+    menu.addItem(stopItem())
     menu.addItem(.separator())
+  }
+
+  /// Ends the session there and then: no panel, no question. End Block logs
+  /// the block and moves on to the queue; this leaves focus altogether.
+  private func stopItem() -> NSMenuItem {
+    let item = NSMenuItem(title: "Stop Focusing", action: #selector(menuStopFocus), keyEquivalent: "")
+    item.target = self
+    item.indentationLevel = 1
+    item.toolTip = "Log the time so far, keep the task open and drop the queue"
+    return item
   }
 
   /// Today as menu items, each of which starts a focus session on the task.
@@ -270,6 +291,10 @@ class MenuBarController: NSObject {
 
   @objc private func menuEndBlock() {
     closeBlock(completingTask: false)
+  }
+
+  @objc private func menuStopFocus() {
+    workspace?.stopFocusSession()
   }
 
   /// Raises the panel first, then asks. The prompt is shown by whichever

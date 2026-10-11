@@ -10,7 +10,7 @@ public enum WorkspaceCommandCatalog {
   /// The shipped keys. What is in force — these with any user keymap laid
   /// over them — is `all`; see `WorkspaceKeyBindings`.
   public static let defaults: [WorkspaceCommand] =
-    go + task + plan + lists + window + timeline + done + motions
+    go + task + focus + plan + lists + window + timeline + done + motions
 
   public static var byID: [WorkspaceCommandID: WorkspaceCommand] { bindings.byID }
 
@@ -212,6 +212,25 @@ public enum WorkspaceCommandCatalog {
     .init(
       id: .taskMoveToNextList, title: "Move the task to the list below", group: "Task",
       keys: ["option+shift+down"], note: "The list below its own in the sidebar. mm picks any list"),
+  ]
+
+  // MARK: - Focus
+
+  /// The menu bar's Task menu carries these as a section of their own, after
+  /// starting a block, and greys them while nothing runs; the palette leaves
+  /// them out altogether until a block is running.
+  public static let focusMenu: [WorkspaceCommandID] = [.focusFinish, .focusStop]
+
+  /// Ending the block that is running, from wherever the keyboard is. Before
+  /// these the only way out by key was Space on the running card, which meant
+  /// finding the card first; a block you cannot leave is a mode you are stuck in.
+  private static let focus: [WorkspaceCommand] = [
+    .init(
+      id: .focusFinish, title: "Finish the focus block", group: "Focus", keys: ["cmd+shift+enter"],
+      note: "Completes its task and asks how it went, as Done does. Works from inside a field"),
+    .init(
+      id: .focusStop, title: "Stop the focus block", group: "Focus", keys: ["cmd+shift+."],
+      note: "Ends the session: the time so far is logged unscored, the task stays open and the queue is dropped"),
   ]
 
   // MARK: - Plan

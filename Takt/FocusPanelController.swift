@@ -1,5 +1,6 @@
 import AppKit
 import SwiftUI
+import TaktCore
 import TaktWorkspace
 
 /// The focus panel: a floating window you leave up, summoned by a global
@@ -258,6 +259,7 @@ final class FocusPanelWindow: NSPanel {
   /// field does nothing at all.
   override func performKeyEquivalent(with event: NSEvent) -> Bool {
     let flags = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
+    if endsFocusBlock(event, flags: flags) { return true }
     let character = event.charactersIgnoringModifiers?.lowercased()
     if flags == [.command, .shift], character == "z" {
       return NSApp.sendAction(Selector(("redo:")), to: nil, from: self)
@@ -276,5 +278,29 @@ final class FocusPanelWindow: NSPanel {
     }
     guard let action else { return super.performKeyEquivalent(with: event) }
     return NSApp.sendAction(action, to: nil, from: self)
+  }
+
+  /// Finish and Stop, by whatever keys the keymap gives them, answered here
+  /// because the panel is where a block runs and an accessory app has no
+  /// main menu to carry their key equivalents. Finishing from here asks its
+  /// question here too.
+  @MainActor
+  private func endsFocusBlock(_ event: NSEvent, flags: NSEvent.ModifierFlags) -> Bool {
+    guard let key = WorkspaceCommandCatalog.key(
+      keyCode: event.keyCode, charactersIgnoringModifiers: event.charactersIgnoringModifiers ?? "",
+      shift: flags.contains(.shift), ctrl: flags.contains(.control), cmd: flags.contains(.command),
+      option: flags.contains(.option)),
+      let workspace = AppDelegate.shared?.workspace
+    else { return false }
+    switch WorkspaceCommandCatalog.command(forKey: key, on: .anywhere)?.id {
+    case .focusStop?:
+      workspace.stopFocusSession()
+      return true
+    case .focusFinish?:
+      workspace.finishFocusBlock(from: .panel)
+      return true
+    default:
+      return false
+    }
   }
 }

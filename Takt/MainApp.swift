@@ -165,6 +165,11 @@ struct MainApp: App {
             }
             .commandShortcut(id)
           }
+          // Ending the block sits after the section that starts one.
+          if index == 0 {
+            Divider()
+            FocusMenuItems()
+          }
         }
         Divider()
         // The digits are one catalogue row that reads which digit ran it, so
@@ -225,6 +230,30 @@ struct MainApp: App {
           AppDelegate.shared.workspace.run(.windowShowDiagnostics)
         }
       }
+    }
+  }
+}
+
+/// The workspace as the menu bar may read it while it is being built, which
+/// is before `AppDelegate.shared` exists. Observable, so items that read
+/// through it update once the delegate fills it in and as the block changes.
+@MainActor @Observable
+final class MenuBarWorkspace {
+  static let shared = MenuBarWorkspace()
+  var workspace: WorkspaceViewModel?
+}
+
+/// Finish and Stop, greyed while there is nothing running to end. A view of
+/// its own so the enabled state is read where observation can see it.
+private struct FocusMenuItems: View {
+  var body: some View {
+    let workspace = MenuBarWorkspace.shared.workspace
+    ForEach(WorkspaceCommandCatalog.focusMenu, id: \.self) { id in
+      Button(WorkspaceCommandCatalog[id].title) {
+        AppDelegate.shared.workspace.run(id)
+      }
+      .commandShortcut(id)
+      .disabled(!(workspace?.isOffered(id) ?? false))
     }
   }
 }

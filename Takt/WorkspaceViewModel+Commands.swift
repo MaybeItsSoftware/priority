@@ -34,6 +34,27 @@ extension WorkspaceViewModel {
   func commandMatches(for query: String) -> [WorkspaceCommandQuery.Match] {
     WorkspaceCommandQuery.matches(
       query: query, surface: commandSurface, recents: recentCommandIDs)
+      .filter { isOffered($0.command.id) }
+  }
+
+  /// The focus panel and the two ways out of a block, in one arm of `run`
+  /// so the switch stays inside its length budget.
+  func runFocusCommand(_ id: WorkspaceCommandID) {
+    switch id {
+    case .focusFinish: finishFocusBlock()
+    case .focusStop: stopFocusSession()
+    default: openFocusPanel()
+    }
+  }
+
+  /// Ending a block is offered only while there is one: two rows that do
+  /// nothing most of the day would be two rows in the way.
+  func isOffered(_ id: WorkspaceCommandID) -> Bool {
+    switch id {
+    case .focusFinish: hasFocusBlockToFinish
+    case .focusStop: hasFocusSessionToEnd
+    default: true
+    }
   }
 
   // MARK: - Recently run
@@ -97,7 +118,7 @@ extension WorkspaceViewModel {
       // selectList leaves a full-pane screen itself.
       if let inbox = inboxList { selectList(inbox.id) }
       requestKeyboardFocus(.tasks)
-    case .goFocus: openFocusPanel()
+    case .goFocus, .focusFinish, .focusStop: runFocusCommand(id)
     case .goTimeline: toggleDockTab(.timeline)
     case .goListNavigator: presentOverlay(.listNavigator)
     case .goSearch: presentSearch()

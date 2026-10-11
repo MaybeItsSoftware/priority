@@ -345,6 +345,34 @@ final class WorkspaceCommandDispatchTests: XCTestCase {
     }
   }
 
+  /// ⇧⌘. stops a focus block and ⇧⌘↩ finishes it, from every surface and
+  /// from inside a field. ⇧⌘. is spelled by its key: Shift would make the
+  /// character `>`.
+  func testTheFocusBlockCanBeEndedFromAnywhere() {
+    let stop = WorkspaceCommandCatalog.key(
+      keyCode: 47, charactersIgnoringModifiers: ">", shift: true, ctrl: false, cmd: true, option: false)
+    XCTAssertEqual(stop, "cmd+shift+.")
+    let finish = WorkspaceCommandCatalog.key(
+      keyCode: 36, charactersIgnoringModifiers: "\r", shift: true, ctrl: false, cmd: true, option: false)
+    XCTAssertEqual(finish, "cmd+shift+enter")
+    for surface in WorkspaceCommandSurface.allCases {
+      XCTAssertEqual(WorkspaceCommandCatalog.command(forKey: "cmd+shift+.", on: surface)?.id, .focusStop, "\(surface)")
+      XCTAssertEqual(
+        WorkspaceCommandCatalog.command(forKey: "cmd+shift+enter", on: surface)?.id, .focusFinish, "\(surface)")
+      XCTAssertTrue(WorkspaceCommandCatalog.reachesIntoTextField("cmd+shift+.", on: surface))
+      XCTAssertTrue(WorkspaceCommandCatalog.reachesIntoTextField("cmd+shift+enter", on: surface))
+    }
+    XCTAssertEqual(WorkspaceCommandCatalog[.focusStop].displayKeys, ["⌘⇧."])
+  }
+
+  /// The full stop is spelled by its key only in a chord; bare, it is still
+  /// whatever the layout types there.
+  func testABareFullStopIsItsCharacter() {
+    let bare = WorkspaceCommandCatalog.key(
+      keyCode: 47, charactersIgnoringModifiers: ":", shift: false, ctrl: false, cmd: false, option: false)
+    XCTAssertEqual(bare, ":")
+  }
+
   /// ⌘← and ⌘→ move a card on the board, and still fold in the outline.
   func testCommandArrowsMoveACardOnlyOnTheBoard() {
     XCTAssertEqual(WorkspaceCommandCatalog.command(forKey: "cmd+left", on: .board)?.id, .planBoardMoveCardLeft)

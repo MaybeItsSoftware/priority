@@ -537,7 +537,8 @@ struct DayView: View {
   }
 
   /// Blitzit's strip, in Priority's vocabulary: pause, skip to the next queued
-  /// task, log the time without closing anything, and tick it off.
+  /// task, log the time without closing anything, stop altogether, and tick
+  /// it off.
   private func controlStrip(session: FocusSession) -> some View {
     HStack(spacing: theme.space.xs) {
       control(session.pausedAt == nil ? "pause.fill" : "play.fill",
@@ -549,6 +550,8 @@ struct DayView: View {
         control("arrow.down.right.and.arrow.up.left", "Minimise to the task and its clock (esc)") { onMinimise() }
       }
       Spacer(minLength: 0)
+      // Out of the block without closing the task or answering for it.
+      FocusStopButton()
       Button { finish() } label: {
         Label("Done", systemImage: "checkmark")
       }

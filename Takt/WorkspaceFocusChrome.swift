@@ -155,9 +155,12 @@ struct FocusActionButtonStyle: ButtonStyle {
   var prominent = false
   /// Larger padding for the few actions that are the point of their screen.
   var large = false
+  /// Caption-sized, for a control that sits in a band of captions — the
+  /// status bar — where the body-sized button would stand taller than the band.
+  var compact = false
 
   func makeBody(configuration: Configuration) -> some View {
-    FocusActionButtonBody(configuration: configuration, prominent: prominent, large: large)
+    FocusActionButtonBody(configuration: configuration, prominent: prominent, large: large, compact: compact)
   }
 }
 
@@ -169,17 +172,18 @@ private struct FocusActionButtonBody: View {
   let configuration: ButtonStyleConfiguration
   let prominent: Bool
   let large: Bool
+  let compact: Bool
   @State private var isHovering = false
 
   var body: some View {
     let shape = RoundedRectangle(cornerRadius: theme.controlRadius, style: .continuous)
     let pressed = configuration.isPressed
     return configuration.label
-      .font(theme.bodyFont(weight: prominent ? .semibold : .medium))
+      .font(compact ? theme.captionFont : theme.bodyFont(weight: prominent ? .semibold : .medium))
       .foregroundStyle(
         configuration.role == .destructive ? theme.danger : (prominent ? theme.primary : theme.ink))
-      .padding(.horizontal, large ? theme.space.md : theme.space.sm)
-      .padding(.vertical, large ? theme.space.sm : theme.space.xs)
+      .padding(.horizontal, large ? theme.space.md : (compact ? theme.space.xs : theme.space.sm))
+      .padding(.vertical, large ? theme.space.sm : (compact ? theme.space.xxs : theme.space.xs))
       .background(shape.fill(fill(pressed: pressed)))
       .overlay(
         shape.strokeBorder(
@@ -233,5 +237,32 @@ private struct FocusChipButtonBody: View {
           isOn ? theme.primary.opacity(Theme.statusBorderOpacity) : theme.border,
           lineWidth: theme.hairline))
       .contentShape(shape)
+  }
+}
+
+/// Stop: one click ends the running session wherever a running block is
+/// drawn — the status bar, the panel's strip, Today's running card, the
+/// inspector. The time so far is logged unscored and the task stays open;
+/// see `WorkspaceViewModel.stopFocusSession`. Escape only ever hid the panel,
+/// and Done only ever closed the task, so before this there was no way to
+/// simply leave a block that did not mean finishing its work.
+struct FocusStopButton: View {
+  @Environment(WorkspaceViewModel.self) private var model
+  var compact = false
+  /// Without its word, where the row it sits in is already a row of glyphs.
+  var iconOnly = false
+
+  var body: some View {
+    Button { model.stopFocusSession() } label: {
+      if iconOnly {
+        Image(systemName: "stop.fill")
+      } else {
+        Label("Stop", systemImage: "stop.fill")
+      }
+    }
+    .buttonStyle(FocusActionButtonStyle(compact: compact))
+    .focusable(false)
+    .commandHelp(.focusStop, note: "Stop focusing: log the time so far and keep the task open")
+    .accessibilityLabel("Stop the focus block")
   }
 }

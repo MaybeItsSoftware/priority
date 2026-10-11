@@ -168,6 +168,12 @@ private struct WorkspaceStatusTrailing: View {
       if let session = model.activeFocusSession, let task = model.activeFocusTask {
         runningBlock(session, task: task)
       }
+      // Beside the block it ends, on every screen of the window, so leaving
+      // a block never means finding it first. Also on a break or a blocked
+      // queue, when there is a session but no task to show.
+      if model.hasFocusSessionToEnd {
+        FocusStopButton(compact: true)
+      }
       tally
       sync
     }
