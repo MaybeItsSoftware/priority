@@ -189,6 +189,18 @@ final class BoardLinksTests: XCTestCase {
     XCTAssertEqual(layout.column(1).gapAbove["x"], 100)
   }
 
+  /// Space a column draws above a card for its own reasons — the label over
+  /// its blocked cards — moves the card and so its link.
+  func testSpaceAboveACardIsCounted() {
+    let links = BoardLinks(
+      columns: [[(id: "p", rowIDs: [])], [(id: "a", rowIDs: []), (id: "x", rowIDs: [])]], sources: ["x": "p"])
+    var metrics = metrics(heights: ["p": 40, "a": 30, "x": 30], headings: ["p": 50, "x": 10])
+    metrics.spaceAbove["x"] = 20
+    let layout = BoardLinkLayout.solve(links, metrics: metrics)
+    // x's heading sits at 30 + 20 + 10 = 60, below p's at 50: a step.
+    XCTAssertEqual(layout.column(1).steps, [.init(childID: "x", fromY: 50, toY: 60)])
+  }
+
   /// Neighbours sharing a rule overlap by it, and the layout counts that.
   func testCardSpacingIsCounted() {
     let links = BoardLinks(

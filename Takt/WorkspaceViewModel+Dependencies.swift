@@ -1,4 +1,5 @@
 import Foundation
+import TaktCore
 import TaktWorkspace
 
 /// Blocked by: a task that waits on other tasks until they are done. The rule
@@ -10,6 +11,24 @@ extension WorkspaceViewModel {
   /// Whether `task` is open and still waits on an open task.
   func isBlocked(_ task: WorkspaceTask) -> Bool {
     task.status == .open && blockedTaskIDs.contains(task.id)
+  }
+
+  /// The outline rows to draw the "Blocked" label above: the first of each
+  /// sibling group's blocked tail.
+  func blockedSectionStarts(in items: [TaskOutlineItem]) -> Set<String> {
+    guard !blockedTaskIDs.isEmpty else { return [] }
+    return BlockedSection.labelledIDs(
+      items.map { (id: $0.id, group: "\($0.task.listId)/\($0.task.parentTaskId ?? "")") },
+      blocked: Set(items.lazy.filter { self.isBlocked($0.task) }.map(\.id)))
+  }
+
+  /// The card in a column to draw the "Blocked" label above, if its cards
+  /// end with blocked ones.
+  func blockedSectionStart(inCards cards: [WorkspaceTask]) -> String? {
+    guard !blockedTaskIDs.isEmpty else { return nil }
+    return BlockedSection.labelledIDs(
+      cards.map { (id: $0.id, group: 0) }, blocked: Set(cards.lazy.filter { self.isBlocked($0) }.map(\.id))
+    ).first
   }
 
   /// The finder for a task to wait on, on the selected task. Nothing for a

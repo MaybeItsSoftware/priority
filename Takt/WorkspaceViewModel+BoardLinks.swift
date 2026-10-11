@@ -47,6 +47,13 @@ extension WorkspaceViewModel {
     update(&boardLinkMetrics.headingMids, cardID, mid)
   }
 
+  /// The height of the label over a column's blocked cards.
+  func reportBoardBlockedLabelHeight(_ height: Double) {
+    guard abs(boardBlockedLabelHeight - height) >= 0.5 else { return }
+    boardBlockedLabelHeight = height
+    if !boardLinks.isEmpty { queueBoardLinkSettle() }
+  }
+
   /// A linked row's top and middle on its card.
   func reportBoardRow(card cardID: String, row rowID: String, top: Double, mid: Double) {
     let key = BoardRowKey(card: cardID, row: rowID)
@@ -79,7 +86,16 @@ extension WorkspaceViewModel {
   /// while every card below it slid after: the card is new to the column, so
   /// there is no gap to grow from, only a jump to make look like one.
   func settleBoardLinks() {
-    let layout = BoardLinkLayout.solve(boardLinks, metrics: boardLinkMetrics)
+    var metrics = boardLinkMetrics
+    // The label over a column's blocked cards pushes them down as a gap would.
+    if !boardLinks.isEmpty, boardBlockedLabelHeight > 0, !blockedTaskIDs.isEmpty {
+      for column in boardColumns {
+        if let card = blockedSectionStart(inCards: tasks(in: column)) {
+          metrics.spaceAbove[card] = boardBlockedLabelHeight
+        }
+      }
+    }
+    let layout = BoardLinkLayout.solve(boardLinks, metrics: metrics)
     guard layout != boardLinkLayout else { return }
     boardLinkLayout = layout
   }

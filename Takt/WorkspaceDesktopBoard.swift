@@ -203,6 +203,7 @@ struct WorkspaceKanbanColumnView: View {
 
   var body: some View {
     let tasks = model.tasks(in: column)
+    let blockedStart = model.blockedSectionStart(inCards: tasks)
     // The card the selected row is drawn on, looked up in the index the
     // board keeps rather than found by walking each card's subtasks.
     let selectedCardID = selectedRowID.flatMap { model.boardRows(in: column).cardByRow[$0] }
@@ -234,15 +235,20 @@ struct WorkspaceKanbanColumnView: View {
           LazyVStack(alignment: .leading, spacing: -theme.hairline) {
             ForEach(tasks) { task in
               if model.draftsBeside(task.id, above: true) { draftRow }
-              WorkspaceKanbanCard(
-                task: task, column: column,
-                selectedRowID: task.id == selectedCardID ? selectedRowID : nil,
-                hasKeyboard: tasksHaveKeyboard && task.id == selectedCardID,
-                linkStepsIn: linkLayout.steps.contains { $0.childID == task.id },
-                selectedLinkID: selectedLink.flatMap {
-                  $0.childID == task.id || $0.sourceCardID == task.id ? $0.childID : nil
-                })
-                .environment(model)
+              // The label over the column's blocked cards rides with the
+              // first of them, so the card's gap and id carry both.
+              VStack(alignment: .leading, spacing: 0) {
+                if task.id == blockedStart { blockedDivider }
+                WorkspaceKanbanCard(
+                  task: task, column: column,
+                  selectedRowID: task.id == selectedCardID ? selectedRowID : nil,
+                  hasKeyboard: tasksHaveKeyboard && task.id == selectedCardID,
+                  linkStepsIn: linkLayout.steps.contains { $0.childID == task.id },
+                  selectedLinkID: selectedLink.flatMap {
+                    $0.childID == task.id || $0.sourceCardID == task.id ? $0.childID : nil
+                  })
+                  .environment(model)
+              }
                 // The gap that drops a card level with the row it stands for
                 // in an earlier column, exactly as the layout gives it: the
                 // layout already counts the hairline neighbours overlap by,
@@ -316,6 +322,18 @@ struct WorkspaceKanbanColumnView: View {
     .accessibilityElement(children: .contain)
     .accessibilityLabel("\(column.title) column")
     .accessibilityHint("Drop a task here to move it to \(column.title)")
+  }
+
+  /// The label over the column's blocked cards, which sink to its foot. Its
+  /// height moves the cards below it, so the link layout is told it.
+  private var blockedDivider: some View {
+    WorkspaceBlockedDivider()
+      .padding(.horizontal, WorkspaceBoardMetrics.columnPadding(theme))
+      .padding(.top, theme.space.sm)
+      .padding(.bottom, theme.space.xs)
+      .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { height in
+        model.reportBoardBlockedLabelHeight(Double(height))
+      }
   }
 
   private func cardGap(above cardID: String) -> CGFloat {
@@ -464,6 +482,9 @@ struct WorkspaceKanbanCard: View {
       }
       subtaskTree
     }
+    // Blocked, the whole card steps back — mark, title, badges and the
+    // subtasks that wait with it — while its rules and selection keep theirs.
+    .opacity(model.isBlocked(task) ? Theme.disabledOpacity : 1)
     .padding(.vertical, theme.space.xs)
     .padding(.horizontal, WorkspaceBoardMetrics.columnPadding(theme))
     .frame(maxWidth: .infinity, alignment: .leading)
@@ -569,7 +590,7 @@ struct WorkspaceKanbanCard: View {
       }
       .buttonStyle(.plain)
       .font(theme.bodyFont())
-      .foregroundStyle(task.status == .open && !model.isBlocked(task) ? theme.ink : theme.muted)
+      .foregroundStyle(task.status == .open ? theme.ink : theme.muted)
       .focusable()
       .multilineTextAlignment(.leading)
       .expandsWhenSelected(isSelected, lineLimit: 2)
@@ -732,7 +753,7 @@ struct WorkspaceKanbanCard: View {
           model.reportKeyboardFocus(.tasks)
         }
         .buttonStyle(.plain)
-        .foregroundStyle(isOpen && !model.isBlocked(item.task) ? theme.ink : theme.muted)
+        .foregroundStyle(isOpen ? theme.ink : theme.muted)
         .strikethrough(!isOpen)
         .multilineTextAlignment(.leading)
         .expandsWhenSelected(isRowSelected)
@@ -750,6 +771,9 @@ struct WorkspaceKanbanCard: View {
           .accessibilityHidden(true)
       }
     }
+    // A blocked subtask on a card that is not: the row steps back as a
+    // blocked card does. On a blocked card it already has.
+    .opacity(model.isBlocked(item.task) && !model.isBlocked(task) ? Theme.disabledOpacity : 1)
     .font(theme.captionFont)
     .padding(.vertical, theme.space.xxs)
     // Every row, not only the ones a link leaves from: moving a subtask to a

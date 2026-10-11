@@ -43,7 +43,9 @@ struct WorkspaceOutlinePane: View {
                   WorkspaceEmptyMessage("No tasks")
                     .outlineRowChrome()
                 } else {
+                  let blockedStarts = model.blockedSectionStarts(in: items)
                   ForEach(items) { item in
+                    if blockedStarts.contains(item.id) { blockedDivider(depth: item.depth) }
                     drafted(item) {
                       row(item, selectedID: selectedID, tasksHaveKeyboard: tasksHaveKeyboard)
                     }
@@ -66,7 +68,9 @@ struct WorkspaceOutlinePane: View {
             }
           } else {
             let parents = model.outlineParentIDs
+            let blockedStarts = model.blockedSectionStarts(in: model.outlineRows)
             ForEach(model.outlineRows) { item in
+              if blockedStarts.contains(item.id) { blockedDivider(depth: item.depth) }
               drafted(item) {
                 row(item, selectedID: selectedID, tasksHaveKeyboard: tasksHaveKeyboard,
                   fold: parents.contains(item.id) ? model.foldedTaskIDs.contains(item.id) : nil)
@@ -109,6 +113,22 @@ struct WorkspaceOutlinePane: View {
     if model.draftsBeside(item.id, above: false) {
       WorkspaceTaskDraftRow(depth: item.depth + (model.taskInsertionIsChild ? 1 : 0)).outlineRowChrome()
     }
+  }
+
+  /// The label over a sibling group's blocked tail, its text in the title
+  /// column of the rows it heads and the guides running on through it.
+  private func blockedDivider(depth: Int) -> some View {
+    WorkspaceBlockedDivider()
+      .padding(.leading, WorkspaceRowMetrics.iconWidth + theme.space.sm)
+      .padding(.leading, CGFloat(depth) * WorkspaceRowMetrics.indent(theme))
+      .padding(.top, theme.space.xs)
+      .padding(.bottom, theme.space.xxs)
+      .padding(.horizontal, theme.paneGutter)
+      .workspaceIndentGuides(
+        depth: depth,
+        origin: theme.paneGutter + WorkspaceRowMetrics.iconWidth / 2,
+        step: WorkspaceRowMetrics.indent(theme))
+      .outlineRowChrome()
   }
 
   private func row(
@@ -202,12 +222,16 @@ struct WorkspaceOutlineRow: View {
               ? WorkspaceCommandHelpText.text(for: .taskRename)
               : isBlocked ? "\(item.task.title) — waiting on another task" : item.task.title)
           .strikethrough(item.task.status != .open)
-          .foregroundStyle(item.task.status == .open && !isBlocked ? theme.ink : theme.muted)
+          .foregroundStyle(item.task.status == .open ? theme.ink : theme.muted)
       }
       WorkspaceWaitingBadges(task: item.task)
       WorkspaceTaskPlanningBadges(task: item.task, isExpanded: isSelected)
         .frame(maxWidth: 170, alignment: .leading)
     }
+    // Blocked, the whole row — mark, title and badges — steps back, not
+    // only its title's colour: a muted title beside full-strength badges
+    // read as a finished task's. The selection behind it keeps its weight.
+    .opacity(isBlocked ? Theme.disabledOpacity : 1)
     // On the row itself: a List row takes its face from the table style, not
     // from the window, so without this every title was in the system sans.
     .font(theme.bodyFont())

@@ -492,6 +492,9 @@ enum WorkspaceSidebarItem: Identifiable {
   /// cards write them as they lay out, and only the layout reads them.
   @ObservationIgnored var boardLinkMetrics = BoardLinkMetrics()
   @ObservationIgnored var boardLinkSolveQueued = false
+  /// The height of the "Blocked" label over a column's blocked cards, which
+  /// moves every card below it and so every link meeting one.
+  @ObservationIgnored var boardBlockedLabelHeight: Double = 0
 
   private func refoldOutline() {
     let rows = TaskOutlineFolding.visible(outline, folded: foldedTaskIDs)

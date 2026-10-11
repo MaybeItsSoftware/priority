@@ -281,6 +281,9 @@ public struct BoardLinkMetrics: Equatable, Sendable {
   /// Each linked row's top and middle, from its card's top.
   public var rowTops: [BoardRowKey: Double] = [:]
   public var rowMids: [BoardRowKey: Double] = [:]
+  /// Space a column draws above a card that is not a link's — the label
+  /// over its blocked cards — by card.
+  public var spaceAbove: [String: Double] = [:]
   /// The space between one card and the next in a column: negative when
   /// neighbours overlap to share a rule.
   public var cardSpacing: Double
@@ -367,6 +370,7 @@ public struct BoardLinkLayout: Equatable, Sendable {
       let estimate = measured.isEmpty ? metrics.estimatedCardHeight : measured.reduce(0, +) / Double(measured.count)
       var y = 0.0
       for card in cards {
+        y += metrics.spaceAbove[card] ?? 0
         tops[card] = y
         y += (metrics.cardHeights[card] ?? estimate) + metrics.cardSpacing
       }

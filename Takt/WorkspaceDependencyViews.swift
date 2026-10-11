@@ -191,3 +191,24 @@ struct WorkspaceDependencyInspectorSection: View {
     .help(isOpen ? "\(other.title) — open" : "\(other.title) — done")
   }
 }
+
+/// The quiet label over a group's blocked tasks — an outline parent's
+/// children, a board column's cards — which sink below the rest. A
+/// micro-label and a hairline, nothing to select: the keyboard walks the
+/// tasks either side of it as if it were not there.
+struct WorkspaceBlockedDivider: View {
+  @Environment(\.theme) private var theme
+
+  var body: some View {
+    HStack(spacing: theme.space.sm) {
+      MicroLabel("Blocked")
+        .fixedSize()
+      Rectangle()
+        .fill(theme.border)
+        .frame(height: theme.hairline)
+    }
+    .help("Waiting on other tasks; they rise again once those are done")
+    .accessibilityElement(children: .ignore)
+    .accessibilityLabel("Blocked: these tasks wait on others")
+  }
+}
