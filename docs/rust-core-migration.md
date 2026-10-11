@@ -255,8 +255,8 @@ covered the old copies pass against it.
    answers the Checkvist cursor and subtree spans for the sync and mutation
    services, all over tasks the core does not hold.
    `MatrixNavigation` and `MatrixViewport` had no callers outside their
-   tests and are deleted. `BoardLinks` solves the board's link geometry from measured card
-   heights a frame at a time. It overlaps `board.rs` only in which card a
+   tests and are deleted. `BoardLinks` says which rows and cards name each other's
+   columns, and turns on no measured height. It overlaps `board.rs` only in which card a
    subtask hangs from, which the board read already carries.
 
    **Themes.** `core/src/theme/` holds the whole theme format: a reader and

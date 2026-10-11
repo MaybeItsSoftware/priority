@@ -512,19 +512,12 @@ enum WorkspaceSidebarItem: Identifiable {
   /// Each board column's rows and the card each is drawn on. Rebuilt by
   /// `rebuildBoardRowIndex()` when the board is read or a fold changes.
   var boardRowsByColumn: [String: BoardColumnRows] = [:]
-  /// Which cards are subtasks further on than the card they hang from, and
-  /// which of those are drawn level with it. Rebuilt with the row index.
+  /// Which cards are subtasks filed in another column than the card they
+  /// hang from. Rebuilt with the row index.
   var boardLinks = BoardLinks.empty
-  /// The space the board lets in to draw those links level, from the cards'
-  /// last measured heights. See `WorkspaceViewModel+BoardLinks.swift`.
-  var boardLinkLayout = BoardLinkLayout.empty
-  /// The measurements behind `boardLinkLayout`. Ignored by observation: the
-  /// cards write them as they lay out, and only the layout reads them.
-  @ObservationIgnored var boardLinkMetrics = BoardLinkMetrics()
-  @ObservationIgnored var boardLinkSolveQueued = false
-  /// The height of the "Blocked" label over a column's blocked cards, which
-  /// moves every card below it and so every link meeting one.
-  @ObservationIgnored var boardBlockedLabelHeight: Double = 0
+  /// The link under the pointer, by its subtask's id: lit at both ends, as
+  /// the selected one is.
+  var hoveredBoardLinkID: String?
 
   private func refoldOutline() {
     let rows = TaskOutlineFolding.visible(outline, folded: foldedTaskIDs)

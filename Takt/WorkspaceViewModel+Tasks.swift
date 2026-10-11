@@ -347,7 +347,6 @@ extension WorkspaceViewModel {
       matrixQuadrants = memo.quadrants
       boardRowsByColumn = memo.rowsByColumn
       if boardLinks != memo.links { boardLinks = memo.links }
-      settleBoardLinks()
       appliedBoardIndexKey = key
       return
     }

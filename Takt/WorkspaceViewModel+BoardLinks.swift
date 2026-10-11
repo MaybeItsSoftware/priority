@@ -5,11 +5,9 @@ import TaktWorkspace
 /// The board's links between a subtask card and the card it hangs from.
 ///
 /// The structure (`BoardLinks`) is rebuilt with the row index, once per board
-/// read and once per fold. The space it takes (`BoardLinkLayout`) turns on
-/// how tall the cards are, which only the views know, so the cards in the
-/// columns a link touches report their heights as they lay out, and the
-/// layout is settled again once per batch of reports — never per render, and
-/// not at all on a board with no links.
+/// read and once per fold. Nothing about it turns on how tall a card is: the
+/// two ends name each other rather than being joined by a line, so the cards
+/// stack as they would with no links at all.
 extension WorkspaceViewModel {
   /// Works out the links from the columns just indexed: each subtask card
   /// filed apart from its parent, and the nearest card it hangs beneath.
@@ -26,77 +24,36 @@ extension WorkspaceViewModel {
     let links = sources.isEmpty && strays.isEmpty
       ? BoardLinks.empty : BoardLinks(columns: columns, sources: sources, strays: strays)
     if boardLinks != links { boardLinks = links }
-    settleBoardLinks()
   }
 
-  /// The overlap between neighbouring cards, which share a rule: the theme's
-  /// hairline, which only the views read.
-  func setBoardCardSpacing(_ spacing: Double) {
-    guard boardLinkMetrics.cardSpacing != spacing else { return }
-    boardLinkMetrics.cardSpacing = spacing
-    queueBoardLinkSettle()
+  /// Selects a link's subtask card in its own column, from the row or
+  /// heading on its parent's card that names the column.
+  func selectBoardLinkedCard(_ childID: String) {
+    guard let link = boardLinks.link(forChild: childID), boardColumns.indices.contains(link.childColumn),
+      let task = task(withID: childID)
+    else { return }
+    focusedBoardColumnID = boardColumns[link.childColumn].id
+    selectTask(task)
+    reportKeyboardFocus(.tasks)
   }
 
-  /// A card's height: its own, since no link lets space into a card.
-  func reportBoardCardHeight(_ cardID: String, _ height: Double) {
-    update(&boardLinkMetrics.cardHeights, cardID, height)
+  /// Selects the card a subtask card hangs from, from the caption that
+  /// names it.
+  func selectBoardLinkSource(of childID: String) {
+    guard let link = boardLinks.link(forChild: childID), boardColumns.indices.contains(link.sourceColumn),
+      let task = task(withID: link.sourceCardID)
+    else { return }
+    focusedBoardColumnID = boardColumns[link.sourceColumn].id
+    selectTask(task)
+    reportKeyboardFocus(.tasks)
   }
 
-  /// The middle of a card's heading, from the card's top.
-  func reportBoardHeadingMid(_ cardID: String, _ mid: Double) {
-    update(&boardLinkMetrics.headingMids, cardID, mid)
-  }
-
-  /// The height of the label over a column's blocked cards.
-  func reportBoardBlockedLabelHeight(_ height: Double) {
-    guard abs(boardBlockedLabelHeight - height) >= 0.5 else { return }
-    boardBlockedLabelHeight = height
-    if !boardLinks.isEmpty { queueBoardLinkSettle() }
-  }
-
-  /// A linked row's top and middle on its card.
-  func reportBoardRow(card cardID: String, row rowID: String, top: Double, mid: Double) {
-    let key = BoardRowKey(card: cardID, row: rowID)
-    update(&boardLinkMetrics.rowTops, key, top)
-    update(&boardLinkMetrics.rowMids, key, mid)
-  }
-
-  /// Records a measurement, and settles the links again if it moved by more
-  /// than layout's own rounding.
-  private func update<Key: Hashable>(_ values: inout [Key: Double], _ key: Key, _ value: Double) {
-    if let old = values[key], abs(old - value) < 0.5 { return }
-    values[key] = value
-    if !boardLinks.isEmpty { queueBoardLinkSettle() }
-  }
-
-  /// Settles once after the layout pass that is reporting, rather than once
-  /// per card in it.
-  private func queueBoardLinkSettle() {
-    guard !boardLinkSolveQueued else { return }
-    boardLinkSolveQueued = true
-    Task { @MainActor [weak self] in
-      guard let self else { return }
-      boardLinkSolveQueued = false
-      settleBoardLinks()
+  /// The link under the pointer, lit at both ends as a selected one is.
+  func hoverBoardLink(_ childID: String, _ hovering: Bool) {
+    if hovering {
+      if hoveredBoardLinkID != childID { hoveredBoardLinkID = childID }
+    } else if hoveredBoardLinkID == childID {
+      hoveredBoardLinkID = nil
     }
-  }
-
-  /// Lets in the space the links need, in one step. It used to animate, and
-  /// a card moved into a link's path slid down from the top of its column
-  /// while every card below it slid after: the card is new to the column, so
-  /// there is no gap to grow from, only a jump to make look like one.
-  func settleBoardLinks() {
-    var metrics = boardLinkMetrics
-    // The label over a column's blocked cards pushes them down as a gap would.
-    if !boardLinks.isEmpty, boardBlockedLabelHeight > 0, !blockedTaskIDs.isEmpty {
-      for column in boardColumns {
-        if let card = blockedSectionStart(inCards: tasks(in: column)) {
-          metrics.spaceAbove[card] = boardBlockedLabelHeight
-        }
-      }
-    }
-    let layout = BoardLinkLayout.solve(boardLinks, metrics: metrics)
-    guard layout != boardLinkLayout else { return }
-    boardLinkLayout = layout
   }
 }

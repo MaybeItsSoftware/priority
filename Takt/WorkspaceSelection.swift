@@ -125,9 +125,9 @@ struct WorkspaceTaskMarker: View {
 }
 
 /// The `└` a subtask's row hangs from, drawn rather than set as a glyph: a
-/// glyph's stroke and position were the font's, so it never met the board's
-/// link hairlines it sits beside. This is the board's own elbow in the colour
-/// those links take at rest, inside the box the glyph took, so no row moves.
+/// glyph's stroke and position were the font's, not the theme's hairline.
+/// Drawn in the border's colour inside the box the glyph took, so no row
+/// moves.
 struct WorkspaceSubtaskElbow: View {
   @Environment(\.theme) private var theme
 
