@@ -540,6 +540,67 @@ covered the old copies pass against it.
    Checkvist-era engines, which work on tasks the core never holds. Each
    paragraph above says why for its own cluster.
 
+10. **Everything else (audit 2026-10-11).** Decided 2026-10-11: every piece
+    of logic that is not view code, OS integration or transport moves, so
+    the apps are only views; the Checkvist client and import move too. The
+    audit below walked every Swift file in `Sources/`, `Takt/` and
+    `mobile/ios`, and every Kotlin file in `mobile/android`'s `core`, `data`
+    and `app` modules, for logic the core does not yet own. Board columns,
+    kanban and filter lists are left out on purpose: they are being reworked
+    in parallel and get their own pass afterwards. "Both" means the same
+    rule is written on more than one platform. Each row's plan is either
+    *move* (and the commit that moved it fills in *done*) or *native*, with
+    the reason.
+
+    **Duplicated across platforms**
+
+    | Item | Current home(s) | Both? | Plan |
+    |---|---|---|---|
+    | Checkvist requests and answers (login, lists, tasks, create, update, move, reparent, notes, actions, delete; token, lossy task and note reading, depth-first order) | Mac `NativeCheckvistSyncPlugin`, `CheckvistSession`, `CheckvistTaskRepository`, `CheckvistModels`; CLI `checkvist.rs` | Mac + CLI | move: `core/src/checkvist.rs`, sans-IO like the sync wire |
+    | Checkvist import seeds (dedupe, order, `checkvist:<list>:` ids, status, notes) | Mac `WorkspaceViewModel+Import` (three copies) | Mac ×3 | move: `checkvist_import_seeds` |
+    | `DayBoundary` | Kotlin `DayBoundary.kt` (hand port); Swift already wraps the core | Kotlin + core | move: Kotlin wraps the core's `day_boundary_*` |
+    | `BlockedSection` labels | `TaktCore/BlockedSection`, iOS `BlockedSections`, Kotlin `BlockedSection.kt` | all three | move |
+    | `DayArrangement` (reordering planned day rows) | `TaktCore/DayArrangement`, Kotlin `DayModel.kt` | Swift + Kotlin | move |
+    | `DayForecast` (remaining estimate, finish time) | `TaktCore/DayForecast`, Kotlin `DayModel.kt` | Swift + Kotlin | move |
+    | `FocusDeferral` (in an hour, this afternoon, tomorrow, next week) | iOS `FocusModel`, Kotlin `FocusModel.kt` | iOS + Kotlin | move |
+    | `FocusContextSelection` (condition toggle, restore) | `TaktCore`, iOS `FocusModel`, Kotlin `FocusViewModel` | all three | move |
+    | Task editor: estimate parsing, three-way reconcile, save validation | `TaktWorkspace/TaskEditorDraft`, Kotlin `TaskEditorDraft.kt`, `InspectorLogic.InspectorValidation` | Swift + Kotlin | move |
+    | Outline drop planning (sibling-only reorder, no-op detection) | iOS `OutlineDropPlanner`, Kotlin `OutlineShaping.planDrop` | iOS + Kotlin | move |
+    | Kotlin outline walk and sidebar index fallbacks (`WorkspaceListTree.outline`, `WorkspaceSidebarIndex.build`, `ListsTreeShaping.openCounts`) | Kotlin, beside the core's `outline`, `sidebar_index_with_open_counts` | Kotlin + core | native as test oracles, as `WorkspaceListTree` is on the Mac (step 9) |
+    | `TaskOutlineFolding`, `MatrixGeometry`, `RootDueBucket` | Swift, Kotlin | both | native: per-point maths and fold state held only in UI memory (step 9) |
+    | Date and duration text (`Format`, `WaitingFollowUp.label`, `FocusPoints.formatted`, `SyncStatusText`) | iOS, Kotlin, Mac | all three | native: locale presentation |
+    | Focus wording and start objections (`FocusText`, `+Conditions`) | iOS, Kotlin, Mac | all three | native: per-tap wording over reasons the core already returns; the platforms differ on purpose (step 9, "The phones' screens") |
+    | Sync session, token refresh, scheduler rhythm, credential stores | `TaktSync`, Kotlin `sync/`, `settings/` | both | native: transport and auth (step 7) |
+    | Habit form, recurrence presets, requirement groups, blocker picker | Kotlin `HabitFormLogic`, `InspectorLogic`; Mac overlays | Mac + Kotlin | native: per-tap form state over values the core validates on save |
+    | Undo history travel (`undoCount/redoCount`) | iOS `UndoHistory`, Kotlin `UndoCenter` | both | native: counts over the core's history rows, one subtraction |
+    | Widget precedence (`NextUpSummary`, `WidgetSnapshotBuilder`) | iOS, Kotlin | both | native: picks the head of the core's next-up answer |
+    | Keyboard chord parsing | iOS `KeyboardCommands.parse`, Kotlin `KeyCatalog.Chord` | both | move with the keymap (below) if the phones take the keymap file; until then native, as each maps to its own toolkit's key type |
+
+    **Mac only**
+
+    | Item | Current home | Plan |
+    |---|---|---|
+    | `WorkspaceKeymap` parse and resolve, `WorkspaceKeyBindings` | `TaktCore` | move the file format (parse, issues, normalise, overlay); the key-event lookup stays, it runs per key press over `NSEvent` |
+    | `VimFind`, `CursorStepping` | `TaktCore` | move: pure list maths, one call per key press |
+    | `DesktopShortcutSequence`, `DoubleTapModifier` | `TaktCore` | native: timers over `NSEvent` timing |
+    | `WorkspaceCommandQuery` (palette ranking) | `TaktCore` | native: ranks the Mac's own catalogue every keystroke (step 9) |
+    | `TaskDraftAnchor`, `DailyTitleEdit` | `TaktCore` | native: per-refresh UI state over rows on screen |
+    | `IntegrationLinkStore`, `DailyNotePath`, `ManagedMarkdownBlock`, Obsidian note body, Google Calendar event payload, `AgentStreamProtocol`, `AgentToolSummary`, `MCPWire` | `TaktCore`, plugins | native: integration edges that exist only on the Mac and talk to its other programs; no second copy to retire |
+    | `TaskRepository`, `SyncService`, `TaskMutationService`, `OfflineTaskSyncPlugin`, `LocalTaskStore`, `ReorderQueue`, `UndoService`, the list-scoped priority stores, `OfflineReplayPolicy`, `AuthRetryPolicy`, `RemoteKeyBootstrapPolicy`, `CompletionRetention`, `TimerElapsedReassignmentPolicy`, `TaskFilterEngine`, `DayLogPlan`, `TaskTreeFormatter` | `Takt/`, `TaktCore` | native, recommended for deletion instead: the Checkvist-era in-memory machine whose popover, kanban and list view were deleted in the roadmap's Phase 6. What it still does is load Checkvist lists and tasks for the import and serve the Checkvist settings page; porting it would put a retired feature into the shared core |
+    | `DiagnosticsReport`, `SyncStatusSummary`, celebrations, `FocusTimerDisplay`, `RelativeDateTextCache`, `WindowFrameClamp`, `FileLock`, helper locators, `AppTerminationPolicy`, `OnboardingResetPolicy`, `AutoRefreshThrottlePolicy` | `TaktCore` | native: presentation and OS |
+    | Theme palette lookup, hex parse, typography override, folder mirror | `TaktCore/Theming`, Kotlin `theme/` | native (step 9, "Themes") |
+
+    **Android only**
+
+    | Item | Current home | Plan |
+    |---|---|---|
+    | Dead raw-SQL helpers (`moveSubtree`, `upsertKanbanColumn`, `normalizedVisibleRootName`, `taskDescendantIDs`, `persistTaskOrder`, `encodeStringArray`) | `data/workspace/StoreSupport.kt`, `Queries.kt` | delete: no callers; the core does each |
+    | `SqlDates`, change tracking triggers, observers | `data/db` | native: the androidx driver's own observation |
+    | `ChartScale`, `DateFieldMath` | `app/ui/review`, `app/ui/inspector` | native: axis and calendar-grid geometry drawn per frame |
+    | `SearchMatching` (highlight ranges) | `app/ui/search` | native: per-row presentation of the core's search answer |
+    | View-model orchestration (`ListViewModel`, `TodayViewModel`, `FocusViewModel`, `FocusActions`, `TaskInspectorViewModel`, `UndoCenter`, `ForegroundEngines`, `SyncController`, `TaskCommands`) | `app/` | native: lifecycle and coroutines over repository calls that are already the core's |
+    | Board and matrix shaping, filter lists | `BoardShaping.kt`, `FilterList*` | later pass (excluded above) |
+
 ## Risks
 
 - **App size and build time.** An app build already needs cargo for the
