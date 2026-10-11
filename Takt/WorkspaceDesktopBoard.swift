@@ -242,8 +242,10 @@ struct WorkspaceKanbanColumnView: View {
                 })
                 .environment(model)
                 // The gap that drops a card level with the row it stands for
-                // in an earlier column, a rule taller as the card overlaps it
-                // by one. Padding on the card, always there, rather than a
+                // in an earlier column, exactly as the layout gives it: the
+                // layout already counts the hairline neighbours overlap by,
+                // and adding it again left the card's line a point below the
+                // row's. Padding on the card, always there, rather than a
                 // view that comes and goes: the lazy stack re-laid the column
                 // out every time the gap appeared or went, and the card
                 // flickered as the links settled.
@@ -321,7 +323,7 @@ struct WorkspaceKanbanColumnView: View {
 
   private func cardGap(above cardID: String) -> CGFloat {
     guard let gap = linkLayout.gapAbove[cardID], gap >= 0.5 else { return 0 }
-    return CGFloat(gap) + theme.hairline
+    return CGFloat(gap)
   }
 
   /// The space let in above each linked row on a card, by row.
