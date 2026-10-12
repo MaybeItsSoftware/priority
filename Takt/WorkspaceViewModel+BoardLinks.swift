@@ -39,17 +39,6 @@ extension WorkspaceViewModel {
     reportKeyboardFocus(.tasks)
   }
 
-  /// Selects the card a subtask card hangs from, from the caption that
-  /// names it.
-  func selectBoardLinkSource(of childID: String) {
-    guard let link = boardLinks.link(forChild: childID), boardColumns.indices.contains(link.sourceColumn),
-      let task = task(withID: link.sourceCardID)
-    else { return }
-    focusedBoardColumnID = boardColumns[link.sourceColumn].id
-    selectTask(task)
-    reportKeyboardFocus(.tasks)
-  }
-
   /// The end of a link under the pointer, lit and drawn as a selected one
   /// is: a subtask's row or card, or a card subtasks further on hang from.
   /// Leaving a row for the card it is drawn on hands the pointer back to the

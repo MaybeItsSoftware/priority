@@ -646,21 +646,11 @@ struct WorkspaceKanbanCard: View {
     }
   }
 
-  /// Whose subtask this card is, on a card filed in another column than its
-  /// parent: "← parent", pointing the way to the card that draws it as a
-  /// row, which a click selects. "↳ parent" when no card on the board draws
-  /// the parent — it is finished and hidden, say — so there is nowhere to go.
+  /// Whose subtask this card is, when no card on the board draws the parent
+  /// — it is finished and hidden, say — so there is no line to draw:
+  /// "↳ parent". A linked card says nothing; its line says it.
   @ViewBuilder private var linkHint: some View {
-    if let link, let parent = model.boardParent(of: task) {
-      Button {
-        model.selectBoardLinkSource(of: task.id)
-      } label: {
-        WorkspaceBoardLinkLabel(
-          arrow: link.pointsForward ? "←" : "→", text: parent.title, colour: linkColour([task.id]))
-      }
-      .buttonStyle(.plain)
-      .help("A subtask of \(parent.title), drawn on its card in \(columnTitle(link.sourceColumn))")
-    } else if model.boardLinks.isStray(task.id), let parent = model.boardParent(of: task) {
+    if link == nil, model.boardLinks.isStray(task.id), let parent = model.boardParent(of: task) {
       WorkspaceBoardLinkLabel(arrow: "↳", text: parent.title, colour: theme.dim)
         .help("A subtask of \(parent.title)")
     }
@@ -891,9 +881,10 @@ enum WorkspaceTaskDrag {
   }
 }
 
-/// One end of a board link naming the other: "→ This week 2" for a folded
-/// card's subtasks, "← Adam's Campus Toolbox" on the subtask's own card. Dim at
-/// rest, the accent while the selection or the pointer is on either end.
+/// Words standing in for a board link's line: "→ This week 2" for a folded
+/// card's subtasks, "↳ Adam's Campus Toolbox" on a subtask whose parent has
+/// no card. Dim at rest, the accent while the selection or the pointer is
+/// on either end.
 struct WorkspaceBoardLinkLabel: View {
   @Environment(\.theme) private var theme
   let arrow: String
