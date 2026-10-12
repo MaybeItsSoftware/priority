@@ -6,8 +6,10 @@ import TaktWorkspace
 ///
 /// The structure (`BoardLinks`) is rebuilt with the row index, once per board
 /// read and once per fold. Nothing about it turns on how tall a card is: the
-/// two ends name each other rather than being joined by a line, so the cards
-/// stack as they would with no links at all.
+/// two ends name each other, so the cards stack as they would with no links
+/// at all, and the line drawn between them while one is selected or under
+/// the pointer (`WorkspaceBoardLinkLines`) is laid over the board from where
+/// the cards already are.
 extension WorkspaceViewModel {
   /// Works out the links from the columns just indexed: each subtask card
   /// filed apart from its parent, and the nearest card it hangs beneath.
@@ -48,12 +50,15 @@ extension WorkspaceViewModel {
     reportKeyboardFocus(.tasks)
   }
 
-  /// The link under the pointer, lit at both ends as a selected one is.
-  func hoverBoardLink(_ childID: String, _ hovering: Bool) {
+  /// The end of a link under the pointer, lit and drawn as a selected one
+  /// is: a subtask's row or card, or a card subtasks further on hang from.
+  /// Leaving a row for the card it is drawn on hands the pointer back to the
+  /// card, when the card is an end itself — `fallback`.
+  func hoverBoardLink(_ id: String, _ hovering: Bool, fallback: String? = nil) {
     if hovering {
-      if hoveredBoardLinkID != childID { hoveredBoardLinkID = childID }
-    } else if hoveredBoardLinkID == childID {
-      hoveredBoardLinkID = nil
+      if hoveredBoardLinkID != id { hoveredBoardLinkID = id }
+    } else if hoveredBoardLinkID == id {
+      hoveredBoardLinkID = fallback
     }
   }
 }

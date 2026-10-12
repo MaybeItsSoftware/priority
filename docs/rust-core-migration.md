@@ -257,7 +257,9 @@ covered the old copies pass against it.
    `MatrixNavigation` and `MatrixViewport` had no callers outside their
    tests and are deleted. `BoardLinks` says which rows and cards name each other's
    columns, and turns on no measured height. It overlaps `board.rs` only in which card a
-   subtask hangs from, which the board read already carries.
+   subtask hangs from, which the board read already carries. `BoardLinkRoute`
+   routes the line drawn over the board between a lit link's two ends; it is
+   geometry over frames the view has just laid out, so it stays native too.
 
    **Themes.** `core/src/theme/` holds the whole theme format: a reader and
    writer for the JSON dialect Swift's `JSONDecoder` and `JSONEncoder`

@@ -515,8 +515,9 @@ enum WorkspaceSidebarItem: Identifiable {
   /// Which cards are subtasks filed in another column than the card they
   /// hang from. Rebuilt with the row index.
   var boardLinks = BoardLinks.empty
-  /// The link under the pointer, by its subtask's id: lit at both ends, as
-  /// the selected one is.
+  /// The end of a link under the pointer — a subtask's row or card, or a
+  /// card subtasks further on hang from — whose links are lit and drawn as
+  /// the selection's are.
   var hoveredBoardLinkID: String?
 
   private func refoldOutline() {

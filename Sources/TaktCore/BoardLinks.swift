@@ -17,6 +17,10 @@
 /// as every other card does, and nothing here or in the board turns on a
 /// measured height.
 ///
+/// The line is back, but only for the links `linkIDs(touching:)` lights —
+/// the selection's and the pointer's — and drawn over the board from where
+/// the cards already stand rather than levelling them: `BoardLinkRoute`.
+///
 /// Worked out once per board read and once per fold.
 public struct BoardLinks: Equatable, Sendable {
   /// One subtask card and the card it hangs from.
