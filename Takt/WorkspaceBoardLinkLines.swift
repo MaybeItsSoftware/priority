@@ -38,6 +38,12 @@ enum WorkspaceBoardLinkEnd: Hashable {
 /// rather than one per end. Every write rounds to half a point and is skipped
 /// when nothing changed, so a layout pass that moves nothing invalidates
 /// nothing.
+///
+/// It also works out the space each subtask card opens above itself so its
+/// line runs flat (`BoardLinkNudge`), which the columns read. That is
+/// settled once the layout has, after any change to where an end sits in
+/// its column: never on a scroll, which moves only the stacks, and never
+/// mid-pass, since every end a pass moves has reported by the time it runs.
 @MainActor
 @Observable
 final class WorkspaceBoardLinkGeometry {
@@ -62,10 +68,28 @@ final class WorkspaceBoardLinkGeometry {
   /// column's id: a line is clipped to it, so one to a card scrolled out of
   /// sight stops at the band's edge rather than running over the headers.
   private(set) var bands: [String: CGRect] = [:]
+  /// The space opened above each subtask card so its line runs flat, by
+  /// its id. Only the columns read it.
+  private(set) var nudges: [String: CGFloat] = [:]
+
+  /// The board's links and columns, for settling the nudges.
+  @ObservationIgnored private var links: [BoardLinks.Link] = []
+  @ObservationIgnored private var columnIDs: [String] = []
+  @ObservationIgnored private var settleScheduled = false
+  /// Settles in a row that each changed something. A layout that keeps
+  /// answering a nudge with a different one stops being nudged rather than
+  /// shaking; a change to the links starts it again.
+  @ObservationIgnored private var unsettledRuns = 0
+  private static let maximumUnsettledRuns = 6
 
   func setEnds(_ ids: [WorkspaceBoardLinkEnd], _ rect: CGRect) {
     let rect = Self.rounded(rect)
-    for id in ids where ends[id] != rect { ends[id] = rect }
+    var changed = false
+    for id in ids where ends[id] != rect {
+      ends[id] = rect
+      changed = true
+    }
+    if changed { scheduleSettle() }
   }
 
   func setColumn(_ id: String, frame: CGRect) {
@@ -80,19 +104,66 @@ final class WorkspaceBoardLinkGeometry {
 
   func setBand(_ id: String, frame: CGRect) {
     let frame = Self.rounded(frame)
-    if bands[id] != frame { bands[id] = frame }
+    guard bands[id] != frame else { return }
+    let moved = bands[id]?.minY != frame.minY
+    bands[id] = frame
+    if moved { scheduleSettle() }
   }
 
-  /// Forgets the ends of links the board no longer has. An end whose view
-  /// has only scrolled out of a lazy stack keeps its frame: the stack keeps
-  /// its place too, so the frame is still where the end would be.
-  func retain(_ links: BoardLinks) {
+  /// Takes the board's links and columns, and forgets the ends of links it
+  /// no longer has. An end whose view has only scrolled out of a lazy stack
+  /// keeps its frame: the stack keeps its place too, so the frame is still
+  /// where the end would be.
+  func setLayout(_ links: BoardLinks, columnIDs: [String]) {
     let stale = ends.keys.filter { end in
       switch end {
       case .source(let id), .target(let id): links.link(forChild: id) == nil
       }
     }
     for end in stale { ends[end] = nil }
+    self.links = links.byChild.values.sorted { $0.childID < $1.childID }
+    self.columnIDs = columnIDs
+    unsettledRuns = 0
+    scheduleSettle()
+  }
+
+  /// Settles the nudges once the layout pass under way has reported every
+  /// end it moved.
+  private func scheduleSettle() {
+    guard !settleScheduled else { return }
+    settleScheduled = true
+    Task { @MainActor [weak self] in
+      guard let self else { return }
+      settleScheduled = false
+      settle()
+    }
+  }
+
+  private func settle() {
+    let current = nudges.mapValues(Double.init)
+    let measured = links.map { link in
+      BoardLinkNudge.End(
+        childID: link.childID, sourceColumn: link.sourceColumn, childColumn: link.childColumn,
+        sourceY: unscrolledMidY(of: .source(link.childID), inColumn: link.sourceColumn),
+        targetY: unscrolledMidY(of: .target(link.childID), inColumn: link.childColumn))
+    }
+    let next = BoardLinkNudge.offsets(for: measured, current: current, cap: WorkspaceBoardMetrics.linkNudgeCap)
+    guard next != current else {
+      unsettledRuns = 0
+      return
+    }
+    unsettledRuns += 1
+    guard unsettledRuns <= Self.maximumUnsettledRuns else { return }
+    nudges = next.mapValues { CGFloat($0) }
+  }
+
+  /// An end's middle as it would be on the board if no column were
+  /// scrolled: its height in its stack, from the top of its column's band.
+  private func unscrolledMidY(of end: WorkspaceBoardLinkEnd, inColumn column: Int) -> Double? {
+    guard columnIDs.indices.contains(column), let rect = ends[end], let band = bands[columnIDs[column]] else {
+      return nil
+    }
+    return Double(band.minY + rect.midY)
   }
 
   /// An end's frame on the board, once it and its column's stack are known.

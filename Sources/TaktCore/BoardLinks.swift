@@ -14,13 +14,14 @@
 /// the line, and — as soon as one card had several subtasks further on, or a
 /// link had to cross a column of other cards — stacked the lines into a
 /// staircase through cards that had nothing to do with them. Cards now stack
-/// as every other card does, and nothing here or in the board turns on a
-/// measured height.
+/// as every other card does, and nothing here turns on a measured height.
 ///
-/// The line is back, drawn from where the cards already stand rather than
-/// levelling them: a hairline for every link, in a lane of its own in the
-/// gutter between columns, and the accent for those `linkIDs(touching:)`
-/// lights — the selection's and the pointer's (`BoardLinkRoute`).
+/// The line is back, drawn from where the cards stand rather than levelling
+/// them: a hairline for every link, in a lane of its own in the gutter
+/// between columns, and the accent for those `linkIDs(touching:)` lights —
+/// the selection's and the pointer's (`BoardLinkRoute`). A card a little
+/// above its row is moved down level with it, no more than about a card's
+/// height (`BoardLinkNudge`); further, and the line steps down instead.
 ///
 /// Worked out once per board read and once per fold.
 public struct BoardLinks: Equatable, Sendable {

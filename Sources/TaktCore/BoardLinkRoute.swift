@@ -63,8 +63,10 @@ public enum BoardLinkRoute {
   }
 
   /// Rises or falls smaller than this are drawn as a straight line: a
-  /// half-point jog with two rounded corners reads as a smudge.
-  public static let straightTolerance = 0.5
+  /// point's jog with two rounded corners reads as a smudge, and a card
+  /// nudged level with its row (`BoardLinkNudge`), moved by whole points
+  /// and measured to half ones, can be left that far off.
+  public static let straightTolerance = 1.0
 
   /// The route from a subtask's row (or the label on its parent's card that
   /// stands for it) to the subtask's card.

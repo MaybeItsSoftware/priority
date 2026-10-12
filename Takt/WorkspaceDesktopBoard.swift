@@ -56,6 +56,11 @@ enum WorkspaceBoardMetrics {
   /// How far apart the lines turning in one gutter run.
   static let linkLaneSpacing: Double = 3
 
+  /// The most a subtask's card is moved down to bring it level with its
+  /// row, so the line between runs flat: about a compact card. Further, and
+  /// the line steps down instead.
+  static let linkNudgeCap = BoardLinkNudge.defaultCap
+
   /// The space between two columns, with the rule down its middle: the
   /// rule's own width on a board with no links, edge to edge as ever, and
   /// room for a few lines to turn in, side by side, on one with them.
@@ -193,7 +198,10 @@ private struct WorkspaceKanbanColumnStrip: View {
               layer: .above, geometry: linkGeometry, links: allLinks, lit: litLinks, columnIDs: columnIDs,
               gutter: gutter)
           }
-          .onChange(of: links, initial: true) { _, links in linkGeometry.retain(links) }
+          .onChange(of: links, initial: true) { _, links in
+            linkGeometry.setLayout(links, columnIDs: columnIDs)
+          }
+          .onChange(of: columnIDs) { _, columnIDs in linkGeometry.setLayout(links, columnIDs: columnIDs) }
           .padding(.horizontal, WorkspaceBoardMetrics.edgeInset(theme))
           .background(WorkspaceHorizontalOverscrollDisabler())
         }
@@ -248,6 +256,9 @@ struct WorkspaceKanbanColumnView: View {
     // The card the selected row is drawn on, looked up in the index the
     // board keeps rather than found by walking each card's subtasks.
     let selectedCardID = selectedRowID.flatMap { model.boardRows(in: column).cardByRow[$0] }
+    // The space a subtask's card opens above itself so the line from its
+    // row runs flat.
+    let nudges = linkGeometry?.nudges ?? [:]
     VStack(alignment: .leading, spacing: theme.space.sm) {
       VStack(alignment: .leading, spacing: theme.space.sm) {
       HStack(spacing: theme.space.xs) {
@@ -288,6 +299,9 @@ struct WorkspaceKanbanColumnView: View {
               // The label over the column's blocked cards rides with the
               // first of them, so the card's gap and id carry both.
               VStack(alignment: .leading, spacing: 0) {
+                if let nudge = nudges[task.id], nudge > 0 {
+                  Color.clear.frame(height: nudge).accessibilityHidden(true)
+                }
                 if task.id == blockedStart { blockedDivider }
                 WorkspaceKanbanCard(
                   task: task, column: column,

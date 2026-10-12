@@ -41,9 +41,9 @@ final class BoardLinkRouteTests: XCTestCase {
     XCTAssertEqual(route.points[1].x, route.points[2].x)
   }
 
-  /// Level within half a point, the line runs straight across.
+  /// Level within a point, the line runs straight across.
   func testALevelCardIsAStraightLine() {
-    let route = path(from: row(inColumn: 0, y: 100), to: row(inColumn: 1, y: 100.3), sourceColumn: 0)
+    let route = path(from: row(inColumn: 0, y: 100), to: row(inColumn: 1, y: 100.8), sourceColumn: 0)
     XCTAssertEqual(route.points, [Point(x: 194, y: 100), Point(x: 207, y: 100)])
     XCTAssertEqual(route.radii, [0, 0])
   }
