@@ -1,72 +1,146 @@
+import Observation
 import SwiftUI
 import TaktCore
+import os
 
 /// The line drawn between a subtask's row and its card in another column,
 /// while the selection or the pointer is on either end.
 ///
 /// The cards stack as they would with no links, and each end names the other
 /// in words (`BoardLinks`). The line is laid over the board on top of that:
-/// each lit end reports its frame as an anchor, the strip collects them, and
-/// `BoardLinkRoute` works out the path from the frames as they are. Nothing
-/// it draws is measured or fed back into a card, so it cannot move one.
+/// each end measures itself into `WorkspaceBoardLinkGeometry`, and
+/// `BoardLinkRoute` works out the path from the frames as they are.
 ///
-/// Only the lit links report frames, so a board with no selection on a link
-/// has no anchors to collect and draws nothing.
+/// The ends used to report anchor preferences, which never reached the
+/// overlay: a column and its card scroller reported anchors of their own with
+/// `anchorPreference`, which *replaces* whatever the views inside it set
+/// rather than merging with it, so every row's and heading's anchor was
+/// dropped on the way up and the overlay only ever saw the columns.
 
-/// What a frame reported to the line overlay belongs to.
-enum WorkspaceBoardLinkAnchor: Hashable {
+/// One end of a link, by the subtask's id.
+enum WorkspaceBoardLinkEnd: Hashable {
   /// The row, or the heading's label, on the parent's card that stands for
-  /// the subtask, by the subtask's id.
+  /// the subtask.
   case source(String)
-  /// The heading of the subtask's own card, by its id.
+  /// The heading of the subtask's own card.
   case target(String)
-  /// A column, by its id: the line turns on the rule beside it.
-  case column(String)
-  /// A column's scrolling cards, by the column's id: the line is clipped to
-  /// them, so one to a card scrolled out of sight stops at the column's edge
-  /// rather than running over its header.
-  case cards(String)
 }
 
-struct WorkspaceBoardLinkAnchorKey: PreferenceKey {
-  static var defaultValue: [WorkspaceBoardLinkAnchor: Anchor<CGRect>] { [:] }
+/// Where the board's link ends are, held by the column strip rather than the
+/// view model: it is layout, not state, and only the line overlay reads it.
+///
+/// Each end is measured in its own column's card stack, so scrolling a
+/// column changes nothing here but the stack's origin — one value per column
+/// rather than one per end. Every write rounds to half a point and is skipped
+/// when nothing changed, so a layout pass that moves nothing invalidates
+/// nothing.
+@MainActor
+@Observable
+final class WorkspaceBoardLinkGeometry {
+  /// The coordinate space of the column strip: the columns' content, inside
+  /// the sideways scroller, so it moves with them.
+  nonisolated static let boardSpace = "WorkspaceBoardLinkGeometry.board"
 
-  static func reduce(
-    value: inout [WorkspaceBoardLinkAnchor: Anchor<CGRect>],
-    nextValue: () -> [WorkspaceBoardLinkAnchor: Anchor<CGRect>]
-  ) {
-    value.merge(nextValue()) { first, _ in first }
+  /// A column's card stack, by the column's id.
+  struct StackSpace: Hashable {
+    let columnID: String
+  }
+
+  /// Each end's frame in its column's card stack.
+  private(set) var ends: [WorkspaceBoardLinkEnd: CGRect] = [:]
+  /// Each column's frame on the board, by id: the line turns on the rule
+  /// beside it.
+  private(set) var columns: [String: CGRect] = [:]
+  /// Where each column's card stack starts on the board, by the column's id.
+  /// It moves as the column scrolls.
+  private(set) var stacks: [String: CGPoint] = [:]
+  /// The part of each column the cards scroll in, on the board, by the
+  /// column's id: a line is clipped to it, so one to a card scrolled out of
+  /// sight stops at the band's edge rather than running over the headers.
+  private(set) var bands: [String: CGRect] = [:]
+
+  func setEnds(_ ids: [WorkspaceBoardLinkEnd], _ rect: CGRect) {
+    let rect = Self.rounded(rect)
+    for id in ids where ends[id] != rect { ends[id] = rect }
+  }
+
+  func setColumn(_ id: String, frame: CGRect) {
+    let frame = Self.rounded(frame)
+    if columns[id] != frame { columns[id] = frame }
+  }
+
+  func setStack(_ id: String, origin: CGPoint) {
+    let origin = CGPoint(x: Self.half(origin.x), y: Self.half(origin.y))
+    if stacks[id] != origin { stacks[id] = origin }
+  }
+
+  func setBand(_ id: String, frame: CGRect) {
+    let frame = Self.rounded(frame)
+    if bands[id] != frame { bands[id] = frame }
+  }
+
+  /// Forgets the ends of links the board no longer has. An end whose view
+  /// has only scrolled out of a lazy stack keeps its frame: the stack keeps
+  /// its place too, so the frame is still where the end would be.
+  func retain(_ links: BoardLinks) {
+    let stale = ends.keys.filter { end in
+      switch end {
+      case .source(let id), .target(let id): links.link(forChild: id) == nil
+      }
+    }
+    for end in stale { ends[end] = nil }
+  }
+
+  /// An end's frame on the board, once it and its column's stack are known.
+  func boardFrame(of end: WorkspaceBoardLinkEnd, inColumn columnID: String) -> CGRect? {
+    guard let rect = ends[end], let origin = stacks[columnID] else { return nil }
+    return rect.offsetBy(dx: origin.x, dy: origin.y)
+  }
+
+  private static func half(_ value: CGFloat) -> CGFloat {
+    (value * 2).rounded() / 2
+  }
+
+  private static func rounded(_ rect: CGRect) -> CGRect {
+    CGRect(x: half(rect.minX), y: half(rect.minY), width: half(rect.width), height: half(rect.height))
   }
 }
 
 extension View {
-  /// Reports this view's frame to the line overlay as `anchor`, while
-  /// `active`; nothing otherwise.
-  func boardLinkAnchor(_ anchor: WorkspaceBoardLinkAnchor, active: Bool) -> some View {
-    anchorPreference(key: WorkspaceBoardLinkAnchorKey.self, value: .bounds) { active ? [anchor: $0] : [:] }
-  }
-
-  /// Reports this view's frame as the source end of every link in `ids`
-  /// that is lit — a heading's label stands for several.
-  func boardLinkSources(_ ids: [String], lit: Set<String>) -> some View {
-    anchorPreference(key: WorkspaceBoardLinkAnchorKey.self, value: .bounds) { anchor in
-      var anchors: [WorkspaceBoardLinkAnchor: Anchor<CGRect>] = [:]
-      for id in ids where lit.contains(id) { anchors[.source(id)] = anchor }
-      return anchors
+  /// Measures this view as the ends in `ids` — a heading's label stands for
+  /// several — in `columnID`'s card stack.
+  func boardLinkEnds(
+    _ ids: [WorkspaceBoardLinkEnd], inColumn columnID: String, geometry: WorkspaceBoardLinkGeometry?
+  ) -> some View {
+    onGeometryChange(for: WorkspaceBoardLinkMeasure.self) { proxy in
+      WorkspaceBoardLinkMeasure(
+        ids: ids,
+        rect: ids.isEmpty
+          ? .zero : proxy.frame(in: .named(WorkspaceBoardLinkGeometry.StackSpace(columnID: columnID))))
+    } action: { measure in
+      guard !measure.ids.isEmpty else { return }
+      geometry?.setEnds(measure.ids, measure.rect)
     }
   }
+}
+
+/// What an end measures: which ends it is, as well as where, so an end that
+/// becomes one without moving still reports.
+struct WorkspaceBoardLinkMeasure: Equatable {
+  let ids: [WorkspaceBoardLinkEnd]
+  let rect: CGRect
 }
 
 /// The lit links' lines, drawn over the column strip.
 struct WorkspaceBoardLinkLines: View {
   @Environment(\.theme) private var theme
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
+  let geometry: WorkspaceBoardLinkGeometry
   let links: [BoardLinks.Link]
   /// The board's column ids, left to right, for finding a link's columns.
   let columnIDs: [String]
-  let anchors: [WorkspaceBoardLinkAnchor: Anchor<CGRect>]
 
-  /// One link's path, once both of its ends and its column are on screen.
+  /// One link's path, once both of its ends and its column are measured.
   private struct Line: Identifiable {
     let id: String
     let path: BoardLinkRoute.Path
@@ -74,7 +148,7 @@ struct WorkspaceBoardLinkLines: View {
 
   var body: some View {
     GeometryReader { proxy in
-      let lines = lines(in: proxy)
+      let lines = lines()
       ZStack(alignment: .topLeading) {
         ForEach(lines) { line in
           WorkspaceBoardLinkShape(path: line.path)
@@ -83,11 +157,15 @@ struct WorkspaceBoardLinkLines: View {
         }
       }
       .frame(width: proxy.size.width, height: proxy.size.height, alignment: .topLeading)
-      .mask(alignment: .topLeading) { clip(in: proxy) }
+      .clipShape(band(height: proxy.size.height))
       // A fade in and out as the selection or the pointer reaches an end,
       // collapsed rather than removed under Reduce Motion.
       .animation(
         .easeOut(duration: reduceMotion ? 0.01 : WorkspaceMotion.duration), value: lines.map(\.id))
+      // MARK: Temporary BoardLinkLines diagnostics — remove once confirmed.
+      .onChange(of: links.map(\.childID), initial: true) { _, lit in
+        Self.logLit(lit, drawn: Set(lines.map(\.id)))
+      }
     }
     .allowsHitTesting(false)
     .accessibilityHidden(true)
@@ -99,43 +177,66 @@ struct WorkspaceBoardLinkLines: View {
     min(max(theme.hairline * 1.5, 1), 1.5)
   }
 
-  private func lines(in proxy: GeometryProxy) -> [Line] {
+  private func lines() -> [Line] {
     let inset = Double(theme.space.xxs)
     let rail = Double(theme.hairline) / 2
     let radius = Double(WorkspaceBoardMetrics.linkCornerRadius)
     return links.compactMap { link in
-      guard columnIDs.indices.contains(link.sourceColumn),
-        let source = anchors[.source(link.childID)],
-        let target = anchors[.target(link.childID)],
-        let column = anchors[.column(columnIDs[link.sourceColumn])]
+      guard columnIDs.indices.contains(link.sourceColumn), columnIDs.indices.contains(link.childColumn),
+        let source = geometry.boardFrame(of: .source(link.childID), inColumn: columnIDs[link.sourceColumn]),
+        let target = geometry.boardFrame(of: .target(link.childID), inColumn: columnIDs[link.childColumn]),
+        let column = geometry.columns[columnIDs[link.sourceColumn]]
       else { return nil }
       let path = BoardLinkRoute.path(
-        from: Self.rect(proxy[source]), to: Self.rect(proxy[target]), sourceColumn: Self.rect(proxy[column]),
+        from: Self.rect(source), to: Self.rect(target), sourceColumn: Self.rect(column),
         pointsForward: link.pointsForward, inset: inset, rail: rail, radius: radius)
       return Line(id: link.childID, path: path)
     }
   }
 
   /// The band the columns' cards scroll in, the board's width across: the
-  /// line may cross a column whose cards did not report, so only the band's
-  /// top and bottom come from the columns that did.
-  @ViewBuilder private func clip(in proxy: GeometryProxy) -> some View {
-    let bands = anchors.compactMap { key, anchor -> CGRect? in
-      if case .cards = key { return proxy[anchor] }
-      return nil
+  /// line may cross a column whose band is not measured, so only the band's
+  /// top and bottom come from the columns that are.
+  private func band(height: CGFloat) -> WorkspaceBoardLinkBand {
+    let bands = geometry.bands.values
+    guard let top = bands.map(\.minY).min(), let bottom = bands.map(\.maxY).max(), bottom > top else {
+      return WorkspaceBoardLinkBand(top: 0, bottom: 0)
     }
-    if let top = bands.map(\.minY).min(), let bottom = bands.map(\.maxY).max(), bottom > top {
-      Rectangle()
-        .frame(width: proxy.size.width, height: bottom - top)
-        .offset(y: top)
-    } else {
-      Rectangle()
-    }
+    return WorkspaceBoardLinkBand(top: max(top, 0), bottom: max(height - bottom, 0))
   }
 
   private static func rect(_ rect: CGRect) -> BoardLinkRoute.Rect {
     BoardLinkRoute.Rect(
       minX: Double(rect.minX), minY: Double(rect.minY), maxX: Double(rect.maxX), maxY: Double(rect.maxY))
+  }
+}
+
+// MARK: - Temporary BoardLinkLines diagnostics
+//
+// Logs, whenever the lit links change, how many there are, how many drew a
+// line and which did not, so the installed app can show whether the ends are
+// being measured: `log stream --level info --predicate 'subsystem ==
+// "uk.co.maybeitssoftware.takt" && category == "BoardLinkLines"'`. To be
+// removed once the lines are confirmed on screen.
+extension WorkspaceBoardLinkLines {
+  private static let logger = Logger(subsystem: "uk.co.maybeitssoftware.takt", category: "BoardLinkLines")
+
+  fileprivate static func logLit(_ lit: [String], drawn: Set<String>) {
+    guard !lit.isEmpty else { return }
+    let missing = lit.filter { !drawn.contains($0) }
+    logger.notice(
+      "lit=\(lit.count, privacy: .public) drawn=\(drawn.count, privacy: .public) missing=\(missing, privacy: .public)")
+  }
+}
+
+/// The board's height between `top` and `bottom` of it, its width across:
+/// the band a line is clipped to.
+private struct WorkspaceBoardLinkBand: Shape {
+  let top: CGFloat
+  let bottom: CGFloat
+
+  func path(in rect: CGRect) -> Path {
+    Path(CGRect(x: rect.minX, y: rect.minY + top, width: rect.width, height: max(rect.height - top - bottom, 0)))
   }
 }
 

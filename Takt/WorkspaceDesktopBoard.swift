@@ -96,6 +96,8 @@ private struct WorkspaceKanbanColumnStrip: View {
   @Environment(\.theme) private var theme
   let columnWidth: CGFloat
   @State private var visibleColumnIDs: Set<String> = []
+  /// Where the link ends are, for the lines drawn between them.
+  @State private var linkGeometry = WorkspaceBoardLinkGeometry()
 
   var body: some View {
     let activeColumnID = model.activeBoardColumnID
@@ -129,9 +131,13 @@ private struct WorkspaceKanbanColumnStrip: View {
                 selectedRowID: column.id == selectedColumnID ? selectedID : nil,
                 litLinks: columnLinks)
                 .environment(model)
-                // A lit link's line turns on the rule beside its source
-                // column, so that column reports where its edges are.
-                .boardLinkAnchor(.column(column.id), active: !columnLinks.isEmpty)
+                // A link's line turns on the rule beside its source column,
+                // so the column measures where its edges are.
+                .onGeometryChange(for: CGRect.self) { proxy in
+                  proxy.frame(in: .named(WorkspaceBoardLinkGeometry.boardSpace))
+                } action: { [linkGeometry] frame in
+                  linkGeometry.setColumn(column.id, frame: frame)
+                }
                 // The hairline is drawn on the column rather than beside it.
                 // As a sibling it was a scroll target answering to the same
                 // id, so a column scrolled almost out to the left still
@@ -149,16 +155,22 @@ private struct WorkspaceKanbanColumnStrip: View {
             }
           }
           .scrollTargetLayout()
+          // The space the ends are placed in: the columns' content, inside
+          // the scroller, so it moves with them.
+          .coordinateSpace(.named(WorkspaceBoardLinkGeometry.boardSpace))
+          .environment(linkGeometry)
           // Over the columns and inside the scroller, so the lines move with
           // the cards they join. An overlay takes the strip's size and adds
           // none, so drawing a line never moves a card. Always there, empty
           // when nothing is lit, so a line that goes out fades rather than
           // vanishing with its overlay.
-          .overlayPreferenceValue(WorkspaceBoardLinkAnchorKey.self) { anchors in
+          .overlay {
             WorkspaceBoardLinkLines(
+              geometry: linkGeometry,
               links: litLinks.sorted().compactMap { links.link(forChild: $0) },
-              columnIDs: columnIDs, anchors: anchors)
+              columnIDs: columnIDs)
           }
+          .onChange(of: links, initial: true) { _, links in linkGeometry.retain(links) }
           .padding(.horizontal, WorkspaceBoardMetrics.edgeInset(theme))
           .background(WorkspaceHorizontalOverscrollDisabler())
         }
@@ -177,6 +189,7 @@ private struct WorkspaceKanbanColumnStrip: View {
 struct WorkspaceKanbanColumnView: View {
   @Environment(WorkspaceViewModel.self) private var model
   @Environment(\.theme) private var theme
+  @Environment(WorkspaceBoardLinkGeometry.self) private var linkGeometry: WorkspaceBoardLinkGeometry?
 
   /// The draft row, drawn as a card.
   private var draftRow: some View {
@@ -268,6 +281,14 @@ struct WorkspaceKanbanColumnView: View {
             if model.draftsAtEnd(ofColumn: column.id) { draftRow }
           }
           .scrollTargetLayout()
+          // The space a link's ends measure themselves in, so scrolling the
+          // column moves only the stack's origin.
+          .coordinateSpace(.named(WorkspaceBoardLinkGeometry.StackSpace(columnID: column.id)))
+          .onGeometryChange(for: CGPoint.self) { proxy in
+            proxy.frame(in: .named(WorkspaceBoardLinkGeometry.boardSpace)).origin
+          } action: { [linkGeometry, columnID = column.id] origin in
+            linkGeometry?.setStack(columnID, origin: origin)
+          }
           .padding(.bottom, theme.space.xxs)
           .background(WorkspaceHorizontalOverscrollDisabler())
         }
@@ -283,8 +304,12 @@ struct WorkspaceKanbanColumnView: View {
             cardProxy.scrollTo(id, anchor: .center)
           }
         }
-        // The band a lit link's line is clipped to.
-        .boardLinkAnchor(.cards(column.id), active: !litLinks.isEmpty)
+        // The band a link's line is clipped to.
+        .onGeometryChange(for: CGRect.self) { proxy in
+          proxy.frame(in: .named(WorkspaceBoardLinkGeometry.boardSpace))
+        } action: { [linkGeometry, columnID = column.id] frame in
+          linkGeometry?.setBand(columnID, frame: frame)
+        }
       }
     }
     .frame(width: width, alignment: .topLeading)
@@ -342,6 +367,7 @@ struct WorkspaceKanbanColumnView: View {
 struct WorkspaceKanbanCard: View {
   @Environment(WorkspaceViewModel.self) private var model
   @Environment(\.theme) private var theme
+  @Environment(WorkspaceBoardLinkGeometry.self) private var linkGeometry: WorkspaceBoardLinkGeometry?
   @FocusState private var isCardFocused: Bool
   @State private var isDropTargeted = false
   @State private var isHovered = false
@@ -416,8 +442,8 @@ struct WorkspaceKanbanCard: View {
   private var cardSurface: some View {
     return VStack(alignment: .leading, spacing: theme.space.xs) {
       cardHeading
-        // Where a lit link's line arrives, as this card is its subtask end.
-        .boardLinkAnchor(.target(task.id), active: link != nil && litLinkIDs.contains(task.id))
+        // Where a link's line arrives, as this card is its subtask end.
+        .boardLinkEnds(link == nil ? [] : [.target(task.id)], inColumn: column.id, geometry: linkGeometry)
       linkHint
       if !task.isList, let dueAt = task.dueAt {
         HStack(spacing: theme.space.xs) {
@@ -614,7 +640,7 @@ struct WorkspaceKanbanCard: View {
           .buttonStyle(.plain)
           // The label stands for every subtask it counts, so each of their
           // lines leaves from it.
-          .boardLinkSources(bundle.childIDs, lit: litLinkIDs)
+          .boardLinkEnds(bundle.childIDs.map { .source($0) }, inColumn: column.id, geometry: linkGeometry)
           .help("\(bundle.childIDs.count) subtask\(bundle.childIDs.count == 1 ? "" : "s") filed in \(title)")
         }
       }
@@ -743,9 +769,9 @@ struct WorkspaceKanbanCard: View {
     .opacity(model.isBlocked(item.task) && !model.isBlocked(task) ? Theme.disabledOpacity : 1)
     .font(theme.captionFont)
     .padding(.vertical, theme.space.xxs)
-    // Where a lit link's line leaves for the subtask's own card: the row's
+    // Where a link's line leaves for the subtask's own card: the row's
     // trailing end, where it names the column.
-    .boardLinkSources(rowLink.map { [$0.childID] } ?? [], lit: litLinkIDs)
+    .boardLinkEnds(rowLink.map { [.source($0.childID)] } ?? [], inColumn: column.id, geometry: linkGeometry)
     // The pointer on either end lights both and draws the line. Off the
     // row and still on the card, the card's own links take over again.
     .onHover { hovering in
