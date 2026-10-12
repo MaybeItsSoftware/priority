@@ -43,6 +43,43 @@ final class AgentContextTests: XCTestCase {
     XCTAssertEqual(ledger.changes([AgentContextBlock(key: "instructions", text: "B", cleared: "gone")]), ["B"])
   }
 
+  func testVisibleTasksListsIdsInOrderAndSaysWhenCapped() throws {
+    let tasks = (1...5).map { (id: "T\($0)", title: "Task \($0)") }
+    let all = try XCTUnwrap(AgentSystemPrompt.visibleTasks(tasks))
+    XCTAssertTrue(all.contains("(5)"))
+    XCTAssertTrue(all.contains("- Task 1 (id T1)\n- Task 2 (id T2)"))
+    let capped = try XCTUnwrap(AgentSystemPrompt.visibleTasks(tasks, limit: 2))
+    XCTAssertTrue(capped.contains("the first 2 of 5"))
+    XCTAssertFalse(capped.contains("T3"))
+    XCTAssertNil(AgentSystemPrompt.visibleTasks([]))
+  }
+
+  func testAVisibleTitleIsKeptToOneShortLine() throws {
+    let block = try XCTUnwrap(
+      AgentSystemPrompt.visibleTasks([(id: "T", title: "Line one\nline two " + String(repeating: "x", count: 100))]))
+    let line = try XCTUnwrap(block.split(separator: "\n").last)
+    XCTAssertTrue(line.hasPrefix("- Line one line two"))
+    XCTAssertTrue(line.contains("… (id T)"))
+  }
+
+  func testFailureAdviceSpellsOutTheFix() {
+    XCTAssertTrue(AgentFailureAdvice.advice(for: "Invalid API key · Please run /login")?.contains("/login") == true)
+    XCTAssertTrue(
+      AgentFailureAdvice.advice(for: "error: unknown option '--permission-prompt-tool'")?.contains("claude update")
+        == true)
+    XCTAssertNil(AgentFailureAdvice.advice(for: "The turn ended with error_max_turns."))
+  }
+
+  func testAChangeShowsWhatItReplaces() {
+    let summary = AgentToolSummary.describe(
+      tool: "mcp__takt__workspace_task_update",
+      input: .object(["task_id": .string("T1"), "title": .string("Oat milk"), "notes": .string("Same")]),
+      name: { $0 == "T1" ? "Milk" : nil },
+      current: { ["task_id": "Milk", "title": "Milk", "notes": "Same"][$0] })
+    XCTAssertEqual(summary.fields.map(\.label), ["Task", "Title", "Notes"])
+    XCTAssertEqual(summary.fields.map(\.previous), [nil, "Milk", nil])
+  }
+
   func testLedgerKeepsBlocksApart() {
     var ledger = AgentContextLedger()
     XCTAssertEqual(

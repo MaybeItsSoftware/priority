@@ -41,6 +41,10 @@ import os
     let request: AgentPermissionRequest
     var state: ApprovalState
     var outcome: Outcome?
+    /// What the change would replace, by input key, read when it was asked
+    /// for: once approved, the task holds the new values. See
+    /// `WorkspaceViewModel.agentCurrentValues`.
+    var before: [String: String] = [:]
   }
 
   enum Entry: Equatable {
@@ -63,6 +67,9 @@ import os
   /// Bumped at the end of every turn, so the workspace can look for the
   /// writes the turn made without waiting for its next poll.
   private(set) var finishedTurns = 0
+
+  /// Reads what a write would replace, for its card. Set by the workspace.
+  @ObservationIgnored var currentValues: ((String, JSONValue) -> [String: String])?
 
   /// A path to `claude` set by hand, tried before the usual install locations.
   var userExecutablePath = UserDefaults.standard.string(forKey: AgentCLILocator.userPathDefaultsKey) ?? "" {
@@ -179,12 +186,10 @@ import os
   // MARK: - The process
 
   /// Launches `claude`. Returns false, with a notice saying why, when it
-  /// cannot.
+  /// cannot — except for a missing `claude`, which the panel's setup state
+  /// already says in its place, with the paths it tried and a field for one.
   private func start() -> Bool {
-    guard let executable = executablePath else {
-      items.append(Item(entry: .notice("Claude Code was not found. Set its path below.", isError: true)))
-      return false
-    }
+    guard let executable = executablePath else { return false }
     guard let helper = Self.mcpHelperPath() else {
       items.append(
         Item(
@@ -302,6 +307,14 @@ import os
         entry: .notice(
           detail.isEmpty ? "Claude Code stopped (exit \(status))." : "Claude Code stopped: \(detail)",
           isError: true)))
+    adviseOn(detail)
+  }
+
+  /// The fix, under a failure it is known for: the CLI says "Please run
+  /// /login", and the panel has no terminal to run it in.
+  private func adviseOn(_ failure: String) {
+    guard let advice = AgentFailureAdvice.advice(for: failure) else { return }
+    items.append(Item(entry: .notice(advice, isError: false)))
   }
 
   private func withdrawPendingApprovals() {
@@ -386,7 +399,8 @@ import os
             requestID: request.requestID, message: "Only Takt's own tools are available here."))
         items.append(Item(entry: .notice("Refused \(request.toolName): not one of Takt's tools.", isError: true)))
       case .askUser:
-        let item = Item(entry: .write(Approval(request: request, state: .pending, outcome: nil)))
+        let before = currentValues?(request.toolName, request.input) ?? [:]
+        let item = Item(entry: .write(Approval(request: request, state: .pending, outcome: nil, before: before)))
         if let toolUseID = request.toolUseID { toolItems[toolUseID] = item.id }
         items.append(item)
       }
@@ -411,6 +425,7 @@ import os
         let detail = result.text?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         items.append(
           Item(entry: .notice(detail.isEmpty ? "The turn ended with \(result.subtype)." : detail, isError: true)))
+        adviseOn(detail)
       }
     }
   }

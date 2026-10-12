@@ -116,3 +116,50 @@ public struct AgentContextLedger: Equatable, Sendable {
     return out
   }
 }
+
+extension AgentSystemPrompt {
+
+  /// The tasks on screen, in the order they are drawn, with their ids, so
+  /// "these", "the top three" and "everything here" mean something without a
+  /// read first. Capped at `limit`, and saying so when it is. Sent as a block,
+  /// so only when what is on screen has changed since the last message.
+  public static func visibleTasks(_ tasks: [(id: String, title: String)], limit: Int = 30) -> String? {
+    guard !tasks.isEmpty else { return nil }
+    let shown = tasks.prefix(limit).map { task in
+      var title = task.title.replacingOccurrences(of: "\n", with: " ").trimmingCharacters(in: .whitespaces)
+      if title.count > 80 { title = String(title.prefix(79)) + "…" }
+      return "- \(title) (id \(task.id))"
+    }
+    let count = tasks.count > limit ? "the first \(limit) of \(tasks.count)" : "\(tasks.count)"
+    return "[Tasks on the user's screen, top to bottom (\(count)):\n\(shown.joined(separator: "\n"))]"
+  }
+
+  public static let noVisibleTasks = "[No tasks are on the user's screen now.]"
+}
+
+/// What to do about a failure Claude Code reported, in words the user can act
+/// on. The CLI's own messages are written for a terminal ("Please run
+/// /login"), and in the panel there is no terminal to run it in.
+public enum AgentFailureAdvice {
+
+  /// The fix for `message` — a turn's error, or the stderr of a process that
+  /// died — or nil when it is not one this knows.
+  public static func advice(for message: String) -> String? {
+    let text = message.lowercased()
+    func has(_ needles: String...) -> Bool { needles.contains(where: text.contains) }
+    if has("/login", "not logged in", "invalid api key", "please log in", "authentication", "oauth token") {
+      return "Claude Code is not signed in. Open Terminal, run `claude`, type `/login` and finish signing in, "
+        + "then send your message again here."
+    }
+    if has("unknown option", "unknown argument", "unrecognized option") {
+      return "This Claude Code is too old for the agent panel. Run `claude update` in Terminal, then start a new thread."
+    }
+    if has("usage limit", "rate limit", "limit reached", "credit balance", "quota") {
+      return "Claude Code has hit a usage limit. Wait for it to reset (`claude` in Terminal says when), then try again."
+    }
+    if has("enotfound", "econnrefused", "econnreset", "connection error", "fetch failed", "network error") {
+      return "Claude Code could not reach Anthropic. Check the connection, then send the message again."
+    }
+    return nil
+  }
+}

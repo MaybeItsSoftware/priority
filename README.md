@@ -728,14 +728,18 @@ the bottom.
     deleting anything — stops as a card saying what it will do (the tool, the
     title, the list by name) with **Approve** and **Deny**; nothing runs until
     you click Approve, or press Return with the card holding the keyboard
-    (Tab from the field reaches it; Esc denies). Stopping the thread, starting
+    (Tab from the field reaches it; Esc denies). A change to a task shows
+    what it holds now struck through above what it would become. Each message
+    also tells it the tasks on screen with their ids (the first 30), so "these"
+    and "the top three" work. Stopping the thread, starting
     a new one, or the process dying withdraws an unanswered card, and the
     change never happens. Return sends, Shift+Return is a new line, Esc hands
     the keyboard back to the tasks; the glyphs on the tab bar start a new
     thread and stop the current one. Approved changes are ordinary "MCP: …"
     steps in the Undo menu. If Claude Code is not installed where Takt
     looks (`~/.local/bin`, `~/.claude/local`, Homebrew, `/usr/local/bin`), the
-    panel says so and takes a path. **Standing instructions** can be written
+    panel says so and takes a path; if it is not signed in, too old or out of
+    usage, the error says what to run. **Standing instructions** can be written
     for the whole account (Settings ▸ Agent), for a folder and for a list (in
     its settings, `oo`); a message carries the account's, then each enclosing
     folder's, then the list's, and only when they changed since the last

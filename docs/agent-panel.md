@@ -44,7 +44,15 @@ alias — so the binary is looked for directly, first match wins
 4. `/opt/homebrew/bin/claude`, `/usr/local/bin/claude`
 
 If none is executable the panel says so, lists the paths it tried, and takes a
-path.
+path. That setup state stays at the top of the panel, transcript or not, for as
+long as there is no `claude` to run.
+
+When Claude Code is there but fails — a turn ending in an error, or the
+process dying with something on stderr — the panel shows the CLI's message and,
+for the failures it knows, the fix under it (`AgentFailureAdvice`): not signed
+in (run `claude` in Terminal and `/login`), too old for these flags (`claude
+update`), a usage limit, or no connection. The CLI's own wording is written for
+a terminal the panel does not have.
 
 Takt's MCP server is found the way `Takt --mcp-server` finds it
 (`MCPHelperLocator`): `$PRIORITY_MCP_EXECUTABLE_PATH`, then the bundled helper
@@ -104,6 +112,11 @@ Takt's.
 Each message is prefixed with one line saying what is on screen — the list and
 the selected task, by name and id — so "this task" means something. It is sent
 to the assistant and not shown in the transcript.
+
+The tasks on screen go with it too, top to bottom with their ids, capped at 30
+(`AgentSystemPrompt.visibleTasks`), so "these", "the top three" and
+"everything here" need no read first. Like the standing instructions below, the
+list is sent only when it differs from the last one this process was sent.
 
 ## Standing instructions
 
@@ -176,7 +189,11 @@ a control request to stdout and waits:
 
 The panel shows it as a card: the action in words ("Add a task"), each
 argument labelled, with ids resolved to list and task names, and the raw input
-behind a disclosure. A delete's Approve is in the danger hue. The card waits
+behind a disclosure. A change to a workspace task (`workspace_task_update`,
+`workspace_task_move`) shows what each field holds now struck through above
+what it would become — the title, notes, status, list or parent — read from
+the workspace when the request arrives, since once approved the task holds
+the new values. A delete's Approve is in the danger hue. The card waits
 for one of two answers, written to the CLI's stdin:
 
 ```json
@@ -205,7 +222,8 @@ for one of two answers, written to the CLI's stdin:
   list behind it.
 
 Once approved, the card follows the tool's result: running, done, or failed
-with the tool's message.
+with the tool's message. Done says where to take it back: the change is an
+"MCP: …" step in Edit ▸ Undo.
 
 Verified on this machine (Claude Code 2.1.283) against a throwaway database
 (`PRIORITY_MCP_DB_PATH` and friends pointed at `/tmp`, no Checkvist

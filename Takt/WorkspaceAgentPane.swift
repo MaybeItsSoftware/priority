@@ -24,7 +24,9 @@ struct WorkspaceAgentPane: View {
 
   var body: some View {
     VStack(spacing: 0) {
-      if agent.items.isEmpty && agent.executablePath == nil {
+      // Ahead of the transcript too: a message sent with no Claude Code leaves
+      // a notice saying so, and the place to fix it has to stay on screen.
+      if agent.executablePath == nil && !agent.isRunning {
         WorkspaceAgentSetup()
       } else if agent.items.isEmpty {
         emptyState
@@ -122,7 +124,8 @@ struct WorkspaceAgentPane: View {
         approve: { model.agent.approve(item.id); model.focusAgentInput() },
         deny: { model.agent.deny(item.id); model.focusAgentInput() })
     case .notice(let text, let isError):
-      Text(text)
+      // Markdown, so a fix's `claude` reads as something to type.
+      Text(Self.markdown(text))
         .font(theme.captionFont)
         .foregroundStyle(isError ? theme.danger : theme.muted)
         .textSelection(.enabled)
@@ -259,7 +262,8 @@ struct WorkspaceAgentApprovalCard: View {
 
   var body: some View {
     let summary = AgentToolSummary.describe(
-      tool: approval.request.toolName, input: approval.request.input, name: model.agentDisplayName(for:))
+      tool: approval.request.toolName, input: approval.request.input, name: model.agentDisplayName(for:),
+      current: { approval.before[$0] })
     return VStack(alignment: .leading, spacing: theme.space.sm) {
       HStack(alignment: .firstTextBaseline, spacing: theme.space.xs) {
         MicroLabel(isPending ? "Wants to" : "Asked to")
@@ -274,11 +278,22 @@ struct WorkspaceAgentApprovalCard: View {
               Text(field.label)
                 .font(theme.captionFont)
                 .foregroundStyle(theme.muted)
-              Text(field.value)
-                .font(theme.bodyFont())
-                .foregroundStyle(theme.ink)
-                .textSelection(.enabled)
-                .fixedSize(horizontal: false, vertical: true)
+              VStack(alignment: .leading, spacing: 0) {
+                // Before, struck through, over after: a change reads as one.
+                if let previous = field.previous {
+                  Text(previous)
+                    .font(theme.bodyFont())
+                    .foregroundStyle(theme.muted)
+                    .strikethrough(color: theme.muted)
+                    .lineLimit(3)
+                    .help("Before: \(previous)")
+                }
+                Text(field.value)
+                  .font(theme.bodyFont())
+                  .foregroundStyle(theme.ink)
+                  .textSelection(.enabled)
+                  .fixedSize(horizontal: false, vertical: true)
+              }
             }
           }
         }
@@ -357,7 +372,7 @@ struct WorkspaceAgentApprovalCard: View {
     case .approved:
       switch approval.outcome {
       case nil: status("Approved · running…", theme.muted)
-      case .applied: status("Approved · done", theme.success)
+      case .applied: status("Approved · done · an \"MCP: …\" step in Edit ▸ Undo", theme.success)
       case .failed(let message): status("Approved · failed: \(message)", theme.danger)
       }
     case .denied:

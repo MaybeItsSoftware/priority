@@ -12,10 +12,14 @@ public struct AgentToolSummary: Equatable, Sendable {
   public struct Field: Equatable, Sendable {
     public let label: String
     public let value: String
+    /// What it is now, for a change: the card shows it struck through beside
+    /// `value`. Nil when it is not a change, or the value would not change.
+    public let previous: String?
 
-    public init(label: String, value: String) {
+    public init(label: String, value: String, previous: String? = nil) {
       self.label = label
       self.value = value
+      self.previous = previous
     }
   }
 
@@ -32,10 +36,16 @@ public struct AgentToolSummary: Equatable, Sendable {
   }
 
   /// The words for a write, as the approval card shows it.
+  ///
+  /// `current` answers what a key's value is now, already in words — the
+  /// task's title for `title`, its list's name for `list_id` — for the keys
+  /// a change would alter, so the card can show before and after. It is
+  /// not asked about the key that names what is being changed (`task_id`).
   public static func describe(
     tool qualified: String,
     input: JSONValue,
-    name: (String) -> String? = { _ in nil }
+    name: (String) -> String? = { _ in nil },
+    current: (String) -> String? = { _ in nil }
   ) -> AgentToolSummary {
     let tool = AgentToolPolicy.priorityToolName(qualified) ?? qualified
     let object = input.objectValue ?? [:]
@@ -43,7 +53,8 @@ public struct AgentToolSummary: Equatable, Sendable {
       guard let value = object[key], let text = display(value, key: key, name: name) else {
         return nil
       }
-      return Field(label: label(for: key), value: text)
+      let previous = subjectKeys.contains(key) ? nil : current(key)
+      return Field(label: label(for: key), value: text, previous: previous == text ? nil : previous)
     }
     return AgentToolSummary(
       title: titles[tool] ?? humanised(tool),
@@ -98,6 +109,9 @@ public struct AgentToolSummary: Equatable, Sendable {
   ]
 
   private static let destructiveTools: Set<String> = ["workspace_task_delete", "task_delete"]
+
+  /// Keys that say which thing a call is about rather than what it changes.
+  private static let subjectKeys: Set<String> = ["task_id", "daily_id"]
 
   /// Keys in the order a person reads them: what, then where, then details.
   private static let keyOrder = [

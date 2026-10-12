@@ -256,10 +256,14 @@ extension WorkspaceViewModel {
     agentInputFocusRequest += 1
   }
 
-  /// The agent's message, with a line saying what is on screen so "this
-  /// list" and "this task" mean something, and the standing instructions for
-  /// where that is whenever they differ from the last ones the thread was sent.
+  /// The agent's message, with a line saying where the user is so "this
+  /// list" and "this task" mean something. The standing instructions for
+  /// there, and the tasks on screen, go with it whenever they differ from the
+  /// last ones the thread was sent.
   func sendAgentMessage(_ text: String) {
+    // Set here rather than at init: no approval can be asked for before a
+    // message has been sent.
+    agent.currentValues = { [weak self] tool, input in self?.agentCurrentValues(tool: tool, input: input) ?? [:] }
     let task = selectedTask
     let list = isEverythingSelected ? nil : selectedList ?? task.flatMap { task in lists.first { $0.id == task.listId } }
     agent.send(
@@ -273,7 +277,11 @@ extension WorkspaceViewModel {
         AgentContextBlock(
           key: "instructions",
           text: AgentStandingInstructions.block(agentInstructionScopes),
-          cleared: AgentStandingInstructions.cleared)
+          cleared: AgentStandingInstructions.cleared),
+        AgentContextBlock(
+          key: "screen",
+          text: AgentSystemPrompt.visibleTasks(visibleNavigationTasks.map { ($0.id, $0.title) }),
+          cleared: AgentSystemPrompt.noVisibleTasks),
       ])
   }
 
@@ -332,6 +340,28 @@ extension WorkspaceViewModel {
     if let folder = folders.first(where: { $0.id == id }) { return folder.name }
     if let task = taskCache[id] { return task.title }
     return (try? store?.task(id: id))??.title
+  }
+
+  /// What a change to a workspace task would replace, by input key, in the
+  /// words the approval card uses, so the card can show "Milk" struck through
+  /// over "Oat milk" rather than only the new value. Empty for any other
+  /// tool, or a task this workspace cannot find.
+  func agentCurrentValues(tool: String, input: JSONValue) -> [String: String] {
+    let bare = AgentToolPolicy.priorityToolName(tool)
+    guard bare == "workspace_task_update" || bare == "workspace_task_move",
+      let id = input.objectValue?["task_id"]?.stringValue,
+      let task = task(withID: id)
+    else { return [:] }
+    let notes = task.notes.trimmingCharacters(in: .whitespacesAndNewlines)
+    var values = [
+      "title": task.title,
+      "notes": notes.isEmpty ? "None" : notes,
+      "status": task.status.rawValue,
+      "kind": (task.itemKind ?? .task).rawValue,
+      "parent_task_id": task.parentTaskId.map { self.task(withID: $0)?.title ?? $0 } ?? "Top level",
+    ]
+    values["list_id"] = (lists + archivedLists).first { $0.id == task.listId }?.name
+    return values
   }
 
   /// After a turn, look for its writes now rather than on the next poll.
