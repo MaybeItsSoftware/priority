@@ -42,8 +42,7 @@ struct WorkspaceOutlinePane: View {
                 } else {
                   let blockedStarts = model.blockedSectionStarts(in: items)
                   ForEach(items) { item in
-                    if blockedStarts.contains(item.id) { blockedDivider(depth: item.depth) }
-                    drafted(item) {
+                    drafted(item, blocked: blockedStarts.contains(item.id)) {
                       row(item, selectedID: selectedID, tasksHaveKeyboard: tasksHaveKeyboard)
                     }
                   }
@@ -67,8 +66,7 @@ struct WorkspaceOutlinePane: View {
             let parents = model.outlineParentIDs
             let blockedStarts = model.blockedSectionStarts(in: model.outlineRows)
             ForEach(model.outlineRows) { item in
-              if blockedStarts.contains(item.id) { blockedDivider(depth: item.depth) }
-              drafted(item) {
+              drafted(item, blocked: blockedStarts.contains(item.id)) {
                 row(item, selectedID: selectedID, tasksHaveKeyboard: tasksHaveKeyboard,
                   fold: parents.contains(item.id) ? model.foldedTaskIDs.contains(item.id) : nil)
               }
@@ -99,17 +97,27 @@ struct WorkspaceOutlinePane: View {
     }
   }
 
-  /// The row, with the draft row before or after it when the new task is to
-  /// land there — one step further in when it goes inside.
-  @ViewBuilder
-  private func drafted(_ item: TaskOutlineItem, @ViewBuilder row: () -> some View) -> some View {
-    if model.draftsBeside(item.id, above: true) {
-      WorkspaceTaskDraftRow(depth: item.depth).outlineRowChrome()
+  /// The row, with the blocked label over it when it heads a blocked tail,
+  /// and the draft row before or after it when the new task is to land
+  /// there — one step further in when it goes inside.
+  ///
+  /// One table row whatever it holds. A `ForEach` whose element can be one
+  /// row or several makes the table build every element to count them, which
+  /// in Everything was seven thousand rows on each switch to it.
+  private func drafted(
+    _ item: TaskOutlineItem, blocked: Bool, @ViewBuilder row: () -> some View
+  ) -> some View {
+    VStack(spacing: 0) {
+      if blocked { blockedDivider(depth: item.depth) }
+      if model.draftsBeside(item.id, above: true) {
+        WorkspaceTaskDraftRow(depth: item.depth)
+      }
+      row()
+      if model.draftsBeside(item.id, above: false) {
+        WorkspaceTaskDraftRow(depth: item.depth + (model.taskInsertionIsChild ? 1 : 0))
+      }
     }
-    row()
-    if model.draftsBeside(item.id, above: false) {
-      WorkspaceTaskDraftRow(depth: item.depth + (model.taskInsertionIsChild ? 1 : 0)).outlineRowChrome()
-    }
+    .outlineRowChrome()
   }
 
   /// The label over a sibling group's blocked tail, its text in the title
