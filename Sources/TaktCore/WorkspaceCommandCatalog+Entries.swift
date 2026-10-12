@@ -173,7 +173,7 @@ public enum WorkspaceCommandCatalog {
       note: "Or add it to the queue behind a running block"),
     .init(
       id: .taskMove, title: "Move the task or list", group: "Task", keys: ["mm", "cmd+shift+m"],
-      note: "Including everything under it"),
+      note: "To any list, or under any task, with everything under it"),
     .init(
       id: .taskConvertToList, title: "Convert to a list, or back", group: "Task",
       keys: ["cmd+shift+l"]),

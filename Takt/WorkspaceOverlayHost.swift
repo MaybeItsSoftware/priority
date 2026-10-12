@@ -404,6 +404,11 @@ struct WorkspaceListNavigator: View {
 /// Where to move a task or list: every list, nested list and folder it could
 /// go to, filtered as you type. It was a pop-up menu in a sheet, which is a
 /// mouse control you had to Tab to.
+///
+/// Below the lists, a task being moved is also offered every open task the
+/// query matches, from any list, to become the last subtask of. The lists
+/// stay first, so typing a list's name and pressing Return still lands where
+/// it always did.
 struct WorkspaceMoveOverlay: View {
   @Environment(WorkspaceViewModel.self) private var model
   @Environment(\.theme) private var theme
@@ -414,6 +419,10 @@ struct WorkspaceMoveOverlay: View {
   /// Read once when the overlay opens. It needs the outline beneath the task
   /// being moved, which is a store read, and a body is no place for one.
   @State private var all: [Destination] = []
+  /// The task being moved and everything below it: no place it can go.
+  @State private var excluded: Set<String> = []
+  /// The open tasks the query matches, searched as you type.
+  @State private var taskMatches: [Destination] = []
 
   private static let newListRowID = "new-list"
 
@@ -423,13 +432,34 @@ struct WorkspaceMoveOverlay: View {
     let listID: String
     let parentTaskID: String?
     var folderID: String?
+    /// The list a task destination lives in, drawn beside it; nil for a
+    /// list, nested list or folder.
+    var listName: String?
+  }
+
+  enum Row: Identifiable {
+    case destination(Destination)
+    case newList(String)
+
+    var id: String {
+      switch self {
+      case .destination(let destination): destination.id
+      case .newList: WorkspaceMoveOverlay.newListRowID
+      }
+    }
   }
 
   private var destinations: [Destination] {
     all.filter { query.isEmpty || $0.name.localizedCaseInsensitiveContains(query) }
   }
 
-  /// The list the last row would create: what you typed, when no list is
+  /// The lists, then the new list row, then the tasks to move under.
+  private var rows: [Row] {
+    destinations.map(Row.destination) + (newListName.map { [Row.newList($0)] } ?? [])
+      + taskMatches.map(Row.destination)
+  }
+
+  /// The list the new list row would create: what you typed, when no list is
   /// called that already. Moving somewhere that does not exist yet is the
   /// same gesture as moving somewhere that does, not a trip to the sidebar.
   private var newListName: String? {
@@ -441,40 +471,23 @@ struct WorkspaceMoveOverlay: View {
   }
 
   var body: some View {
-    let items = destinations
-    let newList = newListName
-    let rowCount = items.count + (newList == nil ? 0 : 1)
+    let rows = rows
     VStack(spacing: 0) {
       WorkspaceOverlayField(
-        symbol: "arrow.right.doc.on.clipboard", prompt: "Move to… or type a new list's name", text: $query,
-        context: request.title)
+        symbol: "arrow.right.doc.on.clipboard", prompt: "Move to a list or under a task… or name a new list",
+        text: $query, context: request.title)
       FocusRule()
-      if rowCount == 0 {
+      if rows.isEmpty {
         WorkspaceOverlayHint(text: "Nowhere matches.")
           .frame(height: WorkspaceOverlayMetrics.listHeight)
       } else {
         ScrollViewReader { proxy in
           ScrollView {
             LazyVStack(alignment: .leading, spacing: 0) {
-              ForEach(Array(items.enumerated()), id: \.element.id) { index, destination in
-                Label(destination.name, systemImage: destination.folderID == nil ? "list.bullet" : "folder")
-                  .font(theme.bodyFont())
-                  .foregroundStyle(theme.ink)
-                  .lineLimit(1)
-                  .truncationMode(.middle)
-                  .overlayRow(isSelected: index == (selection ?? 0))
-                  .id(destination.id)
-                  .onTapGesture { move(to: destination) }
-              }
-              if let newList {
-                Label("New list “\(newList)”", systemImage: "plus")
-                  .font(theme.bodyFont())
-                  .foregroundStyle(theme.primary)
-                  .lineLimit(1)
-                  .truncationMode(.middle)
-                  .overlayRow(isSelected: items.count == (selection ?? 0))
-                  .id(Self.newListRowID)
-                  .onTapGesture { moveToNewList(named: newList) }
+              ForEach(Array(rows.enumerated()), id: \.element.id) { index, row in
+                rowView(row, isSelected: index == (selection ?? 0))
+                  .id(row.id)
+                  .onTapGesture { choose(row) }
               }
             }
           }
@@ -482,31 +495,74 @@ struct WorkspaceMoveOverlay: View {
           // Rows are keyed by destination, not position: keyed by position,
           // a filtered list kept drawing the rows it had before you typed.
           .onChange(of: selection) { _, index in
-            guard let index else { return }
-            proxy.scrollTo(items.indices.contains(index) ? items[index].id : Self.newListRowID)
+            guard let index, rows.indices.contains(index) else { return }
+            proxy.scrollTo(rows[index].id)
           }
         }
       }
-      WorkspaceOverlayFooter(hints: "↑↓ choose · ↩ move · esc cancel", trailing: "\(items.count)")
+      WorkspaceOverlayFooter(
+        hints: "↑↓ choose · ↩ move · esc cancel", trailing: "\(destinations.count + taskMatches.count)")
     }
-    .onAppear { all = Self.destinations(for: request, in: model) }
-    .onChange(of: query) { _, _ in selection = nil }
+    .onAppear {
+      excluded = Self.excludedTaskIDs(for: request, in: model)
+      all = Self.destinations(for: request, excluding: excluded, in: model)
+    }
+    .onChange(of: query) { _, text in
+      selection = nil
+      taskMatches = Self.taskDestinations(matching: text, for: request, excluding: excluded, in: model)
+    }
     .overlayKeys(model, id: overlayID) { key in
-      let items = destinations
-      let newList = newListName
-      let rowCount = items.count + (newList == nil ? 0 : 1)
+      let rows = rows
       if let step = WorkspaceOverlayStep.offset(for: key) {
-        selection = WorkspaceOverlayStep.index(from: selection ?? 0, by: step, count: rowCount)
+        selection = WorkspaceOverlayStep.index(from: selection ?? 0, by: step, count: rows.count)
         return true
       }
       guard key == "enter" else { return false }
       let index = selection ?? 0
-      if items.indices.contains(index) {
-        move(to: items[index])
-      } else if index == items.count, let newList {
-        moveToNewList(named: newList)
-      }
+      if rows.indices.contains(index) { choose(rows[index]) }
       return true
+    }
+  }
+
+  @ViewBuilder
+  private func rowView(_ row: Row, isSelected: Bool) -> some View {
+    switch row {
+    case .newList(let name):
+      Label("New list “\(name)”", systemImage: "plus")
+        .font(theme.bodyFont())
+        .foregroundStyle(theme.primary)
+        .lineLimit(1)
+        .truncationMode(.middle)
+        .overlayRow(isSelected: isSelected)
+    case .destination(let destination):
+      if let listName = destination.listName {
+        HStack(alignment: isSelected ? .firstTextBaseline : .center, spacing: theme.space.sm) {
+          Label(destination.name, systemImage: "arrow.turn.down.right")
+            .font(theme.bodyFont())
+            .foregroundStyle(theme.ink)
+            .expandsWhenSelected(isSelected)
+          Spacer(minLength: theme.space.md)
+          MicroLabel(listName)
+            .lineLimit(1)
+            .fixedSize(horizontal: isSelected, vertical: false)
+        }
+        .overlayRow(isSelected: isSelected)
+        .help("Move under \(destination.name), as its last subtask")
+      } else {
+        Label(destination.name, systemImage: destination.folderID == nil ? "list.bullet" : "folder")
+          .font(theme.bodyFont())
+          .foregroundStyle(theme.ink)
+          .lineLimit(1)
+          .truncationMode(.middle)
+          .overlayRow(isSelected: isSelected)
+      }
+    }
+  }
+
+  private func choose(_ row: Row) {
+    switch row {
+    case .destination(let destination): move(to: destination)
+    case .newList(let name): moveToNewList(named: name)
     }
   }
 
@@ -524,14 +580,19 @@ struct WorkspaceMoveOverlay: View {
     }
   }
 
-  static func destinations(for request: WorkspaceItemMoveRequest, in model: WorkspaceViewModel) -> [Destination] {
-    var blocked = Set<String>()
-    if let taskID = request.taskID {
-      blocked.insert(taskID)
-      for item in (try? model.store?.outline(in: request.sourceListID, parentTaskId: taskID)) ?? [] {
-        blocked.insert(item.id)
-      }
+  /// The task being moved and its whole subtree, which it cannot go under.
+  static func excludedTaskIDs(for request: WorkspaceItemMoveRequest, in model: WorkspaceViewModel) -> Set<String> {
+    guard let taskID = request.taskID else { return [] }
+    var excluded: Set<String> = [taskID]
+    for item in (try? model.store?.outline(in: request.sourceListID, parentTaskId: taskID)) ?? [] {
+      excluded.insert(item.id)
     }
+    return excluded
+  }
+
+  static func destinations(
+    for request: WorkspaceItemMoveRequest, excluding blocked: Set<String>, in model: WorkspaceViewModel
+  ) -> [Destination] {
     let roots = model.lists.filter { request.taskID != nil || $0.id != request.sourceListID }
     let listDestinations = roots.flatMap { list in
       [Destination(id: "root:\(list.id)", name: list.name, listID: list.id, parentTaskID: nil)]
@@ -542,6 +603,23 @@ struct WorkspaceMoveOverlay: View {
     return listDestinations + model.folders.map { folder in
       Destination(id: "folder:\(folder.id)", name: "Folder: \(folder.name)", listID: "", parentTaskID: nil, folderID: folder.id)
     }
+  }
+
+  /// Open tasks matching `query`, from any list, to move a task under. Only
+  /// for a task: a list moves into lists and folders. Nested lists are
+  /// already among the lists above, so they are not offered twice.
+  static func taskDestinations(
+    matching query: String, for request: WorkspaceItemMoveRequest, excluding blocked: Set<String>,
+    in model: WorkspaceViewModel
+  ) -> [Destination] {
+    guard request.taskID != nil, !query.trimmingCharacters(in: .whitespaces).isEmpty else { return [] }
+    return model.searchResults(matching: query)
+      .filter { !$0.task.isList && !blocked.contains($0.id) }
+      .map { result in
+        Destination(
+          id: "task:\(result.id)", name: result.task.title, listID: result.task.listId,
+          parentTaskID: result.task.id, listName: result.list.name)
+      }
   }
 }
 
