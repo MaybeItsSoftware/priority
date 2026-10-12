@@ -52,9 +52,20 @@ public final class RelativeDateTextCache {
     return text
   }
 
-  /// The formatting the day list uses: "tomorrow", "in 3 days", "yesterday",
-  /// measured against the clock as it is when the call is made.
-  public nonisolated static func namedRelative(_ date: Date, now _: Date) -> String {
-    date.formatted(.relative(presentation: .named))
+  /// The formatting the day list uses: "tomorrow", "in 3 days", "yesterday".
+  ///
+  /// A date at midnight is a day with no time on it — what `@fri`, Today's
+  /// field and a Checkvist due date all give — so it is counted in days
+  /// against `now`'s: today's is "today", not "19 hours ago". A date with a
+  /// time is measured against the clock.
+  public nonisolated static func namedRelative(_ date: Date, now: Date) -> String {
+    let calendar = Calendar.current
+    guard date == calendar.startOfDay(for: date) else {
+      return date.formatted(.relative(presentation: .named))
+    }
+    let days = calendar.dateComponents([.day], from: calendar.startOfDay(for: now), to: date).day ?? 0
+    let formatter = RelativeDateTimeFormatter()
+    formatter.dateTimeStyle = .named
+    return formatter.localizedString(from: DateComponents(day: days))
   }
 }

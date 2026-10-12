@@ -63,6 +63,21 @@ final class RelativeDateTextCacheTests: XCTestCase {
     XCTAssertLessThan(cached, formatting / 3)
   }
 
+  func testADueDayIsCountedInDaysNotHours() {
+    let calendar = Calendar.current
+    let today = calendar.startOfDay(for: .now)
+    let evening = today.addingTimeInterval(19 * 3_600)
+    let named = { (days: Int) in
+      RelativeDateTextCache.namedRelative(calendar.date(byAdding: .day, value: days, to: today)!, now: evening)
+    }
+    let formatter = RelativeDateTimeFormatter()
+    formatter.dateTimeStyle = .named
+    XCTAssertEqual(named(0), formatter.localizedString(from: DateComponents(day: 0)))
+    XCTAssertEqual(named(1), formatter.localizedString(from: DateComponents(day: 1)))
+    XCTAssertEqual(named(-2), formatter.localizedString(from: DateComponents(day: -2)))
+    XCTAssertFalse(named(0).contains("hour"))
+  }
+
   private static func seconds(_ work: () -> Void) -> Double {
     let start = DispatchTime.now().uptimeNanoseconds
     work()
