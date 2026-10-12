@@ -155,6 +155,7 @@ struct WorkspaceTaskPlanningEditor: View {
         }
       }
       .inspectorStop("condition.add")
+      .commandHelp(.taskConditions, note: "Tick conditions from the keyboard, or type a new one")
       if isAddingCondition {
         HStack(spacing: theme.space.sm) {
           TextField("New condition", text: $newConditionName, prompt: Text("Home, Floor space…"))
@@ -240,16 +241,15 @@ struct WorkspaceTaskPlanningBadges: View {
           .foregroundStyle(start > .now ? theme.warning : theme.muted)
       }
       if let groups = planning?.requirementGroups, !groups.isEmpty {
-        Label(groups.map { group in
-          group.map { id in model.focusConditions.first(where: { $0.id == id })?.name ?? "Missing condition" }
-            .joined(separator: " or ")
-        }.joined(separator: " + "), systemImage: "location")
+        WorkspaceRequirementTags(groups: groups)
       }
-      // A start still to come is already the line above, so it is not said
-      // twice; only the other reasons are.
+      // A start still to come is already the line above, and a missing
+      // condition is its tag in the warning colour, so neither is said twice;
+      // only the other reasons are.
       if let blocked = model.blockedFocusTasks.first(where: { $0.id == task.id }) {
         let reasons = blocked.reasons.filter { reason in
           if case .startsLater = reason { return planning?.startAt == nil }
+          if case .missingConditions = reason { return planning?.requirementGroups?.isEmpty ?? true }
           return true
         }
         if !reasons.isEmpty {
@@ -258,5 +258,33 @@ struct WorkspaceTaskPlanningBadges: View {
         }
       }
     }.font(theme.captionFont).foregroundStyle(theme.muted).expandsWhenSelected(isExpanded, lineLimit: 2)
+  }
+}
+
+/// A task's required conditions as tags on its row or card, one per
+/// requirement — "Home", "Campus or Library" — so what a task needs reads at
+/// a glance rather than as a sentence. One that holds now is in the success
+/// colour; one that does not is in the warning colour, because it is what
+/// keeps the task out of the day. `cc` changes them.
+struct WorkspaceRequirementTags: View {
+  @Environment(WorkspaceViewModel.self) private var model
+  @Environment(\.theme) private var theme
+  let groups: [[String]]
+
+  var body: some View {
+    let available = model.focusContext.conditionIDs
+    HStack(spacing: theme.space.xs) {
+      Image(systemName: "location")
+        .foregroundStyle(theme.muted)
+        .accessibilityHidden(true)
+      ForEach(Array(groups.enumerated()), id: \.offset) { _, group in
+        let name = group.map { id in model.focusConditions.first { $0.id == id }?.name ?? "Missing condition" }
+          .joined(separator: " or ")
+        let holds = group.contains { available.contains($0) }
+        ThemedTag(name, tint: holds ? theme.success : theme.warning)
+          .help(holds ? "Needs \(name) — available now" : "Needs \(name) — not available now. cc changes what it needs")
+          .accessibilityLabel(holds ? "Needs \(name), available now" : "Needs \(name), not available now")
+      }
+    }
   }
 }

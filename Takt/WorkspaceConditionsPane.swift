@@ -81,9 +81,10 @@ struct WorkspaceConditionsPane: View {
   /// The conditions that held before the last context expired, offered back.
   private var lastContext: some View {
     HStack(spacing: theme.space.sm) {
-      Text("Last context: " + model.suggestedContextIDs.sorted().map { id in
-        model.focusConditions.first(where: { $0.id == id })?.name ?? ""
-      }.joined(separator: ", "))
+      // In the tab's order, as the rows above are: sorted by id, the names
+      // came out in an order nothing on screen explained.
+      Text("Last context: " + model.focusConditions.filter { model.suggestedContextIDs.contains($0.id) }
+        .map(\.name).joined(separator: ", "))
       .foregroundStyle(theme.muted)
       .lineLimit(2)
       Spacer(minLength: theme.space.xs)

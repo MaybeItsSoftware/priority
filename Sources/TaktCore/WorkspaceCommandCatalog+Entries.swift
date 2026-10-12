@@ -37,8 +37,8 @@ public enum WorkspaceCommandCatalog {
     [.taskMoveToPreviousList, .taskMoveToNextList, .taskMove],
     [.taskConvertToList, .taskPromoteList, .taskExtractBranch],
     [
-      .taskTogglePlannedToday, .taskToggleDaily, .taskHabit, .taskWaiting, .taskAddBlocker, .taskOpenLink,
-      .taskShowProgress, .taskToggleInspector,
+      .taskTogglePlannedToday, .taskToggleDaily, .taskHabit, .taskWaiting, .taskAddBlocker, .taskConditions,
+      .taskOpenLink, .taskShowProgress, .taskToggleInspector,
     ],
   ]
 
@@ -162,6 +162,11 @@ public enum WorkspaceCommandCatalog {
       id: .taskAddBlocker, title: "Blocked by: wait on another task", group: "Task",
       keys: ["bb", "cmd+shift+b"],
       note: "Finds the task it waits on. Until that is done it is greyed, sinks below its siblings and is never next up"),
+    // `c` starts only `cd`, `cn` and `ct`, so `cc` was free.
+    .init(
+      id: .taskConditions, title: "Conditions: what the task needs before it is worth starting", group: "Task",
+      keys: ["cc"],
+      note: "Type to find one, Space or Return ticks it, a new name makes it. With no task selected, the Conditions tab"),
     // ⌃T rather than T: bare `t` starts `td`, `tm` and `tt`, and ⌘T goes to
     // Today.
     .init(

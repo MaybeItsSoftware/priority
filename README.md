@@ -88,6 +88,7 @@ something you already have to know.
 | `gb` / `Cmd+Shift+H` | Make a habit from the task, or edit the habit it is — see [Habits](#habits) |
 | `ww` | Waiting on: who or what, and when to follow up — moves the task to Waiting on; see [Waiting on](#waiting-on) |
 | `bb` / `Cmd+Shift+B` | Blocked by: find a task this one waits on, or type a new one and `Cmd+Return` to make it just above; see [Blocked by](#blocked-by) |
+| `cc` | Conditions: tick what the task needs (Home, Floor space…), or type a new one — `Space` or `Return` ticks, `Esc` closes; with no task selected, the Conditions tab. See [Conditions](#conditions) |
 | `Delete` / `Cmd+Delete` / `Cmd+Shift+K` | Delete the task — it asks, and `Return` confirms |
 | `Return` | **Always** add a task, as in Checkvist — below the selection — on the board, below the card a selected subtask is drawn on — and at the foot of the day on Today. On a subtask's own card in another column than its parent's, the new task is a plain card of that column, at the foot of its plain cards, rather than another subtask of the parent |
 | `Space` / `x` | **Always** complete the task (or reopen it) — unless you are typing |
@@ -335,10 +336,25 @@ puts it away.
 
 A **condition** is a place or circumstance a task needs before it is worth
 starting — *Home*, *Campus*, *Floor space*. A task that requires one stays out
-of the day and the panel (its badge says what it needs) until you say that
-condition holds; a task with no conditions is available whenever.
+of the day and the panel until you say that condition holds; a task with no
+conditions is available whenever. Its row and card show what it needs as
+tags, one per requirement (*Home*, *Campus or Library*): in the success
+colour while it holds, in the warning colour while it is what keeps the task
+back.
 
-Both halves of the job live in the right dock's **Conditions** tab.
+**Requiring one** is `cc` on the task (or **Conditions** in the palette and
+the Task menu). A finder opens with every condition as a row with a box:
+type to narrow, `↑`/`↓` to choose, and `Space` or `Return` ticks the row or
+unticks it — saved at once, one undo step each. Type a name nothing is called
+yet and the last row is **New condition “…”**: `Return` makes it and requires
+it together (two undo steps, the requirement first, since the condition
+outlives the task). It stays open for the next one, and `Esc` closes it. A
+second **place** joins the first as either-or (*Home or Campus*) rather than
+asking for both, since you can only be in one. `Space` ticks once you have
+moved with the arrows, or with nothing typed; otherwise it is a space in the
+name. `Cmd+Return` goes to the Conditions tab.
+
+Saying what holds now, and managing the conditions themselves, live in the right dock's **Conditions** tab.
 `Cmd+Alt+8` (or `ga`, or **Set what's available now…** in the palette) opens
 it with the keyboard in it; so does clicking the status bar's indicator, which
 shows the active conditions (or *Anywhere*). The focus panel has the same line
@@ -360,9 +376,10 @@ tab.
   on the new-condition row.
 - `↑`/`↓` (or `j`/`k`) walk both halves with one cursor; `Esc` or `←` hands
   the keyboard back to the work and leaves the dock open, `r` puts it away.
-- **Requiring one**: in the inspector's Plan section, **Add required
-  condition** — or **New condition…** at the foot of that menu, which makes it
-  and requires it at once. **Or…** widens a requirement to either of two.
+- **In the inspector**: the Plan section's **Add required condition** does
+  what `cc` does with the mouse — **New condition…** at the foot of its menu
+  makes one and requires it — and **Or…** widens a requirement to either of
+  two.
 
 ### The focus panel
 
