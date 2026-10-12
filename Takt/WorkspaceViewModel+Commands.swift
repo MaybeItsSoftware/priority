@@ -289,7 +289,7 @@ extension WorkspaceViewModel {
     case .motionOutlineFold: if key != nil { foldOrAscendSelection() }
     case .motionDismiss: if key != nil { dismissFromKeyboard() }
     case .motionSetPriority:
-      if let key, let digit = Int(key) { editTaskValues { $0.priority = digit } }
+      if let key, let digit = Int(key), (1...4).contains(digit) { editTaskValues { $0.priority = digit } }
     case .motionDoneSelect: if let key { moveDoneCursor(key) }
     case .motionTimelineSelect: if let key { moveTimelineCursor(key) }
     case .todayStart: startSelectedDayTask()

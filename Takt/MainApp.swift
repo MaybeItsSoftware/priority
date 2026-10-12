@@ -175,7 +175,7 @@ struct MainApp: App {
         // The digits are one catalogue row that reads which digit ran it, so
         // the menu passes the digit as the key.
         Menu("Set Priority") {
-          ForEach(1..<10) { digit in
+          ForEach(1..<5) { digit in
             Button("Priority \(digit)") {
               AppDelegate.shared.workspace.run(.motionSetPriority, key: String(digit))
             }

@@ -116,6 +116,9 @@ struct DayTaskFacts: Equatable {
   let completion: CompletionKind
   let isDaily: Bool
   let isDailyDone: Bool
+  /// 1–4, or nil when it has none. Carried here rather than read by the row,
+  /// so a priority set from the keys redraws the row through `==`.
+  let priority: Int?
   /// "12m / 25m", "12m" or "25m"; nil when the task has neither.
   let cost: String?
   /// Open and still waiting on an open task: drawn greyed.
@@ -168,6 +171,9 @@ struct DayTaskRow: View, Equatable {
               .font(theme.bodyFont())
               .foregroundStyle(facts.isBlocked ? theme.muted : theme.ink)
               .expandsWhenSelected(isExpanded)
+          }
+          if facts.priority != nil {
+            WorkspacePriorityBadge(taskID: task.id)
           }
           if facts.isDaily {
             DailyBadge(task: task, isDoneToday: facts.isDailyDone)

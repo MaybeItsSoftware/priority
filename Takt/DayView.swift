@@ -689,6 +689,7 @@ struct DayView: View {
     let dailies = Dictionary(
       model.dailyItems.map { ($0.task.id, $0) }, uniquingKeysWith: { first, _ in first })
     let logged = model.taskLoggedSeconds
+    let priorities = model.taskPriorities
     func facts(_ task: WorkspaceTask, index: Int?) -> DayTaskFacts {
       let daily = dailies[task.id]
       let isDaily = model.isDailyProgressTask(task)
@@ -696,6 +697,7 @@ struct DayView: View {
         task: task, index: index, isActive: task.id == activeID,
         completion: daily.map { .daily(id: $0.daily.id) } ?? .workspaceTask(id: task.id),
         isDaily: isDaily, isDailyDone: isDaily && (daily?.isDoneToday ?? false),
+        priority: priorities[task.id],
         cost: costText(for: task, logged: logged[task.id] ?? 0), isBlocked: model.isBlocked(task))
     }
     if trimmed.isEmpty {

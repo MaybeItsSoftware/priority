@@ -598,10 +598,14 @@ public enum WorkspaceCommandCatalog {
     .init(
       id: .motionDismiss, title: "Clear the selection, or leave the scope",
       group: "Moving around", keys: ["escape"], kind: .motion),
+    // The four a task can have, as `!1`–`!4` writes them. It listed 1–9,
+    // left from the Checkvist panel's rank queue: the workspace's priority
+    // stops at 4, so 5–9 ran and said "Choose a priority between None and
+    // Urgent" instead.
     .init(
       id: .motionSetPriority, title: "Set the task's priority", group: "Moving around",
-      keys: ["1", "2", "3", "4", "5", "6", "7", "8", "9"], kind: .motion,
-      note: "Type the digit; 0 clears it"),
+      keys: ["1", "2", "3", "4"], kind: .motion,
+      note: "Type the digit, at once, and it shows on the row; 0 clears it"),
     // Today's list is walked with the ordinary selection keys, the way every
     // other pane's is — it used to keep a selection of its own behind a search
     // field, and these keys only handed that field the caret back. What is

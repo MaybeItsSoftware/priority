@@ -639,6 +639,7 @@ struct WorkspaceKanbanCard: View {
         .help(task.title)
         .strikethrough(task.status != .open)
       }
+      WorkspacePriorityBadge(taskID: task.id)
       if !model.descendants(of: task).isEmpty {
         Button {
           model.toggleFold(of: task)
@@ -819,6 +820,7 @@ struct WorkspaceKanbanCard: View {
         .expandsWhenSelected(isRowSelected)
         .frame(maxWidth: .infinity, alignment: .leading)
         .help(item.task.title)
+        WorkspacePriorityBadge(taskID: item.task.id)
       }
       // Trailing, as the card's own fold is.
       if let isFolded {

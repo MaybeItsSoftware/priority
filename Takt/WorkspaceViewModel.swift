@@ -723,6 +723,9 @@ enum WorkspaceSidebarItem: Identifiable {
   /// The open tasks still waiting on an open task, drawn greyed. Read with
   /// `waitingDetails`, at the same change stamp.
   var blockedTaskIDs: Set<String> = []
+  /// Each prioritised task's priority, 1–4, for the number on its row.
+  /// Read with `waitingDetails`, under the same change stamp.
+  var taskPriorities: [String: Int] = [:]
   /// The store and its change stamp `waitingDetails` was read at. While both
   /// match, nothing has been written, and the reread is skipped: switching
   /// lists rebuilds the task cache but cannot change who waits on what.

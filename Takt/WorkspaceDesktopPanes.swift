@@ -229,6 +229,7 @@ struct WorkspaceOutlineRow: View {
           .strikethrough(item.task.status != .open)
           .foregroundStyle(item.task.status == .open ? theme.ink : theme.muted)
       }
+      WorkspacePriorityBadge(taskID: item.task.id)
       WorkspaceWaitingBadges(task: item.task)
       WorkspaceTaskPlanningBadges(task: item.task, isExpanded: isSelected)
         .frame(maxWidth: 170, alignment: .leading)
@@ -268,6 +269,34 @@ struct WorkspaceOutlineRow: View {
       .strokeBorder(
         model.dragDestinationListID == item.task.id && item.task.isList ? theme.primary : .clear,
         lineWidth: theme.borders.emphasis))
+  }
+}
+
+/// A task's priority as the number that set it — the digit pressed on the
+/// row, or the `!2` typed after a title — in a small squared tag beside the
+/// title. Nothing at all when the task has none, so an unprioritised list
+/// stays quiet.
+struct WorkspacePriorityBadge: View {
+  @Environment(WorkspaceViewModel.self) private var model
+  @Environment(\.theme) private var theme
+  let taskID: String
+
+  var body: some View {
+    if let priority = model.taskPriorities[taskID] {
+      let shape = RoundedRectangle(cornerRadius: theme.controlRadius, style: .continuous)
+      Text("\(priority)")
+        .font(theme.numeralFont(theme.scale.caption, weight: .semibold))
+        .monospacedDigit()
+        .foregroundStyle(theme.ink)
+        .lineLimit(1)
+        .padding(.horizontal, theme.space.xs)
+        .padding(.vertical, theme.space.xxs)
+        .background(shape.fill(theme.well))
+        .overlay(shape.strokeBorder(theme.border, lineWidth: theme.hairline))
+        .fixedSize()
+        .help("Priority \(priority) — 1–4 sets it, 0 clears it")
+        .accessibilityLabel("Priority \(priority)")
+    }
   }
 }
 
