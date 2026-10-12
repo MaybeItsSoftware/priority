@@ -29,10 +29,16 @@ extension WorkspaceViewModel {
     // row is filed, which for most rows is nowhere — they follow the card.
     let boardColumn = boardDraftIsSubtaskRow ? boardTaskColumns[reference.id] : column(for: reference)?.id
     perform {
+      var parentID = taskInsertionIsChild ? reference.id : reference.parentTaskId
+      var adjacentID = taskInsertionIsChild ? nil : reference.id
+      var above = taskInsertionAbove
+      if let card = try boardCardBesideCrossColumnSubtask(reference, inColumn: boardColumn, store: store) {
+        (parentID, adjacentID, above) = (card.parentID, card.adjacentID, false)
+      }
       let task = try store.createTask(capturing: title, listId: reference.listId,
-        parentTaskId: taskInsertionIsChild ? reference.id : reference.parentTaskId,
+        parentTaskId: parentID,
         kanbanColumn: viewMode == .board ? boardColumn : nil,
-        adjacentTaskId: taskInsertionIsChild ? nil : reference.id, above: taskInsertionAbove)
+        adjacentTaskId: adjacentID, above: above)
       // The board draws a subtask as a row on its parent's card, so it stays
       // put rather than opening the parent to show it.
       if taskInsertionIsChild && viewMode != .board { scopeTaskID = reference.id }
@@ -42,6 +48,34 @@ extension WorkspaceViewModel {
       taskInsertionIsChild = false
       reloadOutline()
     }
+  }
+
+  /// Where a task typed beside a subtask's own card goes: a card filed in
+  /// another column than its parent's is drawn as a card there, linked back
+  /// to its parent's row, and a task added beside it is a plain card of that
+  /// column rather than another child of the parent over in the first one.
+  ///
+  /// The cards filed from another column's tasks are drawn after the
+  /// column's plain cards, so the new one goes at the foot of those — the
+  /// place nearest the card it was typed beside — and among the board's top
+  /// level. Nil for anything else, a subtask row drawn on its parent's card
+  /// included, which keeps adding a sibling there.
+  private func boardCardBesideCrossColumnSubtask(
+    _ reference: WorkspaceTask, inColumn columnID: String?, store: WorkspaceStore
+  ) throws -> (parentID: String?, adjacentID: String?)? {
+    guard viewMode == .board, !taskInsertionIsChild, !boardDraftIsSubtaskRow,
+      boardCrossColumnTasks.contains(where: { $0.id == reference.id })
+    else { return nil }
+    // The level the board's cards are at: in a folder or Everything, the
+    // list's own visible root; in one list, the board's parent.
+    let parentID = isMultiListScope
+      ? try lists.first { $0.id == reference.listId }.flatMap { try store.visibleRootParentTaskID(for: $0) }
+      : boardParentTaskID
+    let plainCards = Set(
+      boardTasks.lazy.filter { $0.parentTaskId == parentID && $0.listId == reference.listId }.map(\.id))
+    let lastPlainCard = boardColumns.first { $0.id == columnID }
+      .flatMap { tasks(in: $0).last { plainCards.contains($0.id) } }
+    return (parentID, lastPlainCard?.id)
   }
 
   /// Creates work in the currently visible board scope. This differs from the

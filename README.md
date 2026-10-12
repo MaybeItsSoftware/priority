@@ -89,7 +89,7 @@ something you already have to know.
 | `ww` | Waiting on: who or what, and when to follow up — moves the task to Waiting on; see [Waiting on](#waiting-on) |
 | `bb` / `Cmd+Shift+B` | Blocked by: find a task this one waits on, or type a new one and `Cmd+Return` to make it just above; see [Blocked by](#blocked-by) |
 | `Delete` / `Cmd+Delete` / `Cmd+Shift+K` | Delete the task — it asks, and `Return` confirms |
-| `Return` | **Always** add a task, as in Checkvist — below the selection — on the board, below the card a selected subtask is drawn on — and at the foot of the day on Today |
+| `Return` | **Always** add a task, as in Checkvist — below the selection — on the board, below the card a selected subtask is drawn on — and at the foot of the day on Today. On a subtask's own card in another column than its parent's, the new task is a plain card of that column, at the foot of its plain cards, rather than another subtask of the parent |
 | `Space` / `x` | **Always** complete the task (or reopen it) — unless you are typing |
 | `Shift+Space` | Cancel the task, or reinstate it — it stopped mattering, rather than got done |
 | `1`–`4` / `0` | Set the task's priority at once, as `!1`–`!4` does when you type a task, or clear it — on the outline, the board, the matrix and Today. The number shows in a small box beside the title; one undo step each |

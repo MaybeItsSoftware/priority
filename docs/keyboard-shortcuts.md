@@ -251,6 +251,9 @@ reach them.
 
 On the board, Return on a card adds a card below it, and on a subtask row
 adds a sibling subtask below that row on the same card (Shift+Return above).
+A subtask filed in another column than its parent's is a card of its own
+there, and Return on that card adds a plain card to the column, at the foot
+of its plain cards, rather than another subtask of the parent.
 `ee`/F2 edits a card's or subtask row's title in place, as in the outline.
 `Alt+Up`/`Alt+Down` move a card past the card above or below in its column,
 and a subtask row past the row above or below on its card.
