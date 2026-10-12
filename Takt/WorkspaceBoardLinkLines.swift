@@ -207,8 +207,9 @@ struct WorkspaceBoardLinkMeasure: Equatable {
 
 /// The links' lines, in one of the two layers they are drawn in.
 ///
-/// Every link has a line. At rest it is a hairline in the rule's colour; lit,
-/// it is the accent, half as heavy again, over everything. A resting line
+/// Every link has a line. At rest it is a dashed hairline in the dim text's
+/// colour, so it never reads as a card's or a column's rule; lit, it is the
+/// accent, solid and half as heavy again, over everything. A resting line
 /// that crosses a column on its way runs beneath that column's cards, which
 /// are opaque, so it reads as passing under them rather than scribbling over
 /// cards that have nothing to do with it; one to the next column is drawn
@@ -252,7 +253,10 @@ struct WorkspaceBoardLinkLines: View {
       ZStack(alignment: .topLeading) {
         ForEach(resting) { line in
           WorkspaceBoardLinkShape(path: line.path)
-            .stroke(theme.border, style: StrokeStyle(lineWidth: theme.hairline, lineCap: .round, lineJoin: .round))
+            .stroke(
+              theme.dim,
+              style: StrokeStyle(
+                lineWidth: theme.hairline, lineCap: .butt, lineJoin: .round, dash: WorkspaceBoardMetrics.linkRestingDash))
         }
         ForEach(lighted) { line in
           WorkspaceBoardLinkShape(path: line.path)

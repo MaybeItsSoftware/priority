@@ -53,6 +53,10 @@ enum WorkspaceBoardMetrics {
   /// theme's: a square theme still wants the line to turn smoothly.
   static let linkCornerRadius: CGFloat = 6
 
+  /// A resting line's dashes, dash and gap: broken, so it is never taken
+  /// for a rule.
+  static let linkRestingDash: [CGFloat] = [3, 3]
+
   /// How far apart the lines turning beside one rule run.
   static let linkLaneSpacing: Double = 3
 
@@ -63,9 +67,10 @@ enum WorkspaceBoardMetrics {
   }
 
   /// The most a subtask's card is moved down to bring it level with its
-  /// row, so the line between runs flat: about a compact card. Further, and
-  /// the line steps down instead.
-  static let linkNudgeCap = BoardLinkNudge.defaultCap
+  /// row, so the line between runs flat: half a compact card, since a
+  /// bigger move left blank strips in the column. Further, and the line
+  /// steps down instead.
+  static let linkNudgeCap = BoardLinkNudge.defaultCap / 2
 
   /// The space between two columns: the rule's own width, edge to edge.
   /// A board with links once widened it for the lines to turn in, which
@@ -749,17 +754,27 @@ struct WorkspaceKanbanCard: View {
       } label: {
         WorkspaceTaskMarker(
           task: item.task, isSubtask: true,
-          elbowColour: rowLink.map { litLinkIDs.contains($0.childID) } == true ? theme.primary : nil)
+          elbowColour: rowLink.map { litLinkIDs.contains($0.childID) ? theme.primary : theme.dim })
           .frame(width: step)
+          // Where a link's line leaves for the subtask's own card: the
+          // `└`'s own box, the elbow's centred in the mark, narrowed by the
+          // gap the line leaves at its ends, so it runs on from the elbow's
+          // stroke as one line.
+          .overlay {
+            Text("└").font(theme.monoCaptionFont).hidden()
+              .overlay {
+                Color.clear
+                  .padding(.horizontal, theme.space.xxs)
+                  .boardLinkEnds(
+                    rowLink.map { [.source($0.childID)] } ?? [], inColumn: column.id, geometry: linkGeometry)
+              }
+          }
           .contentShape(Rectangle())
       }
       .buttonStyle(.plain)
       .accessibilityLabel(
         item.task.isList ? "Open \(item.task.title)" : (isOpen ? "Complete \(item.task.title)" : "Reopen \(item.task.title)"))
       .commandHelp(item.task.isList ? .planEnterTask : .taskComplete, note: item.task.isList ? "Open the list" : nil)
-      // Where a link's line leaves for the subtask's own card: straight on
-      // from the row's mark, the line standing in for the title.
-      .boardLinkEnds(rowLink.map { [.source($0.childID)] } ?? [], inColumn: column.id, geometry: linkGeometry)
       if model.editingTaskTitleID == item.task.id {
         WorkspaceTaskTitleField(
           initialTitle: item.task.title, caret: model.editingTaskTitleCaret, font: theme.captionFont,
