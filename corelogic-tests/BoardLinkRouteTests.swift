@@ -91,4 +91,60 @@ final class BoardLinkRouteTests: XCTestCase {
     XCTAssertEqual(xs, xs.sorted())
     XCTAssertEqual(route.points[1].x, 232)
   }
+
+  // MARK: Lanes
+
+  private func lane(
+    _ id: String, from sourceY: Double, to targetY: Double, column: Int = 0, forward: Bool = true
+  ) -> Route.LaneRequest {
+    Route.LaneRequest(id: id, sourceColumn: column, pointsForward: forward, sourceY: sourceY, targetY: targetY)
+  }
+
+  /// One link in a gutter turns on its middle.
+  func testALoneLinkHasNoLane() {
+    XCTAssertEqual(Route.lanes(for: [lane("a", from: 100, to: 300)], spacing: 3, width: 10), [:])
+  }
+
+  /// Of two falling links, the one leaving higher turns further out.
+  func testFallingLinksAreSpreadWithTheHigherOutside() {
+    let lanes = Route.lanes(
+      for: [lane("low", from: 200, to: 400), lane("high", from: 100, to: 300)], spacing: 3, width: 10)
+    XCTAssertEqual(lanes, ["high": 1.5, "low": -1.5])
+  }
+
+  /// Of two rising links, the one leaving lower turns further out.
+  func testRisingLinksAreSpreadWithTheLowerOutside() {
+    let lanes = Route.lanes(
+      for: [lane("high", from: 300, to: 100), lane("low", from: 400, to: 200)], spacing: 3, width: 10)
+    XCTAssertEqual(lanes, ["low": 1.5, "high": -1.5])
+  }
+
+  /// Three lanes centre on the middle; falling ones take the outside.
+  func testFallingLinksTakeTheOuterLanes() {
+    let lanes = Route.lanes(
+      for: [lane("rise", from: 300, to: 100), lane("fall", from: 350, to: 500), lane("first", from: 50, to: 400)],
+      spacing: 3, width: 10)
+    XCTAssertEqual(lanes, ["first": 3, "fall": 0, "rise": -3])
+  }
+
+  /// Too many to fit at the spacing, they close up to the gutter's width.
+  func testLanesCloseUpToFitTheGutter() {
+    let requests = (0..<5).map { lane("l\($0)", from: Double($0) * 10, to: 500) }
+    let lanes = Route.lanes(for: requests, spacing: 3, width: 8)
+    XCTAssertEqual(lanes["l0"], 4)
+    XCTAssertEqual(lanes["l4"], -4)
+    XCTAssertEqual(lanes["l2"], 0)
+  }
+
+  /// A level link turns nowhere, and links in other gutters, or the same
+  /// gutter the other way, keep lanes of their own.
+  func testLevelLinksAndOtherGuttersAreApart() {
+    let lanes = Route.lanes(
+      for: [
+        lane("level", from: 100, to: 100.2), lane("a", from: 100, to: 300),
+        lane("next", from: 120, to: 300, column: 1), lane("back", from: 150, to: 300, column: 0, forward: false),
+      ],
+      spacing: 3, width: 10)
+    XCTAssertEqual(lanes, [:])
+  }
 }

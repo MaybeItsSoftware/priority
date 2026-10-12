@@ -258,8 +258,9 @@ covered the old copies pass against it.
    tests and are deleted. `BoardLinks` says which rows and cards name each other's
    columns, and turns on no measured height. It overlaps `board.rs` only in which card a
    subtask hangs from, which the board read already carries. `BoardLinkRoute`
-   routes the line drawn over the board between a lit link's two ends; it is
-   geometry over frames the view has just laid out, so it stays native too.
+   routes the line drawn between a link's two ends and gives each a lane in
+   its gutter; it is geometry over frames the view has just laid out, so it
+   stays native too.
 
    **Themes.** `core/src/theme/` holds the whole theme format: a reader and
    writer for the JSON dialect Swift's `JSONDecoder` and `JSONEncoder`

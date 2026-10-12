@@ -15,9 +15,11 @@ import UniformTypeIdentifiers
 /// The board's column geometry.
 ///
 /// Columns sit edge to edge with a hairline between them rather than as
-/// separate filled wells with gaps, so the only figures left are the clamp on a
-/// column's width. They are layout decisions, not theme tokens: a theme owns
-/// spacing and type, not how many cards fit across a window.
+/// separate filled wells with gaps — unless the board has links, when the
+/// rule sits in a narrow gutter the lines turn in — so the only figures left
+/// are the clamp on a column's width and the lines'. They are layout
+/// decisions, not theme tokens: a theme owns spacing and type, not how many
+/// cards fit across a window.
 enum WorkspaceBoardMetrics {
   /// The narrowest a column gets before the board scrolls sideways instead:
   /// room for a card's handle, check, two or three words of title, and its
@@ -51,12 +53,22 @@ enum WorkspaceBoardMetrics {
   /// theme's: a square theme still wants the line to turn smoothly.
   static let linkCornerRadius: CGFloat = 6
 
+  /// How far apart the lines turning in one gutter run.
+  static let linkLaneSpacing: Double = 3
+
+  /// The space between two columns, with the rule down its middle: the
+  /// rule's own width on a board with no links, edge to edge as ever, and
+  /// room for a few lines to turn in, side by side, on one with them.
+  static func columnGutter(_ theme: Theme, hasLinks: Bool) -> CGFloat {
+    hasLinks ? max(theme.space.md, theme.hairline) : theme.hairline
+  }
+
   /// Five default columns should be visible together at useful desktop
   /// widths. Fewer or custom columns expand instead of leaving an oversized
   /// empty canvas; very narrow windows still scroll.
-  static func columnWidth(available width: CGFloat, columns: Int, theme: Theme) -> CGFloat {
+  static func columnWidth(available width: CGFloat, columns: Int, gutter: CGFloat, theme: Theme) -> CGFloat {
     let count = CGFloat(max(columns, 1))
-    let rules = theme.hairline * (count - 1)
+    let rules = gutter * (count - 1)
     let usable = width - 2 * edgeInset(theme) - rules
     return max(minColumnWidth, min(maxColumnWidth, usable / count))
   }
@@ -71,8 +83,9 @@ struct WorkspaceKanbanBoard: View {
       WorkspaceEmptyPane(title: "Board", message: "Choose a list in the sidebar to see its board.")
     } else {
       GeometryReader { geometry in
+        let gutter = WorkspaceBoardMetrics.columnGutter(theme, hasLinks: !model.boardLinks.byChild.isEmpty)
         let columnWidth = WorkspaceBoardMetrics.columnWidth(
-          available: geometry.size.width, columns: model.boardColumns.count, theme: theme)
+          available: geometry.size.width, columns: model.boardColumns.count, gutter: gutter, theme: theme)
         VStack(spacing: 0) {
           // The board said nowhere on its face which list it was showing, so
           // ⌘2 from the outline took the scope name off the screen.
@@ -80,7 +93,7 @@ struct WorkspaceKanbanBoard: View {
           } trailing: {
             WorkspacePaneCount(count: model.boardColumns.reduce(0) { $0 + model.tasks(in: $1).count })
           }
-          WorkspaceKanbanColumnStrip(columnWidth: columnWidth)
+          WorkspaceKanbanColumnStrip(columnWidth: columnWidth, gutter: gutter)
         }
       }
       .background(theme.paper)
@@ -95,6 +108,8 @@ private struct WorkspaceKanbanColumnStrip: View {
   @Environment(WorkspaceViewModel.self) private var model
   @Environment(\.theme) private var theme
   let columnWidth: CGFloat
+  /// The space between two columns, the rule down its middle.
+  let gutter: CGFloat
   @State private var visibleColumnIDs: Set<String> = []
   /// Where the link ends are, for the lines drawn between them.
   @State private var linkGeometry = WorkspaceBoardLinkGeometry()
@@ -106,19 +121,21 @@ private struct WorkspaceKanbanColumnStrip: View {
     // The column the selection is drawn in — for a subtask row, the column
     // of the card it is drawn on.
     let selectedColumnID = selectedID == nil ? nil : activeColumnID
-    // The links lit at both ends and drawn between them: the selection's,
-    // and those of the end under the pointer. Each column is handed only
-    // those with an end in it.
+    // The links lit at both ends, their lines in the accent: the
+    // selection's, and those of the end under the pointer. Each column is
+    // handed only those with an end in it.
     let links = model.boardLinks
     let litLinks = links.isEmpty
       ? Set<String>()
       : links.linkIDs(touching: selectedID).union(links.linkIDs(touching: model.hoveredBoardLinkID))
     let columnIDs = model.boardColumns.map(\.id)
+    let allLinks = links.byChild.values.sorted { $0.childID < $1.childID }
     ScrollViewReader { scrollProxy in
       GeometryReader { viewport in
         ScrollView(.horizontal) {
           // Edge to edge, a hairline between each pair: columns are regions
-          // of one surface, not cards laid on it.
+          // of one surface, not cards laid on it. With links, the hairline
+          // sits in a gutter the lines turn in.
           LazyHStack(alignment: .top, spacing: 0) {
             ForEach(Array(model.boardColumns.enumerated()), id: \.element.id) { index, column in
               let columnLinks = litLinks.isEmpty ? Set<String>() : links.linkIDs(litLinks, inColumn: index)
@@ -143,12 +160,13 @@ private struct WorkspaceKanbanColumnStrip: View {
                 // id, so a column scrolled almost out to the left still
                 // counted as visible by its right-hand rule, and ← to it
                 // never scrolled back.
-                .padding(.trailing, column.id == model.boardColumns.last?.id ? 0 : theme.hairline)
+                .padding(.trailing, column.id == model.boardColumns.last?.id ? 0 : gutter)
                 .overlay(alignment: .trailing) {
                   if column.id != model.boardColumns.last?.id {
                     Rectangle()
                       .fill(theme.border)
                       .frame(width: theme.hairline, height: viewport.size.height)
+                      .padding(.trailing, (gutter - theme.hairline) / 2)
                   }
                 }
                 .id(column.id)
@@ -159,16 +177,21 @@ private struct WorkspaceKanbanColumnStrip: View {
           // the scroller, so it moves with them.
           .coordinateSpace(.named(WorkspaceBoardLinkGeometry.boardSpace))
           .environment(linkGeometry)
-          // Over the columns and inside the scroller, so the lines move with
-          // the cards they join. An overlay takes the strip's size and adds
-          // none, so drawing a line never moves a card. Always there, empty
-          // when nothing is lit, so a line that goes out fades rather than
-          // vanishing with its overlay.
+          // Inside the scroller, so the lines move with the cards they join:
+          // beneath the columns for the resting lines that cross one, over
+          // them for the rest. A background or an overlay takes the strip's
+          // size and adds none, so drawing a line never moves a card. Always
+          // there, so a line that goes out fades rather than vanishing with
+          // its layer.
+          .background {
+            WorkspaceBoardLinkLines(
+              layer: .beneath, geometry: linkGeometry, links: allLinks, lit: litLinks, columnIDs: columnIDs,
+              gutter: gutter)
+          }
           .overlay {
             WorkspaceBoardLinkLines(
-              geometry: linkGeometry,
-              links: litLinks.sorted().compactMap { links.link(forChild: $0) },
-              columnIDs: columnIDs)
+              layer: .above, geometry: linkGeometry, links: allLinks, lit: litLinks, columnIDs: columnIDs,
+              gutter: gutter)
           }
           .onChange(of: links, initial: true) { _, links in linkGeometry.retain(links) }
           .padding(.horizontal, WorkspaceBoardMetrics.edgeInset(theme))
@@ -472,9 +495,12 @@ struct WorkspaceKanbanCard: View {
     // a table's rows, since the cards now meet edge to edge. Hover is the
     // theme's hover fill; selection draws on top of it, never instead of the
     // border's shape.
+    // Opaque, hover or not: a resting link line that crosses this column
+    // runs beneath its cards.
     .background {
       ZStack {
-        Rectangle().fill(isHovered ? theme.hover : theme.paper)
+        Rectangle().fill(theme.paper)
+        if isHovered { Rectangle().fill(theme.hover) }
         WorkspaceSelectionBackground(isSelected: isSelected, hasKeyboard: hasKeyboard && isSelected)
       }
     }

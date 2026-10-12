@@ -3,13 +3,17 @@ import SwiftUI
 import TaktCore
 import os
 
-/// The line drawn between a subtask's row and its card in another column,
-/// while the selection or the pointer is on either end.
+/// The line drawn between a subtask's row and its card in another column: a
+/// hairline at rest, the accent while the selection or the pointer is on
+/// either end.
 ///
 /// The cards stack as they would with no links, and each end names the other
-/// in words (`BoardLinks`). The line is laid over the board on top of that:
-/// each end measures itself into `WorkspaceBoardLinkGeometry`, and
-/// `BoardLinkRoute` works out the path from the frames as they are.
+/// in words (`BoardLinks`), which still says where a line goes once one of
+/// its ends has scrolled away. The lines are laid over and under the board
+/// on top of that: each end measures itself into
+/// `WorkspaceBoardLinkGeometry`, and `BoardLinkRoute` works out the paths
+/// from the frames as they are, each in a lane of its own in the gutter it
+/// turns in.
 ///
 /// The ends used to report anchor preferences, which never reached the
 /// overlay: a column and its card scroller reported anchors of their own with
@@ -131,28 +135,58 @@ struct WorkspaceBoardLinkMeasure: Equatable {
   let rect: CGRect
 }
 
-/// The lit links' lines, drawn over the column strip.
+/// The links' lines, in one of the two layers they are drawn in.
+///
+/// Every link has a line. At rest it is a hairline in the rule's colour; lit,
+/// it is the accent, half as heavy again, over everything. A resting line
+/// that crosses a column on its way runs beneath that column's cards, which
+/// are opaque, so it reads as passing under them rather than scribbling over
+/// cards that have nothing to do with it; one to the next column is drawn
+/// over the cards, since the only cards it touches are its own two ends.
 struct WorkspaceBoardLinkLines: View {
+  /// Which of the board's two line layers this is.
+  enum Layer {
+    /// Behind the columns: resting lines that cross a column.
+    case beneath
+    /// Over the columns: resting lines to the next column, and lit ones.
+    case above
+  }
+
   @Environment(\.theme) private var theme
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
+  let layer: Layer
   let geometry: WorkspaceBoardLinkGeometry
+  /// Every link on the board, in a stable order.
   let links: [BoardLinks.Link]
+  /// The lit ones, by subtask id.
+  let lit: Set<String>
   /// The board's column ids, left to right, for finding a link's columns.
   let columnIDs: [String]
+  /// The space between two columns, which a line turns in.
+  let gutter: CGFloat
 
   /// One link's path, once both of its ends and its column are measured.
   private struct Line: Identifiable {
     let id: String
     let path: BoardLinkRoute.Path
+    /// Whether it crosses a column on its way, rather than running to the
+    /// next one.
+    let crosses: Bool
   }
 
   var body: some View {
     GeometryReader { proxy in
       let lines = lines()
+      let resting = lines.filter { line in !lit.contains(line.id) && line.crosses == (layer == .beneath) }
+      let lighted = layer == .above ? lines.filter { lit.contains($0.id) } : []
       ZStack(alignment: .topLeading) {
-        ForEach(lines) { line in
+        ForEach(resting) { line in
           WorkspaceBoardLinkShape(path: line.path)
-            .stroke(theme.primary, style: StrokeStyle(lineWidth: lineWidth, lineCap: .round, lineJoin: .round))
+            .stroke(theme.border, style: StrokeStyle(lineWidth: theme.hairline, lineCap: .round, lineJoin: .round))
+        }
+        ForEach(lighted) { line in
+          WorkspaceBoardLinkShape(path: line.path)
+            .stroke(theme.primary, style: StrokeStyle(lineWidth: litWidth, lineCap: .round, lineJoin: .round))
             .transition(.opacity)
         }
       }
@@ -161,10 +195,10 @@ struct WorkspaceBoardLinkLines: View {
       // A fade in and out as the selection or the pointer reaches an end,
       // collapsed rather than removed under Reduce Motion.
       .animation(
-        .easeOut(duration: reduceMotion ? 0.01 : WorkspaceMotion.duration), value: lines.map(\.id))
+        .easeOut(duration: reduceMotion ? 0.01 : WorkspaceMotion.duration), value: lighted.map(\.id))
       // MARK: Temporary BoardLinkLines diagnostics — remove once confirmed.
-      .onChange(of: links.map(\.childID), initial: true) { _, lit in
-        Self.logLit(lit, drawn: Set(lines.map(\.id)))
+      .onChange(of: layer == .above ? lit : [], initial: true) { _, lit in
+        Self.logLit(lit, drawn: Set(lighted.map(\.id)))
       }
     }
     .allowsHitTesting(false)
@@ -173,24 +207,36 @@ struct WorkspaceBoardLinkLines: View {
 
   /// The house hairline, half as heavy again: it is the one line on the
   /// board that crosses cards, and at a bare hairline it read as their rules.
-  private var lineWidth: CGFloat {
+  private var litWidth: CGFloat {
     min(max(theme.hairline * 1.5, 1), 1.5)
   }
 
   private func lines() -> [Line] {
     let inset = Double(theme.space.xxs)
-    let rail = Double(theme.hairline) / 2
     let radius = Double(WorkspaceBoardMetrics.linkCornerRadius)
-    return links.compactMap { link in
+    // Every measured link's ends on the board, for its lane and its path.
+    let ends: [(link: BoardLinks.Link, source: CGRect, target: CGRect, column: CGRect)] = links.compactMap { link in
       guard columnIDs.indices.contains(link.sourceColumn), columnIDs.indices.contains(link.childColumn),
         let source = geometry.boardFrame(of: .source(link.childID), inColumn: columnIDs[link.sourceColumn]),
         let target = geometry.boardFrame(of: .target(link.childID), inColumn: columnIDs[link.childColumn]),
         let column = geometry.columns[columnIDs[link.sourceColumn]]
       else { return nil }
+      return (link, source, target, column)
+    }
+    let lanes = BoardLinkRoute.lanes(
+      for: ends.map {
+        BoardLinkRoute.LaneRequest(
+          id: $0.link.childID, sourceColumn: $0.link.sourceColumn, pointsForward: $0.link.pointsForward,
+          sourceY: Double($0.source.midY), targetY: Double($0.target.midY))
+      },
+      spacing: WorkspaceBoardMetrics.linkLaneSpacing,
+      width: Double(gutter - 2 * theme.hairline - WorkspaceBoardMetrics.linkLaneSpacing))
+    return ends.map { end in
+      let rail = Double(gutter) / 2 + (lanes[end.link.childID] ?? 0)
       let path = BoardLinkRoute.path(
-        from: Self.rect(source), to: Self.rect(target), sourceColumn: Self.rect(column),
-        pointsForward: link.pointsForward, inset: inset, rail: rail, radius: radius)
-      return Line(id: link.childID, path: path)
+        from: Self.rect(end.source), to: Self.rect(end.target), sourceColumn: Self.rect(end.column),
+        pointsForward: end.link.pointsForward, inset: inset, rail: rail, radius: radius)
+      return Line(id: end.link.childID, path: path, crosses: abs(end.link.childColumn - end.link.sourceColumn) > 1)
     }
   }
 
@@ -221,9 +267,9 @@ struct WorkspaceBoardLinkLines: View {
 extension WorkspaceBoardLinkLines {
   private static let logger = Logger(subsystem: "uk.co.maybeitssoftware.takt", category: "BoardLinkLines")
 
-  fileprivate static func logLit(_ lit: [String], drawn: Set<String>) {
+  fileprivate static func logLit(_ lit: Set<String>, drawn: Set<String>) {
     guard !lit.isEmpty else { return }
-    let missing = lit.filter { !drawn.contains($0) }
+    let missing = lit.subtracting(drawn).sorted()
     logger.notice(
       "lit=\(lit.count, privacy: .public) drawn=\(drawn.count, privacy: .public) missing=\(missing, privacy: .public)")
   }

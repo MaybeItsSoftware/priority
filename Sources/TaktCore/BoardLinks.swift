@@ -17,9 +17,10 @@
 /// as every other card does, and nothing here or in the board turns on a
 /// measured height.
 ///
-/// The line is back, but only for the links `linkIDs(touching:)` lights —
-/// the selection's and the pointer's — and drawn over the board from where
-/// the cards already stand rather than levelling them: `BoardLinkRoute`.
+/// The line is back, drawn from where the cards already stand rather than
+/// levelling them: a hairline for every link, in a lane of its own in the
+/// gutter between columns, and the accent for those `linkIDs(touching:)`
+/// lights — the selection's and the pointer's (`BoardLinkRoute`).
 ///
 /// Worked out once per board read and once per fold.
 public struct BoardLinks: Equatable, Sendable {

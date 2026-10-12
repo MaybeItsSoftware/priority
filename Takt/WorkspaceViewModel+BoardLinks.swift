@@ -7,9 +7,9 @@ import TaktWorkspace
 /// The structure (`BoardLinks`) is rebuilt with the row index, once per board
 /// read and once per fold. Nothing about it turns on how tall a card is: the
 /// two ends name each other, so the cards stack as they would with no links
-/// at all, and the line drawn between them while one is selected or under
-/// the pointer (`WorkspaceBoardLinkLines`) is laid over the board from where
-/// the cards already are.
+/// at all, and the line drawn between them (`WorkspaceBoardLinkLines`) is
+/// laid over the board from where the cards already are. Where they are is
+/// layout, kept by the board's view rather than here.
 extension WorkspaceViewModel {
   /// Works out the links from the columns just indexed: each subtask card
   /// filed apart from its parent, and the nearest card it hangs beneath.
