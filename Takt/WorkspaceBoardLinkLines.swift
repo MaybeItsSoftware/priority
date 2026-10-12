@@ -12,8 +12,8 @@ import os
 /// its ends has scrolled away. The lines are laid over and under the board
 /// on top of that: each end measures itself into
 /// `WorkspaceBoardLinkGeometry`, and `BoardLinkRoute` works out the paths
-/// from the frames as they are, each in a lane of its own in the gutter it
-/// turns in.
+/// from the frames as they are, each in a lane of its own beside the rule it
+/// turns on.
 ///
 /// The ends used to report anchor preferences, which never reached the
 /// overlay: a column and its card scroller reported anchors of their own with
@@ -301,7 +301,7 @@ struct WorkspaceBoardLinkLines: View {
           sourceY: Double($0.source.midY), targetY: Double($0.target.midY))
       },
       spacing: WorkspaceBoardMetrics.linkLaneSpacing,
-      width: Double(gutter - 2 * theme.hairline - WorkspaceBoardMetrics.linkLaneSpacing))
+      width: WorkspaceBoardMetrics.linkLaneWidth(theme))
     return ends.map { end in
       let rail = Double(gutter) / 2 + (lanes[end.link.childID] ?? 0)
       let path = BoardLinkRoute.path(

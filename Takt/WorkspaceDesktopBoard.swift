@@ -15,8 +15,8 @@ import UniformTypeIdentifiers
 /// The board's column geometry.
 ///
 /// Columns sit edge to edge with a hairline between them rather than as
-/// separate filled wells with gaps — unless the board has links, when the
-/// rule sits in a narrow gutter the lines turn in — so the only figures left
+/// separate filled wells with gaps — link lines turn on that rule, and the
+/// columns' own margins either side of it — so the only figures left
 /// are the clamp on a column's width and the lines'. They are layout
 /// decisions, not theme tokens: a theme owns spacing and type, not how many
 /// cards fit across a window.
@@ -53,19 +53,25 @@ enum WorkspaceBoardMetrics {
   /// theme's: a square theme still wants the line to turn smoothly.
   static let linkCornerRadius: CGFloat = 6
 
-  /// How far apart the lines turning in one gutter run.
+  /// How far apart the lines turning beside one rule run.
   static let linkLaneSpacing: Double = 3
+
+  /// How wide the lanes beside one rule may spread, into the columns'
+  /// margins either side of it.
+  static func linkLaneWidth(_ theme: Theme) -> Double {
+    Double(theme.space.md)
+  }
 
   /// The most a subtask's card is moved down to bring it level with its
   /// row, so the line between runs flat: about a compact card. Further, and
   /// the line steps down instead.
   static let linkNudgeCap = BoardLinkNudge.defaultCap
 
-  /// The space between two columns, with the rule down its middle: the
-  /// rule's own width on a board with no links, edge to edge as ever, and
-  /// room for a few lines to turn in, side by side, on one with them.
-  static func columnGutter(_ theme: Theme, hasLinks: Bool) -> CGFloat {
-    hasLinks ? max(theme.space.md, theme.hairline) : theme.hairline
+  /// The space between two columns: the rule's own width, edge to edge.
+  /// A board with links once widened it for the lines to turn in, which
+  /// read as margins; they turn on the rule instead.
+  static func columnGutter(_ theme: Theme) -> CGFloat {
+    theme.hairline
   }
 
   /// Five default columns should be visible together at useful desktop
@@ -88,7 +94,7 @@ struct WorkspaceKanbanBoard: View {
       WorkspaceEmptyPane(title: "Board", message: "Choose a list in the sidebar to see its board.")
     } else {
       GeometryReader { geometry in
-        let gutter = WorkspaceBoardMetrics.columnGutter(theme, hasLinks: !model.boardLinks.byChild.isEmpty)
+        let gutter = WorkspaceBoardMetrics.columnGutter(theme)
         let columnWidth = WorkspaceBoardMetrics.columnWidth(
           available: geometry.size.width, columns: model.boardColumns.count, gutter: gutter, theme: theme)
         VStack(spacing: 0) {
@@ -139,8 +145,7 @@ private struct WorkspaceKanbanColumnStrip: View {
       GeometryReader { viewport in
         ScrollView(.horizontal) {
           // Edge to edge, a hairline between each pair: columns are regions
-          // of one surface, not cards laid on it. With links, the hairline
-          // sits in a gutter the lines turn in.
+          // of one surface, not cards laid on it. Link lines turn on it.
           LazyHStack(alignment: .top, spacing: 0) {
             ForEach(Array(model.boardColumns.enumerated()), id: \.element.id) { index, column in
               let columnLinks = litLinks.isEmpty ? Set<String>() : links.linkIDs(litLinks, inColumn: index)
@@ -746,7 +751,7 @@ struct WorkspaceKanbanCard: View {
     let step = Self.markWidth(theme)
     let isRowSelected = selectedRowID == item.task.id
     // A subtask filed in another column keeps its row here, its title muted
-    // since its card is elsewhere, and names that column at its end.
+    // since its card is elsewhere, and a line runs on from its title to it.
     let rowLink = model.boardLinks.rowLink(item.task.id, onCard: task.id)
     return HStack(alignment: isRowSelected ? .firstTextBaseline : .center, spacing: 0) {
       Button {
@@ -783,6 +788,9 @@ struct WorkspaceKanbanCard: View {
         .strikethrough(!isOpen)
         .multilineTextAlignment(.leading)
         .expandsWhenSelected(isRowSelected)
+        // Where a link's line leaves for the subtask's own card: straight
+        // on from the title's end, one line from the words to the card.
+        .boardLinkEnds(rowLink.map { [.source($0.childID)] } ?? [], inColumn: column.id, geometry: linkGeometry)
         .frame(maxWidth: .infinity, alignment: .leading)
         .help(item.task.title)
       }
@@ -790,28 +798,12 @@ struct WorkspaceKanbanCard: View {
       if let isFolded {
         WorkspaceFoldButton(isFolded: isFolded, title: item.task.title) { model.toggleFold(of: item.task) }
       }
-      if let rowLink {
-        let title = columnTitle(rowLink.childColumn)
-        Button {
-          model.selectBoardLinkedCard(rowLink.childID)
-        } label: {
-          WorkspaceBoardLinkLabel(
-            arrow: rowLink.pointsForward ? "→" : "←", text: title, colour: linkColour([rowLink.childID]))
-            .frame(maxWidth: WorkspaceBoardMetrics.minColumnWidth / 2, alignment: .trailing)
-        }
-        .buttonStyle(.plain)
-        .padding(.leading, theme.space.xs)
-        .help("A card of its own in \(title)")
-      }
     }
     // A blocked subtask on a card that is not: the row steps back as a
     // blocked card does. On a blocked card it already has.
     .opacity(model.isBlocked(item.task) && !model.isBlocked(task) ? Theme.disabledOpacity : 1)
     .font(theme.captionFont)
     .padding(.vertical, theme.space.xxs)
-    // Where a link's line leaves for the subtask's own card: the row's
-    // trailing end, where it names the column.
-    .boardLinkEnds(rowLink.map { [.source($0.childID)] } ?? [], inColumn: column.id, geometry: linkGeometry)
     // The pointer on either end lights both and draws the line. Off the
     // row and still on the card, the card's own links take over again.
     .onHover { hovering in
@@ -899,8 +891,8 @@ enum WorkspaceTaskDrag {
   }
 }
 
-/// One end of a board link naming the other: "→ This week" at the end of a
-/// subtask's row, "← Adam's Campus Toolbox" on the subtask's own card. Dim at
+/// One end of a board link naming the other: "→ This week 2" for a folded
+/// card's subtasks, "← Adam's Campus Toolbox" on the subtask's own card. Dim at
 /// rest, the accent while the selection or the pointer is on either end.
 struct WorkspaceBoardLinkLabel: View {
   @Environment(\.theme) private var theme
