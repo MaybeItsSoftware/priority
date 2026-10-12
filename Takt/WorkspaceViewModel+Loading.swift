@@ -179,20 +179,36 @@ extension WorkspaceViewModel {
     completionExpiryTask = Task { @MainActor [weak self] in
       do { try await Task.sleep(for: .seconds(max(expiry.timeIntervalSinceNow, 0) + 0.05)) } catch { return }
       guard let self else { return }
-      let before = self.visibleNavigationTasks.map(\.id)
+      let column = self.viewMode == .board ? self.activeBoardColumnID : nil
+      let before = self.selectionOrder(inBoardColumn: column)
       self.reloadOutline(refreshSidebar: false)
-      self.keepSelectionAfterExpiry(previousOrder: before)
+      self.keepSelectionAfterExpiry(previousOrder: before, boardColumn: column)
     }
   }
 
-  private func keepSelectionAfterExpiry(previousOrder: [String]) {
+  /// The rows the selection is among, as drawn. On the board that is the
+  /// column the keys are in, its cards with the subtask rows drawn on them:
+  /// the cards of every column alone left out a subtask row, so one ticked
+  /// off there lost the selection and the next arrow started from the top.
+  private func selectionOrder(inBoardColumn columnID: String?) -> [String] {
+    guard let columnID, let column = boardColumns.first(where: { $0.id == columnID }) else {
+      return visibleNavigationTasks.map(\.id)
+    }
+    return boardRowIDs(in: column)
+  }
+
+  /// The row that took the gone one's place — see `SelectionSuccessor` —
+  /// with the board's keys kept in the column they were walking.
+  private func keepSelectionAfterExpiry(previousOrder: [String], boardColumn: String?) {
     guard let selectedTaskID else { return }
-    let visible = visibleNavigationTasks.map(\.id)
-    guard !visible.contains(selectedTaskID), let index = previousOrder.firstIndex(of: selectedTaskID) else { return }
-    let remaining = Set(visible)
-    let after = previousOrder[(index + 1)...].first { remaining.contains($0) }
-    let before = previousOrder[..<index].last { remaining.contains($0) }
-    self.selectedTaskID = after ?? before
+    let remaining = Set(selectionOrder(inBoardColumn: boardColumn))
+    guard
+      let successor = SelectionSuccessor.successor(
+        of: selectedTaskID, previousOrder: previousOrder, remaining: remaining,
+        parentOf: { [self] in task(withID: $0)?.parentTaskId })
+    else { return }
+    if let boardColumn { focusedBoardColumnID = boardColumn }
+    self.selectedTaskID = successor
   }
 
   /// The current scope's columns as the core resolves them: the board's own

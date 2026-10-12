@@ -106,7 +106,7 @@ struct DayView: View {
       results = trimmed.isEmpty ? [] : model.searchResults(matching: trimmed)
       selectDefault()
     }
-    .onChange(of: rows.map(\.id)) { _, _ in selectDefault() }
+    .onChange(of: rows.map(\.id)) { old, _ in selectDefault(previous: old) }
   }
 
   // MARK: - Chrome
@@ -765,13 +765,21 @@ extension DayView {
     selectedID = activeTaskID ?? rows.first?.id
   }
 
-  private func selectDefault() {
+  /// - Parameter previous: the rows before the change, when the day changed
+  ///   under the cursor rather than a new query replacing it. A card ticked
+  ///   off leaves the day, and the cursor goes to the card that took its
+  ///   place rather than back to the top.
+  private func selectDefault(previous: [String] = []) {
     let ids = rows.map(\.id)
     if let cursorID, ids.contains(cursorID) { return }
     // In the window only while the pane has the keyboard: a task selected in
     // the sidebar's list, or left by another mode, is not the day's to take.
     if !surface.isPanel && model.keyboardFocusArea != .tasks { return }
-    if surface.isPanel { selectedID = ids.first } else { model.selectedTaskID = ids.first }
+    let successor = cursorID.flatMap { id in
+      // The day is one level: its cards are each other's siblings.
+      SelectionSuccessor.successor(of: id, previousOrder: previous, remaining: Set(ids), parentOf: { _ in nil })
+    }
+    setCursor(successor ?? ids.first)
   }
 
   private func move(by offset: Int) {
