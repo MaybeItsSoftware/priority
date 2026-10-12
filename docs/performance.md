@@ -27,9 +27,25 @@ index and the board's links (`BoardIndexMemo`, keyed by the shape's number,
 the columns and the folds). Going back to a board drawn before assigns these
 rather than sorting thousands of cards again.
 
-Two more reads used to be made on every switch and are now keyed to the
+More reads used to be made on every switch and are now keyed to the
 stamp: the done rail's rows (`reloadCompleted`), which cover every list and
-so cannot change on a switch, and the waiting chips (already were).
+so cannot change on a switch; the waiting chips (already were); and the
+board's columns (`readBoardColumns`), kept per board until the next write or
+the next minute, since a rule column's matches turn on the time — 2 ms of
+every switch to Everything, more than the rest of it.
+
+A switch also no longer moves `taskContentRevision`. It changes which tasks
+the cache holds, not what any of them says, so the views keyed to it (the
+progress dock, the inspector's dependencies, every body that resolved a task
+by id) were redrawn for nothing; it moves only when the store's stamp has.
+
+## What is animated
+
+Nothing, on a switch of scope. The main pane fades when you change the view
+mode yourself (`viewModeFadeToken`); it used to fade on any change of mode,
+so going from the inbox (an outline) to a list (a board), to Everything from
+the outline, or to Today from the sidebar faded the whole new pane in over
+140 ms, which read as a flash. Those cut now, as Zed's tabs do.
 
 ## When it is dropped
 
@@ -54,10 +70,15 @@ the app's own (`ownChanges`) or another process's (`data_version`). So:
 
 - The background reread of a kept combined scope, its comparison with what is
   held, and its shaping (`revalidateScope`).
-- Reading ahead: after every switch the lists either side of the new one in
-  the sidebar (and the first list, from Everything) are read in the
-  background (`prefetchAdjacentScopes`), so the next ↑ or ↓ finds them
-  resident. These are held apart from the scopes in use, two at most, so a
+- Reading ahead: at launch and after every switch, the scopes the next one
+  is likely to land on are read *and shaped* in the background
+  (`prefetchAdjacentScopes`): the sidebar rows either side of the cursor
+  (lists and folders, for `j`/`k`), the lists either side in sidebar order
+  (⌥⌘↑/↓), the list before this one (⌃-), and Everything until it has been
+  read once — the one scope that costs tens of milliseconds cold. Shaped with
+  the options the switch will ask for, so the first visit shapes nothing
+  either. An unchanged answer is compared off the main thread and only
+  re-stamped. These are held apart from the scopes in use, six at most, so a
   guess never pushes out somewhere you have been.
 - Both read on a second handle on the file (`WorkspaceStore.backgroundCore()`,
   `scopeRead(_:hidingCompletedBefore:inBackground:)`). The store's own handle
@@ -108,7 +129,17 @@ Measured 2026-10-10, release build, median of 7–9 runs, in milliseconds:
 | a write on the main thread while a background read of Everything runs | — | 11.5 on the store's own handle | 0.25 on the background handle |
 
 "Before" is every switch reading its scope again, which is what the first
-visit to a scope still costs. The benchmarks in
+visit to a scope not read ahead still costs.
+
+Measured 2026-10-12, same run conditions, the second round:
+
+| Switch | Before | After |
+|---|---:|---:|
+| → Everything (board), resident: columns read again → kept | 3.29 | 1.14 |
+| list → list (board), resident: columns read again → kept | 0.24 | 0.14 |
+| list → next list, read ahead: unshaped → shaped in the background | 0.83 | 0.18 |
+| → Everything, first visit: cold → read ahead from launch | 43.8 | 1.14 (34 off the main thread) |
+| inbox → list, Everything from the outline, Today from the sidebar | 140 ms fade | cut | The benchmarks in
 `WorkspacePerformanceBenchmarks` are unchanged by this work.
 
 ## Not done

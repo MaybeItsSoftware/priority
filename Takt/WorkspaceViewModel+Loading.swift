@@ -222,7 +222,20 @@ extension WorkspaceViewModel {
       let legacy = UserDefaults.standard.dictionary(forKey: Self.kanbanColumnsKey) as? [String: Data] ?? [:]
       boardColumnConfigurations = try store.kanbanBoardConfigurations(legacy: legacy, currentKey: boardConfigurationKey)
     }
-    return try store.boardColumns(key: boardConfigurationKey, listIDs: boardScopeListIDs)
+    // Kept per stamp: going back to a board reads its columns again only if
+    // something was written since — for Everything that was 2 ms of every
+    // switch to it, more than the rest of a resident switch. Kept a minute at
+    // most too, since a rule column's matches turn on the time.
+    let now = Date()
+    let key = BoardColumnsMemoKey(
+      store: ObjectIdentifier(store), stamp: try store.changeStamp(), board: boardConfigurationKey,
+      listIDs: boardScopeListIDs, minute: Int(now.timeIntervalSinceReferenceDate / 60))
+    if let memo = boardColumnsMemos[key.board], memo.key == key { return memo.read }
+    let read = try store.boardColumns(key: key.board, listIDs: key.listIDs, now: now)
+    // Only the boards read since the last write are worth holding.
+    boardColumnsMemos = boardColumnsMemos.filter { $0.value.key.isCurrent(with: key) }
+    boardColumnsMemos[key.board] = (key, read)
+    return read
   }
 
   /// The lists the board draws from.
@@ -255,4 +268,18 @@ extension WorkspaceViewModel {
     return "\(base)-\(counter)"
   }
 
+}
+
+/// What a board's columns were read for. See `readBoardColumns(store:)`.
+struct BoardColumnsMemoKey: Equatable {
+  let store: ObjectIdentifier
+  let stamp: WorkspaceChangeStamp
+  let board: String
+  let listIDs: [String]
+  let minute: Int
+
+  /// Read at the same stamp and minute as `other`, whatever the board.
+  func isCurrent(with other: BoardColumnsMemoKey) -> Bool {
+    store == other.store && stamp == other.stamp && minute == other.minute
+  }
 }

@@ -15,8 +15,10 @@ import TaktWorkspace
 ///   what you just did has to be on screen. A switch, which wrote nothing,
 ///   draws a kept combined scope as it was and reads it again in the
 ///   background, swapping the answer in only if it differs.
-/// - Once a switch has drawn, the lists either side of it in the sidebar are
-///   read in the background, so the next ↑ or ↓ finds them resident.
+/// - Once a switch has drawn, the scopes the next one is likely to land on —
+///   the sidebar rows either side of the cursor, the lists either side, the
+///   list before, Everything — are read and shaped in the background, so it
+///   finds them resident.
 @MainActor
 extension WorkspaceViewModel {
   /// Runs a switch: timed under `name` (`SwitchSignpost`), allowed to draw a
@@ -34,11 +36,10 @@ extension WorkspaceViewModel {
   /// What the main pane is drawn from now.
   var currentScope: WorkspaceScope? {
     if isMultiListScope {
-      let open = lists.filter { $0.completedAt == nil }
-      if let filter = selectedFilterList { return .filter(filter.id, open.map(\.id)) }
-      guard let ids = folderScopeListIDs else { return .combined(open.map(\.id)) }
-      let openIDs = Set(open.map(\.id))
-      return .combined(ids.filter { openIDs.contains($0) })
+      if let filter = selectedFilterList {
+        return .filter(filter.id, lists.filter { $0.completedAt == nil }.map(\.id))
+      }
+      return combinedScope(folderID: selectedFolderID)
     }
     return selectedListID.map(WorkspaceScope.list)
   }
@@ -135,57 +136,164 @@ extension WorkspaceViewModel {
     reloadOutline(refreshSidebar: false)
   }
 
-  /// Reads the lists beside the one on screen, and Everything's first list
-  /// from Everything, off this thread, so the likely next switch is resident.
-  /// Coalesced to one pass per turn of the run loop.
+  /// Reads the scopes the next switch is likely to land on, off this thread,
+  /// so it finds them resident and already shaped. Coalesced to one pass per
+  /// turn of the run loop. See `scopePrefetchCandidates`.
   func prefetchAdjacentScopes() {
     guard !scopePrefetchQueued, store != nil else { return }
     scopePrefetchQueued = true
     Task { @MainActor [weak self] in self?.launchScopePrefetch() }
   }
 
+  /// The combined scope Everything (nil) or a folder is drawn from: its open
+  /// lists, in sidebar order. The same answer as `currentScope` gives there.
+  func combinedScope(folderID: String?) -> WorkspaceScope {
+    let open = lists.filter { $0.completedAt == nil }
+    guard let folderID else { return .combined(open.map(\.id)) }
+    let openIDs = Set(open.map(\.id))
+    return .combined(listIDs(inFolder: folderID).filter { openIDs.contains($0) })
+  }
+
+  /// Where the next switch probably goes, cheapest first:
+  ///
+  /// - the rows either side of the sidebar's cursor, for `j` and `k`, which
+  ///   switch as they move;
+  /// - the lists either side in sidebar order, for ⌥⌘↑ and ⌥⌘↓;
+  /// - the list before this one, for ⌃-;
+  /// - Everything, never yet read: the one scope that takes tens of
+  ///   milliseconds to read cold, and ⌘0 away from anywhere.
+  ///
+  /// Each with the shape options the switch to it will ask for, so its first
+  /// draw shapes nothing either. A nested list is read, not shaped: it opens
+  /// with its task entered.
+  private func scopePrefetchCandidates() -> [ScopePrefetchRequest] {
+    var requests: [ScopePrefetchRequest] = []
+    let current = currentScope
+    let listsByID = Dictionary(lists.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+    func add(_ scope: WorkspaceScope, shapes: Bool = true) {
+      guard scope != current, !requests.contains(where: { $0.scope == scope }) else { return }
+      if case .combined(let ids) = scope, ids.isEmpty { return }
+      let options: WorkspaceScopeShapeOptions?
+      switch scope {
+      case .list(let id):
+        options = shapes
+          ? WorkspaceScopeShapeOptions(
+            scopeTaskID: nil, registeredRootTaskID: listsByID[id]?.visibleRootTaskId,
+            hidesCompletedTasks: hidesCompletedTasks)
+          : nil
+      case .combined:
+        options = WorkspaceScopeShapeOptions(
+          scopeTaskID: nil, registeredRootTaskID: nil, hidesCompletedTasks: hidesCompletedTasks)
+      case .filter:
+        return
+      }
+      requests.append(ScopePrefetchRequest(
+        scope: scope, options: options,
+        cutoff: scope.isCombined && hidesCompletedTasks ? Date().addingTimeInterval(-Self.completedLingerInterval) : nil,
+        // A combined scope opens as a board, except a folder from the outline.
+        outline: !scope.isCombined || viewMode == .outline, board: true))
+    }
+
+    let rows = sidebarRows
+    if let cursor = sidebarCursorRow, let index = rows.firstIndex(where: { $0.id == cursor.id }) {
+      for neighbour in [index + 1, index - 1] where rows.indices.contains(neighbour) {
+        switch rows[neighbour].kind {
+        case .list(let id) where listsByID[id]?.completedAt == nil: add(.list(id))
+        case .nestedList(let id):
+          if let listID = nestedLists.first(where: { $0.task.id == id })?.task.listId { add(.list(listID), shapes: false) }
+        case .folder(let id): add(combinedScope(folderID: id))
+        case .everything, .today, .list, .filterList: break
+        }
+      }
+    }
+    let ordered = listsInSidebarOrder.filter { $0.completedAt == nil }
+    if case .list(let id) = current, let index = ordered.firstIndex(where: { $0.id == id }) {
+      if index + 1 < ordered.count { add(.list(ordered[index + 1].id)) }
+      if index > 0 { add(.list(ordered[index - 1].id)) }
+    } else if let first = ordered.first {
+      add(.list(first.id))
+    }
+    if let previous = listBackStack.last, listsByID[previous]?.completedAt == nil { add(.list(previous)) }
+    let everything = combinedScope(folderID: nil)
+    if scopeCache.entry(for: everything) == nil {
+      add(everything)
+    }
+    return requests
+  }
+
   private func launchScopePrefetch() {
     scopePrefetchQueued = false
     guard let store else { return }
-    let open = lists.filter { $0.completedAt == nil }
-    var candidates: [WorkspaceScope] = []
-    if case .list(let id) = currentScope, let index = open.firstIndex(where: { $0.id == id }) {
-      if index > 0 { candidates.append(.list(open[index - 1].id)) }
-      if index + 1 < open.count { candidates.append(.list(open[index + 1].id)) }
-    } else if isEverythingSelected, let first = open.first {
-      candidates.append(.list(first.id))
-    }
-    let held = Dictionary(uniqueKeysWithValues: candidates.compactMap { scope in
-      scopeCache.entry(for: scope).map { (scope, $0.stamp) }
+    var requests = scopePrefetchCandidates()
+    let held = Dictionary(uniqueKeysWithValues: requests.compactMap { request in
+      scopeCache.entry(for: request.scope).map { (request.scope, (stamp: $0.stamp, read: $0.read)) }
     })
-    candidates.removeAll { revalidatingScopes.contains($0) }
-    guard !candidates.isEmpty else { return }
-    revalidatingScopes.formUnion(candidates)
+    requests.removeAll { revalidatingScopes.contains($0.scope) }
+    guard !requests.isEmpty else { return }
+    let scopes = requests.map(\.scope)
+    revalidatingScopes.formUnion(scopes)
     Task.detached(priority: .utility) { [weak self] in
-      var reads: [(WorkspaceScope, WorkspaceChangeStamp, WorkspaceScopeRead)] = []
+      var results: [ScopePrefetch] = []
       if let stamp = try? store.changeStamp() {
-        for scope in candidates where held[scope] != stamp {
-          if let read = try? store.scopeRead(scope, hidingCompletedBefore: nil, inBackground: true) {
-            reads.append((scope, stamp, read))
+        for request in requests where held[request.scope]?.stamp != stamp {
+          guard let read = try? store.scopeRead(request.scope, hidingCompletedBefore: request.cutoff, inBackground: true)
+          else { continue }
+          // Compared here, as a reread is: an unchanged answer keeps the
+          // shapes already made from it, and costs the main thread nothing.
+          if read == held[request.scope]?.read {
+            results.append(ScopePrefetch(request: request, stamp: stamp, read: nil, outline: nil, board: nil))
+            continue
           }
+          let now = Date()
+          let options = request.options
+          results.append(ScopePrefetch(
+            request: request, stamp: stamp, read: read,
+            outline: options.flatMap { request.outline ? WorkspaceScopeShaping.outline(read, options: $0, now: now) : nil },
+            board: options.flatMap { request.board ? WorkspaceScopeShaping.board(read, options: $0, now: now) : nil }))
         }
       }
-      await self?.finishPrefetch(candidates, reads: reads, store: store)
+      await self?.finishPrefetch(scopes, results: results, store: store)
     }
   }
 
-  private func finishPrefetch(
-    _ candidates: [WorkspaceScope], reads: [(WorkspaceScope, WorkspaceChangeStamp, WorkspaceScopeRead)],
-    store: WorkspaceStore
-  ) {
-    revalidatingScopes.subtract(candidates)
+  private func finishPrefetch(_ scopes: [WorkspaceScope], results: [ScopePrefetch], store: WorkspaceStore) {
+    revalidatingScopes.subtract(scopes)
     guard self.store === store else { return }
-    for (scope, stamp, read) in reads {
+    for result in results {
+      let scope = result.request.scope
+      guard let read = result.read else {
+        scopeCache.confirm(scope, at: result.stamp)
+        continue
+      }
       // Held apart until used, so a prefetch never pushes out a scope you
       // have actually been to in favour of one you have not.
-      scopeCache.store(read, for: scope, stamp: stamp, cutoff: nil, asPrefetch: true)
+      guard scopeCache.store(
+        read, for: scope, stamp: result.stamp, cutoff: result.request.cutoff, asPrefetch: true, knownToDiffer: true)
+      else { continue }
+      if let options = result.request.options {
+        scopeCache.keepShapes(for: scope, options: options, outline: result.outline, board: result.board)
+      }
     }
   }
+}
+
+/// A scope to read ahead, and how to shape it: `options` nil reads it only.
+struct ScopePrefetchRequest: Sendable {
+  let scope: WorkspaceScope
+  let options: WorkspaceScopeShapeOptions?
+  let cutoff: Date?
+  let outline: Bool
+  let board: Bool
+}
+
+/// A scope read ahead, shaped off the main thread: `read` is nil when it
+/// matched the read already held.
+struct ScopePrefetch: Sendable {
+  let request: ScopePrefetchRequest
+  let stamp: WorkspaceChangeStamp
+  let read: WorkspaceScopeRead?
+  let outline: (items: [TaskOutlineItem], expiry: Date?)?
+  let board: (board: WorkspaceBoardShape, expiry: Date?)?
 }
 
 /// A background reread's answer: `read` is nil when it matched the read

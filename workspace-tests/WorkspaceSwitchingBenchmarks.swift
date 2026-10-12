@@ -153,6 +153,54 @@ final class WorkspaceSwitchingBenchmarks: XCTestCase {
       try residentSwitch(everything, cache: cache, store: store, outline: false, board: true)
     }
 
+    // A board's columns are read with its scope. They were read again on
+    // every switch; now they are kept per board until the next write.
+    print("PERF -- a resident switch's column read, then and now")
+    let everythingIDs = lists.map(\.id)
+    try time("-> Everything (board), resident, columns read again (before)") {
+      try residentSwitch(everything, cache: cache, store: store, outline: false, board: true)
+      _ = try store.boardColumns(key: "everything/root", listIDs: everythingIDs)
+    }
+    try time("-> Everything (board), resident, columns kept (after)") {
+      try residentSwitch(everything, cache: cache, store: store, outline: false, board: true)
+      _ = try store.changeStamp()
+    }
+    try time("list -> list (board), resident, columns read again (before)") {
+      try residentSwitch(listB, cache: cache, store: store, outline: true, board: true)
+      _ = try store.boardColumns(key: "\(lists[6].id)/root", listIDs: [lists[6].id])
+    }
+
+    // A list read ahead used to arrive unshaped, so its first visit shaped it
+    // on the main thread; it is shaped in the background now and arrives as
+    // a resident scope does. Everything was never read ahead, so its first
+    // visit was the cold switch above; it is read ahead from launch now.
+    print("PERF -- a first visit to a scope read ahead")
+    let neighbour = WorkspaceScope.list(lists[7].id)
+    let neighbourRead = try store.scopeRead(neighbour, hidingCompletedBefore: nil)
+    try time("list -> next list, read ahead unshaped (before)") {
+      let ahead = WorkspaceScopeCache(capacity: 8)
+      ahead.store(neighbourRead, for: neighbour, stamp: stamp, cutoff: nil, asPrefetch: true)
+      ahead.touch(neighbour)
+      let items = ahead.outline(for: neighbour, options: options, now: Date())?.items ?? []
+      let shape = ahead.board(for: neighbour, options: options, now: Date())?.board ?? .empty
+      applyCost(outline: items, board: shape)
+    }
+    let neighbourOutline = WorkspaceScopeShaping.outline(neighbourRead, options: options, now: Date())
+    let neighbourBoard = WorkspaceScopeShaping.board(neighbourRead, options: options, now: Date())
+    try time("list -> next list, read ahead and shaped (after)") {
+      let ahead = WorkspaceScopeCache(capacity: 8)
+      ahead.store(neighbourRead, for: neighbour, stamp: stamp, cutoff: nil, asPrefetch: true, knownToDiffer: true)
+      ahead.keepShapes(for: neighbour, options: options, outline: neighbourOutline, board: neighbourBoard)
+      ahead.touch(neighbour)
+      let items = ahead.outline(for: neighbour, options: options, now: Date())?.items ?? []
+      let shape = ahead.board(for: neighbour, options: options, now: Date())?.board ?? .empty
+      applyCost(outline: items, board: shape)
+    }
+    try time("  Everything read ahead and shaped (off the main thread)", runs: 5) {
+      let read = try store.scopeRead(everything, hidingCompletedBefore: Date().addingTimeInterval(-3), inBackground: true)
+      _ = WorkspaceScopeShaping.board(read, options: options, now: Date())
+    }
+
     // After a write elsewhere every kept read is behind. A list is read again
     // on the main thread, which for one list is cheap; a combined scope is
     // drawn as kept while the background reads it again.
@@ -255,6 +303,17 @@ final class WorkspaceSwitchingBenchmarks: XCTestCase {
       cache.reserveCapacity(shape.treeTasks.count)
       for task in shape.treeTasks { cache[task.id] = task }
     }
+    // The reads a view model switch makes besides its scope's.
+    let listIDs = lists.map(\.id)
+    try time("  store.boardColumns(one list)") {
+      _ = try store.boardColumns(key: "\(lists[6].id)/root", listIDs: [lists[6].id])
+    }
+    try time("  store.boardColumns(Everything)") {
+      _ = try store.boardColumns(key: "everything/root", listIDs: listIDs)
+    }
+    let dayIDs = shape.cards.prefix(12).map(\.id)
+    try time("  store.tasks(ids:) for the day's twelve") { _ = try store.tasks(ids: dayIDs) }
+    try time("  store.changeStamp()") { _ = try store.changeStamp() }
     let other = WorkspaceScopeShaping.board(read, options: options, now: Date()).board
     try time("    shape == shape (the view model's assign-if-changed)") {
       _ = shape.cards == other.cards

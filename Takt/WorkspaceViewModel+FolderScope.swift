@@ -23,9 +23,13 @@ extension WorkspaceViewModel {
 
   /// The lists a folder scope stands for, in sidebar order.
   var folderScopeListIDs: [String]? {
-    guard let selectedFolderID else { return nil }
-    return WorkspaceSidebarOutline.listIDs(
-      inFolder: selectedFolderID,
+    selectedFolderID.map(listIDs(inFolder:))
+  }
+
+  /// The lists a folder stands for, in sidebar order, nested folders' too.
+  func listIDs(inFolder folderID: String) -> [String] {
+    WorkspaceSidebarOutline.listIDs(
+      inFolder: folderID,
       folders: folders.map { SidebarFolderDescriptor(id: $0.id, parentFolderID: $0.parentFolderId) },
       lists: lists.map { SidebarListDescriptor(id: $0.id, folderID: $0.folderId) })
   }

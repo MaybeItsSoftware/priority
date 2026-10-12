@@ -261,7 +261,7 @@ enum WorkspaceSidebarItem: Identifiable {
   @ObservationIgnored var nextUpGeneration = 0
   /// The scopes shown lately, resident between switches. See
   /// `WorkspaceViewModel+ScopeCache.swift`.
-  @ObservationIgnored let scopeCache = WorkspaceScopeCache(capacity: 8)
+  @ObservationIgnored let scopeCache = WorkspaceScopeCache(capacity: 8, prefetchCapacity: 6)
   /// Set for the refresh a switch makes, which wrote nothing, so a kept
   /// combined scope may be drawn while it is read again.
   @ObservationIgnored var scopeReadMayBeStale = false
@@ -329,6 +329,9 @@ enum WorkspaceSidebarItem: Identifiable {
   /// newer — a switch, which writes nothing — does not bump
   /// `taskContentRevision` and redraw every view that resolved a task by id.
   @ObservationIgnored var taskContentStamp: (store: ObjectIdentifier, stamp: WorkspaceChangeStamp)?
+  /// The boards' columns read since the last write, by board, and what each
+  /// was read for. See `readBoardColumns(store:)`.
+  @ObservationIgnored var boardColumnsMemos: [String: (key: BoardColumnsMemoKey, read: WorkspaceBoardColumns)] = [:]
   /// Whether the board's state was emptied rather than read, because the
   /// combined scope it belongs to is showing something else. See
   /// `reloadBoardNow`.
@@ -909,6 +912,9 @@ enum WorkspaceSidebarItem: Identifiable {
     boardColumnConfigurations = nil
     reloadFocus()
     refresh([.outline, .sidebar, .dailies, .nextUp])
+    // Launch draws one scope; the ones a first switch goes to are read
+    // behind it, Everything among them.
+    prefetchAdjacentScopes()
   }
 
   /// Today's dailies, joined to their tasks and contributions. Reloaded rather
