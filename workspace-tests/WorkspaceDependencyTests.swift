@@ -97,6 +97,26 @@ final class WorkspaceDependencyTests: XCTestCase {
     XCTAssertEqual(try store.blockers(of: report.id).map(\.id), [data.id])
   }
 
+  func testANewBlockerIsASiblingAboveTheTaskAndOneUndoStep() throws {
+    let parent = try store.createTask(listId: list.id, title: "Project")
+    let first = try store.createTask(listId: list.id, title: "First", parentTaskId: parent.id)
+    let report = try store.createTask(listId: list.id, title: "Write report", parentTaskId: parent.id)
+    let last = try store.createTask(listId: list.id, title: "Last", parentTaskId: parent.id)
+
+    let data = try store.createBlocker(capturing: "Get data !1", for: report)
+    XCTAssertEqual(data.title, "Get data", "read the way the add field reads it")
+    XCTAssertEqual(data.listId, list.id)
+    XCTAssertEqual(data.parentTaskId, parent.id)
+    XCTAssertEqual(try store.blockers(of: report.id).map(\.id), [data.id])
+    // In the blocked task's place, which then sinks below its siblings.
+    XCTAssertEqual(
+      try store.listTree(in: list.id).children(of: parent.id).map(\.id), [first.id, data.id, last.id, report.id])
+
+    XCTAssertEqual(try store.undo(), "New Blocker")
+    XCTAssertNil(try store.task(id: data.id))
+    XCTAssertTrue(try store.blockedTaskIds().isEmpty)
+  }
+
   func testDeletingABlockerDropsTheEdgeAndUndoBringsItBack() throws {
     let report = try store.createTask(listId: list.id, title: "Write report")
     let data = try store.createTask(listId: list.id, title: "Get data")

@@ -12,6 +12,10 @@ struct WorkspaceBlockerRequest: Identifiable {
 /// workspace, by what it says — the search's own index, filtered as you type.
 /// Return makes the selected task a blocker; one that would close a loop is
 /// refused, and says so.
+///
+/// A blocker that does not exist yet is the last row, "New task", which ⌘↩
+/// reaches from anywhere in the list — the list navigator's key for making
+/// what you typed. It is written at the blocked task's level, just above it.
 struct WorkspaceBlockerFinder: View {
   @Environment(WorkspaceViewModel.self) private var model
   @Environment(\.theme) private var theme
@@ -32,10 +36,8 @@ struct WorkspaceBlockerFinder: View {
         context: request.task.title)
       FocusRule()
       Group {
-        if query.trimmingCharacters(in: .whitespaces).isEmpty {
-          WorkspaceOverlayHint(text: "Type to find the task it waits on.")
-        } else if results.isEmpty {
-          WorkspaceOverlayHint(text: "No open task matches.")
+        if newTaskTitle == nil {
+          WorkspaceOverlayHint(text: "Type to find the task it waits on, or to name a new one.")
         } else {
           list
         }
@@ -50,7 +52,8 @@ struct WorkspaceBlockerFinder: View {
           .padding(.vertical, theme.space.xxs)
       }
       WorkspaceOverlayFooter(
-        hints: "↑↓ choose · ↩ wait on it · esc cancel", trailing: results.isEmpty ? nil : "\(results.count)")
+        hints: "↑↓ choose · ↩ wait on it · ⌘↩ new task · esc cancel",
+        trailing: results.isEmpty ? nil : "\(results.count)")
     }
     .onAppear {
       excluded = Set([request.task.id] + model.blockers(of: request.task).map(\.id))
@@ -61,16 +64,36 @@ struct WorkspaceBlockerFinder: View {
       results = model.searchResults(matching: text).filter { !$0.task.isList && !excluded.contains($0.id) }
     }
     .overlayKeys(model, id: overlayID) { key in
+      let rowCount = results.count + (newTaskTitle == nil ? 0 : 1)
       if let step = WorkspaceOverlayStep.offset(for: key) {
-        selection = WorkspaceOverlayStep.index(from: selection ?? 0, by: step, count: results.count)
+        selection = WorkspaceOverlayStep.index(from: selection ?? 0, by: step, count: rowCount)
         return true
       }
-      guard key == "enter" else { return false }
-      let index = selection ?? 0
-      if results.indices.contains(index) { choose(results[index]) }
-      return true
+      switch key {
+      case "enter":
+        let index = selection ?? 0
+        if results.indices.contains(index) {
+          choose(results[index])
+        } else if index == results.count {
+          createNewTask()
+        }
+        return true
+      case "cmd+enter":
+        createNewTask()
+        return true
+      default:
+        return false
+      }
     }
   }
+
+  /// What the "New task" row would write: what you typed, once there is any.
+  private var newTaskTitle: String? {
+    let title = query.trimmingCharacters(in: .whitespacesAndNewlines)
+    return title.isEmpty ? nil : title
+  }
+
+  private static let newTaskRowID = "new-task"
 
   private var list: some View {
     ScrollViewReader { proxy in
@@ -92,17 +115,41 @@ struct WorkspaceBlockerFinder: View {
             .id(result.id)
             .onTapGesture { choose(result) }
           }
+          if let title = newTaskTitle {
+            HStack(spacing: theme.space.sm) {
+              Label("New task “\(title)”", systemImage: "plus")
+                .font(theme.bodyFont())
+                .foregroundStyle(theme.primary)
+                .lineLimit(1)
+                .truncationMode(.middle)
+              Spacer(minLength: theme.space.md)
+              KeyCapRow(keys: ShortcutReference.displayKeys(forBinding: "cmd+enter"))
+            }
+            .overlayRow(isSelected: results.count == (selection ?? 0))
+            .id(Self.newTaskRowID)
+            .onTapGesture { createNewTask() }
+            .help("Make it a task beside this one, just above it, and wait on it")
+          }
         }
       }
       .onChange(of: selection) { _, index in
-        guard let index, results.indices.contains(index) else { return }
-        proxy.scrollTo(results[index].id)
+        guard let index else { return }
+        proxy.scrollTo(results.indices.contains(index) ? results[index].id : Self.newTaskRowID)
       }
     }
   }
 
   private func choose(_ result: TaskSearchResult) {
     if let failure = model.addBlocker(result.task, to: request.task) {
+      error = failure
+      return
+    }
+    model.dismissOverlay()
+  }
+
+  private func createNewTask() {
+    guard let title = newTaskTitle else { return }
+    if let failure = model.addNewBlocker(titled: title, to: request.task) {
       error = failure
       return
     }

@@ -1353,6 +1353,12 @@ public protocol CoreWorkspaceProtocol: AnyObject, Sendable {
     func createTask(task: NewTask, nowMs: Int64) throws  -> String
     
     /**
+     * Creates `task` and makes `task_id` wait on it, as one "New Blocker"
+     * step (`dependencies::create_blocker`). Returns the new task's id.
+     */
+    func createTaskBlocker(taskId: String, task: NewTask, nowMs: Int64) throws  -> String
+    
+    /**
      * SQLite's `data_version` on this handle's connection: it moves when
      * another connection commits (the CLI, another process) and never for
      * this handle's own writes, so a client that writes only through the
@@ -3057,6 +3063,22 @@ open func createTask(task: NewTask, nowMs: Int64)throws  -> String  {
         uniffiCallStatus in
     uniffi_takt_core_fn_method_coreworkspace_create_task(
             self.uniffiCloneHandle(),
+        FfiConverterTypeNewTask_lower(task),
+        FfiConverterInt64.lower(nowMs),uniffiCallStatus
+    )
+})
+}
+    
+    /**
+     * Creates `task` and makes `task_id` wait on it, as one "New Blocker"
+     * step (`dependencies::create_blocker`). Returns the new task's id.
+     */
+open func createTaskBlocker(taskId: String, task: NewTask, nowMs: Int64)throws  -> String  {
+    return try  FfiConverterString.lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_create_task_blocker(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(taskId),
         FfiConverterTypeNewTask_lower(task),
         FfiConverterInt64.lower(nowMs),uniffiCallStatus
     )
@@ -26770,6 +26792,9 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_method_coreworkspace_create_task() != 36329) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_create_task_blocker() != 56190) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_method_coreworkspace_data_version() != 15691) {

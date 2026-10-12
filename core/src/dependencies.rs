@@ -121,6 +121,21 @@ pub fn add_blocker(
     Ok(changed > 0)
 }
 
+/// Creates `new` and makes `task_id` wait on it: the Blocked by finder's
+/// "New task" row, for a blocker that does not exist yet. One transaction, so
+/// the task and the edge are one undo step and neither is left without the
+/// other. Returns the new task's id.
+pub fn create_blocker(
+    transaction: &Transaction,
+    task_id: &str,
+    new: &crate::tasks::NewTask,
+    now_ms: i64,
+) -> Result<String, CoreError> {
+    let id = crate::tasks::create_task(transaction, new, now_ms)?;
+    add_blocker(transaction, task_id, &id, now_ms)?;
+    Ok(id)
+}
+
 /// Stops `task_id` waiting on `blocked_by_task_id`. Returns whether there was
 /// such an edge.
 pub fn remove_blocker(

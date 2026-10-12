@@ -67,6 +67,28 @@ extension WorkspaceViewModel {
     return failure
   }
 
+  /// Makes `task` wait on a task that does not exist yet: `title`, read as
+  /// the add field reads it, written at `task`'s level just above it. Above,
+  /// because it has to be done first — and as the blocked task sinks below
+  /// its siblings, the new one takes the place it held. One undo step.
+  /// Returns an error message, or nil once saved.
+  @discardableResult
+  func addNewBlocker(titled title: String, to task: WorkspaceTask) -> String? {
+    guard let store else { return "The workspace is not open." }
+    taskEditor.flush()
+    var failure: String?
+    perform {
+      do {
+        _ = try store.createBlocker(capturing: title, for: task)
+      } catch {
+        failure = error.localizedDescription
+        throw error
+      }
+      refresh([.outline, .sidebar, .nextUp])
+    }
+    return failure
+  }
+
   func removeBlocker(_ blocker: WorkspaceTask, from task: WorkspaceTask) {
     guard let store else { return }
     perform {

@@ -203,6 +203,50 @@ fn adding_and_removing_a_blocker_are_undoable_steps() {
 }
 
 #[test]
+fn a_new_blocker_takes_the_blocked_tasks_place_and_goes_in_one_undo_step() {
+    let mut connection = workspace();
+    let new = crate::tasks::NewTask {
+        list_id: "l".into(),
+        title: "N".into(),
+        kind: "task".into(),
+        adjacent_task_id: Some("c".into()),
+        above: true,
+        ..Default::default()
+    };
+    let id = journalled(&mut connection, "New Blocker", |tx| {
+        create_blocker(tx, "c", &new, 1_000)
+    })
+    .unwrap();
+    // Above the task it blocks, which then sinks below its siblings.
+    assert_eq!(roots(&connection), ["a", "b", id.as_str(), "d", "c"]);
+    assert_eq!(blocked_task_ids(&connection).unwrap(), ["c"]);
+    assert_eq!(
+        undo(&mut connection).unwrap().as_deref(),
+        Some("New Blocker")
+    );
+    assert_eq!(roots(&connection), ["a", "b", "c", "d"]);
+    assert_eq!(edges(&connection), 0);
+}
+
+#[test]
+fn a_new_blocker_that_cannot_be_made_leaves_nothing_behind() {
+    let mut connection = workspace();
+    let new = crate::tasks::NewTask {
+        list_id: "l".into(),
+        title: "N".into(),
+        kind: "task".into(),
+        ..Default::default()
+    };
+    assert!(
+        journalled(&mut connection, "New Blocker", |tx| {
+            create_blocker(tx, "missing", &new, 1_000)
+        })
+        .is_err()
+    );
+    assert_eq!(roots(&connection), ["a", "b", "c", "d"]);
+}
+
+#[test]
 fn deleting_either_task_removes_the_edge_and_undoing_the_delete_restores_it() {
     let mut connection = workspace();
     add(&mut connection, "b", "a1").unwrap();

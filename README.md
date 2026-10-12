@@ -87,7 +87,7 @@ something you already have to know.
 | `Ctrl+T` | Plan the task for today, or take it off |
 | `gb` / `Cmd+Shift+H` | Make a habit from the task, or edit the habit it is — see [Habits](#habits) |
 | `ww` | Waiting on: who or what, and when to follow up — moves the task to Waiting on; see [Waiting on](#waiting-on) |
-| `bb` / `Cmd+Shift+B` | Blocked by: find a task this one waits on; see [Blocked by](#blocked-by) |
+| `bb` / `Cmd+Shift+B` | Blocked by: find a task this one waits on, or type a new one and `Cmd+Return` to make it just above; see [Blocked by](#blocked-by) |
 | `Delete` / `Cmd+Delete` / `Cmd+Shift+K` | Delete the task — it asks, and `Return` confirms |
 | `Return` | **Always** add a task, as in Checkvist — below the selection — on the board, below the card a selected subtask is drawn on — and at the foot of the day on Today |
 | `Space` / `x` | **Always** complete the task (or reopen it) — unless you are typing |
@@ -638,7 +638,13 @@ follow-up when it next looks.
 
 A task can wait on other tasks, in any list. `bb` (or `Cmd+Shift+B`, or
 **Blocked by** in the palette) on a task opens a finder over every open task;
-`Return` makes the one you choose a blocker. Until every task it waits on is
+`Return` makes the one you choose a blocker. When the task it waits on does
+not exist yet, the last row is **New task** with what you typed — `Return` on
+it, or `Cmd+Return` from anywhere in the finder, writes it beside the task
+being blocked (same list, same parent, just above it, since it has to be done
+first; on the board, in the same column) and makes it the blocker, in one undo
+step. The title is read the way the add field reads it, so `!1`, `@fri` and
+`45m` work there too. Until every task it waits on is
 done or cancelled, the task is **blocked**: its title is greyed in the outline,
 on the board, in the matrix and on Today, it sinks below its unblocked
 siblings, and it is never offered as next up. Finishing the last blocker puts

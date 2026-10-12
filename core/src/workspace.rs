@@ -271,6 +271,19 @@ impl CoreWorkspace {
         })
     }
 
+    /// Creates `task` and makes `task_id` wait on it, as one "New Blocker"
+    /// step (`dependencies::create_blocker`). Returns the new task's id.
+    pub fn create_task_blocker(
+        &self,
+        task_id: String,
+        task: NewTask,
+        now_ms: i64,
+    ) -> Result<String, CoreError> {
+        journal::journalled(&mut self.lock(), "New Blocker", |tx| {
+            dependencies::create_blocker(tx, &task_id, &task, now_ms)
+        })
+    }
+
     /// Stops `task_id` waiting on `blocked_by_task_id` as one "Remove
     /// Blocker" step. Returns whether there was such a dependency.
     pub fn remove_task_blocker(
