@@ -129,6 +129,9 @@ extension WorkspaceViewModel {
     scopeCache.keepShapes(for: scope, options: options, outline: value.outline, board: value.board)
     guard scope == currentScope else { return }
     SwitchSignpost.event("Revalidated scope changed")
+    // What was drawn kept was older than the stamp the task cache last
+    // noted, so the rebuild below has to say the tasks changed.
+    taskContentStamp = nil
     reloadOutline(refreshSidebar: false)
   }
 

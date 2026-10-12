@@ -105,9 +105,12 @@ struct WorkspaceDesktopView: View {
         .safeAreaInset(edge: .bottom, spacing: 0) { WorkspaceTaskDeletionInset() }
         .background { WorkspaceDeletionCanceller() }
     }
-    // Switching outline, board, matrix or Today fades rather than cuts. Only
-    // the swap is animated: the pane's own reloads stay instant.
-    .animation(WorkspaceMotion.quick, value: model.viewMode)
+    // Choosing outline, board, matrix or Today fades rather than cuts. Only
+    // that swap is animated: the pane's own reloads stay instant, and so does
+    // a switch of list, folder or Everything that changes the mode on the way
+    // — keyed to the mode itself, going from the inbox to a list faded the
+    // new list's whole board in over 140 ms.
+    .animation(WorkspaceMotion.quick, value: model.viewModeFadeToken)
     .focusSection()
     .frame(minWidth: 420, maxWidth: .infinity, maxHeight: .infinity)
   }

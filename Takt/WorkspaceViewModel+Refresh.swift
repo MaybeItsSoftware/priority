@@ -124,7 +124,7 @@ extension WorkspaceViewModel {
     }
     if wrote { waitingDetailsAreStale = true }
     if reloadedTasks || wrote {
-      rebuildTaskCache()
+      rebuildTaskCache(afterWrite: wrote)
       refreshHistoryLabels()
       if let draft { reanchorTaskDraft(from: draft) }
     }
@@ -152,7 +152,14 @@ extension WorkspaceViewModel {
   /// Built from what the refresh has just loaded, then topped up in one read
   /// for whatever is named but not on the board or outline — the day's tasks,
   /// the running block, the selection.
-  func rebuildTaskCache() {
+  ///
+  /// - Parameter wrote: whether a write preceded it. Without one, and with
+  ///   the store's stamp where it was at the last rebuild, nothing a task
+  ///   resolved by id could say has changed — a switch only changes which
+  ///   tasks are held — so `taskContentRevision` is left alone, and the views
+  ///   keyed to it (the progress dock's reload, the inspector's dependencies,
+  ///   every body that resolved a task) are not redrawn by a switch.
+  func rebuildTaskCache(afterWrite wrote: Bool = true) {
     var cache: [String: WorkspaceTask] = [:]
     cache.reserveCapacity(boardTreeTasks.count + outline.count + nestedLists.count)
     for task in completedTasks { cache[task.id] = task }
@@ -173,8 +180,21 @@ extension WorkspaceViewModel {
     reloadWaitingDetails()
     missingTaskIDs.removeAll(keepingCapacity: true)
     descendantCache.removeAll(keepingCapacity: true)
-    taskContentRevision += 1
+    if taskContentMayHaveChanged(afterWrite: wrote) { taskContentRevision += 1 }
     rebuildDayItems()
+  }
+
+  /// Whether anything has been written since the last rebuild, by this
+  /// process or another, and notes the stamp for the next one.
+  private func taskContentMayHaveChanged(afterWrite wrote: Bool) -> Bool {
+    guard let store, let stamp = try? store.changeStamp() else {
+      taskContentStamp = nil
+      return true
+    }
+    let current = (store: ObjectIdentifier(store), stamp: stamp)
+    defer { taskContentStamp = current }
+    guard !wrote, let held = taskContentStamp else { return true }
+    return held.store != current.store || held.stamp != current.stamp
   }
 
   /// The day, resolved to tasks. See `dayItems`.

@@ -319,6 +319,16 @@ enum WorkspaceSidebarItem: Identifiable {
   var viewMode: WorkspaceViewMode = .today {
     didSet { if viewMode != oldValue { viewModeDidChange() } }
   }
+  /// Moves when you change the view mode yourself, which is the one change
+  /// the main pane fades on. A switch of scope that changes the mode on the
+  /// way — the inbox opening as an outline, Everything or a list as a board,
+  /// Today from the sidebar — cuts instead, as Zed's tabs do: the new rows
+  /// are drawn in the frame that asked for them rather than faded in over it.
+  var viewModeFadeToken = 0
+  /// What the task cache was last rebuilt at, so a rebuild that read nothing
+  /// newer — a switch, which writes nothing — does not bump
+  /// `taskContentRevision` and redraw every view that resolved a task by id.
+  @ObservationIgnored var taskContentStamp: (store: ObjectIdentifier, stamp: WorkspaceChangeStamp)?
   /// Whether the board's state was emptied rather than read, because the
   /// combined scope it belongs to is showing something else. See
   /// `reloadBoardNow`.

@@ -67,7 +67,7 @@ extension WorkspaceViewModel {
     // which Today does not draw — is not read on the way.
     batchingRefreshes {
       selectEverything()
-      selectViewMode(.today)
+      selectViewMode(.today, fades: false)
     }
   }
 
@@ -111,10 +111,13 @@ extension WorkspaceViewModel {
     selectedTaskID = task.id
   }
 
-  func selectViewMode(_ mode: WorkspaceViewMode) {
+  /// - Parameter fades: false when the change is part of a switch of scope,
+  ///   which cuts rather than fades; see `viewModeFadeToken`.
+  func selectViewMode(_ mode: WorkspaceViewMode, fades: Bool = true) {
     if mode != viewMode { isDraftingTask = false }
     if mode == .today { dayPresentationCount += 1 }
     let changed = viewMode != mode
+    if changed && fades { viewModeFadeToken += 1 }
     // One refresh for both: the board a mode needs (see `viewModeDidChange`)
     // and the outline below.
     switchScope("Select view mode") {
