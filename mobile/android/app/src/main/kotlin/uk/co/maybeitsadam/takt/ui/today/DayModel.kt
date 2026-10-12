@@ -106,8 +106,8 @@ data class DayState(
 
 /**
  * The day's finish-by figure: what the day's estimates still owe, and now
- * plus that. Deliberately naive (no breaks, no calendar). Port of
- * `Sources/TaktCore/DayForecast.swift`.
+ * plus that. Deliberately naive (no breaks, no calendar). Wraps the core's
+ * `day_forecast`, as `Sources/TaktCore/DayForecast.swift` does.
  */
 @Immutable
 data class DayForecast(
@@ -138,28 +138,19 @@ data class DayForecast(
         }
 
     companion object {
+        /** The sum is the Rust core's (`core/src/shaping.rs`), shared with the Mac and iPhone. */
         fun of(entries: List<Entry>, now: Instant): DayForecast {
-            var estimated = 0
-            var logged = 0
-            var remaining = 0
-            var unestimated = 0
-            for (entry in entries) {
-                val spent = maxOf(0, entry.loggedSeconds)
-                logged += spent
-                val estimate = entry.estimateSeconds
-                if (estimate == null || estimate <= 0) {
-                    unestimated++
-                    continue
-                }
-                estimated += estimate
-                remaining += maxOf(0, estimate - spent)
-            }
+            val summary = uniffi.takt_core.dayForecast(
+                entries.map { uniffi.takt_core.DayForecastEntry(it.estimateSeconds?.toLong(), it.loggedSeconds.toLong()) },
+                now.toEpochMilli(),
+            )
             return DayForecast(
-                estimatedSeconds = estimated,
-                loggedSeconds = logged,
-                remainingSeconds = remaining,
-                unestimatedCount = unestimated,
-                finishAt = if (remaining > 0) now.plusSeconds(remaining.toLong()) else null,
+                estimatedSeconds = summary.estimatedSeconds.toInt(),
+                loggedSeconds = summary.loggedSeconds.toInt(),
+                remainingSeconds = summary.remainingSeconds.toInt(),
+                unestimatedCount = summary.unestimatedCount.toInt(),
+                // From `now` itself, which keeps its sub-millisecond part.
+                finishAt = summary.finishAtMs?.let { now.plusSeconds(summary.remainingSeconds) },
             )
         }
 
@@ -275,28 +266,18 @@ object DayShaping {
 
 /**
  * Arranging the day by hand. Only planned cards move: a derived card is in
- * the day because of a date, and the next read would put it back. Port of
- * `Sources/TaktCore/DayArrangement.swift`.
+ * the day because of a date, and the next read would put it back. The rule is
+ * the core's (`core/src/shaping.rs`), shared with the Mac and iPhone.
  */
 object DayArrangement {
     /** The planned order with [taskId] moved [offset] places, clamped; null when nothing moves. */
-    fun moving(taskId: String, offset: Int, order: List<String>): List<String>? {
-        val index = order.indexOf(taskId)
-        if (offset == 0 || index < 0) return null
-        val target = (index + offset).coerceIn(0, order.size - 1)
-        if (target == index) return null
-        return order.toMutableList().apply {
-            removeAt(index)
-            add(target, taskId)
-        }
-    }
+    fun moving(taskId: String, offset: Int, order: List<String>): List<String>? =
+        uniffi.takt_core.dayArrangementMoving(taskId, offset.toLong(), order)
 
     /** [order] replacing the planned cards, in place, so a move shows before the next read lands. */
     fun applying(order: List<String>, cards: List<DayCard>): List<DayCard> {
         val planned = cards.filter { it.isPlanned }.associateBy { it.id }
-        val queue = order.iterator()
-        return cards.map { card ->
-            if (!card.isPlanned || !queue.hasNext()) card else planned[queue.next()] ?: card
-        }
+        val ids = uniffi.takt_core.dayArrangementApplying(order, cards.map { it.id }, cards.map { it.isPlanned })
+        return cards.mapIndexed { index, card -> if (!card.isPlanned) card else planned[ids[index]] ?: card }
     }
 }

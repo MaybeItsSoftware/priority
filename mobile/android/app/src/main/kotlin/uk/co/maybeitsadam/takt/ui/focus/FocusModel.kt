@@ -14,6 +14,8 @@ import uk.co.maybeitsadam.takt.core.NextUpReason
 import uk.co.maybeitsadam.takt.core.ScoredNextUp
 import uk.co.maybeitsadam.takt.core.TaskAvailabilityPolicy
 import uk.co.maybeitsadam.takt.core.TaskCondition
+import uk.co.maybeitsadam.takt.core.coreMillis
+import uk.co.maybeitsadam.takt.core.coreName
 import uk.co.maybeitsadam.takt.core.FocusContext
 import uk.co.maybeitsadam.takt.core.TaskUnavailableReason
 import uk.co.maybeitsadam.takt.ui.components.Format
@@ -26,17 +28,18 @@ enum class FocusDeferral(val title: String) {
     NEXT_WEEK("Next week"),
     ;
 
+    /** The core's arithmetic (`focus_deferral_date`), shared with the iPhone. */
     fun date(now: Instant, zone: ZoneId = ZoneId.systemDefault()): Instant {
-        val local = now.atZone(zone)
-        return when (this) {
-            AN_HOUR -> now.plusSeconds(3_600)
-            THIS_AFTERNOON -> {
-                val afternoon = local.toLocalDate().atTime(14, 0).atZone(zone).toInstant()
-                if (afternoon > now) afternoon else now.plusSeconds(3_600)
-            }
-            TOMORROW -> local.toLocalDate().plusDays(1).atTime(9, 0).atZone(zone).toInstant()
-            NEXT_WEEK -> local.toLocalDate().plusDays(7).atTime(9, 0).atZone(zone).toInstant()
+        val kind = when (this) {
+            AN_HOUR -> uniffi.takt_core.FocusDeferral.AN_HOUR
+            THIS_AFTERNOON -> uniffi.takt_core.FocusDeferral.THIS_AFTERNOON
+            TOMORROW -> uniffi.takt_core.FocusDeferral.TOMORROW
+            NEXT_WEEK -> uniffi.takt_core.FocusDeferral.NEXT_WEEK
         }
+        val nowMs = now.coreMillis
+        val ms = uniffi.takt_core.focusDeferralDate(kind, nowMs, zone.coreName)
+        // "An hour from now" keeps `now`'s sub-millisecond part.
+        return if (ms - nowMs == 3_600_000L) now.plusSeconds(3_600) else Instant.ofEpochMilli(ms)
     }
 }
 

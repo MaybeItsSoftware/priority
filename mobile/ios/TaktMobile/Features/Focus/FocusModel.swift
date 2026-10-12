@@ -18,20 +18,10 @@ enum FocusDeferral: String, CaseIterable, Identifiable {
     }
   }
 
+  /// The core's arithmetic (`FocusDeferralTime`), shared with Android.
   func date(from now: Date, calendar: Calendar = .current) -> Date {
-    switch self {
-    case .anHour:
-      return now.addingTimeInterval(3_600)
-    case .thisAfternoon:
-      let afternoon = calendar.date(bySettingHour: 14, minute: 0, second: 0, of: now) ?? now
-      return afternoon > now ? afternoon : now.addingTimeInterval(3_600)
-    case .tomorrow:
-      let tomorrow = calendar.date(byAdding: .day, value: 1, to: now) ?? now
-      return calendar.date(bySettingHour: 9, minute: 0, second: 0, of: tomorrow) ?? tomorrow
-    case .nextWeek:
-      let week = calendar.date(byAdding: .day, value: 7, to: now) ?? now
-      return calendar.date(bySettingHour: 9, minute: 0, second: 0, of: week) ?? week
-    }
+    // Same raw values on both enums.
+    FocusDeferralTime(rawValue: rawValue)!.date(from: now, calendar: calendar)
   }
 }
 
@@ -196,15 +186,10 @@ final class FocusModel {
 
   func toggleCondition(_ condition: TaskCondition) {
     suggestedContextIDs = []
-    if conditionIDs.contains(condition.id) {
-      conditionIDs.remove(condition.id)
-    } else {
-      var next = conditionIDs
-      // One place at a time: choosing a location replaces the last one.
-      if condition.isLocation { next.subtract(snapshot.conditions.filter(\.isLocation).map(\.id)) }
-      next.insert(condition.id)
-      conditionIDs = next
-    }
+    // One place at a time: choosing a location replaces the last one.
+    conditionIDs = FocusContextSelection.toggling(
+      condition.id, isLocation: condition.isLocation, in: conditionIDs,
+      locationIDs: Set(snapshot.conditions.filter(\.isLocation).map(\.id)))
   }
 
   func setAvailable(minutes: Int?, now: Date = .now) {

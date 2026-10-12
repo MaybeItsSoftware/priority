@@ -1,5 +1,6 @@
 import Foundation
 import TaktCore
+import TaktRustCore
 
 public enum TaskEditorField: String, Codable, CaseIterable, Sendable {
   case title, notes, dueAt, estimateMinutes, priority, tags, recurrenceRule, links, dailyProgress
@@ -41,12 +42,14 @@ public struct TaskEditorSnapshot: Codable, Equatable, Sendable {
   public var values: TaskEditorValues {
     TaskEditorValues(
       title: title, notes: notes, dueAt: dueAt,
-      estimateMinutes: estimateSeconds.map { $0 % 60 == 0 ? String($0 / 60) : String(Double($0) / 60) } ?? "",
+      estimateMinutes: estimateSeconds.map { editorMinutesText(seconds: Int64($0), wholeMinutesPlainly: true) } ?? "",
       priority: metadata.priority ?? 0, tags: metadata.tags.joined(separator: ", "),
       recurrenceRule: metadata.recurrenceRule ?? "",
       links: metadata.externalLinks.joined(separator: "\n"), dailyProgress: dailyProgress,
       startAt: planning?.startAt, dueDate: planning?.dueDate, requirementGroups: planning?.requirementGroups,
-      minimumBlockMinutes: planning?.minimumBlockSeconds.map { String(Double($0) / 60) },
+      minimumBlockMinutes: planning?.minimumBlockSeconds.map {
+        editorMinutesText(seconds: Int64($0), wholeMinutesPlainly: false)
+      },
       requiresSingleSitting: planning?.requiresSingleSitting)
   }
 }
@@ -68,14 +71,13 @@ public struct TaskEditorValues: Codable, Equatable, Sendable {
   public var minimumBlockMinutes: String?
   public var requiresSingleSitting: Bool?
 
+  /// Minutes as typed, to whole seconds; the core's `editor_parse_minutes`.
   static func parseEstimate(_ raw: String) throws -> Int? {
-    let raw = raw.trimmingCharacters(in: .whitespacesAndNewlines)
-    if raw.isEmpty { return nil }
-    guard raw.range(of: "^(?:[0-9]+(?:\\.[0-9]*)?|\\.[0-9]+)$", options: .regularExpression) != nil,
-      let minutes = Double(raw), minutes.isFinite, minutes >= 0 else { throw TaskEditorError.invalidEstimate }
-    let seconds = (minutes * 60).rounded()
-    guard seconds.isFinite, seconds < Double(Int.max) else { throw TaskEditorError.invalidEstimate }
-    return Int(seconds)
+    do {
+      return try editorParseMinutes(raw: raw).map { Int($0) }
+    } catch {
+      throw TaskEditorError.invalidEstimate
+    }
   }
 
   public func matches(_ field: TaskEditorField, in other: Self) -> Bool {
@@ -133,22 +135,28 @@ public struct TaskEditorDraft: Codable, Equatable, Sendable {
     guard saved.workspaceId == baseline.workspaceId, saved.taskId == baseline.taskId else { return }
     let previous = baseline.values
     let current = saved.values
-    for field in TaskEditorField.allCases {
-      if values.matches(field, in: current) {
-        conflicts.remove(field)
-      } else if !values.matches(field, in: previous) || conflicts.contains(field) {
-        if !current.matches(field, in: previous) { conflicts.insert(field) }
-      } else {
-        values.copy(field, from: current)
-      }
-      // Estimates displayed in minutes can have identical text but different
-      // exact seconds. A dirty estimate still conflicts with that saved edit.
-      if field == .estimateMinutes, !values.matches(field, in: previous),
-        saved.estimateSeconds != baseline.estimateSeconds {
-        let parsed = try? TaskEditorValues.parseEstimate(values.estimateMinutes)
-        let converged = parsed == saved.estimateSeconds
-          && (values.estimateMinutes.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || parsed != nil)
-        if converged { conflicts.remove(field) } else { conflicts.insert(field) }
+    // The comparisons are this type's; what to do with each field is the
+    // core's (`editor_reconcile`), shared with Android.
+    let fields = TaskEditorField.allCases
+    let outcomes = editorReconcile(
+      fields: fields.map { field in
+        EditorFieldComparison(
+          draftMatchesSaved: values.matches(field, in: current),
+          draftMatchesBaseline: values.matches(field, in: previous),
+          savedMatchesBaseline: current.matches(field, in: previous),
+          inConflict: conflicts.contains(field))
+      },
+      estimate: EditorEstimateCheck(
+        fieldIndex: UInt32(fields.firstIndex(of: .estimateMinutes)!),
+        draftText: values.estimateMinutes, savedText: current.estimateMinutes,
+        baselineSeconds: baseline.estimateSeconds.map(Int64.init),
+        savedSeconds: saved.estimateSeconds.map(Int64.init)))
+    for (field, outcome) in zip(fields, outcomes) {
+      if outcome.followSaved { values.copy(field, from: current) }
+      switch outcome.conflict {
+      case true?: conflicts.insert(field)
+      case false?: conflicts.remove(field)
+      case nil: break
       }
     }
     baseline = saved

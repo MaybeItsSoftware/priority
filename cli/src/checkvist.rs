@@ -3,6 +3,10 @@
 //! Talks to the API rather than to the running app, so every command here works
 //! whether or not Takt is open. It descends from the client in the app's
 //! former in-process MCP server, which this binary replaced (see `mcp.rs`).
+//!
+//! What each request looks like and how an answer reads are the core's
+//! (`takt_core::checkvist`), shared with the Mac's Checkvist plugin. What is
+//! left here is the sending: `ureq`, the token and the one retry after a 401.
 
 use crate::config::Config;
 use crate::error::{Result, ToolError};
@@ -10,10 +14,17 @@ use serde_json::{Value, json};
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::time::Duration;
+use takt_core::CoreError;
+use takt_core::checkvist::{self as wire, CheckvistCall};
+
+pub use takt_core::checkvist::{DEFAULT_BASE_URL, parent_id_of, status_of};
 
 pub const USER_AGENT: &str = "TaktMCP/0.3";
-pub const DEFAULT_BASE_URL: &str = "https://checkvist.com";
 const REQUEST_TIMEOUT: Duration = Duration::from_secs(30);
+
+fn core_error(error: CoreError) -> ToolError {
+    ToolError::new(error.to_string())
+}
 
 pub struct CheckvistConfig {
     pub username: String,
@@ -53,56 +64,47 @@ impl CheckvistClient {
     pub fn new(config: CheckvistConfig) -> Self {
         CheckvistClient {
             config,
-            agent: ureq::AgentBuilder::new()
-                .timeout(REQUEST_TIMEOUT)
-                .user_agent(USER_AGENT)
-                .build(),
+            agent: ureq::AgentBuilder::new().timeout(REQUEST_TIMEOUT).build(),
             token: RefCell::new(None),
         }
     }
 
-    fn build_url(&self, path: &str) -> String {
-        let base = self.config.base_url.trim_end_matches('/');
-        if path.starts_with('/') {
-            format!("{base}{path}")
-        } else {
-            format!("{base}/{path}")
-        }
-    }
-
-    fn request(
-        &self,
-        method: &str,
-        path: &str,
-        query: &[(&str, &str)],
-        body: Option<Value>,
-        require_auth: bool,
-    ) -> Result<Value> {
+    /// Sends `call`, shaped by the core, and answers with the body's text.
+    fn request(&self, call: CheckvistCall, require_auth: bool) -> Result<String> {
         // One retry only, and only for 401: a token can expire between calls,
         // but a second rejection means the credentials themselves are wrong and
         // retrying would just lock the account out slower.
         let mut retry_unauthorized = true;
         loop {
-            let mut request = self.agent.request(method, &self.build_url(path));
-            request = request.set("Accept", "application/json");
-            for (key, value) in query {
-                request = request.query(key, value);
+            let token = if require_auth {
+                Some(self.ensure_token()?)
+            } else {
+                None
+            };
+            let shaped = wire::checkvist_request(
+                self.config.base_url.clone(),
+                call.clone(),
+                token,
+                USER_AGENT.into(),
+            )
+            .map_err(core_error)?;
+            let mut request = self.agent.request(&shaped.method, &shaped.url);
+            for header in &shaped.headers {
+                request = request.set(&header.name, &header.value);
             }
-            if require_auth {
-                request = request.set("X-Client-Token", &self.ensure_token()?);
-            }
-
-            let outcome = match &body {
-                Some(payload) => request.send_json(payload.clone()),
+            let outcome = match &shaped.body {
+                Some(body) => request.send_string(body),
                 None => request.call(),
             };
 
-            let (status, parsed) = match outcome {
-                Ok(response) => {
-                    let status = response.status();
-                    (status, parse_body(response))
+            let (status, text) = match outcome {
+                Ok(response) => (
+                    response.status(),
+                    response.into_string().unwrap_or_default(),
+                ),
+                Err(ureq::Error::Status(status, response)) => {
+                    (status, response.into_string().unwrap_or_default())
                 }
-                Err(ureq::Error::Status(status, response)) => (status, parse_body(response)),
                 Err(ureq::Error::Transport(transport)) => {
                     return Err(ToolError::new(format!("Network error: {transport}")));
                 }
@@ -118,12 +120,21 @@ impl CheckvistClient {
                 return Err(ToolError::http(
                     format!("Checkvist API request failed with status {status}."),
                     Some(status),
-                    Some(parsed),
+                    Some(wire::parse_body(&text)),
                 ));
             }
 
-            return Ok(parsed);
+            return Ok(text);
         }
+    }
+
+    /// An authenticated [`Self::request`], with the answer read as JSON.
+    fn request_json(&self, call: CheckvistCall) -> Result<Value> {
+        Ok(wire::parse_body(&self.request_text(call)?))
+    }
+
+    fn request_text(&self, call: CheckvistCall) -> Result<String> {
+        self.request(call, true)
     }
 
     fn ensure_token(&self) -> Result<String> {
@@ -143,21 +154,16 @@ impl CheckvistClient {
                 "Missing credentials. Set CHECKVIST_USERNAME and CHECKVIST_REMOTE_KEY.",
             ));
         }
-        let payload = json!({
-            "username": self.config.username,
-            "remote_key": self.config.remote_key,
-        });
-        let response = self.request("POST", "/auth/login.json", &[], Some(payload), false)?;
-
-        let token = match &response {
-            Value::Object(_) => response.get("token").and_then(Value::as_str).map(str::trim),
-            Value::String(text) => Some(text.trim().trim_matches('"')),
-            _ => None,
-        }
-        .filter(|token| !token.is_empty())
-        .ok_or_else(|| ToolError::new("Authentication response did not include a token."))?;
-
-        *self.token.borrow_mut() = Some(token.to_string());
+        let text = self.request(
+            CheckvistCall::Login {
+                username: self.config.username.clone(),
+                remote_key: self.config.remote_key.clone(),
+            },
+            false,
+        )?;
+        let token = wire::checkvist_login_token(text)
+            .ok_or_else(|| ToolError::new("Authentication response did not include a token."))?;
+        *self.token.borrow_mut() = Some(token);
         Ok(())
     }
 
@@ -178,18 +184,10 @@ impl CheckvistClient {
     }
 
     pub fn list_lists(&self) -> Result<Vec<Value>> {
-        let response = self.request("GET", "/checklists.json", &[], None, true)?;
-        let Value::Array(items) = response else {
-            return Err(ToolError::http(
-                "Unexpected response while listing checklists.",
-                None,
-                Some(response),
-            ));
-        };
-        Ok(items
-            .into_iter()
-            .filter(|item| item.is_object() && item.get("archived") != Some(&Value::Bool(true)))
-            .collect())
+        let text = self.request_text(CheckvistCall::Lists)?;
+        wire::list_values(&text).map_err(|error| {
+            ToolError::http(error.to_string(), None, Some(wire::parse_body(&text)))
+        })
     }
 
     pub fn fetch_tasks(
@@ -198,26 +196,13 @@ impl CheckvistClient {
         include_closed: bool,
         with_notes: bool,
     ) -> Result<Vec<Value>> {
-        let response = self.request(
-            "GET",
-            &format!("/checklists/{list_id}/tasks.json"),
-            &[("with_notes", if with_notes { "true" } else { "false" })],
-            None,
-            true,
-        )?;
-        let Value::Array(items) = response else {
-            return Err(ToolError::http(
-                "Unexpected response while fetching tasks.",
-                None,
-                Some(response),
-            ));
-        };
-
-        let mut tasks: Vec<Value> = items.into_iter().filter(Value::is_object).collect();
-        if !include_closed {
-            tasks.retain(|task| status_of(task) == 0);
-        }
-        Ok(depth_first_tasks(tasks))
+        let text = self.request_text(CheckvistCall::Tasks {
+            list_id: list_id.into(),
+            with_notes,
+        })?;
+        wire::task_values(&text, include_closed).map_err(|error| {
+            ToolError::http(error.to_string(), None, Some(wire::parse_body(&text)))
+        })
     }
 
     pub fn create_task(
@@ -228,25 +213,17 @@ impl CheckvistClient {
         position: Option<i64>,
         due: Option<&str>,
     ) -> Result<Value> {
-        let mut task = serde_json::Map::new();
-        task.insert("content".into(), json!(content));
-        if let Some(parent_id) = parent_id {
-            task.insert("parent_id".into(), json!(parent_id));
-        }
-        if let Some(position) = position {
-            task.insert("position".into(), json!(position));
-        }
-        if let Some(due) = due {
-            task.insert("due".into(), json!(due));
-        }
-
-        let response = self.request(
-            "POST",
-            &format!("/checklists/{list_id}/tasks.json"),
-            &[("parse", "true")],
-            Some(json!({ "task": task })),
-            true,
-        )?;
+        let response = self.request_json(CheckvistCall::CreateTask {
+            list_id: list_id.into(),
+            content: content.into(),
+            parent_id,
+            position,
+            due: due.map(str::to_string),
+            tags: None,
+            priority: None,
+            // An assistant writes `#tag` and `^date` inline and means them.
+            parse: true,
+        })?;
         if !response.is_object() {
             return Err(ToolError::http(
                 "Unexpected response while creating task.",
@@ -265,41 +242,39 @@ impl CheckvistClient {
         due: Option<&str>,
         tags: Option<&str>,
     ) -> Result<Value> {
-        let mut payload = serde_json::Map::new();
-        if let Some(content) = content {
-            payload.insert("content".into(), json!(content));
-        }
-        if let Some(due) = due {
-            payload.insert("due".into(), json!(due));
-        }
-        if let Some(tags) = tags {
-            payload.insert("tags".into(), json!(tags));
-        }
-        if payload.is_empty() {
-            return Err(ToolError::new(
-                "No updates provided. Pass content, due, and/or tags.",
-            ));
-        }
-        self.put_task(list_id, task_id, Value::Object(payload))
+        let response = self.request_json(CheckvistCall::UpdateTask {
+            list_id: list_id.into(),
+            task_id,
+            content: content.map(str::to_string),
+            due: due.map(str::to_string),
+            tags: tags.map(str::to_string),
+        })?;
+        Ok(ok_or_wrapped(response))
     }
 
     /// Reorder within the current parent. Checkvist positions are 1-based.
     pub fn move_task(&self, list_id: &str, task_id: i64, position: i64) -> Result<Value> {
-        self.put_task(list_id, task_id, json!({ "position": position }))
+        let response = self.request_json(CheckvistCall::MoveTask {
+            list_id: list_id.into(),
+            task_id,
+            position,
+        })?;
+        Ok(ok_or_wrapped(response))
     }
 
     /// `parent_id = None` promotes to the list root.
-    ///
-    /// Sent explicitly as null rather than omitted: omitting the key means
-    /// "leave the parent alone", which is a different request.
     pub fn reparent_task(
         &self,
         list_id: &str,
         task_id: i64,
         parent_id: Option<i64>,
     ) -> Result<Value> {
-        let parent = parent_id.map_or(Value::Null, Value::from);
-        self.put_task(list_id, task_id, json!({ "parent_id": parent }))
+        let response = self.request_json(CheckvistCall::ReparentTask {
+            list_id: list_id.into(),
+            task_id,
+            parent_id,
+        })?;
+        Ok(ok_or_wrapped(response))
     }
 
     /// Transfer a task and every descendant into another checklist.
@@ -326,7 +301,7 @@ impl CheckvistClient {
         }
 
         let source_tasks = self.fetch_tasks(source_list_id, true, true)?;
-        let project = project_tasks(&source_tasks, root_task_id)?;
+        let project = wire::project_tasks(&source_tasks, root_task_id).map_err(core_error)?;
         let mut id_map: HashMap<i64, i64> = HashMap::new();
         let mut copied: Vec<Value> = Vec::with_capacity(project.len());
 
@@ -416,42 +391,25 @@ impl CheckvistClient {
             .and_then(Value::as_str)
             .filter(|text| !text.trim().is_empty())
             .ok_or_else(|| ToolError::new("Source task is missing content."))?;
-        let mut task = serde_json::Map::new();
-        task.insert("content".into(), json!(content));
-        if let Some(parent_id) = target_parent_id {
-            task.insert("parent_id".into(), json!(parent_id));
-        }
-        if let Some(position) = source.get("position").and_then(Value::as_i64) {
-            task.insert("position".into(), json!(position));
-        }
-        if let Some(due) = source
-            .get("due")
-            .and_then(Value::as_str)
-            .filter(|due| !due.is_empty())
-        {
-            task.insert("due".into(), json!(due));
-        }
-        if let Some(tags) = source
-            .get("tags_as_text")
-            .and_then(Value::as_str)
-            .filter(|tags| !tags.is_empty())
-        {
-            task.insert("tags".into(), json!(tags));
-        }
-        if let Some(priority) = source.get("priority").and_then(Value::as_i64) {
-            task.insert("priority".into(), json!(priority));
-        }
-
-        let response = self.request(
-            "POST",
-            &format!("/checklists/{target_list_id}/tasks.json"),
-            // Checkvist treats the presence of `parse` as enabled, including
-            // the string value `false`. Omit it entirely to retain literal
-            // text such as "#test" while transferring an existing project.
-            &[],
-            Some(json!({ "task": task })),
-            true,
-        )?;
+        let text = |key: &str| {
+            source
+                .get(key)
+                .and_then(Value::as_str)
+                .filter(|value| !value.is_empty())
+                .map(str::to_string)
+        };
+        let response = self.request_json(CheckvistCall::CreateTask {
+            list_id: target_list_id.into(),
+            content: content.into(),
+            parent_id: target_parent_id,
+            position: source.get("position").and_then(Value::as_i64),
+            due: text("due"),
+            tags: text("tags_as_text"),
+            priority: source.get("priority").and_then(Value::as_i64),
+            // Literal text such as "#test" stays literal while a project is
+            // transferred.
+            parse: false,
+        })?;
         if !response.is_object() {
             return Err(ToolError::http(
                 "Unexpected response while copying task.",
@@ -470,7 +428,8 @@ impl CheckvistClient {
         id_map: &HashMap<i64, i64>,
     ) -> Result<()> {
         let target_tasks = self.fetch_tasks(target_list_id, true, false)?;
-        let target_project = project_tasks(&target_tasks, target_root_id)?;
+        let target_project =
+            wire::project_tasks(&target_tasks, target_root_id).map_err(core_error)?;
         if target_project.len() != source_project.len() {
             return Err(ToolError::new(format!(
                 "Copied project verification failed: expected {} tasks, found {}. Source was not deleted.",
@@ -511,89 +470,46 @@ impl CheckvistClient {
         Ok(())
     }
 
-    fn put_task(&self, list_id: &str, task_id: i64, task: Value) -> Result<Value> {
-        let response = self.request(
-            "PUT",
-            &format!("/checklists/{list_id}/tasks/{task_id}.json"),
-            &[],
-            Some(json!({ "task": task })),
-            true,
-        )?;
-        Ok(ok_or_wrapped(response))
-    }
-
     pub fn create_list(&self, name: &str) -> Result<Value> {
-        let response = self.request(
-            "POST",
-            "/checklists.json",
-            &[],
-            Some(json!({ "checklist": { "name": name } })),
-            true,
-        )?;
+        let response = self.request_json(CheckvistCall::CreateList { name: name.into() })?;
         Ok(ok_or_wrapped(response))
     }
 
     /// Notes are Checkvist "comments" — a separate resource from the task,
     /// which is why `update_task` cannot write them.
     pub fn add_note(&self, list_id: &str, task_id: i64, comment: &str) -> Result<Value> {
-        let response = self.request(
-            "POST",
-            &format!("/checklists/{list_id}/tasks/{task_id}/comments.json"),
-            &[],
-            Some(json!({ "comment": { "comment": comment } })),
-            true,
-        )?;
+        let response = self.request_json(CheckvistCall::AddNote {
+            list_id: list_id.into(),
+            task_id,
+            comment: comment.into(),
+        })?;
         Ok(ok_or_wrapped(response))
     }
 
     pub fn task_action(&self, list_id: &str, task_id: i64, action: &str) -> Result<Value> {
-        if !matches!(action, "close" | "reopen" | "invalidate") {
-            return Err(ToolError::new(format!("Unsupported task action: {action}")));
-        }
-        let response = self.request(
-            "POST",
-            &format!("/checklists/{list_id}/tasks/{task_id}/{action}.json"),
-            &[],
-            None,
-            true,
-        )?;
+        let response = self.request_json(CheckvistCall::TaskAction {
+            list_id: list_id.into(),
+            task_id,
+            action: action.into(),
+        })?;
         Ok(ok_or_wrapped(response))
     }
 
     pub fn delete_task(&self, list_id: &str, task_id: i64) -> Result<Value> {
-        let response = self.request(
-            "DELETE",
-            &format!("/checklists/{list_id}/tasks/{task_id}.json"),
-            &[],
-            None,
-            true,
-        )?;
+        let response = self.request_json(CheckvistCall::DeleteTask {
+            list_id: list_id.into(),
+            task_id,
+        })?;
         Ok(ok_or_wrapped(response))
     }
 }
 
-fn parse_body(response: ureq::Response) -> Value {
-    let Ok(text) = response.into_string() else {
-        return Value::Null;
-    };
-    let trimmed = text.trim();
-    if trimmed.is_empty() {
-        return Value::Null;
-    }
-    serde_json::from_str(trimmed).unwrap_or_else(|_| Value::String(trimmed.to_string()))
-}
-
 /// A Checkvist checklist id is a decimal integer, and it is spliced into a
-/// request path. Checked once where a list id enters — `resolve_list_id` and
-/// `move_project_to_list` — rather than at each of the seven `format!`s, so a
-/// stray `../` or `?` can neither reach the URL nor be answered confusingly.
+/// request path. Checked where a list id enters — `resolve_list_id` and
+/// `move_project_to_list` — so a stray `../` or `?` is answered at once; the
+/// core checks again when it makes the request.
 pub fn validate_list_id(list_id: &str) -> Result<()> {
-    if !list_id.is_empty() && list_id.bytes().all(|byte| byte.is_ascii_digit()) {
-        return Ok(());
-    }
-    Err(ToolError::new(format!(
-        "Invalid list ID {list_id:?}: a Checkvist list ID is a number."
-    )))
+    wire::validate_list_id(list_id).map_err(core_error)
 }
 
 /// Some endpoints answer with a bare `true` or an empty body. Wrapping keeps
@@ -603,18 +519,6 @@ fn ok_or_wrapped(response: Value) -> Value {
         response
     } else {
         json!({ "ok": true, "response": response })
-    }
-}
-
-pub fn status_of(task: &Value) -> i64 {
-    task.get("status").and_then(Value::as_i64).unwrap_or(0)
-}
-
-pub fn parent_id_of(task: &Value) -> i64 {
-    match task.get("parent_id") {
-        Some(Value::Number(number)) => number.as_i64().unwrap_or(0),
-        Some(Value::String(text)) => text.parse().unwrap_or(0),
-        _ => 0,
     }
 }
 
@@ -632,96 +536,4 @@ fn notes_of(task: &Value) -> Vec<String> {
         .filter_map(|note| note.get("comment").and_then(Value::as_str))
         .map(str::to_owned)
         .collect()
-}
-
-/// Return the root and its descendants, depth-first. `tasks` is already
-/// ordered by [`depth_first_tasks`], but filtering by ancestry rather than by
-/// a contiguous range also handles a malformed ordering defensively.
-fn project_tasks(tasks: &[Value], root_id: i64) -> Result<Vec<Value>> {
-    if !tasks
-        .iter()
-        .any(|task| task.get("id").and_then(Value::as_i64) == Some(root_id))
-    {
-        return Err(ToolError::new(format!(
-            "Task {root_id} was not found in the source list."
-        )));
-    }
-
-    let mut result = Vec::new();
-    let mut included = vec![root_id];
-    // The API can return rows out of hierarchy order when a list has been
-    // edited concurrently. Repeat until no further descendant is found.
-    while result.len() < tasks.len() {
-        let before = result.len();
-        for task in tasks {
-            let id = task_id(task)?;
-            if included.contains(&id) || !included.contains(&parent_id_of(task)) {
-                continue;
-            }
-            included.push(id);
-            result.push(task.clone());
-        }
-        if result.len() == before {
-            break;
-        }
-    }
-
-    // The loop above intentionally skips the root (its parent is external),
-    // so prepend it after confirming the traversal found no impossible cycle.
-    let root = tasks
-        .iter()
-        .find(|task| task.get("id").and_then(Value::as_i64) == Some(root_id))
-        .expect("root presence checked above")
-        .clone();
-    result.insert(0, root);
-    Ok(result)
-}
-
-/// Parents before children, siblings in `position` order — the order the app
-/// shows, so a task list read here reads the same as the popover.
-pub fn depth_first_tasks(tasks: Vec<Value>) -> Vec<Value> {
-    let mut children_by_parent: Vec<(i64, Vec<Value>)> = Vec::new();
-    for task in tasks {
-        let parent_id = parent_id_of(&task);
-        match children_by_parent
-            .iter_mut()
-            .find(|(id, _)| *id == parent_id)
-        {
-            Some((_, siblings)) => siblings.push(task),
-            None => children_by_parent.push((parent_id, vec![task])),
-        }
-    }
-    for (_, siblings) in &mut children_by_parent {
-        siblings.sort_by_key(|task| task.get("position").and_then(Value::as_i64).unwrap_or(0));
-    }
-
-    let mut ordered = Vec::new();
-    let mut visited: Vec<i64> = Vec::new();
-    walk(0, &children_by_parent, &mut ordered, &mut visited);
-    ordered
-}
-
-fn walk(
-    parent_id: i64,
-    children_by_parent: &[(i64, Vec<Value>)],
-    ordered: &mut Vec<Value>,
-    visited: &mut Vec<i64>,
-) {
-    // A parent cycle would otherwise recurse until the stack runs out. The API
-    // should never return one; a malformed list should still produce a partial
-    // answer rather than a crash.
-    if visited.contains(&parent_id) {
-        return;
-    }
-    visited.push(parent_id);
-
-    let Some((_, children)) = children_by_parent.iter().find(|(id, _)| *id == parent_id) else {
-        return;
-    };
-    for child in children {
-        ordered.push(child.clone());
-        if let Some(child_id) = child.get("id").and_then(Value::as_i64) {
-            walk(child_id, children_by_parent, ordered, visited);
-        }
-    }
 }

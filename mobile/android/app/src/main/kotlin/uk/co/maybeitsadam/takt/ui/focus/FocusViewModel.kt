@@ -160,13 +160,14 @@ class FocusViewModel(private val container: AppContainer) : ViewModel() {
 
     fun toggleCondition(condition: TaskCondition) {
         val current = contextState.value.selected
-        val next = if (condition.id in current) {
-            current - condition.id
-        } else {
-            // One place at a time: choosing a location replaces the last one.
-            val places = if (condition.isLocation) state.value.conditions.filter { it.isLocation }.map { it.id }.toSet() else emptySet()
-            current - places + condition.id
-        }
+        // One place at a time: choosing a location replaces the last one. The
+        // rule is the core's, shared with the Mac and iPhone.
+        val next = uniffi.takt_core.focusContextToggle(
+            condition.id,
+            condition.isLocation,
+            current.toList(),
+            state.value.conditions.filter { it.isLocation }.map { it.id },
+        ).toSet()
         viewModelScope.launch { settings.putStringSet(CONDITIONS_KEY, next) }
     }
 

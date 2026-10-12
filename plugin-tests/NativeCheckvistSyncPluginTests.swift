@@ -5,7 +5,7 @@ import XCTest
 
 @MainActor
 final class NativeCheckvistSyncPluginTests: XCTestCase {
-  func testCreateListBuildsFormEncodedRequestAndDecodesWrappedResponse() async throws {
+  func testCreateListBuildsJSONRequestAndDecodesWrappedResponse() async throws {
     let session = CheckvistSession()
     let repository = CheckvistTaskRepository()
     let plugin = NativeCheckvistSyncPlugin(session: session, taskRepository: repository)
@@ -27,12 +27,8 @@ final class NativeCheckvistSyncPluginTests: XCTestCase {
     XCTAssertEqual(request.httpMethod, "POST")
     XCTAssertEqual(request.url?.path, "/checklists.json")
     XCTAssertEqual(request.value(forHTTPHeaderField: "X-Client-Token"), session.issuedToken)
-    XCTAssertEqual(
-      request.value(forHTTPHeaderField: "Content-Type"),
-      "application/x-www-form-urlencoded"
-    )
-    let body = String(data: request.httpBody ?? Data(), encoding: .utf8)
-    XCTAssertEqual(body, "checklist[name]=My%20New%20List")
+    XCTAssertEqual(request.value(forHTTPHeaderField: "Content-Type"), "application/json")
+    XCTAssertEqual(try jsonBody(request), ["checklist": ["name": "My New List"]])
   }
 
   func testFetchListsFiltersArchivedLists() async throws {
@@ -83,7 +79,7 @@ final class NativeCheckvistSyncPluginTests: XCTestCase {
     }
   }
 
-  func testCreateTaskBuildsFormEncodedRequestAndDecodesCreatedTask() async throws {
+  func testCreateTaskBuildsJSONRequestAndDecodesCreatedTask() async throws {
     let session = CheckvistSession()
     let repository = CheckvistTaskRepository()
     let plugin = NativeCheckvistSyncPlugin(session: session, taskRepository: repository)
@@ -109,13 +105,12 @@ final class NativeCheckvistSyncPluginTests: XCTestCase {
     let request = try XCTUnwrap(session.recordedRequests.first)
     XCTAssertEqual(request.httpMethod, "POST")
     XCTAssertEqual(request.url?.path, "/checklists/12/tasks.json")
-    XCTAssertEqual(
-      request.value(forHTTPHeaderField: "Content-Type"),
-      "application/x-www-form-urlencoded"
-    )
+    XCTAssertEqual(request.value(forHTTPHeaderField: "Content-Type"), "application/json")
     XCTAssertEqual(request.value(forHTTPHeaderField: "Accept"), "application/json")
-    let body = String(data: request.httpBody ?? Data(), encoding: .utf8)
-    XCTAssertEqual(body, "task[content]=New%20task&task[parent_id]=55&task[position]=2")
+    // Never parsed: the app keeps its own tags and dates.
+    XCTAssertNil(request.url?.query)
+    XCTAssertEqual(
+      try jsonBody(request), ["task": ["content": "New task", "parent_id": 55, "position": 2] as NSDictionary])
   }
 
   func testCreateTaskDecodesWrappedTaskResponse() async throws {
@@ -202,12 +197,8 @@ final class NativeCheckvistSyncPluginTests: XCTestCase {
     // parse=true must NOT be sent for due-only updates — it causes the
     // server to re-parse the content and overwrite the explicit due_date.
     XCTAssertNil(request.url?.query)
-    XCTAssertEqual(
-      request.value(forHTTPHeaderField: "Content-Type"),
-      "application/x-www-form-urlencoded"
-    )
-    let body = String(data: request.httpBody ?? Data(), encoding: .utf8)
-    XCTAssertEqual(body, "task[due_date]=tomorrow")
+    XCTAssertEqual(request.value(forHTTPHeaderField: "Content-Type"), "application/json")
+    XCTAssertEqual(try jsonBody(request), ["task": ["due_date": "tomorrow"]])
   }
 
   func testUpdateTaskWithContentAndDueOmitsParseFlag() async throws {
@@ -230,8 +221,7 @@ final class NativeCheckvistSyncPluginTests: XCTestCase {
     // parse=true must never be sent — it strips inline #tags from content
     // and can overwrite explicit due_date values.
     XCTAssertNil(request.url?.query)
-    let body = String(data: request.httpBody ?? Data(), encoding: .utf8)
-    XCTAssertEqual(body, "task[content]=Updated%20task&task[due_date]=tomorrow")
+    XCTAssertEqual(try jsonBody(request), ["task": ["content": "Updated task", "due_date": "tomorrow"]])
   }
 
   func testPersistAndLoadTaskCacheDelegatesToRepository() {
@@ -256,5 +246,11 @@ final class NativeCheckvistSyncPluginTests: XCTestCase {
 
     repository.isCacheOutdatedResult = true
     XCTAssertTrue(plugin.isTaskCacheOutdated(loaded!))
+  }
+
+  /// A request's JSON body, which the core writes.
+  private func jsonBody(_ request: URLRequest) throws -> NSDictionary {
+    let object = try JSONSerialization.jsonObject(with: XCTUnwrap(request.httpBody))
+    return try XCTUnwrap(object as? NSDictionary)
   }
 }

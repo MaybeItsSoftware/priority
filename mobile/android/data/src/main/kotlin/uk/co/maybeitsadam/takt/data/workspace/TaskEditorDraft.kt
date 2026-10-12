@@ -4,8 +4,10 @@ import java.time.Instant
 import uk.co.maybeitsadam.takt.core.TaskEditorMetadata
 import uk.co.maybeitsadam.takt.core.TaskPlanning
 
-// Port of Sources/TaktWorkspace/TaskEditorDraft.swift: the inspector's
-// draft, with conflict detection against what was saved underneath it.
+// The inspector's draft, with conflict detection against what was saved
+// underneath it, as Sources/TaktWorkspace/TaskEditorDraft.swift keeps it. The
+// estimate's reading and showing and the reconcile rule are the core's
+// (`core/src/editor_draft.rs`).
 
 enum class TaskEditorField(val label: String) {
     TITLE("Title"),
@@ -48,13 +50,12 @@ data class TaskEditorSnapshot(
     val values: TaskEditorValues
         get() = TaskEditorValues(
             title = title, notes = notes, dueAt = dueAt,
-            estimateMinutes = estimateSeconds?.let { if (it % 60 == 0) (it / 60).toString() else swiftDouble(it / 60.0) }
-                ?: "",
+            estimateMinutes = estimateSeconds?.let { uniffi.takt_core.editorMinutesText(it.toLong(), true) } ?: "",
             priority = metadata.priority ?: 0, tags = metadata.tags.joinToString(", "),
             recurrenceRule = metadata.recurrenceRule ?: "", links = metadata.externalLinks.joinToString("\n"),
             dailyProgress = dailyProgress, startAt = planning?.startAt, dueDate = planning?.dueDate,
             requirementGroups = planning?.requirementGroups,
-            minimumBlockMinutes = planning?.minimumBlockSeconds?.let { swiftDouble(it / 60.0) },
+            minimumBlockMinutes = planning?.minimumBlockSeconds?.let { uniffi.takt_core.editorMinutesText(it.toLong(), false) },
             requiresSingleSitting = planning?.requiresSingleSitting,
         )
 }
@@ -111,20 +112,14 @@ data class TaskEditorValues(
     }
 
     companion object {
-        private val estimatePattern = Regex("^(?:[0-9]+(?:\\.[0-9]*)?|\\.[0-9]+)$")
-
-        /** Minutes as typed, to whole seconds; nil when blank. */
+        /** Minutes as typed, to whole seconds; null when blank. The core's `editor_parse_minutes`. */
         fun parseEstimate(raw: String): Int? {
-            val value = raw.trimmedWhitespace()
-            if (value.isEmpty()) return null
-            val minutes = value.takeIf { estimatePattern.matches(it) }?.toDoubleOrNull()
-            if (minutes == null || !minutes.isFinite() || minutes < 0) {
+            val seconds = try {
+                uniffi.takt_core.editorParseMinutes(raw)
+            } catch (_: uniffi.takt_core.CoreException) {
                 throw TaskEditorException(TaskEditorError.INVALID_ESTIMATE)
-            }
-            val seconds = Math.rint(minutes * 60)
-            if (!seconds.isFinite() || seconds >= Int.MAX_VALUE.toDouble()) {
-                throw TaskEditorException(TaskEditorError.INVALID_ESTIMATE)
-            }
+            } ?: return null
+            if (seconds >= Int.MAX_VALUE) throw TaskEditorException(TaskEditorError.INVALID_ESTIMATE)
             return seconds.toInt()
         }
     }
@@ -146,22 +141,32 @@ data class TaskEditorDraft(
         val current = saved.values
         var values = this.values
         val conflicts = this.conflicts.toMutableSet()
-        for (field in TaskEditorField.entries) {
-            if (values.matches(field, current)) {
-                conflicts.remove(field)
-            } else if (!values.matches(field, previous) || field in conflicts) {
-                if (!current.matches(field, previous)) conflicts.add(field)
-            } else {
-                values = values.copying(field, current)
-            }
-            if (field == TaskEditorField.ESTIMATE_MINUTES && !values.matches(field, previous) &&
-                saved.estimateSeconds != baseline.estimateSeconds
-            ) {
-                val parsed = runCatching { TaskEditorValues.parseEstimate(values.estimateMinutes) }
-                val parsedValue = parsed.getOrNull()
-                val converged = parsed.isSuccess && parsedValue == saved.estimateSeconds &&
-                    (values.estimateMinutes.trimmedWhitespace().isEmpty() || parsedValue != null)
-                if (converged) conflicts.remove(field) else conflicts.add(field)
+        // The comparisons are this type's; what to do with each field is the
+        // core's (`editor_reconcile`), shared with the Mac and iPhone.
+        val fields = TaskEditorField.entries
+        val outcomes = uniffi.takt_core.editorReconcile(
+            fields.map { field ->
+                uniffi.takt_core.EditorFieldComparison(
+                    values.matches(field, current),
+                    values.matches(field, previous),
+                    current.matches(field, previous),
+                    field in conflicts,
+                )
+            },
+            uniffi.takt_core.EditorEstimateCheck(
+                fields.indexOf(TaskEditorField.ESTIMATE_MINUTES).toUInt(),
+                values.estimateMinutes,
+                current.estimateMinutes,
+                baseline.estimateSeconds?.toLong(),
+                saved.estimateSeconds?.toLong(),
+            ),
+        )
+        for ((field, outcome) in fields.zip(outcomes)) {
+            if (outcome.followSaved) values = values.copying(field, current)
+            when (outcome.conflict) {
+                true -> conflicts.add(field)
+                false -> conflicts.remove(field)
+                null -> Unit
             }
         }
         return copy(baseline = saved, values = values, conflicts = conflicts, isUnavailable = false)
@@ -206,10 +211,4 @@ data class TaskEditorDraft(
         if (values.dueDate != null) result = result.copy(dueAt = null)
         return result
     }
-}
-
-/** `String(Double)` as Swift prints it: `1.5`, `2.0`, `0.25`. */
-internal fun swiftDouble(value: Double): String {
-    if (value == Math.floor(value) && !value.isInfinite() && Math.abs(value) < 1e16) return "${value.toLong()}.0"
-    return value.toString()
 }

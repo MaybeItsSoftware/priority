@@ -1,8 +1,6 @@
 package uk.co.maybeitsadam.takt.data.workspace
 
-import java.text.Normalizer
 import java.time.Instant
-import java.util.Locale
 import uk.co.maybeitsadam.takt.core.BoardColumnsRead
 import uk.co.maybeitsadam.takt.core.ListFolder
 import uk.co.maybeitsadam.takt.core.TaskCondition
@@ -53,17 +51,6 @@ internal fun actionableTasks(db: Db, workspaceId: String, limitedTo: List<String
     return scoped.flatMap { list -> trees[list.id]?.actionableTasks(list.visibleRootTaskId) ?: emptyList() }
 }
 
-/** Re-files a subtree under another list in one statement, as the Swift store does. */
-internal fun moveSubtree(db: Db, ids: Set<String>, listId: String, now: Instant) {
-    val sorted = ids.sorted()
-    for (chunk in sorted.chunked(500)) {
-        db.execute(
-            "UPDATE tasks SET listId = ?, updatedAt = ? WHERE id IN (${chunk.joinToString(",") { "?" }})",
-            listId, now, *chunk.toTypedArray(),
-        )
-    }
-}
-
 internal fun upsertKanbanColumn(db: Db, taskId: String, column: String?, now: Instant) {
     db.execute(
         "INSERT INTO task_metadata(taskId, tagsJSON, externalLinksJSON, kanbanColumn, updatedAt) " +
@@ -83,13 +70,6 @@ internal fun validateActionableTask(db: Db, id: String) {
             db.core.tasksInLists(listOf(task.listId)).map { it.toTask() },
         )
     if (!ok) fail(WorkspaceStoreError.INVALID_TASK_MOVE)
-}
-
-/** `normalizedVisibleRootName`: case- and diacritic-folded, letters and digits only. */
-internal fun normalizedVisibleRootName(name: String): String {
-    val folded = Normalizer.normalize(name.lowercase(Locale.getDefault()), Normalizer.Form.NFD)
-        .replace(Regex("\\p{M}+"), "")
-    return folded.trimmedWhitespace().replace(Regex("[^\\p{L}\\p{N}]+"), "")
 }
 
 /** `[WorkspaceKanbanColumn]` as Foundation's JSONEncoder writes it, for seeding a legacy layout. */

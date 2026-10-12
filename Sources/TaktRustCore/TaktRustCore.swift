@@ -5934,6 +5934,352 @@ public func FfiConverterTypeCaptureParts_lower(_ value: CaptureParts) -> RustBuf
 }
 
 
+public struct CheckvistHeader: Equatable, Hashable {
+    public var name: String
+    public var value: String
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(name: String, value: String) {
+        self.name = name
+        self.value = value
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension CheckvistHeader: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeCheckvistHeader: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> CheckvistHeader {
+        return
+            try CheckvistHeader(
+                name: FfiConverterString.read(from: &buf), 
+                value: FfiConverterString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: CheckvistHeader, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.name, into: &buf)
+        FfiConverterString.write(value.value, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCheckvistHeader_lift(_ buf: RustBuffer) throws -> CheckvistHeader {
+    return try FfiConverterTypeCheckvistHeader.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCheckvistHeader_lower(_ value: CheckvistHeader) -> RustBuffer {
+    return FfiConverterTypeCheckvistHeader.lower(value)
+}
+
+
+/**
+ * One request, ready for a client's HTTP stack.
+ */
+public struct CheckvistHttpRequest: Equatable, Hashable {
+    /**
+     * `GET`, `POST`, `PUT` or `DELETE`.
+     */
+    public var method: String
+    public var url: String
+    public var headers: [CheckvistHeader]
+    /**
+     * JSON, when the call has a body.
+     */
+    public var body: String?
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(
+        /**
+         * `GET`, `POST`, `PUT` or `DELETE`.
+         */method: String, url: String, headers: [CheckvistHeader], 
+        /**
+         * JSON, when the call has a body.
+         */body: String?) {
+        self.method = method
+        self.url = url
+        self.headers = headers
+        self.body = body
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension CheckvistHttpRequest: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeCheckvistHttpRequest: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> CheckvistHttpRequest {
+        return
+            try CheckvistHttpRequest(
+                method: FfiConverterString.read(from: &buf), 
+                url: FfiConverterString.read(from: &buf), 
+                headers: FfiConverterSequenceTypeCheckvistHeader.read(from: &buf), 
+                body: FfiConverterOptionString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: CheckvistHttpRequest, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.method, into: &buf)
+        FfiConverterString.write(value.url, into: &buf)
+        FfiConverterSequenceTypeCheckvistHeader.write(value.headers, into: &buf)
+        FfiConverterOptionString.write(value.body, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCheckvistHttpRequest_lift(_ buf: RustBuffer) throws -> CheckvistHttpRequest {
+    return try FfiConverterTypeCheckvistHttpRequest.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCheckvistHttpRequest_lower(_ value: CheckvistHttpRequest) -> RustBuffer {
+    return FfiConverterTypeCheckvistHttpRequest.lower(value)
+}
+
+
+/**
+ * A checklist as the Mac keeps it.
+ */
+public struct CheckvistListRow: Equatable, Hashable {
+    public var id: Int64
+    public var name: String
+    public var archived: Bool?
+    public var readOnly: Bool?
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(id: Int64, name: String, archived: Bool?, readOnly: Bool?) {
+        self.id = id
+        self.name = name
+        self.archived = archived
+        self.readOnly = readOnly
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension CheckvistListRow: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeCheckvistListRow: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> CheckvistListRow {
+        return
+            try CheckvistListRow(
+                id: FfiConverterInt64.read(from: &buf), 
+                name: FfiConverterString.read(from: &buf), 
+                archived: FfiConverterOptionBool.read(from: &buf), 
+                readOnly: FfiConverterOptionBool.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: CheckvistListRow, into buf: inout [UInt8]) {
+        FfiConverterInt64.write(value.id, into: &buf)
+        FfiConverterString.write(value.name, into: &buf)
+        FfiConverterOptionBool.write(value.archived, into: &buf)
+        FfiConverterOptionBool.write(value.readOnly, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCheckvistListRow_lift(_ buf: RustBuffer) throws -> CheckvistListRow {
+    return try FfiConverterTypeCheckvistListRow.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCheckvistListRow_lower(_ value: CheckvistListRow) -> RustBuffer {
+    return FfiConverterTypeCheckvistListRow.lower(value)
+}
+
+
+/**
+ * A note on a task.
+ */
+public struct CheckvistNoteRow: Equatable, Hashable {
+    public var id: Int64?
+    public var content: String
+    public var createdAt: String?
+    public var updatedAt: String?
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(id: Int64?, content: String, createdAt: String?, updatedAt: String?) {
+        self.id = id
+        self.content = content
+        self.createdAt = createdAt
+        self.updatedAt = updatedAt
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension CheckvistNoteRow: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeCheckvistNoteRow: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> CheckvistNoteRow {
+        return
+            try CheckvistNoteRow(
+                id: FfiConverterOptionInt64.read(from: &buf), 
+                content: FfiConverterString.read(from: &buf), 
+                createdAt: FfiConverterOptionString.read(from: &buf), 
+                updatedAt: FfiConverterOptionString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: CheckvistNoteRow, into buf: inout [UInt8]) {
+        FfiConverterOptionInt64.write(value.id, into: &buf)
+        FfiConverterString.write(value.content, into: &buf)
+        FfiConverterOptionString.write(value.createdAt, into: &buf)
+        FfiConverterOptionString.write(value.updatedAt, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCheckvistNoteRow_lift(_ buf: RustBuffer) throws -> CheckvistNoteRow {
+    return try FfiConverterTypeCheckvistNoteRow.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCheckvistNoteRow_lower(_ value: CheckvistNoteRow) -> RustBuffer {
+    return FfiConverterTypeCheckvistNoteRow.lower(value)
+}
+
+
+/**
+ * A task as the Mac keeps it. `status` is 0 open, 1 closed, 2 invalidated.
+ */
+public struct CheckvistTaskRow: Equatable, Hashable {
+    public var id: Int64
+    public var content: String
+    public var status: Int64
+    public var due: String?
+    public var position: Int64?
+    public var parentId: Int64?
+    public var level: Int64?
+    public var notes: [CheckvistNoteRow]?
+    public var updatedAt: String?
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(id: Int64, content: String, status: Int64, due: String?, position: Int64?, parentId: Int64?, level: Int64?, notes: [CheckvistNoteRow]?, updatedAt: String?) {
+        self.id = id
+        self.content = content
+        self.status = status
+        self.due = due
+        self.position = position
+        self.parentId = parentId
+        self.level = level
+        self.notes = notes
+        self.updatedAt = updatedAt
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension CheckvistTaskRow: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeCheckvistTaskRow: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> CheckvistTaskRow {
+        return
+            try CheckvistTaskRow(
+                id: FfiConverterInt64.read(from: &buf), 
+                content: FfiConverterString.read(from: &buf), 
+                status: FfiConverterInt64.read(from: &buf), 
+                due: FfiConverterOptionString.read(from: &buf), 
+                position: FfiConverterOptionInt64.read(from: &buf), 
+                parentId: FfiConverterOptionInt64.read(from: &buf), 
+                level: FfiConverterOptionInt64.read(from: &buf), 
+                notes: FfiConverterOptionSequenceTypeCheckvistNoteRow.read(from: &buf), 
+                updatedAt: FfiConverterOptionString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: CheckvistTaskRow, into buf: inout [UInt8]) {
+        FfiConverterInt64.write(value.id, into: &buf)
+        FfiConverterString.write(value.content, into: &buf)
+        FfiConverterInt64.write(value.status, into: &buf)
+        FfiConverterOptionString.write(value.due, into: &buf)
+        FfiConverterOptionInt64.write(value.position, into: &buf)
+        FfiConverterOptionInt64.write(value.parentId, into: &buf)
+        FfiConverterOptionInt64.write(value.level, into: &buf)
+        FfiConverterOptionSequenceTypeCheckvistNoteRow.write(value.notes, into: &buf)
+        FfiConverterOptionString.write(value.updatedAt, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCheckvistTaskRow_lift(_ buf: RustBuffer) throws -> CheckvistTaskRow {
+    return try FfiConverterTypeCheckvistTaskRow.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCheckvistTaskRow_lower(_ value: CheckvistTaskRow) -> RustBuffer {
+    return FfiConverterTypeCheckvistTaskRow.lower(value)
+}
+
+
 /**
  * The login the Mac hands down to the CLI.
  */
@@ -9230,6 +9576,181 @@ public func FfiConverterTypeDayEntry_lower(_ value: DayEntry) -> RustBuffer {
 
 
 /**
+ * One task on the day, as far as the forecast cares.
+ */
+public struct DayForecastEntry: Equatable, Hashable {
+    /**
+     * What the task was meant to cost, or nothing when nobody said.
+     */
+    public var estimateSeconds: Int64?
+    /**
+     * What it has cost so far, the running block's elapsed time included
+     * when this is the task being worked on.
+     */
+    public var loggedSeconds: Int64
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(
+        /**
+         * What the task was meant to cost, or nothing when nobody said.
+         */estimateSeconds: Int64?, 
+        /**
+         * What it has cost so far, the running block's elapsed time included
+         * when this is the task being worked on.
+         */loggedSeconds: Int64) {
+        self.estimateSeconds = estimateSeconds
+        self.loggedSeconds = loggedSeconds
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension DayForecastEntry: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeDayForecastEntry: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> DayForecastEntry {
+        return
+            try DayForecastEntry(
+                estimateSeconds: FfiConverterOptionInt64.read(from: &buf), 
+                loggedSeconds: FfiConverterInt64.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: DayForecastEntry, into buf: inout [UInt8]) {
+        FfiConverterOptionInt64.write(value.estimateSeconds, into: &buf)
+        FfiConverterInt64.write(value.loggedSeconds, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeDayForecastEntry_lift(_ buf: RustBuffer) throws -> DayForecastEntry {
+    return try FfiConverterTypeDayForecastEntry.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeDayForecastEntry_lower(_ value: DayForecastEntry) -> RustBuffer {
+    return FfiConverterTypeDayForecastEntry.lower(value)
+}
+
+
+/**
+ * How much of the day's plan is left and, worked straight through, when it
+ * would be done. Deliberately naive: no breaks, no calendar, no hours.
+ */
+public struct DayForecastSummary: Equatable, Hashable {
+    /**
+     * Every estimate on the day.
+     */
+    public var estimatedSeconds: Int64
+    /**
+     * Time logged against the day's tasks, estimated or not.
+     */
+    public var loggedSeconds: Int64
+    /**
+     * What the estimated tasks still owe. A task past its estimate owes
+     * nothing: an overrun on one buys no time back on the others.
+     */
+    public var remainingSeconds: Int64
+    /**
+     * Tasks that say nothing about their cost, each making the forecast
+     * optimistic.
+     */
+    public var unestimatedCount: Int64
+    /**
+     * `now` plus what is left, or nothing when nothing estimated is left.
+     */
+    public var finishAtMs: Int64?
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(
+        /**
+         * Every estimate on the day.
+         */estimatedSeconds: Int64, 
+        /**
+         * Time logged against the day's tasks, estimated or not.
+         */loggedSeconds: Int64, 
+        /**
+         * What the estimated tasks still owe. A task past its estimate owes
+         * nothing: an overrun on one buys no time back on the others.
+         */remainingSeconds: Int64, 
+        /**
+         * Tasks that say nothing about their cost, each making the forecast
+         * optimistic.
+         */unestimatedCount: Int64, 
+        /**
+         * `now` plus what is left, or nothing when nothing estimated is left.
+         */finishAtMs: Int64?) {
+        self.estimatedSeconds = estimatedSeconds
+        self.loggedSeconds = loggedSeconds
+        self.remainingSeconds = remainingSeconds
+        self.unestimatedCount = unestimatedCount
+        self.finishAtMs = finishAtMs
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension DayForecastSummary: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeDayForecastSummary: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> DayForecastSummary {
+        return
+            try DayForecastSummary(
+                estimatedSeconds: FfiConverterInt64.read(from: &buf), 
+                loggedSeconds: FfiConverterInt64.read(from: &buf), 
+                remainingSeconds: FfiConverterInt64.read(from: &buf), 
+                unestimatedCount: FfiConverterInt64.read(from: &buf), 
+                finishAtMs: FfiConverterOptionInt64.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: DayForecastSummary, into buf: inout [UInt8]) {
+        FfiConverterInt64.write(value.estimatedSeconds, into: &buf)
+        FfiConverterInt64.write(value.loggedSeconds, into: &buf)
+        FfiConverterInt64.write(value.remainingSeconds, into: &buf)
+        FfiConverterInt64.write(value.unestimatedCount, into: &buf)
+        FfiConverterOptionInt64.write(value.finishAtMs, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeDayForecastSummary_lift(_ buf: RustBuffer) throws -> DayForecastSummary {
+    return try FfiConverterTypeDayForecastSummary.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeDayForecastSummary_lower(_ value: DayForecastSummary) -> RustBuffer {
+    return FfiConverterTypeDayForecastSummary.lower(value)
+}
+
+
+/**
  * Where logical days begin: at `rollover_hour` in `zone`, not at midnight,
  * so work finished at 01:30 belongs to the day that began the previous
  * morning. `first_weekday` is Foundation's numbering (1 = Sunday) and only
@@ -9739,6 +10260,240 @@ public func FfiConverterTypeDeletedTask_lift(_ buf: RustBuffer) throws -> Delete
 #endif
 public func FfiConverterTypeDeletedTask_lower(_ value: DeletedTask) -> RustBuffer {
     return FfiConverterTypeDeletedTask.lower(value)
+}
+
+
+/**
+ * The estimate's own check: the minutes shown can read the same while the
+ * seconds underneath differ, so an edited estimate is held to the seconds.
+ */
+public struct EditorEstimateCheck: Equatable, Hashable {
+    /**
+     * Which of the comparisons is the estimate.
+     */
+    public var fieldIndex: UInt32
+    public var draftText: String
+    public var savedText: String
+    public var baselineSeconds: Int64?
+    public var savedSeconds: Int64?
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(
+        /**
+         * Which of the comparisons is the estimate.
+         */fieldIndex: UInt32, draftText: String, savedText: String, baselineSeconds: Int64?, savedSeconds: Int64?) {
+        self.fieldIndex = fieldIndex
+        self.draftText = draftText
+        self.savedText = savedText
+        self.baselineSeconds = baselineSeconds
+        self.savedSeconds = savedSeconds
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension EditorEstimateCheck: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeEditorEstimateCheck: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> EditorEstimateCheck {
+        return
+            try EditorEstimateCheck(
+                fieldIndex: FfiConverterUInt32.read(from: &buf), 
+                draftText: FfiConverterString.read(from: &buf), 
+                savedText: FfiConverterString.read(from: &buf), 
+                baselineSeconds: FfiConverterOptionInt64.read(from: &buf), 
+                savedSeconds: FfiConverterOptionInt64.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: EditorEstimateCheck, into buf: inout [UInt8]) {
+        FfiConverterUInt32.write(value.fieldIndex, into: &buf)
+        FfiConverterString.write(value.draftText, into: &buf)
+        FfiConverterString.write(value.savedText, into: &buf)
+        FfiConverterOptionInt64.write(value.baselineSeconds, into: &buf)
+        FfiConverterOptionInt64.write(value.savedSeconds, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeEditorEstimateCheck_lift(_ buf: RustBuffer) throws -> EditorEstimateCheck {
+    return try FfiConverterTypeEditorEstimateCheck.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeEditorEstimateCheck_lower(_ value: EditorEstimateCheck) -> RustBuffer {
+    return FfiConverterTypeEditorEstimateCheck.lower(value)
+}
+
+
+/**
+ * One field of an open draft, compared by the platform holding it.
+ */
+public struct EditorFieldComparison: Equatable, Hashable {
+    /**
+     * The draft's value equals the newly saved one.
+     */
+    public var draftMatchesSaved: Bool
+    /**
+     * The draft's value equals the one it was opened from.
+     */
+    public var draftMatchesBaseline: Bool
+    /**
+     * The saved value equals the one the draft was opened from.
+     */
+    public var savedMatchesBaseline: Bool
+    /**
+     * The field is already marked as conflicting.
+     */
+    public var inConflict: Bool
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(
+        /**
+         * The draft's value equals the newly saved one.
+         */draftMatchesSaved: Bool, 
+        /**
+         * The draft's value equals the one it was opened from.
+         */draftMatchesBaseline: Bool, 
+        /**
+         * The saved value equals the one the draft was opened from.
+         */savedMatchesBaseline: Bool, 
+        /**
+         * The field is already marked as conflicting.
+         */inConflict: Bool) {
+        self.draftMatchesSaved = draftMatchesSaved
+        self.draftMatchesBaseline = draftMatchesBaseline
+        self.savedMatchesBaseline = savedMatchesBaseline
+        self.inConflict = inConflict
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension EditorFieldComparison: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeEditorFieldComparison: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> EditorFieldComparison {
+        return
+            try EditorFieldComparison(
+                draftMatchesSaved: FfiConverterBool.read(from: &buf), 
+                draftMatchesBaseline: FfiConverterBool.read(from: &buf), 
+                savedMatchesBaseline: FfiConverterBool.read(from: &buf), 
+                inConflict: FfiConverterBool.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: EditorFieldComparison, into buf: inout [UInt8]) {
+        FfiConverterBool.write(value.draftMatchesSaved, into: &buf)
+        FfiConverterBool.write(value.draftMatchesBaseline, into: &buf)
+        FfiConverterBool.write(value.savedMatchesBaseline, into: &buf)
+        FfiConverterBool.write(value.inConflict, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeEditorFieldComparison_lift(_ buf: RustBuffer) throws -> EditorFieldComparison {
+    return try FfiConverterTypeEditorFieldComparison.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeEditorFieldComparison_lower(_ value: EditorFieldComparison) -> RustBuffer {
+    return FfiConverterTypeEditorFieldComparison.lower(value)
+}
+
+
+/**
+ * What to do with one field when a save lands.
+ */
+public struct EditorFieldOutcome: Equatable, Hashable {
+    /**
+     * Take the saved value: the field was untouched in the draft.
+     */
+    public var followSaved: Bool
+    /**
+     * Mark the field conflicting (`true`), clear it (`false`), or leave it.
+     */
+    public var conflict: Bool?
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(
+        /**
+         * Take the saved value: the field was untouched in the draft.
+         */followSaved: Bool, 
+        /**
+         * Mark the field conflicting (`true`), clear it (`false`), or leave it.
+         */conflict: Bool?) {
+        self.followSaved = followSaved
+        self.conflict = conflict
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension EditorFieldOutcome: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeEditorFieldOutcome: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> EditorFieldOutcome {
+        return
+            try EditorFieldOutcome(
+                followSaved: FfiConverterBool.read(from: &buf), 
+                conflict: FfiConverterOptionBool.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: EditorFieldOutcome, into buf: inout [UInt8]) {
+        FfiConverterBool.write(value.followSaved, into: &buf)
+        FfiConverterOptionBool.write(value.conflict, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeEditorFieldOutcome_lift(_ buf: RustBuffer) throws -> EditorFieldOutcome {
+    return try FfiConverterTypeEditorFieldOutcome.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeEditorFieldOutcome_lower(_ value: EditorFieldOutcome) -> RustBuffer {
+    return FfiConverterTypeEditorFieldOutcome.lower(value)
 }
 
 
@@ -16201,6 +16956,222 @@ public func FfiConverterTypeWorkspaceRow_lower(_ value: WorkspaceRow) -> RustBuf
 
 
 /**
+ * Something to ask Checkvist.
+ */
+
+public enum CheckvistCall: Equatable, Hashable {
+    
+    /**
+     * Exchanges a username and remote key for a token. The one call made
+     * without a token.
+     */
+    case login(username: String, remoteKey: String
+    )
+    /**
+     * Every checklist the account can see.
+     */
+    case lists
+    /**
+     * A checklist's tasks, closed ones included; notes when asked for.
+     */
+    case tasks(listId: String, withNotes: Bool
+    )
+    case createList(name: String
+    )
+    /**
+     * `parse` hands the content to Checkvist's smart syntax, which lifts
+     * `#tags` and `^due` out of it. The Mac never asks for it: it keeps tags
+     * and dates itself, and Checkvist's parser would rewrite them. Checkvist
+     * treats the parameter's presence as on, so off means leaving it out.
+     */
+    case createTask(listId: String, content: String, parentId: Int64?, position: Int64?, due: String?, tags: String?, priority: Int64?, parse: Bool
+    )
+    /**
+     * Only the fields given change. Never parsed, for the reason above.
+     */
+    case updateTask(listId: String, taskId: Int64, content: String?, due: String?, tags: String?
+    )
+    /**
+     * Within the current parent. Checkvist's positions start at 1.
+     */
+    case moveTask(listId: String, taskId: Int64, position: Int64
+    )
+    /**
+     * `None` moves the task to the list's root. That is sent as an explicit
+     * null: leaving the key out would mean "leave the parent alone".
+     */
+    case reparentTask(listId: String, taskId: Int64, parentId: Int64?
+    )
+    /**
+     * A note is a Checkvist comment, a resource of its own.
+     */
+    case addNote(listId: String, taskId: Int64, comment: String
+    )
+    /**
+     * `close`, `reopen` or `invalidate`.
+     */
+    case taskAction(listId: String, taskId: Int64, action: String
+    )
+    case deleteTask(listId: String, taskId: Int64
+    )
+
+
+
+
+
+}
+
+#if compiler(>=6)
+extension CheckvistCall: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeCheckvistCall: FfiConverterRustBuffer {
+    typealias SwiftType = CheckvistCall
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> CheckvistCall {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .login(username: try FfiConverterString.read(from: &buf), remoteKey: try FfiConverterString.read(from: &buf)
+        )
+        
+        case 2: return .lists
+        
+        case 3: return .tasks(listId: try FfiConverterString.read(from: &buf), withNotes: try FfiConverterBool.read(from: &buf)
+        )
+        
+        case 4: return .createList(name: try FfiConverterString.read(from: &buf)
+        )
+        
+        case 5: return .createTask(listId: try FfiConverterString.read(from: &buf), content: try FfiConverterString.read(from: &buf), parentId: try FfiConverterOptionInt64.read(from: &buf), position: try FfiConverterOptionInt64.read(from: &buf), due: try FfiConverterOptionString.read(from: &buf), tags: try FfiConverterOptionString.read(from: &buf), priority: try FfiConverterOptionInt64.read(from: &buf), parse: try FfiConverterBool.read(from: &buf)
+        )
+        
+        case 6: return .updateTask(listId: try FfiConverterString.read(from: &buf), taskId: try FfiConverterInt64.read(from: &buf), content: try FfiConverterOptionString.read(from: &buf), due: try FfiConverterOptionString.read(from: &buf), tags: try FfiConverterOptionString.read(from: &buf)
+        )
+        
+        case 7: return .moveTask(listId: try FfiConverterString.read(from: &buf), taskId: try FfiConverterInt64.read(from: &buf), position: try FfiConverterInt64.read(from: &buf)
+        )
+        
+        case 8: return .reparentTask(listId: try FfiConverterString.read(from: &buf), taskId: try FfiConverterInt64.read(from: &buf), parentId: try FfiConverterOptionInt64.read(from: &buf)
+        )
+        
+        case 9: return .addNote(listId: try FfiConverterString.read(from: &buf), taskId: try FfiConverterInt64.read(from: &buf), comment: try FfiConverterString.read(from: &buf)
+        )
+        
+        case 10: return .taskAction(listId: try FfiConverterString.read(from: &buf), taskId: try FfiConverterInt64.read(from: &buf), action: try FfiConverterString.read(from: &buf)
+        )
+        
+        case 11: return .deleteTask(listId: try FfiConverterString.read(from: &buf), taskId: try FfiConverterInt64.read(from: &buf)
+        )
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: CheckvistCall, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case let .login(username,remoteKey):
+            writeInt(&buf, Int32(1))
+            FfiConverterString.write(username, into: &buf)
+            FfiConverterString.write(remoteKey, into: &buf)
+            
+        
+        case .lists:
+            writeInt(&buf, Int32(2))
+        
+        
+        case let .tasks(listId,withNotes):
+            writeInt(&buf, Int32(3))
+            FfiConverterString.write(listId, into: &buf)
+            FfiConverterBool.write(withNotes, into: &buf)
+            
+        
+        case let .createList(name):
+            writeInt(&buf, Int32(4))
+            FfiConverterString.write(name, into: &buf)
+            
+        
+        case let .createTask(listId,content,parentId,position,due,tags,priority,parse):
+            writeInt(&buf, Int32(5))
+            FfiConverterString.write(listId, into: &buf)
+            FfiConverterString.write(content, into: &buf)
+            FfiConverterOptionInt64.write(parentId, into: &buf)
+            FfiConverterOptionInt64.write(position, into: &buf)
+            FfiConverterOptionString.write(due, into: &buf)
+            FfiConverterOptionString.write(tags, into: &buf)
+            FfiConverterOptionInt64.write(priority, into: &buf)
+            FfiConverterBool.write(parse, into: &buf)
+            
+        
+        case let .updateTask(listId,taskId,content,due,tags):
+            writeInt(&buf, Int32(6))
+            FfiConverterString.write(listId, into: &buf)
+            FfiConverterInt64.write(taskId, into: &buf)
+            FfiConverterOptionString.write(content, into: &buf)
+            FfiConverterOptionString.write(due, into: &buf)
+            FfiConverterOptionString.write(tags, into: &buf)
+            
+        
+        case let .moveTask(listId,taskId,position):
+            writeInt(&buf, Int32(7))
+            FfiConverterString.write(listId, into: &buf)
+            FfiConverterInt64.write(taskId, into: &buf)
+            FfiConverterInt64.write(position, into: &buf)
+            
+        
+        case let .reparentTask(listId,taskId,parentId):
+            writeInt(&buf, Int32(8))
+            FfiConverterString.write(listId, into: &buf)
+            FfiConverterInt64.write(taskId, into: &buf)
+            FfiConverterOptionInt64.write(parentId, into: &buf)
+            
+        
+        case let .addNote(listId,taskId,comment):
+            writeInt(&buf, Int32(9))
+            FfiConverterString.write(listId, into: &buf)
+            FfiConverterInt64.write(taskId, into: &buf)
+            FfiConverterString.write(comment, into: &buf)
+            
+        
+        case let .taskAction(listId,taskId,action):
+            writeInt(&buf, Int32(10))
+            FfiConverterString.write(listId, into: &buf)
+            FfiConverterInt64.write(taskId, into: &buf)
+            FfiConverterString.write(action, into: &buf)
+            
+        
+        case let .deleteTask(listId,taskId):
+            writeInt(&buf, Int32(11))
+            FfiConverterString.write(listId, into: &buf)
+            FfiConverterInt64.write(taskId, into: &buf)
+            
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCheckvistCall_lift(_ buf: RustBuffer) throws -> CheckvistCall {
+    return try FfiConverterTypeCheckvistCall.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCheckvistCall_lower(_ value: CheckvistCall) -> RustBuffer {
+    return FfiConverterTypeCheckvistCall.lower(value)
+}
+
+
+
+/**
  * Why a config file was left alone.
  *
  * Fields are `path`, `key` and `detail` rather than `message`, which
@@ -16540,6 +17511,17 @@ enum CoreError: Swift.Error, Equatable, Hashable, Foundation.LocalizedError {
     )
     case InvalidRecurrence(rule: String
     )
+    /**
+     * A Checkvist request the core refused to make, or an answer it could
+     * not read (`checkvist.rs`).
+     */
+    case Checkvist(detail: String
+    )
+    /**
+     * An estimate or minimum block typed in minutes that does not read as
+     * one (`editor_draft.rs`).
+     */
+    case InvalidEstimate
 
     
 
@@ -16622,6 +17604,10 @@ public struct FfiConverterTypeCoreError: FfiConverterRustBuffer {
         case 28: return .InvalidRecurrence(
             rule: try FfiConverterString.read(from: &buf)
             )
+        case 29: return .Checkvist(
+            detail: try FfiConverterString.read(from: &buf)
+            )
+        case 30: return .InvalidEstimate
 
          default: throw UniffiInternalError.unexpectedEnumCase
         }
@@ -16758,6 +17744,15 @@ public struct FfiConverterTypeCoreError: FfiConverterRustBuffer {
             writeInt(&buf, Int32(28))
             FfiConverterString.write(rule, into: &buf)
             
+        
+        case let .Checkvist(detail):
+            writeInt(&buf, Int32(29))
+            FfiConverterString.write(detail, into: &buf)
+            
+        
+        case .InvalidEstimate:
+            writeInt(&buf, Int32(30))
+        
         }
     }
 }
@@ -17537,6 +18532,101 @@ public func FfiConverterTypeExportFormat_lift(_ buf: RustBuffer) throws -> Expor
 #endif
 public func FfiConverterTypeExportFormat_lower(_ value: ExportFormat) -> RustBuffer {
     return FfiConverterTypeExportFormat.lower(value)
+}
+
+
+
+/**
+ * When a deferred task comes back.
+ */
+
+public enum FocusDeferral: Equatable, Hashable {
+    
+    /**
+     * An hour from now.
+     */
+    case anHour
+    /**
+     * 14:00 today, or an hour from now once that has passed.
+     */
+    case thisAfternoon
+    /**
+     * 09:00 tomorrow.
+     */
+    case tomorrow
+    /**
+     * 09:00 a week from today.
+     */
+    case nextWeek
+
+
+
+
+
+}
+
+#if compiler(>=6)
+extension FocusDeferral: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeFocusDeferral: FfiConverterRustBuffer {
+    typealias SwiftType = FocusDeferral
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> FocusDeferral {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .anHour
+        
+        case 2: return .thisAfternoon
+        
+        case 3: return .tomorrow
+        
+        case 4: return .nextWeek
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: FocusDeferral, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case .anHour:
+            writeInt(&buf, Int32(1))
+        
+        
+        case .thisAfternoon:
+            writeInt(&buf, Int32(2))
+        
+        
+        case .tomorrow:
+            writeInt(&buf, Int32(3))
+        
+        
+        case .nextWeek:
+            writeInt(&buf, Int32(4))
+        
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeFocusDeferral_lift(_ buf: RustBuffer) throws -> FocusDeferral {
+    return try FfiConverterTypeFocusDeferral.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeFocusDeferral_lower(_ value: FocusDeferral) -> RustBuffer {
+    return FfiConverterTypeFocusDeferral.lower(value)
 }
 
 
@@ -19232,6 +20322,54 @@ fileprivate struct FfiConverterOptionTypeAwardRow: FfiConverterRustBuffer {
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterOptionTypeCheckvistListRow: FfiConverterRustBuffer {
+    typealias SwiftType = CheckvistListRow?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterTypeCheckvistListRow.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterTypeCheckvistListRow.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterOptionTypeCheckvistTaskRow: FfiConverterRustBuffer {
+    typealias SwiftType = CheckvistTaskRow?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterTypeCheckvistTaskRow.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterTypeCheckvistTaskRow.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterOptionTypeCommitment: FfiConverterRustBuffer {
     typealias SwiftType = Commitment?
 
@@ -19680,6 +20818,30 @@ fileprivate struct FfiConverterOptionTypeDailyRow: FfiConverterRustBuffer {
         switch try readInt(&buf) as Int8 {
         case 0: return nil
         case 1: return try FfiConverterTypeDailyRow.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterOptionTypeEditorEstimateCheck: FfiConverterRustBuffer {
+    typealias SwiftType = EditorEstimateCheck?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterTypeEditorEstimateCheck.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterTypeEditorEstimateCheck.read(from: &buf)
         default: throw UniffiInternalError.unexpectedOptionalTag
         }
     }
@@ -20168,6 +21330,30 @@ fileprivate struct FfiConverterOptionSequenceString: FfiConverterRustBuffer {
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterOptionSequenceTypeCheckvistNoteRow: FfiConverterRustBuffer {
+    typealias SwiftType = [CheckvistNoteRow]?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterSequenceTypeCheckvistNoteRow.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterSequenceTypeCheckvistNoteRow.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterOptionSequenceTypeCoreThemeSpecification: FfiConverterRustBuffer {
     typealias SwiftType = [CoreThemeSpecification]?
 
@@ -20306,6 +21492,31 @@ fileprivate struct FfiConverterSequenceInt64: FfiConverterRustBuffer {
         seq.reserveCapacity(Int(len))
         for _ in 0 ..< len {
             seq.append(try FfiConverterInt64.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterSequenceBool: FfiConverterRustBuffer {
+    typealias SwiftType = [Bool]
+
+    public static func write(_ value: [Bool], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterBool.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [Bool] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [Bool]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterBool.read(from: &buf))
         }
         return seq
     }
@@ -20556,6 +21767,106 @@ fileprivate struct FfiConverterSequenceTypeCandidate: FfiConverterRustBuffer {
         seq.reserveCapacity(Int(len))
         for _ in 0 ..< len {
             seq.append(try FfiConverterTypeCandidate.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterSequenceTypeCheckvistHeader: FfiConverterRustBuffer {
+    typealias SwiftType = [CheckvistHeader]
+
+    public static func write(_ value: [CheckvistHeader], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeCheckvistHeader.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [CheckvistHeader] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [CheckvistHeader]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeCheckvistHeader.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterSequenceTypeCheckvistListRow: FfiConverterRustBuffer {
+    typealias SwiftType = [CheckvistListRow]
+
+    public static func write(_ value: [CheckvistListRow], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeCheckvistListRow.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [CheckvistListRow] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [CheckvistListRow]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeCheckvistListRow.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterSequenceTypeCheckvistNoteRow: FfiConverterRustBuffer {
+    typealias SwiftType = [CheckvistNoteRow]
+
+    public static func write(_ value: [CheckvistNoteRow], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeCheckvistNoteRow.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [CheckvistNoteRow] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [CheckvistNoteRow]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeCheckvistNoteRow.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterSequenceTypeCheckvistTaskRow: FfiConverterRustBuffer {
+    typealias SwiftType = [CheckvistTaskRow]
+
+    public static func write(_ value: [CheckvistTaskRow], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeCheckvistTaskRow.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [CheckvistTaskRow] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [CheckvistTaskRow]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeCheckvistTaskRow.read(from: &buf))
         }
         return seq
     }
@@ -20939,6 +22250,31 @@ fileprivate struct FfiConverterSequenceTypeDayEntry: FfiConverterRustBuffer {
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterSequenceTypeDayForecastEntry: FfiConverterRustBuffer {
+    typealias SwiftType = [DayForecastEntry]
+
+    public static func write(_ value: [DayForecastEntry], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeDayForecastEntry.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [DayForecastEntry] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [DayForecastEntry]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeDayForecastEntry.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterSequenceTypeDayLogBucket: FfiConverterRustBuffer {
     typealias SwiftType = [DayLogBucket]
 
@@ -21006,6 +22342,56 @@ fileprivate struct FfiConverterSequenceTypeDayLogRecord: FfiConverterRustBuffer 
         seq.reserveCapacity(Int(len))
         for _ in 0 ..< len {
             seq.append(try FfiConverterTypeDayLogRecord.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterSequenceTypeEditorFieldComparison: FfiConverterRustBuffer {
+    typealias SwiftType = [EditorFieldComparison]
+
+    public static func write(_ value: [EditorFieldComparison], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeEditorFieldComparison.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [EditorFieldComparison] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [EditorFieldComparison]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeEditorFieldComparison.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterSequenceTypeEditorFieldOutcome: FfiConverterRustBuffer {
+    typealias SwiftType = [EditorFieldOutcome]
+
+    public static func write(_ value: [EditorFieldOutcome], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeEditorFieldOutcome.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [EditorFieldOutcome] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [EditorFieldOutcome]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeEditorFieldOutcome.read(from: &buf))
         }
         return seq
     }
@@ -22652,6 +24038,94 @@ public func checkvistDueDate(due: String?) -> Int64?  {
 })
 }
 /**
+ * The checklist a create answered with, bare or wrapped in `checklist`.
+ */
+public func checkvistCreatedList(body: String) -> CheckvistListRow?  {
+    return try!  FfiConverterOptionTypeCheckvistListRow.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_checkvist_created_list(
+        FfiConverterString.lower(body),uniffiCallStatus
+    )
+})
+}
+/**
+ * The task a create answered with, which Checkvist may send bare, wrapped
+ * in `task`, or as the first of a `tasks` array or a bare array.
+ */
+public func checkvistCreatedTask(body: String) -> CheckvistTaskRow?  {
+    return try!  FfiConverterOptionTypeCheckvistTaskRow.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_checkvist_created_task(
+        FfiConverterString.lower(body),uniffiCallStatus
+    )
+})
+}
+/**
+ * The workspace import's seeds for Checkvist tasks: one per task id (the
+ * first wins), ordered by parent then position, each source id
+ * `source_prefix` and the task's id, notes joined by blank lines.
+ */
+public func checkvistImportSeeds(sourcePrefix: String, tasks: [CheckvistTaskRow]) -> [ImportedTaskSeed]  {
+    return try!  FfiConverterSequenceTypeImportedTaskSeed.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_checkvist_import_seeds(
+        FfiConverterString.lower(sourcePrefix),
+        FfiConverterSequenceTypeCheckvistTaskRow.lower(tasks),uniffiCallStatus
+    )
+})
+}
+/**
+ * The checklists in a `GET /checklists.json` answer that are not archived.
+ */
+public func checkvistLists(body: String)throws  -> [CheckvistListRow]  {
+    return try  FfiConverterSequenceTypeCheckvistListRow.lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_checkvist_lists(
+        FfiConverterString.lower(body),uniffiCallStatus
+    )
+})
+}
+/**
+ * The token in a login answer: `{"token": "…"}`, or the bare string, quoted
+ * or not. Nothing when there is no non-empty token.
+ */
+public func checkvistLoginToken(body: String) -> String?  {
+    return try!  FfiConverterOptionString.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_checkvist_login_token(
+        FfiConverterString.lower(body),uniffiCallStatus
+    )
+})
+}
+/**
+ * The request for `call`, against `base_url`, carrying `token` when there is
+ * one. Refuses a list id that is not a number, an action Checkvist does not
+ * have, an empty name or task, and an update that changes nothing.
+ */
+public func checkvistRequest(baseUrl: String, call: CheckvistCall, token: String?, userAgent: String)throws  -> CheckvistHttpRequest  {
+    return try  FfiConverterTypeCheckvistHttpRequest_lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_checkvist_request(
+        FfiConverterString.lower(baseUrl),
+        FfiConverterTypeCheckvistCall_lower(call),
+        FfiConverterOptionString.lower(token),
+        FfiConverterString.lower(userAgent),uniffiCallStatus
+    )
+})
+}
+/**
+ * The tasks in a `GET …/tasks.json` answer, parents before children.
+ */
+public func checkvistTasks(body: String, includeClosed: Bool)throws  -> [CheckvistTaskRow]  {
+    return try  FfiConverterSequenceTypeCheckvistTaskRow.lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_checkvist_tasks(
+        FfiConverterString.lower(body),
+        FfiConverterBool.lower(includeClosed),uniffiCallStatus
+    )
+})
+}
+/**
  * Blanks the seeded login in the CLI's current config under `home`, the
  * counterpart of [`seed_cli_config`]. Only the current path: the legacy file
  * is never written. True when the file was rewritten.
@@ -23115,6 +24589,49 @@ public func dayLogWeeklyBuckets(events: [DayLogRecord], boundary: DayLogBoundary
         FfiConverterTypeDayLogBoundary_lower(boundary),
         FfiConverterInt64.lower(endingOnMs),
         FfiConverterInt64.lower(weeks),uniffiCallStatus
+    )
+})
+}
+/**
+ * A stored number of seconds as the editor shows it in minutes: a whole
+ * number of minutes plainly when `whole_minutes_plainly` (`45`), and
+ * otherwise as Swift prints the quotient (`1.5`, `2.0`, `0.25`).
+ */
+public func editorMinutesText(seconds: Int64, wholeMinutesPlainly: Bool) -> String  {
+    return try!  FfiConverterString.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_editor_minutes_text(
+        FfiConverterInt64.lower(seconds),
+        FfiConverterBool.lower(wholeMinutesPlainly),uniffiCallStatus
+    )
+})
+}
+/**
+ * Minutes as typed (`45`, `1.5`, `.25`), to whole seconds rounded half away
+ * from zero; nothing when blank. Refuses anything else, a negative or a
+ * value too large to hold.
+ */
+public func editorParseMinutes(raw: String)throws  -> Int64?  {
+    return try  FfiConverterOptionInt64.lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_editor_parse_minutes(
+        FfiConverterString.lower(raw),uniffiCallStatus
+    )
+})
+}
+/**
+ * Folds a save into an open draft, field by field: a field that now agrees
+ * with the save is settled; one the draft changed (or that already
+ * conflicted) conflicts if the save changed it too; any other follows the
+ * save. An edited estimate whose seconds the save changed conflicts unless
+ * what was typed reads as exactly the saved seconds.
+ */
+public func editorReconcile(fields: [EditorFieldComparison], estimate: EditorEstimateCheck?) -> [EditorFieldOutcome]  {
+    return try!  FfiConverterSequenceTypeEditorFieldOutcome.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_editor_reconcile(
+        FfiConverterSequenceTypeEditorFieldComparison.lower(fields),
+        FfiConverterOptionTypeEditorEstimateCheck.lower(estimate),uniffiCallStatus
     )
 })
 }
@@ -23726,6 +25243,153 @@ public func workspaceMigrations() -> [String]  {
     return try!  FfiConverterSequenceString.lift(try! rustCall() {
         uniffiCallStatus in
     uniffi_takt_core_fn_func_workspace_migrations(uniffiCallStatus
+    )
+})
+}
+/**
+ * Which rows get the "Blocked" label: in each group, the first of the run of
+ * blocked rows the group ends with.
+ *
+ * `groups[i]` is the group row `i` belongs to (an outline parent's
+ * children, a board column's cards) and `blocked[i]` whether it is drawn as
+ * blocked; the rows are in drawing order, and a group's rows need not be
+ * contiguous. A blocked row with an unblocked one after it in its group (a
+ * stale read, say) is not labelled, since a label there would head a
+ * section that is not all blocked. The answer is row indices, ascending.
+ */
+public func blockedSectionLabels(groups: [UInt32], blocked: [Bool]) -> [UInt32]  {
+    return try!  FfiConverterSequenceUInt32.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_blocked_section_labels(
+        FfiConverterSequenceUInt32.lower(groups),
+        FfiConverterSequenceBool.lower(blocked),uniffiCallStatus
+    )
+})
+}
+/**
+ * Where an arrow key leaves a cursor at `current` in `count` rows. A single
+ * step wraps, so the far end of a long list is one key away; a bigger jump
+ * (a page) stops at the end, because overshooting and landing near the top
+ * again would lose your place.
+ */
+public func cursorStep(current: Int64, offset: Int64, count: Int64) -> Int64  {
+    return try!  FfiConverterInt64.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_cursor_step(
+        FfiConverterInt64.lower(current),
+        FfiConverterInt64.lower(offset),
+        FfiConverterInt64.lower(count),uniffiCallStatus
+    )
+})
+}
+/**
+ * The day with its planned slots filled from `order`, in turn, and every
+ * other slot as it was; `planned[i]` says whether slot `i` is planned and
+ * `ids[i]` is what it holds. Lets the day show a move at once rather than
+ * after the next read, which is what keeps a second move pressed quickly
+ * moving the same task on from where the first left it. A planned slot left
+ * over when `order` runs out keeps its id.
+ */
+public func dayArrangementApplying(order: [String], ids: [String], planned: [Bool]) -> [String]  {
+    return try!  FfiConverterSequenceString.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_day_arrangement_applying(
+        FfiConverterSequenceString.lower(order),
+        FfiConverterSequenceString.lower(ids),
+        FfiConverterSequenceBool.lower(planned),uniffiCallStatus
+    )
+})
+}
+/**
+ * The planned order with `task_id` moved `offset` places, clamped at the
+ * ends; nothing when the task is not in the order or cannot move that way,
+ * so a caller has nothing to write.
+ *
+ * Only planned rows take part. A derived row (overdue, due today, starting
+ * today) is in the day because of a date, and the next read would put it
+ * back wherever it was moved.
+ */
+public func dayArrangementMoving(taskId: String, offset: Int64, order: [String]) -> [String]?  {
+    return try!  FfiConverterOptionSequenceString.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_day_arrangement_moving(
+        FfiConverterString.lower(taskId),
+        FfiConverterInt64.lower(offset),
+        FfiConverterSequenceString.lower(order),uniffiCallStatus
+    )
+})
+}
+public func dayForecast(entries: [DayForecastEntry], nowMs: Int64) -> DayForecastSummary  {
+    return try!  FfiConverterTypeDayForecastSummary_lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_day_forecast(
+        FfiConverterSequenceTypeDayForecastEntry.lower(entries),
+        FfiConverterInt64.lower(nowMs),uniffiCallStatus
+    )
+})
+}
+/**
+ * A saved context, less any condition that no longer exists (`known`).
+ * Archived ones stay: archiving hides a condition from new requirements,
+ * not from tasks that already need it. Sorted and without repeats.
+ */
+public func focusContextRestore(saved: [String], known: [String]) -> [String]  {
+    return try!  FfiConverterSequenceString.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_focus_context_restore(
+        FfiConverterSequenceString.lower(saved),
+        FfiConverterSequenceString.lower(known),uniffiCallStatus
+    )
+})
+}
+/**
+ * The focus context's condition ids with `condition_id` flipped. You are
+ * in one place at a time, so turning a location on turns every other
+ * location (`location_ids`) off; capabilities ("Floor space", "Quiet")
+ * combine freely. Sorted, so the answer is the same however the set was
+ * held.
+ */
+public func focusContextToggle(conditionId: String, isLocation: Bool, current: [String], locationIds: [String]) -> [String]  {
+    return try!  FfiConverterSequenceString.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_focus_context_toggle(
+        FfiConverterString.lower(conditionId),
+        FfiConverterBool.lower(isLocation),
+        FfiConverterSequenceString.lower(current),
+        FfiConverterSequenceString.lower(locationIds),uniffiCallStatus
+    )
+})
+}
+/**
+ * The instant a task deferred `deferral` at `now_ms` comes back, with the
+ * wall-clock times read in `zone` (an IANA name).
+ */
+public func focusDeferralDate(deferral: FocusDeferral, nowMs: Int64, zone: String) -> Int64  {
+    return try!  FfiConverterInt64.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_focus_deferral_date(
+        FfiConverterTypeFocusDeferral_lower(deferral),
+        FfiConverterInt64.lower(nowMs),
+        FfiConverterString.lower(zone),uniffiCallStatus
+    )
+})
+}
+/**
+ * Vim's `f` and `F` over rows: the index of the next row (or previous, when
+ * `forward` is false) whose title begins with `character`, reading a title
+ * from its first letter or digit and ignoring case and accents. The walk
+ * wraps; with no `current` it starts before the first row (after the last,
+ * backwards), so the first match counts. Nothing when no row matches or
+ * `character` is not a letter or digit.
+ */
+public func vimFind(titles: [String], current: Int64?, character: String, forward: Bool) -> Int64?  {
+    return try!  FfiConverterOptionInt64.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_vim_find(
+        FfiConverterSequenceString.lower(titles),
+        FfiConverterOptionInt64.lower(current),
+        FfiConverterString.lower(character),
+        FfiConverterBool.lower(forward),uniffiCallStatus
     )
 })
 }
@@ -24379,6 +26043,27 @@ private let initializationResult: InitializationResult = {
     if (uniffi_takt_core_checksum_func_checkvist_due_date() != 16968) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_takt_core_checksum_func_checkvist_created_list() != 5026) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_checkvist_created_task() != 25640) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_checkvist_import_seeds() != 39320) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_checkvist_lists() != 1638) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_checkvist_login_token() != 8795) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_checkvist_request() != 54237) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_checkvist_tasks() != 9617) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_takt_core_checksum_func_clear_cli_config_credentials() != 1509) {
         return InitializationResult.apiChecksumMismatch
     }
@@ -24491,6 +26176,15 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_func_day_log_weekly_buckets() != 50056) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_editor_minutes_text() != 55346) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_editor_parse_minutes() != 37150) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_editor_reconcile() != 52223) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_func_builtin_filter_lists() != 21554) {
@@ -24626,6 +26320,33 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_func_workspace_migrations() != 25592) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_blocked_section_labels() != 39647) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_cursor_step() != 15724) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_day_arrangement_applying() != 46141) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_day_arrangement_moving() != 36715) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_day_forecast() != 48353) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_focus_context_restore() != 33473) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_focus_context_toggle() != 26054) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_focus_deferral_date() != 35466) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_vim_find() != 17940) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_func_sidebar_list_ids_in_folder() != 59863) {

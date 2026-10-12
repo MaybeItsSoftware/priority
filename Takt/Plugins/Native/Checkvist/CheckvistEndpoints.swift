@@ -1,31 +1,13 @@
 import Foundation
 
-/// Central registry of all Checkvist API and web URLs.
+/// Where Checkvist is, and what the Mac calls itself there. The API's paths
+/// are the core's (`core/src/checkvist.rs`), which makes every request.
 /// Change `baseURL` once to point at a self-hosted or staging instance.
 enum CheckvistEndpoints {
   static let baseURL = "https://checkvist.com"
 
   /// Sent on every request so Checkvist's logs can tell this client apart.
   static let userAgent = "Takt/1.0 (Macintosh; Mac OS X)"
-
-  // MARK: - Static endpoints
-
-  static var login: URL { URL(string: "\(baseURL)/auth/login.json")! }
-  static var lists: URL { URL(string: "\(baseURL)/checklists.json")! }
-
-  // MARK: - Dynamic endpoints
-
-  static func tasks(listId: String) -> URL? {
-    URL(string: "\(baseURL)/checklists/\(listId)/tasks.json")
-  }
-
-  static func task(listId: String, taskId: Int) -> URL? {
-    URL(string: "\(baseURL)/checklists/\(listId)/tasks/\(taskId).json")
-  }
-
-  static func taskAction(listId: String, taskId: Int, action: String) -> URL? {
-    URL(string: "\(baseURL)/checklists/\(listId)/tasks/\(taskId)/\(action).json")
-  }
 
   // MARK: - Web permalinks
 

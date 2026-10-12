@@ -711,6 +711,20 @@ internal object IntegrityCheckingUniffiLib {
     ): Int
     external fun uniffi_takt_core_checksum_func_checkvist_due_date(
     ): Int
+    external fun uniffi_takt_core_checksum_func_checkvist_created_list(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_checkvist_created_task(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_checkvist_import_seeds(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_checkvist_lists(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_checkvist_login_token(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_checkvist_request(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_checkvist_tasks(
+    ): Int
     external fun uniffi_takt_core_checksum_func_clear_cli_config_credentials(
     ): Int
     external fun uniffi_takt_core_checksum_func_cli_config_cleared(
@@ -786,6 +800,12 @@ internal object IntegrityCheckingUniffiLib {
     external fun uniffi_takt_core_checksum_func_day_log_summary(
     ): Int
     external fun uniffi_takt_core_checksum_func_day_log_weekly_buckets(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_editor_minutes_text(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_editor_parse_minutes(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_editor_reconcile(
     ): Int
     external fun uniffi_takt_core_checksum_func_builtin_filter_lists(
     ): Int
@@ -876,6 +896,24 @@ internal object IntegrityCheckingUniffiLib {
     external fun uniffi_takt_core_checksum_func_migrate_workspace(
     ): Int
     external fun uniffi_takt_core_checksum_func_workspace_migrations(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_blocked_section_labels(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_cursor_step(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_day_arrangement_applying(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_day_arrangement_moving(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_day_forecast(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_focus_context_restore(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_focus_context_toggle(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_focus_deferral_date(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_vim_find(
     ): Int
     external fun uniffi_takt_core_checksum_func_sidebar_list_ids_in_folder(
     ): Int
@@ -1831,6 +1869,20 @@ internal object UniffiLib {
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_func_checkvist_due_date(`due`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_checkvist_created_list(`body`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_checkvist_created_task(`body`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_checkvist_import_seeds(`sourcePrefix`: RustBuffer.ByValue,`tasks`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_checkvist_lists(`body`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_checkvist_login_token(`body`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_checkvist_request(`baseUrl`: RustBuffer.ByValue,`call`: RustBuffer.ByValue,`token`: RustBuffer.ByValue,`userAgent`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_checkvist_tasks(`body`: RustBuffer.ByValue,`includeClosed`: Byte,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_func_clear_cli_config_credentials(`home`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): Byte
     external fun uniffi_takt_core_fn_func_cli_config_cleared(`existing`: RustBuffer.ByValue,`configPath`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
@@ -1906,6 +1958,12 @@ internal object UniffiLib {
     external fun uniffi_takt_core_fn_func_day_log_summary(`events`: RustBuffer.ByValue,`boundary`: RustBuffer.ByValue,`onMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_func_day_log_weekly_buckets(`events`: RustBuffer.ByValue,`boundary`: RustBuffer.ByValue,`endingOnMs`: Long,`weeks`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_editor_minutes_text(`seconds`: Long,`wholeMinutesPlainly`: Byte,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_editor_parse_minutes(`raw`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_editor_reconcile(`fields`: RustBuffer.ByValue,`estimate`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_func_builtin_filter_lists(uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
@@ -1996,6 +2054,24 @@ internal object UniffiLib {
     external fun uniffi_takt_core_fn_func_migrate_workspace(`path`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_func_workspace_migrations(uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_blocked_section_labels(`groups`: RustBuffer.ByValue,`blocked`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_cursor_step(`current`: Long,`offset`: Long,`count`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Long
+    external fun uniffi_takt_core_fn_func_day_arrangement_applying(`order`: RustBuffer.ByValue,`ids`: RustBuffer.ByValue,`planned`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_day_arrangement_moving(`taskId`: RustBuffer.ByValue,`offset`: Long,`order`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_day_forecast(`entries`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_focus_context_restore(`saved`: RustBuffer.ByValue,`known`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_focus_context_toggle(`conditionId`: RustBuffer.ByValue,`isLocation`: Byte,`current`: RustBuffer.ByValue,`locationIds`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_focus_deferral_date(`deferral`: RustBuffer.ByValue,`nowMs`: Long,`zone`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): Long
+    external fun uniffi_takt_core_fn_func_vim_find(`titles`: RustBuffer.ByValue,`current`: RustBuffer.ByValue,`character`: RustBuffer.ByValue,`forward`: Byte,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_func_sidebar_list_ids_in_folder(`folderId`: RustBuffer.ByValue,`folders`: RustBuffer.ByValue,`lists`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
@@ -2268,6 +2344,27 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
     if ((lib.uniffi_takt_core_checksum_func_checkvist_due_date() and 0xFFFF) != 16968) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if ((lib.uniffi_takt_core_checksum_func_checkvist_created_list() and 0xFFFF) != 5026) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_checkvist_created_task() and 0xFFFF) != 25640) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_checkvist_import_seeds() and 0xFFFF) != 39320) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_checkvist_lists() and 0xFFFF) != 1638) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_checkvist_login_token() and 0xFFFF) != 8795) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_checkvist_request() and 0xFFFF) != 54237) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_checkvist_tasks() and 0xFFFF) != 9617) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if ((lib.uniffi_takt_core_checksum_func_clear_cli_config_credentials() and 0xFFFF) != 1509) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
@@ -2380,6 +2477,15 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_func_day_log_weekly_buckets() and 0xFFFF) != 50056) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_editor_minutes_text() and 0xFFFF) != 55346) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_editor_parse_minutes() and 0xFFFF) != 37150) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_editor_reconcile() and 0xFFFF) != 52223) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_func_builtin_filter_lists() and 0xFFFF) != 21554) {
@@ -2515,6 +2621,33 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_func_workspace_migrations() and 0xFFFF) != 25592) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_blocked_section_labels() and 0xFFFF) != 39647) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_cursor_step() and 0xFFFF) != 15724) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_day_arrangement_applying() and 0xFFFF) != 46141) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_day_arrangement_moving() and 0xFFFF) != 36715) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_day_forecast() and 0xFFFF) != 48353) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_focus_context_restore() and 0xFFFF) != 33473) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_focus_context_toggle() and 0xFFFF) != 26054) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_focus_deferral_date() and 0xFFFF) != 35466) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_vim_find() and 0xFFFF) != 17940) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_func_sidebar_list_ids_in_folder() and 0xFFFF) != 59863) {
@@ -10034,6 +10167,279 @@ public object FfiConverterTypeCaptureParts: FfiConverterRustBuffer<CaptureParts>
 
 
 
+data class CheckvistHeader (
+    var `name`: kotlin.String
+    , 
+    var `value`: kotlin.String
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeCheckvistHeader: FfiConverterRustBuffer<CheckvistHeader> {
+    override fun read(buf: ByteBuffer): CheckvistHeader {
+        return CheckvistHeader(
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: CheckvistHeader) = (
+            FfiConverterString.allocationSize(value.`name`) +
+            FfiConverterString.allocationSize(value.`value`)
+    )
+
+    override fun write(value: CheckvistHeader, buf: ByteBuffer) {
+            FfiConverterString.write(value.`name`, buf)
+            FfiConverterString.write(value.`value`, buf)
+    }
+}
+
+
+
+/**
+ * One request, ready for a client's HTTP stack.
+ */
+data class CheckvistHttpRequest (
+    /**
+     * `GET`, `POST`, `PUT` or `DELETE`.
+     */
+    var `method`: kotlin.String
+    , 
+    var `url`: kotlin.String
+    , 
+    var `headers`: List<CheckvistHeader>
+    , 
+    /**
+     * JSON, when the call has a body.
+     */
+    var `body`: kotlin.String?
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeCheckvistHttpRequest: FfiConverterRustBuffer<CheckvistHttpRequest> {
+    override fun read(buf: ByteBuffer): CheckvistHttpRequest {
+        return CheckvistHttpRequest(
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterSequenceTypeCheckvistHeader.read(buf),
+            FfiConverterOptionalString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: CheckvistHttpRequest) = (
+            FfiConverterString.allocationSize(value.`method`) +
+            FfiConverterString.allocationSize(value.`url`) +
+            FfiConverterSequenceTypeCheckvistHeader.allocationSize(value.`headers`) +
+            FfiConverterOptionalString.allocationSize(value.`body`)
+    )
+
+    override fun write(value: CheckvistHttpRequest, buf: ByteBuffer) {
+            FfiConverterString.write(value.`method`, buf)
+            FfiConverterString.write(value.`url`, buf)
+            FfiConverterSequenceTypeCheckvistHeader.write(value.`headers`, buf)
+            FfiConverterOptionalString.write(value.`body`, buf)
+    }
+}
+
+
+
+/**
+ * A checklist as the Mac keeps it.
+ */
+data class CheckvistListRow (
+    var `id`: kotlin.Long
+    , 
+    var `name`: kotlin.String
+    , 
+    var `archived`: kotlin.Boolean?
+    , 
+    var `readOnly`: kotlin.Boolean?
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeCheckvistListRow: FfiConverterRustBuffer<CheckvistListRow> {
+    override fun read(buf: ByteBuffer): CheckvistListRow {
+        return CheckvistListRow(
+            FfiConverterLong.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterOptionalBoolean.read(buf),
+            FfiConverterOptionalBoolean.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: CheckvistListRow) = (
+            FfiConverterLong.allocationSize(value.`id`) +
+            FfiConverterString.allocationSize(value.`name`) +
+            FfiConverterOptionalBoolean.allocationSize(value.`archived`) +
+            FfiConverterOptionalBoolean.allocationSize(value.`readOnly`)
+    )
+
+    override fun write(value: CheckvistListRow, buf: ByteBuffer) {
+            FfiConverterLong.write(value.`id`, buf)
+            FfiConverterString.write(value.`name`, buf)
+            FfiConverterOptionalBoolean.write(value.`archived`, buf)
+            FfiConverterOptionalBoolean.write(value.`readOnly`, buf)
+    }
+}
+
+
+
+/**
+ * A note on a task.
+ */
+data class CheckvistNoteRow (
+    var `id`: kotlin.Long?
+    , 
+    var `content`: kotlin.String
+    , 
+    var `createdAt`: kotlin.String?
+    , 
+    var `updatedAt`: kotlin.String?
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeCheckvistNoteRow: FfiConverterRustBuffer<CheckvistNoteRow> {
+    override fun read(buf: ByteBuffer): CheckvistNoteRow {
+        return CheckvistNoteRow(
+            FfiConverterOptionalLong.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterOptionalString.read(buf),
+            FfiConverterOptionalString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: CheckvistNoteRow) = (
+            FfiConverterOptionalLong.allocationSize(value.`id`) +
+            FfiConverterString.allocationSize(value.`content`) +
+            FfiConverterOptionalString.allocationSize(value.`createdAt`) +
+            FfiConverterOptionalString.allocationSize(value.`updatedAt`)
+    )
+
+    override fun write(value: CheckvistNoteRow, buf: ByteBuffer) {
+            FfiConverterOptionalLong.write(value.`id`, buf)
+            FfiConverterString.write(value.`content`, buf)
+            FfiConverterOptionalString.write(value.`createdAt`, buf)
+            FfiConverterOptionalString.write(value.`updatedAt`, buf)
+    }
+}
+
+
+
+/**
+ * A task as the Mac keeps it. `status` is 0 open, 1 closed, 2 invalidated.
+ */
+data class CheckvistTaskRow (
+    var `id`: kotlin.Long
+    , 
+    var `content`: kotlin.String
+    , 
+    var `status`: kotlin.Long
+    , 
+    var `due`: kotlin.String?
+    , 
+    var `position`: kotlin.Long?
+    , 
+    var `parentId`: kotlin.Long?
+    , 
+    var `level`: kotlin.Long?
+    , 
+    var `notes`: List<CheckvistNoteRow>?
+    , 
+    var `updatedAt`: kotlin.String?
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeCheckvistTaskRow: FfiConverterRustBuffer<CheckvistTaskRow> {
+    override fun read(buf: ByteBuffer): CheckvistTaskRow {
+        return CheckvistTaskRow(
+            FfiConverterLong.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterLong.read(buf),
+            FfiConverterOptionalString.read(buf),
+            FfiConverterOptionalLong.read(buf),
+            FfiConverterOptionalLong.read(buf),
+            FfiConverterOptionalLong.read(buf),
+            FfiConverterOptionalSequenceTypeCheckvistNoteRow.read(buf),
+            FfiConverterOptionalString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: CheckvistTaskRow) = (
+            FfiConverterLong.allocationSize(value.`id`) +
+            FfiConverterString.allocationSize(value.`content`) +
+            FfiConverterLong.allocationSize(value.`status`) +
+            FfiConverterOptionalString.allocationSize(value.`due`) +
+            FfiConverterOptionalLong.allocationSize(value.`position`) +
+            FfiConverterOptionalLong.allocationSize(value.`parentId`) +
+            FfiConverterOptionalLong.allocationSize(value.`level`) +
+            FfiConverterOptionalSequenceTypeCheckvistNoteRow.allocationSize(value.`notes`) +
+            FfiConverterOptionalString.allocationSize(value.`updatedAt`)
+    )
+
+    override fun write(value: CheckvistTaskRow, buf: ByteBuffer) {
+            FfiConverterLong.write(value.`id`, buf)
+            FfiConverterString.write(value.`content`, buf)
+            FfiConverterLong.write(value.`status`, buf)
+            FfiConverterOptionalString.write(value.`due`, buf)
+            FfiConverterOptionalLong.write(value.`position`, buf)
+            FfiConverterOptionalLong.write(value.`parentId`, buf)
+            FfiConverterOptionalLong.write(value.`level`, buf)
+            FfiConverterOptionalSequenceTypeCheckvistNoteRow.write(value.`notes`, buf)
+            FfiConverterOptionalString.write(value.`updatedAt`, buf)
+    }
+}
+
+
+
 /**
  * The login the Mac hands down to the CLI.
  */
@@ -12580,6 +12986,128 @@ public object FfiConverterTypeDayEntry: FfiConverterRustBuffer<DayEntry> {
 
 
 /**
+ * One task on the day, as far as the forecast cares.
+ */
+data class DayForecastEntry (
+    /**
+     * What the task was meant to cost, or nothing when nobody said.
+     */
+    var `estimateSeconds`: kotlin.Long?
+    , 
+    /**
+     * What it has cost so far, the running block's elapsed time included
+     * when this is the task being worked on.
+     */
+    var `loggedSeconds`: kotlin.Long
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeDayForecastEntry: FfiConverterRustBuffer<DayForecastEntry> {
+    override fun read(buf: ByteBuffer): DayForecastEntry {
+        return DayForecastEntry(
+            FfiConverterOptionalLong.read(buf),
+            FfiConverterLong.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: DayForecastEntry) = (
+            FfiConverterOptionalLong.allocationSize(value.`estimateSeconds`) +
+            FfiConverterLong.allocationSize(value.`loggedSeconds`)
+    )
+
+    override fun write(value: DayForecastEntry, buf: ByteBuffer) {
+            FfiConverterOptionalLong.write(value.`estimateSeconds`, buf)
+            FfiConverterLong.write(value.`loggedSeconds`, buf)
+    }
+}
+
+
+
+/**
+ * How much of the day's plan is left and, worked straight through, when it
+ * would be done. Deliberately naive: no breaks, no calendar, no hours.
+ */
+data class DayForecastSummary (
+    /**
+     * Every estimate on the day.
+     */
+    var `estimatedSeconds`: kotlin.Long
+    , 
+    /**
+     * Time logged against the day's tasks, estimated or not.
+     */
+    var `loggedSeconds`: kotlin.Long
+    , 
+    /**
+     * What the estimated tasks still owe. A task past its estimate owes
+     * nothing: an overrun on one buys no time back on the others.
+     */
+    var `remainingSeconds`: kotlin.Long
+    , 
+    /**
+     * Tasks that say nothing about their cost, each making the forecast
+     * optimistic.
+     */
+    var `unestimatedCount`: kotlin.Long
+    , 
+    /**
+     * `now` plus what is left, or nothing when nothing estimated is left.
+     */
+    var `finishAtMs`: kotlin.Long?
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeDayForecastSummary: FfiConverterRustBuffer<DayForecastSummary> {
+    override fun read(buf: ByteBuffer): DayForecastSummary {
+        return DayForecastSummary(
+            FfiConverterLong.read(buf),
+            FfiConverterLong.read(buf),
+            FfiConverterLong.read(buf),
+            FfiConverterLong.read(buf),
+            FfiConverterOptionalLong.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: DayForecastSummary) = (
+            FfiConverterLong.allocationSize(value.`estimatedSeconds`) +
+            FfiConverterLong.allocationSize(value.`loggedSeconds`) +
+            FfiConverterLong.allocationSize(value.`remainingSeconds`) +
+            FfiConverterLong.allocationSize(value.`unestimatedCount`) +
+            FfiConverterOptionalLong.allocationSize(value.`finishAtMs`)
+    )
+
+    override fun write(value: DayForecastSummary, buf: ByteBuffer) {
+            FfiConverterLong.write(value.`estimatedSeconds`, buf)
+            FfiConverterLong.write(value.`loggedSeconds`, buf)
+            FfiConverterLong.write(value.`remainingSeconds`, buf)
+            FfiConverterLong.write(value.`unestimatedCount`, buf)
+            FfiConverterOptionalLong.write(value.`finishAtMs`, buf)
+    }
+}
+
+
+
+/**
  * Where logical days begin: at `rollover_hour` in `zone`, not at midnight,
  * so work finished at 01:30 belongs to the day that began the previous
  * morning. `first_weekday` is Foundation's numbering (1 = Sunday) and only
@@ -12970,6 +13498,176 @@ public object FfiConverterTypeDeletedTask: FfiConverterRustBuffer<DeletedTask> {
             FfiConverterString.write(value.`id`, buf)
             FfiConverterString.write(value.`title`, buf)
             FfiConverterUInt.write(value.`subtasksDeleted`, buf)
+    }
+}
+
+
+
+/**
+ * The estimate's own check: the minutes shown can read the same while the
+ * seconds underneath differ, so an edited estimate is held to the seconds.
+ */
+data class EditorEstimateCheck (
+    /**
+     * Which of the comparisons is the estimate.
+     */
+    var `fieldIndex`: kotlin.UInt
+    , 
+    var `draftText`: kotlin.String
+    , 
+    var `savedText`: kotlin.String
+    , 
+    var `baselineSeconds`: kotlin.Long?
+    , 
+    var `savedSeconds`: kotlin.Long?
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeEditorEstimateCheck: FfiConverterRustBuffer<EditorEstimateCheck> {
+    override fun read(buf: ByteBuffer): EditorEstimateCheck {
+        return EditorEstimateCheck(
+            FfiConverterUInt.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterOptionalLong.read(buf),
+            FfiConverterOptionalLong.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: EditorEstimateCheck) = (
+            FfiConverterUInt.allocationSize(value.`fieldIndex`) +
+            FfiConverterString.allocationSize(value.`draftText`) +
+            FfiConverterString.allocationSize(value.`savedText`) +
+            FfiConverterOptionalLong.allocationSize(value.`baselineSeconds`) +
+            FfiConverterOptionalLong.allocationSize(value.`savedSeconds`)
+    )
+
+    override fun write(value: EditorEstimateCheck, buf: ByteBuffer) {
+            FfiConverterUInt.write(value.`fieldIndex`, buf)
+            FfiConverterString.write(value.`draftText`, buf)
+            FfiConverterString.write(value.`savedText`, buf)
+            FfiConverterOptionalLong.write(value.`baselineSeconds`, buf)
+            FfiConverterOptionalLong.write(value.`savedSeconds`, buf)
+    }
+}
+
+
+
+/**
+ * One field of an open draft, compared by the platform holding it.
+ */
+data class EditorFieldComparison (
+    /**
+     * The draft's value equals the newly saved one.
+     */
+    var `draftMatchesSaved`: kotlin.Boolean
+    , 
+    /**
+     * The draft's value equals the one it was opened from.
+     */
+    var `draftMatchesBaseline`: kotlin.Boolean
+    , 
+    /**
+     * The saved value equals the one the draft was opened from.
+     */
+    var `savedMatchesBaseline`: kotlin.Boolean
+    , 
+    /**
+     * The field is already marked as conflicting.
+     */
+    var `inConflict`: kotlin.Boolean
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeEditorFieldComparison: FfiConverterRustBuffer<EditorFieldComparison> {
+    override fun read(buf: ByteBuffer): EditorFieldComparison {
+        return EditorFieldComparison(
+            FfiConverterBoolean.read(buf),
+            FfiConverterBoolean.read(buf),
+            FfiConverterBoolean.read(buf),
+            FfiConverterBoolean.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: EditorFieldComparison) = (
+            FfiConverterBoolean.allocationSize(value.`draftMatchesSaved`) +
+            FfiConverterBoolean.allocationSize(value.`draftMatchesBaseline`) +
+            FfiConverterBoolean.allocationSize(value.`savedMatchesBaseline`) +
+            FfiConverterBoolean.allocationSize(value.`inConflict`)
+    )
+
+    override fun write(value: EditorFieldComparison, buf: ByteBuffer) {
+            FfiConverterBoolean.write(value.`draftMatchesSaved`, buf)
+            FfiConverterBoolean.write(value.`draftMatchesBaseline`, buf)
+            FfiConverterBoolean.write(value.`savedMatchesBaseline`, buf)
+            FfiConverterBoolean.write(value.`inConflict`, buf)
+    }
+}
+
+
+
+/**
+ * What to do with one field when a save lands.
+ */
+data class EditorFieldOutcome (
+    /**
+     * Take the saved value: the field was untouched in the draft.
+     */
+    var `followSaved`: kotlin.Boolean
+    , 
+    /**
+     * Mark the field conflicting (`true`), clear it (`false`), or leave it.
+     */
+    var `conflict`: kotlin.Boolean?
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeEditorFieldOutcome: FfiConverterRustBuffer<EditorFieldOutcome> {
+    override fun read(buf: ByteBuffer): EditorFieldOutcome {
+        return EditorFieldOutcome(
+            FfiConverterBoolean.read(buf),
+            FfiConverterOptionalBoolean.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: EditorFieldOutcome) = (
+            FfiConverterBoolean.allocationSize(value.`followSaved`) +
+            FfiConverterOptionalBoolean.allocationSize(value.`conflict`)
+    )
+
+    override fun write(value: EditorFieldOutcome, buf: ByteBuffer) {
+            FfiConverterBoolean.write(value.`followSaved`, buf)
+            FfiConverterOptionalBoolean.write(value.`conflict`, buf)
     }
 }
 
@@ -18014,6 +18712,418 @@ public object FfiConverterTypeWorkspaceRow: FfiConverterRustBuffer<WorkspaceRow>
 
 
 
+/**
+ * Something to ask Checkvist.
+ */
+sealed class CheckvistCall {
+    
+    /**
+     * Exchanges a username and remote key for a token. The one call made
+     * without a token.
+     */
+    data class Login(
+        val `username`: kotlin.String, 
+        val `remoteKey`: kotlin.String) : CheckvistCall()
+        
+    {
+        
+
+        companion object
+    }
+    
+    /**
+     * Every checklist the account can see.
+     */
+    object Lists : CheckvistCall()
+    
+    
+    /**
+     * A checklist's tasks, closed ones included; notes when asked for.
+     */
+    data class Tasks(
+        val `listId`: kotlin.String, 
+        val `withNotes`: kotlin.Boolean) : CheckvistCall()
+        
+    {
+        
+
+        companion object
+    }
+    
+    data class CreateList(
+        val `name`: kotlin.String) : CheckvistCall()
+        
+    {
+        
+
+        companion object
+    }
+    
+    /**
+     * `parse` hands the content to Checkvist's smart syntax, which lifts
+     * `#tags` and `^due` out of it. The Mac never asks for it: it keeps tags
+     * and dates itself, and Checkvist's parser would rewrite them. Checkvist
+     * treats the parameter's presence as on, so off means leaving it out.
+     */
+    data class CreateTask(
+        val `listId`: kotlin.String, 
+        val `content`: kotlin.String, 
+        val `parentId`: kotlin.Long?, 
+        val `position`: kotlin.Long?, 
+        val `due`: kotlin.String?, 
+        val `tags`: kotlin.String?, 
+        val `priority`: kotlin.Long?, 
+        val `parse`: kotlin.Boolean) : CheckvistCall()
+        
+    {
+        
+
+        companion object
+    }
+    
+    /**
+     * Only the fields given change. Never parsed, for the reason above.
+     */
+    data class UpdateTask(
+        val `listId`: kotlin.String, 
+        val `taskId`: kotlin.Long, 
+        val `content`: kotlin.String?, 
+        val `due`: kotlin.String?, 
+        val `tags`: kotlin.String?) : CheckvistCall()
+        
+    {
+        
+
+        companion object
+    }
+    
+    /**
+     * Within the current parent. Checkvist's positions start at 1.
+     */
+    data class MoveTask(
+        val `listId`: kotlin.String, 
+        val `taskId`: kotlin.Long, 
+        val `position`: kotlin.Long) : CheckvistCall()
+        
+    {
+        
+
+        companion object
+    }
+    
+    /**
+     * `None` moves the task to the list's root. That is sent as an explicit
+     * null: leaving the key out would mean "leave the parent alone".
+     */
+    data class ReparentTask(
+        val `listId`: kotlin.String, 
+        val `taskId`: kotlin.Long, 
+        val `parentId`: kotlin.Long?) : CheckvistCall()
+        
+    {
+        
+
+        companion object
+    }
+    
+    /**
+     * A note is a Checkvist comment, a resource of its own.
+     */
+    data class AddNote(
+        val `listId`: kotlin.String, 
+        val `taskId`: kotlin.Long, 
+        val `comment`: kotlin.String) : CheckvistCall()
+        
+    {
+        
+
+        companion object
+    }
+    
+    /**
+     * `close`, `reopen` or `invalidate`.
+     */
+    data class TaskAction(
+        val `listId`: kotlin.String, 
+        val `taskId`: kotlin.Long, 
+        val `action`: kotlin.String) : CheckvistCall()
+        
+    {
+        
+
+        companion object
+    }
+    
+    data class DeleteTask(
+        val `listId`: kotlin.String, 
+        val `taskId`: kotlin.Long) : CheckvistCall()
+        
+    {
+        
+
+        companion object
+    }
+    
+
+    
+
+    
+    
+
+
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeCheckvistCall : FfiConverterRustBuffer<CheckvistCall>{
+    override fun read(buf: ByteBuffer): CheckvistCall {
+        return when(buf.getInt()) {
+            1 -> CheckvistCall.Login(
+                FfiConverterString.read(buf),
+                FfiConverterString.read(buf),
+                )
+            2 -> CheckvistCall.Lists
+            3 -> CheckvistCall.Tasks(
+                FfiConverterString.read(buf),
+                FfiConverterBoolean.read(buf),
+                )
+            4 -> CheckvistCall.CreateList(
+                FfiConverterString.read(buf),
+                )
+            5 -> CheckvistCall.CreateTask(
+                FfiConverterString.read(buf),
+                FfiConverterString.read(buf),
+                FfiConverterOptionalLong.read(buf),
+                FfiConverterOptionalLong.read(buf),
+                FfiConverterOptionalString.read(buf),
+                FfiConverterOptionalString.read(buf),
+                FfiConverterOptionalLong.read(buf),
+                FfiConverterBoolean.read(buf),
+                )
+            6 -> CheckvistCall.UpdateTask(
+                FfiConverterString.read(buf),
+                FfiConverterLong.read(buf),
+                FfiConverterOptionalString.read(buf),
+                FfiConverterOptionalString.read(buf),
+                FfiConverterOptionalString.read(buf),
+                )
+            7 -> CheckvistCall.MoveTask(
+                FfiConverterString.read(buf),
+                FfiConverterLong.read(buf),
+                FfiConverterLong.read(buf),
+                )
+            8 -> CheckvistCall.ReparentTask(
+                FfiConverterString.read(buf),
+                FfiConverterLong.read(buf),
+                FfiConverterOptionalLong.read(buf),
+                )
+            9 -> CheckvistCall.AddNote(
+                FfiConverterString.read(buf),
+                FfiConverterLong.read(buf),
+                FfiConverterString.read(buf),
+                )
+            10 -> CheckvistCall.TaskAction(
+                FfiConverterString.read(buf),
+                FfiConverterLong.read(buf),
+                FfiConverterString.read(buf),
+                )
+            11 -> CheckvistCall.DeleteTask(
+                FfiConverterString.read(buf),
+                FfiConverterLong.read(buf),
+                )
+            else -> throw RuntimeException("invalid enum value, something is very wrong!!")
+        }
+    }
+
+    override fun allocationSize(value: CheckvistCall): ULong = when(value) {
+        is CheckvistCall.Login -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`username`)
+                + FfiConverterString.allocationSize(value.`remoteKey`)
+            )
+        }
+        is CheckvistCall.Lists -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is CheckvistCall.Tasks -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`listId`)
+                + FfiConverterBoolean.allocationSize(value.`withNotes`)
+            )
+        }
+        is CheckvistCall.CreateList -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`name`)
+            )
+        }
+        is CheckvistCall.CreateTask -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`listId`)
+                + FfiConverterString.allocationSize(value.`content`)
+                + FfiConverterOptionalLong.allocationSize(value.`parentId`)
+                + FfiConverterOptionalLong.allocationSize(value.`position`)
+                + FfiConverterOptionalString.allocationSize(value.`due`)
+                + FfiConverterOptionalString.allocationSize(value.`tags`)
+                + FfiConverterOptionalLong.allocationSize(value.`priority`)
+                + FfiConverterBoolean.allocationSize(value.`parse`)
+            )
+        }
+        is CheckvistCall.UpdateTask -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`listId`)
+                + FfiConverterLong.allocationSize(value.`taskId`)
+                + FfiConverterOptionalString.allocationSize(value.`content`)
+                + FfiConverterOptionalString.allocationSize(value.`due`)
+                + FfiConverterOptionalString.allocationSize(value.`tags`)
+            )
+        }
+        is CheckvistCall.MoveTask -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`listId`)
+                + FfiConverterLong.allocationSize(value.`taskId`)
+                + FfiConverterLong.allocationSize(value.`position`)
+            )
+        }
+        is CheckvistCall.ReparentTask -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`listId`)
+                + FfiConverterLong.allocationSize(value.`taskId`)
+                + FfiConverterOptionalLong.allocationSize(value.`parentId`)
+            )
+        }
+        is CheckvistCall.AddNote -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`listId`)
+                + FfiConverterLong.allocationSize(value.`taskId`)
+                + FfiConverterString.allocationSize(value.`comment`)
+            )
+        }
+        is CheckvistCall.TaskAction -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`listId`)
+                + FfiConverterLong.allocationSize(value.`taskId`)
+                + FfiConverterString.allocationSize(value.`action`)
+            )
+        }
+        is CheckvistCall.DeleteTask -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`listId`)
+                + FfiConverterLong.allocationSize(value.`taskId`)
+            )
+        }
+    }
+
+    override fun write(value: CheckvistCall, buf: ByteBuffer) {
+        when(value) {
+            is CheckvistCall.Login -> {
+                buf.putInt(1)
+                FfiConverterString.write(value.`username`, buf)
+                FfiConverterString.write(value.`remoteKey`, buf)
+                Unit
+            }
+            is CheckvistCall.Lists -> {
+                buf.putInt(2)
+                Unit
+            }
+            is CheckvistCall.Tasks -> {
+                buf.putInt(3)
+                FfiConverterString.write(value.`listId`, buf)
+                FfiConverterBoolean.write(value.`withNotes`, buf)
+                Unit
+            }
+            is CheckvistCall.CreateList -> {
+                buf.putInt(4)
+                FfiConverterString.write(value.`name`, buf)
+                Unit
+            }
+            is CheckvistCall.CreateTask -> {
+                buf.putInt(5)
+                FfiConverterString.write(value.`listId`, buf)
+                FfiConverterString.write(value.`content`, buf)
+                FfiConverterOptionalLong.write(value.`parentId`, buf)
+                FfiConverterOptionalLong.write(value.`position`, buf)
+                FfiConverterOptionalString.write(value.`due`, buf)
+                FfiConverterOptionalString.write(value.`tags`, buf)
+                FfiConverterOptionalLong.write(value.`priority`, buf)
+                FfiConverterBoolean.write(value.`parse`, buf)
+                Unit
+            }
+            is CheckvistCall.UpdateTask -> {
+                buf.putInt(6)
+                FfiConverterString.write(value.`listId`, buf)
+                FfiConverterLong.write(value.`taskId`, buf)
+                FfiConverterOptionalString.write(value.`content`, buf)
+                FfiConverterOptionalString.write(value.`due`, buf)
+                FfiConverterOptionalString.write(value.`tags`, buf)
+                Unit
+            }
+            is CheckvistCall.MoveTask -> {
+                buf.putInt(7)
+                FfiConverterString.write(value.`listId`, buf)
+                FfiConverterLong.write(value.`taskId`, buf)
+                FfiConverterLong.write(value.`position`, buf)
+                Unit
+            }
+            is CheckvistCall.ReparentTask -> {
+                buf.putInt(8)
+                FfiConverterString.write(value.`listId`, buf)
+                FfiConverterLong.write(value.`taskId`, buf)
+                FfiConverterOptionalLong.write(value.`parentId`, buf)
+                Unit
+            }
+            is CheckvistCall.AddNote -> {
+                buf.putInt(9)
+                FfiConverterString.write(value.`listId`, buf)
+                FfiConverterLong.write(value.`taskId`, buf)
+                FfiConverterString.write(value.`comment`, buf)
+                Unit
+            }
+            is CheckvistCall.TaskAction -> {
+                buf.putInt(10)
+                FfiConverterString.write(value.`listId`, buf)
+                FfiConverterLong.write(value.`taskId`, buf)
+                FfiConverterString.write(value.`action`, buf)
+                Unit
+            }
+            is CheckvistCall.DeleteTask -> {
+                buf.putInt(11)
+                FfiConverterString.write(value.`listId`, buf)
+                FfiConverterLong.write(value.`taskId`, buf)
+                Unit
+            }
+        }.let { /* this makes the `when` an expression, which ensures it is exhaustive */ }
+    }
+}
+
+
+
+
+
 
 
 /**
@@ -18460,6 +19570,28 @@ sealed class CoreException: kotlin.Exception() {
             get() = "rule=${ `rule` }"
     }
     
+    /**
+     * A Checkvist request the core refused to make, or an answer it could
+     * not read (`checkvist.rs`).
+     */
+    class Checkvist(
+        
+        val `detail`: kotlin.String
+        ) : CoreException() {
+        override val message
+            get() = "detail=${ `detail` }"
+    }
+    
+    /**
+     * An estimate or minimum block typed in minutes that does not read as
+     * one (`editor_draft.rs`).
+     */
+    class InvalidEstimate(
+        ) : CoreException() {
+        override val message
+            get() = ""
+    }
+    
 
     
 
@@ -18532,6 +19664,10 @@ public object FfiConverterTypeCoreError : FfiConverterRustBuffer<CoreException> 
             28 -> CoreException.InvalidRecurrence(
                 FfiConverterString.read(buf),
                 )
+            29 -> CoreException.Checkvist(
+                FfiConverterString.read(buf),
+                )
+            30 -> CoreException.InvalidEstimate()
             else -> throw RuntimeException("invalid error enum value, something is very wrong!!")
         }
     }
@@ -18663,6 +19799,15 @@ public object FfiConverterTypeCoreError : FfiConverterRustBuffer<CoreException> 
                 4UL
                 + FfiConverterString.allocationSize(value.`rule`)
             )
+            is CoreException.Checkvist -> (
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                4UL
+                + FfiConverterString.allocationSize(value.`detail`)
+            )
+            is CoreException.InvalidEstimate -> (
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                4UL
+            )
         }
     }
 
@@ -18791,6 +19936,15 @@ public object FfiConverterTypeCoreError : FfiConverterRustBuffer<CoreException> 
             is CoreException.InvalidRecurrence -> {
                 buf.putInt(28)
                 FfiConverterString.write(value.`rule`, buf)
+                Unit
+            }
+            is CoreException.Checkvist -> {
+                buf.putInt(29)
+                FfiConverterString.write(value.`detail`, buf)
+                Unit
+            }
+            is CoreException.InvalidEstimate -> {
+                buf.putInt(30)
                 Unit
             }
         }.let { /* this makes the `when` an expression, which ensures it is exhaustive */ }
@@ -19509,6 +20663,57 @@ public object FfiConverterTypeExportFormat: FfiConverterRustBuffer<ExportFormat>
     override fun allocationSize(value: ExportFormat) = 4UL
 
     override fun write(value: ExportFormat, buf: ByteBuffer) {
+        buf.putInt(value.ordinal + 1)
+    }
+}
+
+
+
+
+
+/**
+ * When a deferred task comes back.
+ */
+
+enum class FocusDeferral {
+    
+    /**
+     * An hour from now.
+     */
+    AN_HOUR,
+    /**
+     * 14:00 today, or an hour from now once that has passed.
+     */
+    THIS_AFTERNOON,
+    /**
+     * 09:00 tomorrow.
+     */
+    TOMORROW,
+    /**
+     * 09:00 a week from today.
+     */
+    NEXT_WEEK;
+
+    
+
+
+    companion object
+}
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFocusDeferral: FfiConverterRustBuffer<FocusDeferral> {
+    override fun read(buf: ByteBuffer) = try {
+        FocusDeferral.values()[buf.getInt() - 1]
+    } catch (e: IndexOutOfBoundsException) {
+        throw RuntimeException("invalid enum value, something is very wrong!!", e)
+    }
+
+    override fun allocationSize(value: FocusDeferral) = 4UL
+
+    override fun write(value: FocusDeferral, buf: ByteBuffer) {
         buf.putInt(value.ordinal + 1)
     }
 }
@@ -21776,6 +22981,70 @@ public object FfiConverterOptionalTypeAwardRow: FfiConverterRustBuffer<AwardRow?
 /**
  * @suppress
  */
+public object FfiConverterOptionalTypeCheckvistListRow: FfiConverterRustBuffer<CheckvistListRow?> {
+    override fun read(buf: ByteBuffer): CheckvistListRow? {
+        if (buf.get().toInt() == 0) {
+            return null
+        }
+        return FfiConverterTypeCheckvistListRow.read(buf)
+    }
+
+    override fun allocationSize(value: CheckvistListRow?): ULong {
+        if (value == null) {
+            return 1UL
+        } else {
+            return 1UL + FfiConverterTypeCheckvistListRow.allocationSize(value)
+        }
+    }
+
+    override fun write(value: CheckvistListRow?, buf: ByteBuffer) {
+        if (value == null) {
+            buf.put(0)
+        } else {
+            buf.put(1)
+            FfiConverterTypeCheckvistListRow.write(value, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterOptionalTypeCheckvistTaskRow: FfiConverterRustBuffer<CheckvistTaskRow?> {
+    override fun read(buf: ByteBuffer): CheckvistTaskRow? {
+        if (buf.get().toInt() == 0) {
+            return null
+        }
+        return FfiConverterTypeCheckvistTaskRow.read(buf)
+    }
+
+    override fun allocationSize(value: CheckvistTaskRow?): ULong {
+        if (value == null) {
+            return 1UL
+        } else {
+            return 1UL + FfiConverterTypeCheckvistTaskRow.allocationSize(value)
+        }
+    }
+
+    override fun write(value: CheckvistTaskRow?, buf: ByteBuffer) {
+        if (value == null) {
+            buf.put(0)
+        } else {
+            buf.put(1)
+            FfiConverterTypeCheckvistTaskRow.write(value, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
 public object FfiConverterOptionalTypeCommitment: FfiConverterRustBuffer<Commitment?> {
     override fun read(buf: ByteBuffer): Commitment? {
         if (buf.get().toInt() == 0) {
@@ -22374,6 +23643,38 @@ public object FfiConverterOptionalTypeDailyRow: FfiConverterRustBuffer<DailyRow?
         } else {
             buf.put(1)
             FfiConverterTypeDailyRow.write(value, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterOptionalTypeEditorEstimateCheck: FfiConverterRustBuffer<EditorEstimateCheck?> {
+    override fun read(buf: ByteBuffer): EditorEstimateCheck? {
+        if (buf.get().toInt() == 0) {
+            return null
+        }
+        return FfiConverterTypeEditorEstimateCheck.read(buf)
+    }
+
+    override fun allocationSize(value: EditorEstimateCheck?): ULong {
+        if (value == null) {
+            return 1UL
+        } else {
+            return 1UL + FfiConverterTypeEditorEstimateCheck.allocationSize(value)
+        }
+    }
+
+    override fun write(value: EditorEstimateCheck?, buf: ByteBuffer) {
+        if (value == null) {
+            buf.put(0)
+        } else {
+            buf.put(1)
+            FfiConverterTypeEditorEstimateCheck.write(value, buf)
         }
     }
 }
@@ -23024,6 +24325,38 @@ public object FfiConverterOptionalSequenceString: FfiConverterRustBuffer<List<ko
 /**
  * @suppress
  */
+public object FfiConverterOptionalSequenceTypeCheckvistNoteRow: FfiConverterRustBuffer<List<CheckvistNoteRow>?> {
+    override fun read(buf: ByteBuffer): List<CheckvistNoteRow>? {
+        if (buf.get().toInt() == 0) {
+            return null
+        }
+        return FfiConverterSequenceTypeCheckvistNoteRow.read(buf)
+    }
+
+    override fun allocationSize(value: List<CheckvistNoteRow>?): ULong {
+        if (value == null) {
+            return 1UL
+        } else {
+            return 1UL + FfiConverterSequenceTypeCheckvistNoteRow.allocationSize(value)
+        }
+    }
+
+    override fun write(value: List<CheckvistNoteRow>?, buf: ByteBuffer) {
+        if (value == null) {
+            buf.put(0)
+        } else {
+            buf.put(1)
+            FfiConverterSequenceTypeCheckvistNoteRow.write(value, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
 public object FfiConverterOptionalSequenceTypeCoreThemeSpecification: FfiConverterRustBuffer<List<CoreThemeSpecification>?> {
     override fun read(buf: ByteBuffer): List<CoreThemeSpecification>? {
         if (buf.get().toInt() == 0) {
@@ -23198,6 +24531,34 @@ public object FfiConverterSequenceLong: FfiConverterRustBuffer<List<kotlin.Long>
         buf.putInt(value.size)
         value.iterator().forEach {
             FfiConverterLong.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceBoolean: FfiConverterRustBuffer<List<kotlin.Boolean>> {
+    override fun read(buf: ByteBuffer): List<kotlin.Boolean> {
+        val len = buf.getInt()
+        return List<kotlin.Boolean>(len) {
+            FfiConverterBoolean.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<kotlin.Boolean>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterBoolean.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<kotlin.Boolean>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterBoolean.write(it, buf)
         }
     }
 }
@@ -23478,6 +24839,118 @@ public object FfiConverterSequenceTypeCandidate: FfiConverterRustBuffer<List<Can
         buf.putInt(value.size)
         value.iterator().forEach {
             FfiConverterTypeCandidate.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceTypeCheckvistHeader: FfiConverterRustBuffer<List<CheckvistHeader>> {
+    override fun read(buf: ByteBuffer): List<CheckvistHeader> {
+        val len = buf.getInt()
+        return List<CheckvistHeader>(len) {
+            FfiConverterTypeCheckvistHeader.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<CheckvistHeader>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeCheckvistHeader.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<CheckvistHeader>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeCheckvistHeader.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceTypeCheckvistListRow: FfiConverterRustBuffer<List<CheckvistListRow>> {
+    override fun read(buf: ByteBuffer): List<CheckvistListRow> {
+        val len = buf.getInt()
+        return List<CheckvistListRow>(len) {
+            FfiConverterTypeCheckvistListRow.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<CheckvistListRow>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeCheckvistListRow.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<CheckvistListRow>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeCheckvistListRow.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceTypeCheckvistNoteRow: FfiConverterRustBuffer<List<CheckvistNoteRow>> {
+    override fun read(buf: ByteBuffer): List<CheckvistNoteRow> {
+        val len = buf.getInt()
+        return List<CheckvistNoteRow>(len) {
+            FfiConverterTypeCheckvistNoteRow.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<CheckvistNoteRow>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeCheckvistNoteRow.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<CheckvistNoteRow>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeCheckvistNoteRow.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceTypeCheckvistTaskRow: FfiConverterRustBuffer<List<CheckvistTaskRow>> {
+    override fun read(buf: ByteBuffer): List<CheckvistTaskRow> {
+        val len = buf.getInt()
+        return List<CheckvistTaskRow>(len) {
+            FfiConverterTypeCheckvistTaskRow.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<CheckvistTaskRow>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeCheckvistTaskRow.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<CheckvistTaskRow>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeCheckvistTaskRow.write(it, buf)
         }
     }
 }
@@ -23908,6 +25381,34 @@ public object FfiConverterSequenceTypeDayEntry: FfiConverterRustBuffer<List<DayE
 /**
  * @suppress
  */
+public object FfiConverterSequenceTypeDayForecastEntry: FfiConverterRustBuffer<List<DayForecastEntry>> {
+    override fun read(buf: ByteBuffer): List<DayForecastEntry> {
+        val len = buf.getInt()
+        return List<DayForecastEntry>(len) {
+            FfiConverterTypeDayForecastEntry.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<DayForecastEntry>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeDayForecastEntry.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<DayForecastEntry>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeDayForecastEntry.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
 public object FfiConverterSequenceTypeDayLogBucket: FfiConverterRustBuffer<List<DayLogBucket>> {
     override fun read(buf: ByteBuffer): List<DayLogBucket> {
         val len = buf.getInt()
@@ -23982,6 +25483,62 @@ public object FfiConverterSequenceTypeDayLogRecord: FfiConverterRustBuffer<List<
         buf.putInt(value.size)
         value.iterator().forEach {
             FfiConverterTypeDayLogRecord.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceTypeEditorFieldComparison: FfiConverterRustBuffer<List<EditorFieldComparison>> {
+    override fun read(buf: ByteBuffer): List<EditorFieldComparison> {
+        val len = buf.getInt()
+        return List<EditorFieldComparison>(len) {
+            FfiConverterTypeEditorFieldComparison.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<EditorFieldComparison>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeEditorFieldComparison.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<EditorFieldComparison>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeEditorFieldComparison.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceTypeEditorFieldOutcome: FfiConverterRustBuffer<List<EditorFieldOutcome>> {
+    override fun read(buf: ByteBuffer): List<EditorFieldOutcome> {
+        val len = buf.getInt()
+        return List<EditorFieldOutcome>(len) {
+            FfiConverterTypeEditorFieldOutcome.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<EditorFieldOutcome>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeEditorFieldOutcome.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<EditorFieldOutcome>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeEditorFieldOutcome.write(it, buf)
         }
     }
 }
@@ -25886,6 +27443,118 @@ public object FfiConverterMapStringTypeSyncValue: FfiConverterRustBuffer<Map<kot
     
 
         /**
+         * The checklist a create answered with, bare or wrapped in `checklist`.
+         */ fun `checkvistCreatedList`(`body`: kotlin.String): CheckvistListRow? {
+            return FfiConverterOptionalTypeCheckvistListRow.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_checkvist_created_list(
+    
+        
+        FfiConverterString.lower(`body`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * The task a create answered with, which Checkvist may send bare, wrapped
+         * in `task`, or as the first of a `tasks` array or a bare array.
+         */ fun `checkvistCreatedTask`(`body`: kotlin.String): CheckvistTaskRow? {
+            return FfiConverterOptionalTypeCheckvistTaskRow.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_checkvist_created_task(
+    
+        
+        FfiConverterString.lower(`body`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * The workspace import's seeds for Checkvist tasks: one per task id (the
+         * first wins), ordered by parent then position, each source id
+         * `source_prefix` and the task's id, notes joined by blank lines.
+         */ fun `checkvistImportSeeds`(`sourcePrefix`: kotlin.String, `tasks`: List<CheckvistTaskRow>): List<ImportedTaskSeed> {
+            return FfiConverterSequenceTypeImportedTaskSeed.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_checkvist_import_seeds(
+    
+        
+        FfiConverterString.lower(`sourcePrefix`),
+        FfiConverterSequenceTypeCheckvistTaskRow.lower(`tasks`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * The checklists in a `GET /checklists.json` answer that are not archived.
+         */
+    @Throws(CoreException::class) fun `checkvistLists`(`body`: kotlin.String): List<CheckvistListRow> {
+            return FfiConverterSequenceTypeCheckvistListRow.lift(
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_checkvist_lists(
+    
+        
+        FfiConverterString.lower(`body`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * The token in a login answer: `{"token": "…"}`, or the bare string, quoted
+         * or not. Nothing when there is no non-empty token.
+         */ fun `checkvistLoginToken`(`body`: kotlin.String): kotlin.String? {
+            return FfiConverterOptionalString.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_checkvist_login_token(
+    
+        
+        FfiConverterString.lower(`body`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * The request for `call`, against `base_url`, carrying `token` when there is
+         * one. Refuses a list id that is not a number, an action Checkvist does not
+         * have, an empty name or task, and an update that changes nothing.
+         */
+    @Throws(CoreException::class) fun `checkvistRequest`(`baseUrl`: kotlin.String, `call`: CheckvistCall, `token`: kotlin.String?, `userAgent`: kotlin.String): CheckvistHttpRequest {
+            return FfiConverterTypeCheckvistHttpRequest.lift(
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_checkvist_request(
+    
+        
+        FfiConverterString.lower(`baseUrl`),
+        FfiConverterTypeCheckvistCall.lower(`call`),
+        FfiConverterOptionalString.lower(`token`),
+        FfiConverterString.lower(`userAgent`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * The tasks in a `GET …/tasks.json` answer, parents before children.
+         */
+    @Throws(CoreException::class) fun `checkvistTasks`(`body`: kotlin.String, `includeClosed`: kotlin.Boolean): List<CheckvistTaskRow> {
+            return FfiConverterSequenceTypeCheckvistTaskRow.lift(
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_checkvist_tasks(
+    
+        
+        FfiConverterString.lower(`body`),
+        FfiConverterBoolean.lower(`includeClosed`),_status)
+}
+    )
+    }
+    
+
+        /**
          * Blanks the seeded login in the CLI's current config under `home`, the
          * counterpart of [`seed_cli_config`]. Only the current path: the legacy file
          * is never written. True when the file was rewritten.
@@ -26467,6 +28136,59 @@ public object FfiConverterMapStringTypeSyncValue: FfiConverterRustBuffer<Map<kot
         FfiConverterTypeDayLogBoundary.lower(`boundary`),
         FfiConverterLong.lower(`endingOnMs`),
         FfiConverterLong.lower(`weeks`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * A stored number of seconds as the editor shows it in minutes: a whole
+         * number of minutes plainly when `whole_minutes_plainly` (`45`), and
+         * otherwise as Swift prints the quotient (`1.5`, `2.0`, `0.25`).
+         */ fun `editorMinutesText`(`seconds`: kotlin.Long, `wholeMinutesPlainly`: kotlin.Boolean): kotlin.String {
+            return FfiConverterString.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_editor_minutes_text(
+    
+        
+        FfiConverterLong.lower(`seconds`),
+        FfiConverterBoolean.lower(`wholeMinutesPlainly`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * Minutes as typed (`45`, `1.5`, `.25`), to whole seconds rounded half away
+         * from zero; nothing when blank. Refuses anything else, a negative or a
+         * value too large to hold.
+         */
+    @Throws(CoreException::class) fun `editorParseMinutes`(`raw`: kotlin.String): kotlin.Long? {
+            return FfiConverterOptionalLong.lift(
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_editor_parse_minutes(
+    
+        
+        FfiConverterString.lower(`raw`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * Folds a save into an open draft, field by field: a field that now agrees
+         * with the save is settled; one the draft changed (or that already
+         * conflicted) conflicts if the save changed it too; any other follows the
+         * save. An edited estimate whose seconds the save changed conflicts unless
+         * what was typed reads as exactly the saved seconds.
+         */ fun `editorReconcile`(`fields`: List<EditorFieldComparison>, `estimate`: EditorEstimateCheck?): List<EditorFieldOutcome> {
+            return FfiConverterSequenceTypeEditorFieldOutcome.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_editor_reconcile(
+    
+        
+        FfiConverterSequenceTypeEditorFieldComparison.lower(`fields`),
+        FfiConverterOptionalTypeEditorEstimateCheck.lower(`estimate`),_status)
 }
     )
     }
@@ -27217,6 +28939,180 @@ public object FfiConverterMapStringTypeSyncValue: FfiConverterRustBuffer<Map<kot
     UniffiLib.uniffi_takt_core_fn_func_workspace_migrations(
     
         _status)
+}
+    )
+    }
+    
+
+        /**
+         * Which rows get the "Blocked" label: in each group, the first of the run of
+         * blocked rows the group ends with.
+         *
+         * `groups[i]` is the group row `i` belongs to (an outline parent's
+         * children, a board column's cards) and `blocked[i]` whether it is drawn as
+         * blocked; the rows are in drawing order, and a group's rows need not be
+         * contiguous. A blocked row with an unblocked one after it in its group (a
+         * stale read, say) is not labelled, since a label there would head a
+         * section that is not all blocked. The answer is row indices, ascending.
+         */ fun `blockedSectionLabels`(`groups`: List<kotlin.UInt>, `blocked`: List<kotlin.Boolean>): List<kotlin.UInt> {
+            return FfiConverterSequenceUInt.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_blocked_section_labels(
+    
+        
+        FfiConverterSequenceUInt.lower(`groups`),
+        FfiConverterSequenceBoolean.lower(`blocked`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * Where an arrow key leaves a cursor at `current` in `count` rows. A single
+         * step wraps, so the far end of a long list is one key away; a bigger jump
+         * (a page) stops at the end, because overshooting and landing near the top
+         * again would lose your place.
+         */ fun `cursorStep`(`current`: kotlin.Long, `offset`: kotlin.Long, `count`: kotlin.Long): kotlin.Long {
+            return FfiConverterLong.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_cursor_step(
+    
+        
+        FfiConverterLong.lower(`current`),
+        FfiConverterLong.lower(`offset`),
+        FfiConverterLong.lower(`count`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * The day with its planned slots filled from `order`, in turn, and every
+         * other slot as it was; `planned[i]` says whether slot `i` is planned and
+         * `ids[i]` is what it holds. Lets the day show a move at once rather than
+         * after the next read, which is what keeps a second move pressed quickly
+         * moving the same task on from where the first left it. A planned slot left
+         * over when `order` runs out keeps its id.
+         */ fun `dayArrangementApplying`(`order`: List<kotlin.String>, `ids`: List<kotlin.String>, `planned`: List<kotlin.Boolean>): List<kotlin.String> {
+            return FfiConverterSequenceString.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_day_arrangement_applying(
+    
+        
+        FfiConverterSequenceString.lower(`order`),
+        FfiConverterSequenceString.lower(`ids`),
+        FfiConverterSequenceBoolean.lower(`planned`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * The planned order with `task_id` moved `offset` places, clamped at the
+         * ends; nothing when the task is not in the order or cannot move that way,
+         * so a caller has nothing to write.
+         *
+         * Only planned rows take part. A derived row (overdue, due today, starting
+         * today) is in the day because of a date, and the next read would put it
+         * back wherever it was moved.
+         */ fun `dayArrangementMoving`(`taskId`: kotlin.String, `offset`: kotlin.Long, `order`: List<kotlin.String>): List<kotlin.String>? {
+            return FfiConverterOptionalSequenceString.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_day_arrangement_moving(
+    
+        
+        FfiConverterString.lower(`taskId`),
+        FfiConverterLong.lower(`offset`),
+        FfiConverterSequenceString.lower(`order`),_status)
+}
+    )
+    }
+    
+ fun `dayForecast`(`entries`: List<DayForecastEntry>, `nowMs`: kotlin.Long): DayForecastSummary {
+            return FfiConverterTypeDayForecastSummary.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_day_forecast(
+    
+        
+        FfiConverterSequenceTypeDayForecastEntry.lower(`entries`),
+        FfiConverterLong.lower(`nowMs`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * A saved context, less any condition that no longer exists (`known`).
+         * Archived ones stay: archiving hides a condition from new requirements,
+         * not from tasks that already need it. Sorted and without repeats.
+         */ fun `focusContextRestore`(`saved`: List<kotlin.String>, `known`: List<kotlin.String>): List<kotlin.String> {
+            return FfiConverterSequenceString.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_focus_context_restore(
+    
+        
+        FfiConverterSequenceString.lower(`saved`),
+        FfiConverterSequenceString.lower(`known`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * The focus context's condition ids with `condition_id` flipped. You are
+         * in one place at a time, so turning a location on turns every other
+         * location (`location_ids`) off; capabilities ("Floor space", "Quiet")
+         * combine freely. Sorted, so the answer is the same however the set was
+         * held.
+         */ fun `focusContextToggle`(`conditionId`: kotlin.String, `isLocation`: kotlin.Boolean, `current`: List<kotlin.String>, `locationIds`: List<kotlin.String>): List<kotlin.String> {
+            return FfiConverterSequenceString.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_focus_context_toggle(
+    
+        
+        FfiConverterString.lower(`conditionId`),
+        FfiConverterBoolean.lower(`isLocation`),
+        FfiConverterSequenceString.lower(`current`),
+        FfiConverterSequenceString.lower(`locationIds`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * The instant a task deferred `deferral` at `now_ms` comes back, with the
+         * wall-clock times read in `zone` (an IANA name).
+         */ fun `focusDeferralDate`(`deferral`: FocusDeferral, `nowMs`: kotlin.Long, `zone`: kotlin.String): kotlin.Long {
+            return FfiConverterLong.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_focus_deferral_date(
+    
+        
+        FfiConverterTypeFocusDeferral.lower(`deferral`),
+        FfiConverterLong.lower(`nowMs`),
+        FfiConverterString.lower(`zone`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * Vim's `f` and `F` over rows: the index of the next row (or previous, when
+         * `forward` is false) whose title begins with `character`, reading a title
+         * from its first letter or digit and ignoring case and accents. The walk
+         * wraps; with no `current` it starts before the first row (after the last,
+         * backwards), so the first match counts. Nothing when no row matches or
+         * `character` is not a letter or digit.
+         */ fun `vimFind`(`titles`: List<kotlin.String>, `current`: kotlin.Long?, `character`: kotlin.String, `forward`: kotlin.Boolean): kotlin.Long? {
+            return FfiConverterOptionalLong.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_vim_find(
+    
+        
+        FfiConverterSequenceString.lower(`titles`),
+        FfiConverterOptionalLong.lower(`current`),
+        FfiConverterString.lower(`character`),
+        FfiConverterBoolean.lower(`forward`),_status)
 }
     )
     }

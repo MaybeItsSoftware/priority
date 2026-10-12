@@ -1,5 +1,6 @@
 import Foundation
 import TaktCore
+import TaktRustCore
 import OSLog
 
 // `CheckvistTaskCachePayload` moved to `CheckvistTaskCachePayload.swift` so it
@@ -18,31 +19,21 @@ struct CheckvistTaskRepository {
         (String) throws -> URLRequest
       ) async throws -> (Data, HTTPURLResponse)
   ) async throws -> [CheckvistTask] {
-    guard let baseURL = CheckvistEndpoints.tasks(listId: listId),
-      var components = URLComponents(url: baseURL, resolvingAgainstBaseURL: false)
-    else {
+    let call = CheckvistCall.tasks(listId: listId, withNotes: true)
+    guard (try? CheckvistWire.request(call, token: nil)) != nil else {
       throw CheckvistTaskRepositoryError.invalidListURL
     }
-    components.queryItems = [URLQueryItem(name: "with_notes", value: "true")]
-    guard let url = components.url else {
-      throw CheckvistTaskRepositoryError.invalidListURL
-    }
-
     let (data, httpResponse) = try await performAuthenticatedRequest { validToken in
-      var request = URLRequest(url: url)
-      request.httpMethod = "GET"
-      request.setValue(validToken, forHTTPHeaderField: "X-Client-Token")
-      request.setValue(CheckvistEndpoints.userAgent, forHTTPHeaderField: "User-Agent")
-      return request
+      try CheckvistWire.request(call, token: validToken)
     }
 
     guard (200...299).contains(httpResponse.statusCode) else {
       throw CheckvistTaskRepositoryError.fetchFailed(statusCode: httpResponse.statusCode)
     }
 
-    let allTasks = try JSONDecoder().decode([CheckvistTask].self, from: data)
-    let openTasks = allTasks.filter { $0.status == 0 }
-    return Self.depthFirstTasks(from: openTasks)
+    // Open tasks only, parents before their children, read by the core.
+    return try checkvistTasks(body: CheckvistWire.text(data), includeClosed: false)
+      .map(CheckvistTask.init(core:))
   }
 
   func persistTaskCache(_ payload: CheckvistTaskCachePayload) {
@@ -84,30 +75,6 @@ struct CheckvistTaskRepository {
     }
 
     return containerDirectory.appendingPathComponent("tasks-cache-\(listId).json")
-  }
-
-  private static func depthFirstTasks(from allTasks: [CheckvistTask]) -> [CheckvistTask] {
-    let taskById = Dictionary(uniqueKeysWithValues: allTasks.map { ($0.id, $0) })
-
-    func depthFirst(parentId: Int) -> [CheckvistTask] {
-      let children =
-        allTasks
-        .filter { ($0.parentId ?? 0) == parentId }
-        .sorted { ($0.position ?? 0) < ($1.position ?? 0) }
-      return children.flatMap { [$0] + depthFirst(parentId: $0.id) }
-    }
-
-    var result = depthFirst(parentId: 0)
-
-    // Include orphan tasks (whose parent is missing) but preserve their original parentId
-    let missingParentIds = Set(allTasks.compactMap { $0.parentId }).filter {
-      $0 != 0 && taskById[$0] == nil
-    }
-    for missingId in missingParentIds.sorted() {
-      result.append(contentsOf: depthFirst(parentId: missingId))
-    }
-
-    return result
   }
 }
 
