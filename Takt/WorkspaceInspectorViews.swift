@@ -524,6 +524,7 @@ private struct ListSettingsEditor: View {
   @State private var folderID: String?
   @State private var isArchived: Bool
   @State private var visibleRootTaskID: String?
+  @State private var agentInstructions = ""
   @State private var saveError: String?
   @FocusState private var nameIsFocused: Bool
 
@@ -580,6 +581,8 @@ private struct ListSettingsEditor: View {
             .monospacedDigit()
             .foregroundStyle(theme.muted)
         }
+        AgentInstructionsField(
+          prompt: "Agent instructions for this list", text: $agentInstructions, onSubmit: save)
       }
       if let saveError { Text(saveError).font(theme.captionFont).foregroundStyle(theme.danger) }
       HStack(spacing: theme.space.xs) {
@@ -615,6 +618,7 @@ private struct ListSettingsEditor: View {
     .background(theme.raised)
     .onAppear {
       iconSymbol = model.icon(for: list)
+      agentInstructions = model.agentInstructions.list(list.id)
       nameIsFocused = true
     }
   }
@@ -634,6 +638,7 @@ private struct ListSettingsEditor: View {
       try model.saveListSettings(list, name: name, colorHex: colorHex, folderID: folderID,
                                 isArchived: isArchived, visibleRootTaskID: visibleRootTaskID)
       model.setIcon(iconSymbol, for: list)
+      model.agentInstructions.setList(agentInstructions, for: list.id)
       dismiss()
     } catch { saveError = error.localizedDescription }
   }
@@ -646,6 +651,7 @@ private struct FolderSettingsEditor: View {
   let dismiss: DismissAction
   @State private var name: String
   @State private var parentFolderID: String?
+  @State private var agentInstructions = ""
   @State private var saveError: String?
   @FocusState private var nameIsFocused: Bool
 
@@ -673,6 +679,8 @@ private struct FolderSettingsEditor: View {
             + model.validParentFolders(for: folder).map { ThemedPickerOption($0.name, value: Optional($0.id)) }
         )
         .focusable()
+        AgentInstructionsField(
+          prompt: "Agent instructions for every list in this folder", text: $agentInstructions, onSubmit: save)
       }
       if let saveError { Text(saveError).font(theme.captionFont).foregroundStyle(theme.danger) }
       HStack(spacing: theme.space.xs) {
@@ -705,12 +713,16 @@ private struct FolderSettingsEditor: View {
     .padding(theme.space.xl)
     .frame(width: 380)
     .background(theme.raised)
-    .onAppear { nameIsFocused = true }
+    .onAppear {
+      agentInstructions = model.agentInstructions.folder(folder.id)
+      nameIsFocused = true
+    }
   }
 
   private func save() {
     do {
       try model.saveFolderSettings(folder, name: name, parentFolderID: parentFolderID)
+      model.agentInstructions.setFolder(agentInstructions, for: folder.id)
       dismiss()
     } catch { saveError = error.localizedDescription }
   }

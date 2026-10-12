@@ -20,6 +20,8 @@ The rule it is built around is the one chosen when it was added:
 | `Sources/TaktCore/AgentStreamProtocol.swift` | The stream-json wire format: lines in to `AgentStreamEvent`s, and the user messages and `control_response`s out |
 | `Sources/TaktCore/AgentToolPolicy.swift` | Which tools are read-only, the exact `claude` invocation, where `claude` is looked for, the system prompt |
 | `Sources/TaktCore/AgentToolSummary.swift` | A tool call in words, for the approval card and the read lines |
+| `Sources/TaktCore/AgentContext.swift` | The standing instructions' block and folder chain, and the ledger that sends a block only when it changed |
+| `Takt/WorkspaceAgentInstructions.swift` | Where the standing instructions are kept, and the field they are written in |
 | `Takt/WorkspaceAgentSession.swift` | The process: launch, the line reader, approvals, stop, new thread |
 | `Takt/WorkspaceAgentPane.swift` | The transcript, the approval card, the setup state |
 | `Takt/WorkspaceAgentInputField.swift` | The message field (an `NSTextView`: Return sends, Shift+Return is a new line) |
@@ -102,6 +104,33 @@ Takt's.
 Each message is prefixed with one line saying what is on screen — the list and
 the selected task, by name and id — so "this task" means something. It is sent
 to the assistant and not shown in the transcript.
+
+## Standing instructions
+
+The user can write instructions for the assistant at three scopes: the whole
+account (Settings ▸ Agent), a folder, and a list (each in its settings sheet,
+`oo` on the list or the sidebar's context menu). They are kept in this Mac's
+preferences (`WorkspaceAgentInstructions`: `agentInstructionsAccountV1`, and
+`agentInstructionsByFolderV1` / `agentInstructionsByListV1` keyed by id)
+rather than the workspace database, because only the Mac has an agent and a
+Rust core migration would sync text nothing else reads.
+
+A message starts with the instructions that apply where the user is
+(`WorkspaceViewModel.agentInstructionScopes`), as one block: the account's,
+then each folder enclosing the current list from the outermost in, then the
+list's own, each labelled (`Folder "Work":`), so the narrowest is read last. In
+a folder scope it is the account and that folder's chain; in Everything or a
+filter list, the account alone.
+
+The system prompt is fixed when the process starts, and the list changes during
+a thread, so the block goes with the message rather than the prompt — and only
+when it differs from the last one this process was sent
+(`AgentContextLedger`). Moving to a list with none sends one line saying the
+earlier ones no longer apply. Stop or New thread starts a fresh process and a
+fresh ledger, so its first message carries them again.
+
+The line above the message field names the scopes that apply — written ones in
+the muted ink, unwritten ones dim — and each opens where it is written.
 
 ## Tool policy
 

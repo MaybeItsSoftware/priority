@@ -184,6 +184,10 @@ public enum AgentSystemPrompt {
       one change per call, so each can be approved or declined on its own. If a change is \
       declined, do not retry it; ask what they would like instead.
 
+      A message may begin with bracketed notes from the app rather than the user: what is on \
+      screen, and the user's standing instructions for their account, a folder or a list. \
+      Instructions are sent again only when they change; the latest replace any before them.
+
       Reply in short, plain Markdown. Refer to tasks and lists by their titles, not their ids.
       """
   }

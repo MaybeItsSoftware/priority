@@ -257,17 +257,68 @@ extension WorkspaceViewModel {
   }
 
   /// The agent's message, with a line saying what is on screen so "this
-  /// list" and "this task" mean something.
+  /// list" and "this task" mean something, and the standing instructions for
+  /// where that is whenever they differ from the last ones the thread was sent.
   func sendAgentMessage(_ text: String) {
     let task = selectedTask
-    let list = selectedList ?? task.flatMap { task in lists.first { $0.id == task.listId } }
+    let list = isEverythingSelected ? nil : selectedList ?? task.flatMap { task in lists.first { $0.id == task.listId } }
     agent.send(
       text,
       context: AgentSystemPrompt.context(
-        listName: isEverythingSelected ? nil : list?.name,
-        listID: isEverythingSelected ? nil : list?.id,
+        listName: list?.name,
+        listID: list?.id,
         taskTitle: task?.title,
-        taskID: task?.id))
+        taskID: task?.id),
+      blocks: [
+        AgentContextBlock(
+          key: "instructions",
+          text: AgentStandingInstructions.block(agentInstructionScopes),
+          cleared: AgentStandingInstructions.cleared)
+      ])
+  }
+
+  /// The list whose instructions apply: the selected one, or the selected
+  /// task's. None in Everything, a filter list or a folder, whose tasks come
+  /// from many lists.
+  private var agentContextList: TaskList? {
+    guard !isEverythingSelected, selectedFolderID == nil else { return nil }
+    return selectedList ?? selectedTask.flatMap { task in lists.first { $0.id == task.listId } }
+  }
+
+  /// Every scope whose instructions apply where the user is, written or not,
+  /// in the order they are sent: the account, the folders enclosing the list
+  /// (or the folder in scope) from the outermost in, then the list. In
+  /// Everything or a filter list, the account alone.
+  var agentInstructionScopes: [AgentInstructionScope] {
+    var scopes = [AgentInstructionScope(kind: .account, id: nil, name: "Account", text: agentInstructions.account)]
+    let list = agentContextList
+    let innermostFolder = list != nil ? list?.folderId : isEverythingSelected ? nil : selectedFolderID
+    let chain = AgentStandingInstructions.folderChain(from: innermostFolder) { id in
+      folders.first { $0.id == id }?.parentFolderId
+    }
+    for id in chain {
+      guard let folder = folders.first(where: { $0.id == id }) else { continue }
+      scopes.append(
+        AgentInstructionScope(kind: .folder, id: id, name: folder.name, text: agentInstructions.folder(id)))
+    }
+    if let list {
+      scopes.append(
+        AgentInstructionScope(kind: .list, id: list.id, name: list.name, text: agentInstructions.list(list.id)))
+    }
+    return scopes
+  }
+
+  /// Opens the place a scope's instructions are written: the Agent settings
+  /// page for the account, the settings sheet for a folder or a list.
+  func editAgentInstructions(_ scope: AgentInstructionScope) {
+    switch scope.kind {
+    case .account:
+      AppDelegate.shared.menuSettings(pane: .agent)
+    case .folder:
+      if let folder = folders.first(where: { $0.id == scope.id }) { showSettings(for: folder) }
+    case .list:
+      if let list = lists.first(where: { $0.id == scope.id }) { showSettings(for: list) }
+    }
   }
 
   /// A workspace id as the approval card should say it: a list's or a

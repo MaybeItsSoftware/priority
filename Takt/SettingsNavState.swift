@@ -12,6 +12,7 @@ import Observation
     case focus
     case appearance
     case keyboard
+    case agent
     case plugins
     case sync
     case advanced
@@ -24,6 +25,7 @@ import Observation
       case .focus: "Focus"
       case .appearance: "Appearance"
       case .keyboard: "Keyboard"
+      case .agent: "Agent"
       case .plugins: "Installed plugins"
       case .sync: "Sync"
       case .advanced: "Advanced"
@@ -40,6 +42,8 @@ import Observation
         "Theme, light or dark, and the faces and size the app is set in."
       case .keyboard:
         "Global hotkeys, where Quick Add captures, and the window's keymap."
+      case .agent:
+        "What the agent panel's assistant is told in every thread."
       case .plugins:
         "Plugins you installed yourself, as packages in the plugins folder."
       case .sync:
@@ -55,6 +59,7 @@ import Observation
       case .focus: "scope"
       case .appearance: "paintpalette"
       case .keyboard: "keyboard"
+      case .agent: "sparkles"
       case .plugins: "puzzlepiece.extension"
       case .sync: "arrow.triangle.2.circlepath"
       case .advanced: "wrench.and.screwdriver"
@@ -70,13 +75,14 @@ import Observation
       case .appearance:
         ["theme", "dark", "light", "font", "typeface", "text size", "colour", "color", "zed", "grape", "priority"]
       case .keyboard: ["hotkey", "shortcut", "quick add", "capture", "keymap", "keybinding"]
+      case .agent: ["claude", "assistant", "instructions", "context", "prompt", "ai"]
       case .plugins: ["install", "package", "extension"]
       case .sync: ["account", "devices", "iphone", "android", "server", "password"]
       case .advanced: ["export", "markdown", "json", "backup", "diagnostics", "debug", "support"]
       }
     }
 
-    static let appPanes: [Pane] = [.general, .focus, .appearance, .keyboard]
+    static let appPanes: [Pane] = [.general, .focus, .appearance, .keyboard, .agent]
     static let accountPanes: [Pane] = [.sync, .advanced]
   }
 

@@ -426,6 +426,7 @@ struct SettingsView: View {
     case .pane(.focus): focusPane
     case .pane(.appearance): appearancePane
     case .pane(.keyboard): keyboardPane
+    case .pane(.agent): agentPane
     case .pane(.plugins): pluginsPane
     case .pane(.sync): SettingsSyncPane()
     case .pane(.advanced): advancedPane

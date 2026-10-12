@@ -97,19 +97,25 @@ import os
   @ObservationIgnored private var stoppedOnPurpose = false
   /// Tool-use ids to the item that shows them, for matching results.
   @ObservationIgnored private var toolItems: [String: UUID] = [:]
+  /// The context blocks this process has been sent. A new process starts
+  /// with a new one: it remembers nothing of the last.
+  @ObservationIgnored private var ledger = AgentContextLedger()
 
   // MARK: - The user's side
 
   /// Sends a message, starting the thread's process first if there is none.
-  /// `context` is sent ahead of the text but not shown in the transcript.
-  func send(_ text: String, context: String?) {
+  /// `blocks` and then `context` are sent ahead of the text but not shown in
+  /// the transcript. `context` goes with every message; a block only when it
+  /// differs from what this process was last sent, since it still has the
+  /// last one.
+  func send(_ text: String, context: String?, blocks: [AgentContextBlock] = []) {
     let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
     guard !trimmed.isEmpty, !isWorking, pendingApproval == nil else { return }
     if process == nil {
       guard start() else { return }
     }
     items.append(Item(entry: .user(trimmed)))
-    let message = context.map { "\($0)\n\n\(trimmed)" } ?? trimmed
+    let message = (ledger.changes(blocks) + [context, trimmed].compactMap { $0 }).joined(separator: "\n\n")
     if write(AgentStreamEncoder.userMessage(message)) { isWorking = true }
   }
 
@@ -249,6 +255,7 @@ import os
     Self.log.info("Started an agent thread with \(executable, privacy: .public)")
     self.process = process
     input = stdin.fileHandleForWriting
+    ledger = AgentContextLedger()
     stoppedOnPurpose = false
     return true
   }

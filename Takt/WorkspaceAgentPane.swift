@@ -133,6 +133,7 @@ struct WorkspaceAgentPane: View {
   /// The field and what Return will do, pinned under the transcript.
   private var inputBar: some View {
     VStack(alignment: .leading, spacing: theme.space.xs) {
+      instructionsLine
       ZStack(alignment: .topLeading) {
         WorkspaceAgentInputField(
           text: $draft,
@@ -165,6 +166,30 @@ struct WorkspaceAgentPane: View {
     }
     .padding(theme.space.sm)
     .overlay(alignment: .top) { FocusRule() }
+  }
+
+  /// Which standing instructions apply where you are, each a link to where it
+  /// is written. A scope with instructions is in the muted ink; one without is
+  /// dim, and clicking it is how you write some.
+  private var instructionsLine: some View {
+    HStack(spacing: theme.space.xxs) {
+      Text("instructions")
+        .foregroundStyle(theme.dim)
+      ForEach(Array(model.agentInstructionScopes.enumerated()), id: \.offset) { _, scope in
+        let isWritten = !scope.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        Text("·").foregroundStyle(theme.dim)
+        Button(scope.name) { model.editAgentInstructions(scope) }
+          .buttonStyle(.plain)
+          .foregroundStyle(isWritten ? theme.muted : theme.dim)
+          .help(
+            isWritten
+              ? "\(scope.label)'s instructions are sent with your messages · click to edit"
+              : "No instructions for \(scope.label.prefix(1).lowercased() + scope.label.dropFirst()) · click to write some")
+      }
+    }
+    .font(theme.monoCaptionFont)
+    .lineLimit(1)
+    .truncationMode(.tail)
   }
 
   /// Room for about four lines before the field scrolls.

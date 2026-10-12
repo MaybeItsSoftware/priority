@@ -735,7 +735,12 @@ the bottom.
     thread and stop the current one. Approved changes are ordinary "MCP: …"
     steps in the Undo menu. If Claude Code is not installed where Takt
     looks (`~/.local/bin`, `~/.claude/local`, Homebrew, `/usr/local/bin`), the
-    panel says so and takes a path. See
+    panel says so and takes a path. **Standing instructions** can be written
+    for the whole account (Settings ▸ Agent), for a folder and for a list (in
+    its settings, `oo`); a message carries the account's, then each enclosing
+    folder's, then the list's, and only when they changed since the last
+    message in the thread. The line above the field names the ones in effect
+    where you are, and clicking one opens it to edit. See
     [`docs/agent-panel.md`](docs/agent-panel.md).
 - **Main pane** — a header band with where you are on the left (the scope, and
   the way back out of an opened task) and a count or a few glyph buttons on the

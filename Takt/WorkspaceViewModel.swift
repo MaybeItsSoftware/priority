@@ -415,6 +415,8 @@ enum WorkspaceSidebarItem: Identifiable {
 
   /// The agent panel's thread. See `WorkspaceAgentSession`.
   let agent = WorkspaceAgentSession()
+  /// The agent's standing instructions for the account, folders and lists.
+  let agentInstructions = WorkspaceAgentInstructions()
   /// Asks the agent panel's message field for the keyboard.
   var agentInputFocusRequest = 0
   /// The agent panel's field or one of its approval cards has the keyboard.
