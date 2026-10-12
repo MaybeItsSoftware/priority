@@ -1,7 +1,6 @@
 import Observation
 import SwiftUI
 import TaktCore
-import os
 
 /// The line drawn between a subtask's row and its card in another column: a
 /// hairline at rest, the accent while the selection or the pointer is on
@@ -267,10 +266,6 @@ struct WorkspaceBoardLinkLines: View {
       // collapsed rather than removed under Reduce Motion.
       .animation(
         .easeOut(duration: reduceMotion ? 0.01 : WorkspaceMotion.duration), value: lighted.map(\.id))
-      // MARK: Temporary BoardLinkLines diagnostics — remove once confirmed.
-      .onChange(of: layer == .above ? lit : [], initial: true) { _, lit in
-        Self.logLit(lit, drawn: Set(lighted.map(\.id)))
-      }
     }
     .allowsHitTesting(false)
     .accessibilityHidden(true)
@@ -325,24 +320,6 @@ struct WorkspaceBoardLinkLines: View {
   private static func rect(_ rect: CGRect) -> BoardLinkRoute.Rect {
     BoardLinkRoute.Rect(
       minX: Double(rect.minX), minY: Double(rect.minY), maxX: Double(rect.maxX), maxY: Double(rect.maxY))
-  }
-}
-
-// MARK: - Temporary BoardLinkLines diagnostics
-//
-// Logs, whenever the lit links change, how many there are, how many drew a
-// line and which did not, so the installed app can show whether the ends are
-// being measured: `log stream --level info --predicate 'subsystem ==
-// "uk.co.maybeitssoftware.takt" && category == "BoardLinkLines"'`. To be
-// removed once the lines are confirmed on screen.
-extension WorkspaceBoardLinkLines {
-  private static let logger = Logger(subsystem: "uk.co.maybeitssoftware.takt", category: "BoardLinkLines")
-
-  fileprivate static func logLit(_ lit: Set<String>, drawn: Set<String>) {
-    guard !lit.isEmpty else { return }
-    let missing = lit.subtracting(drawn).sorted()
-    logger.notice(
-      "lit=\(lit.count, privacy: .public) drawn=\(drawn.count, privacy: .public) missing=\(missing, privacy: .public)")
   }
 }
 
