@@ -740,8 +740,8 @@ struct WorkspaceKanbanCard: View {
     let isOpen = item.task.status == .open
     let step = Self.markWidth(theme)
     let isRowSelected = selectedRowID == item.task.id
-    // A subtask filed in another column keeps its row here, its title muted
-    // since its card is elsewhere, and a line runs on from its title to it.
+    // A subtask filed in another column keeps its row here, untitled since
+    // its card is elsewhere: a line runs from the row's mark to that card.
     let rowLink = model.boardLinks.rowLink(item.task.id, onCard: task.id)
     return HStack(alignment: isRowSelected ? .firstTextBaseline : .center, spacing: 0) {
       Button {
@@ -755,32 +755,47 @@ struct WorkspaceKanbanCard: View {
       .accessibilityLabel(
         item.task.isList ? "Open \(item.task.title)" : (isOpen ? "Complete \(item.task.title)" : "Reopen \(item.task.title)"))
       .commandHelp(item.task.isList ? .planEnterTask : .taskComplete, note: item.task.isList ? "Open the list" : nil)
+      // Where a link's line leaves for the subtask's own card: straight on
+      // from the row's mark, the line standing in for the title.
+      .boardLinkEnds(rowLink.map { [.source($0.childID)] } ?? [], inColumn: column.id, geometry: linkGeometry)
       if model.editingTaskTitleID == item.task.id {
         WorkspaceTaskTitleField(
           initialTitle: item.task.title, caret: model.editingTaskTitleCaret, font: theme.captionFont,
           onCommit: { model.commitTaskTitleEdit(item.task, text: $0) },
           onCancel: { model.cancelTaskTitleEdit() })
           .frame(maxWidth: .infinity, alignment: .leading)
+      } else if rowLink != nil {
+        // The subtask is a card in another column, titled there, so its row
+        // here is only the line: the title holds the row's height and takes
+        // the click, unseen.
+        Button {
+          model.focusedBoardColumnID = column.id
+          model.selectTask(item.task)
+          model.reportKeyboardFocus(.tasks)
+        } label: {
+          Text(item.task.title)
+            .lineLimit(1)
+            .hidden()
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(item.task.title)
+        .help(item.task.title)
       } else {
         Button(item.task.title) {
           if isRowSelected && model.keyboardFocusArea == .tasks {
             model.editSelectedTaskTitle()
           } else {
-            // The subtask is a card in another column too; this column keeps
-            // the selection, so it lands on the row clicked.
-            if rowLink != nil { model.focusedBoardColumnID = column.id }
             model.selectTask(item.task)
             model.reportKeyboardFocus(.tasks)
           }
         }
         .buttonStyle(.plain)
-        .foregroundStyle(isOpen && rowLink == nil ? theme.ink : theme.muted)
+        .foregroundStyle(isOpen ? theme.ink : theme.muted)
         .strikethrough(!isOpen)
         .multilineTextAlignment(.leading)
         .expandsWhenSelected(isRowSelected)
-        // Where a link's line leaves for the subtask's own card: straight
-        // on from the title's end, one line from the words to the card.
-        .boardLinkEnds(rowLink.map { [.source($0.childID)] } ?? [], inColumn: column.id, geometry: linkGeometry)
         .frame(maxWidth: .infinity, alignment: .leading)
         .help(item.task.title)
       }
