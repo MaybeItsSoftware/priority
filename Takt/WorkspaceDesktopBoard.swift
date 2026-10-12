@@ -564,6 +564,10 @@ struct WorkspaceKanbanCard: View {
 
   private func handleCardKey(_ press: KeyPress) -> KeyPress.Result {
     guard isCardFocused else { return .ignored }
+    // A field on the card — a subtask being added or renamed — counts as the
+    // card's focus too, and its keys are the text's: space typed into a new
+    // subtask completed the row above it.
+    if NSApp.keyWindow?.firstResponder is NSTextView { return .ignored }
     // The keys act on the row the selection is on, which may be a subtask.
     let target = selectedRowID.flatMap { model.task(withID: $0) } ?? task
     if press.modifiers.contains(.option) {
