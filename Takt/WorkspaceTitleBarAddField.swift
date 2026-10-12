@@ -10,32 +10,28 @@ import SwiftUI
 /// row at the place it will land (`WorkspaceTaskDraftRow`); a capture is the
 /// one add that is not into the list on screen — the arrows send it
 /// elsewhere, up and down for the list and left and right for the day it
-/// starts — so it keeps a field that names its destination instead.
+/// starts — so the window lists where it can go under the field.
+///
+/// Drawn as the overlays' field row (`WorkspaceOverlayField`) is — a glyph,
+/// the text in the body face, no box of its own — because the window it sits
+/// in is drawn as an overlay is, and the chips after the text are the draft
+/// row's, so a capture says what it will set exactly as a task typed in the
+/// window does.
 struct WorkspaceTitleBarAddField: View {
   @Environment(WorkspaceViewModel.self) private var model
   @Environment(\.theme) private var theme
   @State private var title = ""
   @State private var isEditing = false
 
-  /// Room for a sentence and a list name without crowding the mode strip.
-  static let width: CGFloat = 320
-  /// The destination's share of the field, so a long list name truncates
-  /// rather than squeezing the text you are typing.
-  static let destinationWidth: CGFloat = 120
-  /// The destination's share while the capture preview shows. The chips can
-  /// run to four, and at the full share they and the list name would leave
-  /// the text itself no room; the name still reads, truncated, beside them.
-  static let compactDestinationWidth: CGFloat = 64
-
   var body: some View {
     if model.isQuickCaptureActive { field }
   }
 
   private var field: some View {
-    HStack(spacing: theme.space.xs) {
+    let capture = TaskCapture.parse(title)
+    return HStack(spacing: theme.space.sm) {
       Image(systemName: "tray.and.arrow.down")
-        .font(theme.captionFont)
-        .foregroundStyle(isEditing ? theme.primary : theme.muted)
+        .foregroundStyle(theme.muted)
       TitleBarAddTextField(
         text: $title,
         isEditing: $isEditing,
@@ -47,69 +43,20 @@ struct WorkspaceTitleBarAddField: View {
         onCancel: cancel,
         onEndEditing: { model.taskInsertionReference = nil },
         onArrow: arrow)
-      trailing
-    }
-    .padding(.horizontal, theme.space.sm)
-    .padding(.vertical, theme.space.xxs)
-    .frame(width: Self.width)
-    // An input on the page: a hairline, no fill, the ring while it has the
-    // keyboard.
-    .overlay(
-      RoundedRectangle(cornerRadius: theme.controlRadius)
-        .strokeBorder(
-          isEditing ? theme.focusRing : theme.inputBorder,
-          lineWidth: isEditing ? theme.focusRingWidth : theme.hairline))
-    .commandHelp(
-      .taskNew,
-      note: "Add a task to \(model.addFieldDestinationTitle). \(TaskCapturePreview.syntaxHint)")
-  }
-
-  @ViewBuilder
-  private var trailing: some View {
-    let capture = TaskCapture.parse(title)
-    HStack(spacing: theme.space.xs) {
       // What Return will file beyond the title, shown before it is pressed:
       // the parse only reads trailing words, and seeing it is what makes a
       // bare `30m` safe to accept without a prefix.
       if capture.hasDetails {
         TaskCapturePreview(capture: capture)
+          .font(theme.monoCaptionFont)
       }
-      if model.isQuickCaptureActive {
-        Text(model.quickCaptureStartLabel)
-          .foregroundStyle(theme.muted)
-          .help("← → the day it starts")
-      }
-      destination(width: capture.hasDetails ? Self.compactDestinationWidth : Self.destinationWidth)
     }
-    .font(theme.monoCaptionFont)
-    .lineLimit(1)
-    .fixedSize(horizontal: false, vertical: true)
-  }
-
-  /// The destination, and in a folder the menu that changes it — the one
-  /// scope with more than one list a task could honestly go to.
-  @ViewBuilder
-  private func destination(width: CGFloat) -> some View {
-    let label = Text(model.addFieldDestinationTitle)
-      .foregroundStyle(isEditing ? theme.ink : theme.muted)
-      .truncationMode(.tail)
-      .frame(maxWidth: width, alignment: .trailing)
-    if model.selectedFolderID != nil && model.taskInsertionReference == nil && !model.isQuickCaptureActive {
-      Menu {
-        ForEach(model.scopeLists) { list in
-          Button(list.name) { model.newTaskListID = list.id }
-        }
-      } label: {
-        label
-      }
-      .menuStyle(.borderlessButton)
-      .menuIndicator(.hidden)
-      .fixedSize()
-      .commandHelp(.listNewTaskDestination, note: "Choose which of the folder's lists new tasks go to")
-    } else {
-      label
-        .help(model.isQuickCaptureActive ? "↑ ↓ the list it goes to" : model.addFieldDestinationTitle)
-    }
+    .font(theme.bodyFont())
+    .padding(.horizontal, theme.listGutter)
+    .padding(.vertical, theme.space.sm)
+    .commandHelp(
+      .taskNew,
+      note: "Add a task to \(model.addFieldDestinationTitle). \(TaskCapturePreview.syntaxHint)")
   }
 
   private func submit() {
@@ -190,7 +137,7 @@ struct TitleBarAddTextField: NSViewRepresentable {
     if field.textColor != textColor { field.textColor = textColor }
     if field.stringValue != text { field.stringValue = text }
     let placeholder = NSAttributedString(
-      string: "Add a task", attributes: [.foregroundColor: placeholderColor, .font: font])
+      string: "New task", attributes: [.foregroundColor: placeholderColor, .font: font])
     if field.placeholderAttributedString != placeholder { field.placeholderAttributedString = placeholder }
     if context.coordinator.lastFocusRequest != focusRequest {
       context.coordinator.lastFocusRequest = focusRequest
@@ -234,8 +181,16 @@ struct TitleBarAddTextField: NSViewRepresentable {
         return true
       case #selector(NSResponder.moveUp(_:)): return parent.onArrow(.up)
       case #selector(NSResponder.moveDown(_:)): return parent.onArrow(.down)
-      case #selector(NSResponder.moveLeft(_:)): return parent.onArrow(.left)
-      case #selector(NSResponder.moveRight(_:)): return parent.onArrow(.right)
+      // Left and right move the caret, as they do in the window's own add
+      // row; only where the caret can go no further do they steer.
+      case #selector(NSResponder.moveLeft(_:)):
+        let selection = textView.selectedRange()
+        guard selection.length == 0, selection.location == 0 else { return false }
+        return parent.onArrow(.left)
+      case #selector(NSResponder.moveRight(_:)):
+        let selection = textView.selectedRange()
+        guard selection.length == 0, selection.location == (textView.string as NSString).length else { return false }
+        return parent.onArrow(.right)
       default: return false
       }
     }

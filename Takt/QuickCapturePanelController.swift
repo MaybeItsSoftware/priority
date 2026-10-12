@@ -11,9 +11,12 @@ import TaktWorkspace
 /// its way to the inbox, not a clock, so clicking elsewhere drops it.
 @MainActor
 final class QuickCapturePanelController: NSObject, NSWindowDelegate {
-  private static let width = WorkspaceTitleBarAddField.width + 48
-  /// The field and, under it, the line of keys that steer it.
-  private static let height: CGFloat = 84
+  /// The width of the window's own overlays — the palette, the list finder —
+  /// since it is drawn as one.
+  private static let width = WorkspaceOverlayMetrics.width
+  /// The field, the lists it can go to, and the line of keys that steer it.
+  /// The list takes whatever the other two leave.
+  private static let height: CGFloat = 320
   /// Where it lands: a little above centre, as Spotlight does.
   private static let verticalAnchor: CGFloat = 0.22
 
@@ -83,7 +86,9 @@ final class QuickCapturePanelController: NSObject, NSWindowDelegate {
     panel.isMovableByWindowBackground = true
     panel.backgroundColor = .clear
     panel.isOpaque = false
-    panel.hasShadow = true
+    // No shadow: the overlays in the window have none, and this is one of
+    // them summoned over another app. The hairline is the edge.
+    panel.hasShadow = false
     panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .transient]
     panel.delegate = self
     let hosting = NSHostingController(
@@ -129,30 +134,94 @@ final class QuickCapturePanelController: NSObject, NSWindowDelegate {
   }
 }
 
-/// The field on a card of its own: a raised surface and a hairline, no more.
-/// Under it, the keys the field answers (`TitleBarAddTextField`'s
-/// `doCommandBy`): the arrows steer a capture somewhere no tooltip on a
-/// summoned panel would ever be hovered long enough to say.
+/// Drawn as the window's overlays are (`WorkspaceOverlayHost`), because it
+/// is one of them, summoned over another app: the raised surface and its
+/// hairline at the panel radius, the field row, a rule, and under it every
+/// list the capture can go to in the list finder's rows — the one it is going
+/// to selected, ↑ and ↓ moving it — then the overlays' foot of keys, with the
+/// day it starts at the end. All of it in the theme the window is in.
 private struct QuickCapturePanelView: View {
+  @Environment(WorkspaceViewModel.self) private var model
   @Environment(\.theme) private var theme
 
   var body: some View {
-    VStack(alignment: .leading, spacing: theme.space.sm) {
+    VStack(spacing: 0) {
       WorkspaceTitleBarAddField()
-      HStack(spacing: theme.space.md) {
-        KeyHint("↩", "Add")
-        KeyHint("esc", "Cancel")
-        KeyHint("↑ ↓", "List")
-        KeyHint("← →", "Day")
+      FocusRule()
+      QuickCaptureDestinationList()
+        .frame(maxHeight: .infinity)
+      WorkspaceOverlayFooter(
+        hints: "↑↓ list · ←→ start day · ↩ add · esc cancel",
+        trailing: model.quickCaptureStartLabel)
+    }
+    .frame(maxWidth: .infinity, maxHeight: .infinity)
+    .themedSurface(theme, fill: theme.raised, radius: theme.panelRadius)
+  }
+}
+
+/// Where a capture can go: every list, then the nested lists under it, in the
+/// list finder's rows (`WorkspaceListNavigator`) — the list's name, where it
+/// lives beside it in muted type, and the selection band on the one the
+/// capture is going to. A click picks one and hands the caret back.
+private struct QuickCaptureDestinationList: View {
+  @Environment(WorkspaceViewModel.self) private var model
+  @Environment(\.theme) private var theme
+
+  var body: some View {
+    let destinations = model.quickCaptureDestinations
+    let selectedID = model.quickCaptureDestination?.id
+    let homeID = model.quickCaptureHomeList?.id
+    let folderNames = Dictionary(model.folders.map { ($0.id, $0.name) }, uniquingKeysWith: { first, _ in first })
+    let listFolders = Dictionary(model.lists.map { ($0.id, $0.folderId) }, uniquingKeysWith: { first, _ in first })
+    ScrollViewReader { proxy in
+      ScrollView {
+        LazyVStack(alignment: .leading, spacing: 0) {
+          ForEach(destinations) { destination in
+            HStack(spacing: theme.space.sm) {
+              Label(
+                destination.title,
+                systemImage: destination.parentTaskID == nil ? "list.bullet" : "list.bullet.indent")
+                .foregroundStyle(theme.ink)
+                .lineLimit(1)
+              if let context = context(of: destination, folderNames: folderNames, listFolders: listFolders) {
+                Text(context)
+                  .foregroundStyle(theme.muted)
+                  .lineLimit(1)
+                  .truncationMode(.middle)
+              }
+              Spacer(minLength: theme.space.sm)
+              if destination.id == homeID {
+                Text("Default").font(theme.captionFont).foregroundStyle(theme.dim)
+              }
+            }
+            .font(theme.bodyFont())
+            .overlayRow(isSelected: destination.id == selectedID)
+            .id(destination.id)
+            .onTapGesture {
+              model.quickCaptureDestinationID = destination.id
+              model.quickCaptureFocusRequest += 1
+            }
+          }
+        }
+      }
+      .onAppear { if let selectedID { proxy.scrollTo(selectedID) } }
+      .onChange(of: selectedID) { _, id in
+        if let id { proxy.scrollTo(id) }
       }
     }
-    .padding(theme.space.md)
-    .frame(maxWidth: .infinity, maxHeight: .infinity)
-    .background(
-      RoundedRectangle(cornerRadius: theme.panelRadius)
-        .fill(theme.raised))
-    .overlay(
-      RoundedRectangle(cornerRadius: theme.panelRadius)
-        .strokeBorder(theme.border, lineWidth: theme.hairline))
+  }
+
+  /// Where it lives, as the list finder says it: a list's folder, or the
+  /// lists and nested lists a nested list sits in.
+  private func context(
+    of destination: QuickCaptureDestination,
+    folderNames: [String: String],
+    listFolders: [String: String?]
+  ) -> String? {
+    guard destination.parentTaskID != nil else {
+      return listFolders[destination.listID]?.flatMap { folderNames[$0] }
+    }
+    let parents = destination.path.components(separatedBy: " › ").dropLast()
+    return parents.isEmpty ? nil : parents.joined(separator: " › ")
   }
 }

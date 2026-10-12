@@ -49,7 +49,7 @@ to filter them, walk them with `↑`/`↓`, or jump with `⌘1`–`⌘9`:
 | General | Launch at login, confirming deletes, and the completion celebration with a preview |
 | Focus | Where a started block runs, and whether each block is scored |
 | Appearance | The theme gallery, light/dark/system, the interface, heading and numeral fonts, and the text size |
-| Keyboard | The three global hotkeys (show the window, focus panel `⌃⌥⇧⌘F`, Quick Add `⌃⌥⇧⌘D`, which opens a small window of its own over whatever app you are in — `↑`/`↓` pick the list, `←`/`→` the start day, `Return` files it, `Esc` or a click away drops it), the list Quick Add captures into, and `keymap.json` |
+| Keyboard | The three global hotkeys (show the window, focus panel `⌃⌥⇧⌘F`, Quick Add `⌃⌥⇧⌘D`, which opens one of the window's overlays over whatever app you are in, in the theme you have chosen: the field, the chips that say what `30m`, `@fri`, `#work` and `!1` will set as the window's add row does, and under it every list in the list finder's rows — `↑`/`↓` pick the list, `←`/`→` move the caret and, from either end of the text, the start day, `Return` files it, `Esc` or a click away drops it), the list Quick Add captures into, and `keymap.json` |
 | Integrations | One page per integration — Checkvist, Obsidian, AFFiNE, Google Calendar, Google Tasks, MCP, Daily Log — and your installed plugins |
 | Sync | The account that keeps the Mac and phones on one workspace, on Takt's server or [your own](docs/self-hosting.md) |
 | Advanced | Export the workspace as Markdown or JSON, diagnostics, and the app's data folder |
@@ -194,9 +194,9 @@ not one of these stops the reading — so a title is never rewritten in the
 middle: `Read 30 pages` and `Buy 2m of cable` keep every word. The first word is
 always the title's, and a second estimate, day or priority stops the reading
 too, leaving the earlier one in the title where you can see it. As you type,
-what will be set shows as chips beside the field — in the title bar's **Add a
-task** and in the focus panel's "Add … to today" row — so nothing is a surprise
-after Return.
+what will be set shows as chips beside the field — in the row a new task is
+typed in, in Quick Add's window and in the focus panel's "Add … to today" row —
+so nothing is a surprise after Return.
 
 ### Coming from Checkvist
 
