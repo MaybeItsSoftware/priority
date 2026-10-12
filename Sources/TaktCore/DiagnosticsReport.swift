@@ -36,14 +36,15 @@ public struct DiagnosticsSnapshot: Sendable {
   public let appVersion: String
   public let buildNumber: String
   public let generatedAt: Date
+  /// Checkvist, which the workspace imports from: whether it is signed in.
   public let connectionDescription: String
+  /// The Checkvist list the `takt` command defaults to, by name and id.
   public let listName: String
   public let listID: String
-  public let isNetworkReachable: Bool
-  public let syncStatus: String
+  /// When Checkvist's lists last loaded this session.
   public let lastSuccessfulSyncAt: Date?
-  public let openTaskCount: Int
-  public let pendingOfflineWorkCount: Int
+  /// How many Checkvist lists the workspace holds a copy of.
+  public let importedListCount: Int
   public let health: [HealthItem]
   public let recentProblems: [LogItem]
   public let paths: [(label: String, path: String)]
@@ -55,11 +56,8 @@ public struct DiagnosticsSnapshot: Sendable {
     connectionDescription: String,
     listName: String,
     listID: String,
-    isNetworkReachable: Bool,
-    syncStatus: String,
     lastSuccessfulSyncAt: Date?,
-    openTaskCount: Int,
-    pendingOfflineWorkCount: Int,
+    importedListCount: Int,
     health: [HealthItem],
     recentProblems: [LogItem],
     paths: [(label: String, path: String)]
@@ -70,11 +68,8 @@ public struct DiagnosticsSnapshot: Sendable {
     self.connectionDescription = connectionDescription
     self.listName = listName
     self.listID = listID
-    self.isNetworkReachable = isNetworkReachable
-    self.syncStatus = syncStatus
     self.lastSuccessfulSyncAt = lastSuccessfulSyncAt
-    self.openTaskCount = openTaskCount
-    self.pendingOfflineWorkCount = pendingOfflineWorkCount
+    self.importedListCount = importedListCount
     self.health = health
     self.recentProblems = recentProblems
     self.paths = paths
@@ -130,15 +125,12 @@ public enum DiagnosticsReport {
 
     lines.append("Status")
     lines.append("------")
-    lines.append("Connection:     \(snapshot.connectionDescription)")
-    lines.append("List:           \(listDescription(snapshot))")
-    lines.append("Network:        \(snapshot.isNetworkReachable ? "reachable" : "unreachable")")
-    lines.append("Sync:           \(snapshot.syncStatus)")
+    lines.append("Checkvist:      \(snapshot.connectionDescription)")
+    lines.append("CLI list:       \(listDescription(snapshot))")
     lines.append(
-      "Last sync:      "
+      "Lists loaded:   "
         + (snapshot.lastSuccessfulSyncAt.map(timestamp) ?? "never this session"))
-    lines.append("Open tasks:     \(snapshot.openTaskCount)")
-    lines.append("Queued offline: \(snapshot.pendingOfflineWorkCount)")
+    lines.append("Imported lists: \(snapshot.importedListCount)")
     lines.append("")
 
     if !snapshot.health.isEmpty {
@@ -182,7 +174,7 @@ public enum DiagnosticsReport {
   }
 
   private static func listDescription(_ snapshot: DiagnosticsSnapshot) -> String {
-    if snapshot.listID.isEmpty { return "offline workspace" }
+    if snapshot.listID.isEmpty { return "none" }
     if snapshot.listName.isEmpty { return "id \(snapshot.listID) (name unknown)" }
     return "\(snapshot.listName) (id \(snapshot.listID))"
   }

@@ -589,7 +589,7 @@ covered the old copies pass against it.
     | `WorkspaceCommandQuery` (palette ranking) | `TaktCore` | native: ranks the Mac's own catalogue every keystroke (step 9) |
     | `TaskDraftAnchor`, `DailyTitleEdit` | `TaktCore` | native: per-refresh UI state over rows on screen |
     | `IntegrationLinkStore`, `DailyNotePath`, `ManagedMarkdownBlock`, Obsidian note body, Google Calendar event payload, `AgentStreamProtocol`, `AgentToolSummary`, `MCPWire` | `TaktCore`, plugins | native: integration edges that exist only on the Mac and talk to its other programs; no second copy to retire |
-    | `TaskRepository`, `SyncService`, `TaskMutationService`, `OfflineTaskSyncPlugin`, `LocalTaskStore`, `ReorderQueue`, `UndoService`, the list-scoped priority stores, `OfflineReplayPolicy`, `AuthRetryPolicy`, `RemoteKeyBootstrapPolicy`, `CompletionRetention`, `TimerElapsedReassignmentPolicy`, `TaskFilterEngine`, `DayLogPlan`, `TaskTreeFormatter` | `Takt/`, `TaktCore` | native, recommended for deletion instead: the Checkvist-era in-memory machine whose popover, kanban and list view were deleted in the roadmap's Phase 6. What it still does is load Checkvist lists and tasks for the import and serve the Checkvist settings page; porting it would put a retired feature into the shared core |
+    | `TaskRepository`, `SyncService`, `TaskMutationService`, `OfflineTaskSyncPlugin`, `LocalTaskStore`, `ReorderQueue`, `UndoService`, the list-scoped priority stores, `OfflineReplayPolicy`, `AuthRetryPolicy`, `RemoteKeyBootstrapPolicy`, `CompletionRetention`, `TimerElapsedReassignmentPolicy`, `TaskFilterEngine`, `DayLogPlan`, `TaskTreeFormatter` | `Takt/`, `TaktCore` | **deleted 2026-10-13** (decided 2026-10-12), with the `TaktAppLogic` target and its tests, `NavigationState`, the service hosts and the managers only it fed. The import and the settings page run on `CheckvistAccount` over the core's `checkvist.rs`; see "The Checkvist stack, deleted" below |
     | `DiagnosticsReport`, `SyncStatusSummary`, celebrations, `FocusTimerDisplay`, `RelativeDateTextCache`, `WindowFrameClamp`, `FileLock`, helper locators, `AppTerminationPolicy`, `OnboardingResetPolicy`, `AutoRefreshThrottlePolicy` | `TaktCore` | native: presentation and OS |
     | Theme palette lookup, hex parse, typography override, folder mirror | `TaktCore/Theming`, Kotlin `theme/` | native (step 9, "Themes") |
 
@@ -673,6 +673,41 @@ covered the old copies pass against it.
     canonical decomposition, where Foundation folded them) are in
     `shaping.rs`; `CursorStepping` and `VimFind` wrap them, one call per
     key press, and their suites run unchanged.
+
+    **The Checkvist stack, deleted (done 2026-10-13).** Decided 2026-10-12:
+    the Checkvist-era task stack is deleted rather than ported, because
+    porting it would have put a retired feature into the shared core. Gone:
+    `TaskRepository`, `SyncService`, `TaskMutationService` (and `+Board`),
+    `UndoService`, `ReorderQueue`, `OptimisticTaskID`, `OfflineTaskSyncPlugin`,
+    the three list-scoped stores, `TaskTreeFormatter`, `NavigationState`, the
+    service hosts (`TaskServiceHosts.swift`, `AppCoordinator+ServiceHosts.swift`),
+    the timer, quick entry, focus session, start date and recurrence managers
+    that only fed them, the onboarding service, the reachability monitor, the
+    integration and daily log data-source adapters, and from `TaktCore`
+    `OfflineReplayPolicy`, `AuthRetryPolicy`, `RemoteKeyBootstrapPolicy`,
+    `CompletionRetention`, `TimerElapsedReassignmentPolicy`, `TaskFilterEngine`,
+    `DayLogPlan`, `VisibilityTask`, `TimerStore`, `RootTaskView`,
+    `OnboardingResetPolicy`, `SyncStatusSummary` and `IntegrationLinkStore`,
+    with their tests; the `TaktAppLogic` target and `applogic-tests` went with
+    them (Package.swift, CLAUDE.md, `docs/state-ownership.md`). What had to keep
+    working is the import and the Checkvist settings page. `CheckvistAccount`
+    holds the account, its lists and which of them the workspace copies (all by
+    default, so the activation-time import works as before; the page can now
+    exclude a list and import at once); `NativeCheckvistSyncPlugin` is login,
+    lists and a list's open tasks, each a core request and a core reading sent
+    through `URLSession`, with the one retry after a 401 inlined where
+    `AuthRetryPolicy` was. The old offline store is read once more, for its
+    migration, by `LegacyOfflineTaskStore`. What the stack touched elsewhere:
+    the menu bar already read the workspace; the Google Calendar page already
+    acted on the workspace's selection; the MCP setup now takes the account and
+    the default list from `CheckvistAccount`; Obsidian's per-task sync queue,
+    task links and the AFFiNE checklist and day export had no caller left in
+    the coordinator and were removed there (their plugin methods remain, with
+    no entry point); and the day log no longer records task events, because its
+    events are keyed by Checkvist id and only the Checkvist mutation path and
+    timer wrote them. The settings page's list switcher, offline upload,
+    overwrite and merge-lists tools went too: each wrote to Checkvist or to the
+    offline store.
 
 ## Risks
 

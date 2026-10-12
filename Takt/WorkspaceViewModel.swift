@@ -166,7 +166,7 @@ enum WorkspaceSidebarItem: Identifiable {
   /// Internal rather than private so `WorkspaceViewModel+Dailies.swift` —
   /// the same type, split only for size — can reach it.
   @ObservationIgnored var store: WorkspaceStore?
-  @ObservationIgnored let legacyStore: LocalTaskStore
+  @ObservationIgnored let legacyStore: LegacyOfflineTaskStore
   /// Title, task id, list name, due date, all-day → the created event's id,
   /// which is what lets Priority notice later that it was cleared.
   @ObservationIgnored var googleCalendarEventCreator:
@@ -787,7 +787,7 @@ enum WorkspaceSidebarItem: Identifiable {
   /// and the synced choice of theme listen here.
   @ObservationIgnored var onWorkspaceChangedElsewhere: (() -> Void)?
 
-  init(legacyStore: LocalTaskStore) {
+  init(legacyStore: LegacyOfflineTaskStore = LegacyOfflineTaskStore()) {
     self.legacyStore = legacyStore
     do {
       self.store = try WorkspaceStore()

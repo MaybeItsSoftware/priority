@@ -3,27 +3,6 @@ import OSLog
 import Observation
 import TaktCore
 
-/// Read-only access to the task data the daily log needs.
-///
-/// Kept behind a protocol for the same reason `IntegrationDataSource` is: the
-/// manager needs a slice of repository/view-model state, and taking that as a
-/// dependency directly would drag the whole coordinator in behind it.
-@MainActor
-protocol DailyLogDataSource: AnyObject {
-  /// Open tasks that are due or starting today — the day's plan, derived rather
-  /// than authored. Overdue tasks count: they are on today's plate too.
-  var plannedTaskIdsForToday: [Int] { get }
-  /// Titles for every open task, so the note can name an unfinished item.
-  var taskTitlesById: [Int: String] { get }
-  /// Whether the task list has actually arrived yet.
-  ///
-  /// Distinguishes "nothing is planned today" from "we don't know yet", which
-  /// look identical through `plannedTaskIdsForToday` and must not: the snapshot
-  /// is taken once per day, so mistaking the second for the first would freeze
-  /// an empty plan in for the rest of the day.
-  var hasLoadedTasks: Bool { get }
-}
-
 /// Coordinates the daily-log plugin with the rest of the app.
 ///
 /// Everything durable lives in the plugin; this is the thin app-side layer that
@@ -46,19 +25,8 @@ protocol DailyLogDataSource: AnyObject {
   @ObservationIgnored private let preferencesStore: PreferencesStore
   @ObservationIgnored let plugin: any DailyLogPlugin
 
-  @ObservationIgnored weak var dataSource: DailyLogDataSource?
-
   /// Called with an error message (or nil to clear) when a note write fails.
   @ObservationIgnored var onError: ((String?) -> Void)?
-
-  /// Fired when a daily is ticked *on*, so the coordinator can celebrate it the
-  /// way it celebrates a task close. Un-ticking deliberately doesn't fire:
-  /// correcting a mis-click isn't an achievement.
-  ///
-  /// A callback rather than a direct call into the celebration manager, for the
-  /// same reason `onError` is one — this manager shouldn't grow a dependency on
-  /// the UI layer to report something that happened in the log.
-  @ObservationIgnored var onDailyTicked: ((Daily) -> Void)?
 
   var dailyLogEnabled: Bool {
     didSet { preferencesStore.set(dailyLogEnabled, for: .dailyLogIntegrationEnabled) }
@@ -98,38 +66,6 @@ protocol DailyLogDataSource: AnyObject {
     self.plugin.onPersistenceError = { [weak self] error in
       self?.onError?(error.localizedDescription)
     }
-  }
-
-  // MARK: - Recording
-  //
-  // Recording stays on even when the Obsidian half is disabled: the log is what
-  // the Daily view reads, and a user who turns the vault mirror off still wants
-  // their own history. `dailyLogEnabled` gates the *note writing*, not the log.
-
-  func recordCompletion(taskId: Int, title: String, now: Date = Date()) {
-    record(.completed(taskId: taskId, title: title, at: now))
-  }
-
-  func recordReopen(taskId: Int, title: String, now: Date = Date()) {
-    record(.reopened(taskId: taskId, title: title, at: now))
-  }
-
-  func recordInvalidation(taskId: Int, title: String, now: Date = Date()) {
-    record(.invalidated(taskId: taskId, title: title, at: now))
-  }
-
-  func recordDeferral(taskId: Int, title: String, now: Date = Date()) {
-    record(.deferred(taskId: taskId, title: title, at: now))
-  }
-
-  func recordFocusSession(taskId: Int, title: String, seconds: Int, now: Date = Date()) {
-    guard seconds > 0 else { return }
-    record(.focusSessionEnded(taskId: taskId, title: title, seconds: seconds, at: now))
-  }
-
-  private func record(_ event: DayLogEvent) {
-    plugin.record(event)
-    revision &+= 1
   }
 
   // MARK: - Dailies
@@ -173,15 +109,6 @@ protocol DailyLogDataSource: AnyObject {
     let value = plugin.completedDailyIds(on: date)
     cachedCompletedDailyIds = (key, value)
     return value
-  }
-
-  func toggleDaily(_ daily: Daily, now: Date = Date()) {
-    let isDone = completedDailyIds(on: now).contains(daily.id)
-    plugin.setDaily(id: daily.id, completed: !isDone, now: now)
-    revision &+= 1
-    // After the revision bump, so anything the handler reads back — the day's
-    // count, in particular — already includes this tick.
-    if !isDone { onDailyTicked?(daily) }
   }
 
   @discardableResult
@@ -344,22 +271,14 @@ protocol DailyLogDataSource: AnyObject {
 
   // MARK: - Day lifecycle
 
-  /// Snapshots today's plan if it hasn't been taken yet, then mirrors any day
-  /// that has closed since the last run. Safe to call on every popover open —
-  /// both halves are idempotent within a logical day.
+  /// Mirrors any day that has closed since the last run into the dailies
+  /// folder. Idempotent within a logical day, so safe to call on every window
+  /// open.
   func refreshForToday(now: Date = Date()) {
-    // Skipped entirely — not stamped as done — until the list has loaded, so
-    // the next call (the deferred one at launch, or the next popover open)
-    // still gets to take the day's real plan.
-    if let dataSource, dataSource.hasLoadedTasks {
-      plugin.snapshotPlanIfNeeded(plannedTaskIds: dataSource.plannedTaskIdsForToday, now: now)
-      revision &+= 1
-    }
-
     guard dailyLogEnabled else { return }
     plugin.writeClosedDayNotesIfNeeded(
       now: now,
-      titlesByTaskId: dataSource?.taskTitlesById ?? [:]
+      titlesByTaskId: [:]
     )
   }
 
@@ -372,7 +291,7 @@ protocol DailyLogDataSource: AnyObject {
   func renderedDaySection(for day: Date = Date()) -> String {
     DailyNoteMarkdown.section(
       summary: summary(on: day),
-      titlesByTaskId: dataSource?.taskTitlesById ?? [:],
+      titlesByTaskId: [:],
       dailies: plugin.dailies(dueOn: day)
     )
   }
@@ -391,7 +310,7 @@ protocol DailyLogDataSource: AnyObject {
     do {
       _ = try plugin.writeDailyNote(
         for: day,
-        titlesByTaskId: dataSource?.taskTitlesById ?? [:]
+        titlesByTaskId: [:]
       )
       onError?(nil)
       return true

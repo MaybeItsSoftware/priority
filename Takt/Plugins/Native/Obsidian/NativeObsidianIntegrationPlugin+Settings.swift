@@ -47,11 +47,6 @@ private struct ObsidianIntegrationPluginSettingsView: View {
               }
             }
             Spacer()
-            if manager.integrations.hasPendingObsidianSync {
-              Text(manager.integrations.pendingSyncMenuBarPrefix)
-                .font(theme.captionFont)
-                .foregroundStyle(theme.warning)
-            }
           }
         }
       } else {

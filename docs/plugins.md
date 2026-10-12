@@ -11,7 +11,6 @@ Takt ships with native plugins only. Plugins are self-contained and live under:
 - `Takt/Plugins/Native/Celebration/`
 - `Takt/Plugins/Native/Theme/`
 - `Takt/Plugins/Native/Google/`, `GoogleTasks/` — the shared Google account and the Tasks mirror
-- `Takt/Plugins/Native/Offline/` — the offline task store the sync plugin falls back to (`OfflineTaskSyncPlugin`, `LocalTaskStore`)
 
 Helpers two or more plugins share, and that belong to none of them, live in `Takt/Plugins/Support/` (`FormURLEncoding`, `SecurityScopedFolderBookmark`). Nothing plugin-specific goes there.
 
@@ -160,9 +159,12 @@ to one SPM target, and the Xcode app compiles everything as one module where
 for exactly the same reason. No coverage is lost — the logic worth testing lives
 in `Sources/TaktCore/` and is exercised by `corelogic-tests`.
 
-Recording reaches the plugin through `TaskMutationHost.recordDayLogTaskAction`
-(primitives only, since `TaktAppLogic` can't see the event type either) and
-through `FocusSessionManager.onFocusSessionCompleted`.
+Nothing records task events into the log any more. Its events are keyed by
+Checkvist task id, and the only writers were the Checkvist mutation path and
+the Checkvist-era focus timer, both deleted on 2026-10-13 with the rest of
+that stack; the workspace keeps its own completions and focus blocks in the
+database. The plugin still writes closed days' notes and keeps the plugin-era
+dailies.
 
 ### Completion Celebration (`CompletionCelebrationPlugin`)
 
@@ -220,11 +222,8 @@ Two constraints a new preset must respect:
   completion, including under the "None" preset — they are confirmation that the
   keypress registered, not celebration, and turning the animation off shouldn't
   cost you them.
-- **`runInline` blocks the close.** `TaskMutationService.markCurrentTaskDone`
-  awaits it *before* sending the request and abandons the close if it returns
-  `false`. That cancellation is real, not decorative: `NavigationState`
-  reports movement to `CompletionCelebrationManager.cancelInFlight()`, so a user
-  who fires a completion and immediately arrows away calls it off. Let
+- **`runInline` can be cancelled.** `CompletionCelebrationManager.cancelInFlight()`
+  calls it off, and the caller treats `false` as "the user moved on". Let
   `CancellationError` out of your sleeps — the default `runInline` does.
 
 `CompletionMilestonePolicy` decides the *occasion* — ordinary, list cleared,

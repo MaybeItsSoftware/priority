@@ -1,5 +1,15 @@
 # Architecture Improvement Plan
 
+> **Superseded in part, 2026-10-13.** The Checkvist-era task stack this plan
+> decomposes (`TaskRepository`, `SyncService`, `TaskMutationService`,
+> `UndoService`, `NavigationState`, the offline and list-scoped stores, the
+> service hosts and the `TaktAppLogic` target) has been deleted rather than
+> finished: the workspace is the only task model, and Checkvist is an import
+> source behind `CheckvistAccount` and the Rust core's `checkvist.rs`. The
+> steps below that name those types are history. See
+> `docs/state-ownership.md` and `docs/rust-core-migration.md`.
+
+
 This document captures the structural problems in Priority as it stands today and the staged work needed to resolve them. It is referenced from `CLAUDE.md` and should be kept current — when a phase lands, mark it done; when scope changes, edit here rather than scattering decisions across PRs.
 
 ## Guiding Principles

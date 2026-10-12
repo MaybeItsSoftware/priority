@@ -58,7 +58,7 @@ private struct MCPIntegrationPluginSettingsView: View {
       stepRow(
         ok: true,
         title: "Checkvist connected",
-        detail: manager.repository.activeCredentials.normalizedUsername
+        detail: manager.checkvist.activeCredentials.normalizedUsername
           + " — setting up a client copies this login into ~/.config/takt/config.json, "
           + "where the server reads it. Nothing below carries your key."
       )
@@ -184,7 +184,7 @@ private struct MCPIntegrationPluginSettingsView: View {
 
       DisclosureGroup("Show config JSON", isExpanded: $showsRawConfiguration) {
         ScrollView {
-          Text(integrations.mcpClientConfigurationPreview(listId: manager.repository.listId))
+          Text(integrations.mcpClientConfigurationPreview(listId: manager.checkvist.defaultListId))
             .font(theme.monoFont(size: theme.scale.caption))
             .textSelection(.enabled)
             .frame(maxWidth: .infinity, alignment: .leading)

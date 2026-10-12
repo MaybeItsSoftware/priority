@@ -79,7 +79,7 @@ final class CheckvistSession {
     remoteKey: String,
     _ buildRequest: (String) throws -> URLRequest
   ) async throws -> (Data, HTTPURLResponse) {
-    var retryState = AuthRetryState(hasRetriedAfterUnauthorized: false)
+    var hasRetriedAfterUnauthorized = false
 
     while true {
       if token == nil {
@@ -101,9 +101,10 @@ final class CheckvistSession {
 
       if httpResponse.statusCode == 401 {
         clearToken()
-        let retry = AuthRetryPolicy.decisionForUnauthorized(state: retryState)
-        retryState = retry.nextState
-        if retry.decision == .retryAuthentication {
+        // One fresh sign-in per request: a token can expire between calls,
+        // but a second 401 means the credentials themselves are refused.
+        if !hasRetriedAfterUnauthorized {
+          hasRetriedAfterUnauthorized = true
           continue
         }
       }

@@ -79,17 +79,10 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
       self?.menuQuit()
     }
 
-    checkvistManager.focusSessionManager.onAlert = { [weak self] in
-      guard let self else { return }
-      self.showMainWindow()
-      if let sound = NSSound(named: NSSound.Name("Glass")) {
-        sound.play()
-      } else {
-        NSSound.beep()
-      }
+    workspace = WorkspaceViewModel()
+    checkvistManager.importCheckvistNow = { [weak self] in
+      await self?.importFromCheckvist()
     }
-
-    workspace = WorkspaceViewModel(legacyStore: checkvistManager.repository.localTaskStore)
     workspace.googleCalendarEventCreator = { [weak checkvistManager] title, taskID, listTitle, date, isAllDay in
       guard let integrations = checkvistManager?.integrations else { return nil }
       return try await integrations.createGoogleCalendarEvent(
@@ -346,54 +339,35 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
   /// Brings in whatever Checkvist has that the workspace does not, at launch
   /// and whenever the app comes to the front, throttled.
   ///
-  /// Only with the integration on and a list chosen. This used to run on
-  /// every activation regardless, logging in to Checkvist — and, in Release,
-  /// where the remote key is deliberately not read until asked for, writing a
-  /// "Username or Remote Key is missing." failure to Diagnostics each time.
+  /// Only with the integration on and an account to sign in with. In Release
+  /// the remote key is deliberately not read until asked for, so this stays
+  /// quiet until the user has used Checkvist's settings page that session.
   private func scheduleAutoRefresh() {
-    guard checkvistManager.repository.canSyncRemotely else { return }
+    guard checkvistManager.checkvist.canImport else { return }
     let now = Date()
     guard AutoRefreshThrottlePolicy.shouldRefresh(now: now, lastRefreshAt: lastAutoRefreshTime) else { return }
     lastAutoRefreshTime = now
     Task { [weak self] in
-      guard let self else { return }
-      let listsLoaded = await self.checkvistManager.syncService.loadCheckvistLists()
-      await self.checkvistManager.syncService.fetchTopTask()
-      self.workspace.importLegacyCheckvistTasks(
-        self.checkvistManager.repository.tasks,
-        sourceListID: self.checkvistManager.repository.listId)
-      if listsLoaded {
-        let snapshots = await self.checkvistWorkspaceSnapshots()
-        self.workspace.importCheckvistLists(snapshots)
-      }
-      self.menuBarController.updateTitle()
+      await self?.importFromCheckvist()
     }
   }
 
-  /// Fetches each discovered list the workspace has not yet got a copy of,
-  /// without changing the user's active legacy Checkvist selection. The
-  /// workspace receives a local snapshot only; its regular task editing
-  /// remains independent from the remote service.
-  ///
-  /// A list whose fetch fails is left out rather than handed over empty: an
-  /// empty snapshot used to become an empty local list, mapped to the remote
-  /// one, and so never imported again.
-  private func checkvistWorkspaceSnapshots() async -> [(list: CheckvistList, tasks: [CheckvistTask])] {
-    let repository = checkvistManager.repository
-    let imported = workspace.importedCheckvistListIDs
-    var snapshots: [(list: CheckvistList, tasks: [CheckvistTask])] = []
-    for list in repository.availableLists where !imported.contains(String(list.id)) {
-      do {
-        let tasks = try await repository.fetchCheckvistOpenTasks(listId: String(list.id))
-        snapshots.append((list: list, tasks: tasks))
-      } catch {
-        checkvistManager.diagnosticsLog.record(
-          category: "Checkvist",
-          message: "Could not fetch list “\(list.name)” for import: \(error.localizedDescription)",
-          isFailure: true)
-      }
+  /// Loads the account's lists and copies each one the workspace has not got
+  /// yet and the user has not excluded. A list whose fetch fails is left out
+  /// rather than handed over empty: an empty snapshot would become an empty
+  /// local list, mapped to the remote one, and so never imported again.
+  private func importFromCheckvist() async {
+    let checkvist = checkvistManager.checkvist
+    guard await checkvist.loadLists() else { return }
+    let snapshots = await checkvist.importSnapshots(
+      alreadyImported: workspace.importedCheckvistListIDs
+    ) { [weak self] list, error in
+      self?.checkvistManager.diagnosticsLog.record(
+        category: "Checkvist",
+        message: "Could not fetch list “\(list.name)” for import: \(error.localizedDescription)",
+        isFailure: true)
     }
-    return snapshots
+    workspace.importCheckvistLists(snapshots)
   }
 
   func showMainWindow() {

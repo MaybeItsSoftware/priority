@@ -4,15 +4,11 @@ import OSLog
 import Observation
 import TaktCore
 
-/// Provides read-only access to task/list data that IntegrationCoordinator needs.
+/// What the MCP setup seeds the `takt` command with: the Checkvist account
+/// and the list its Checkvist tools default to.
 @MainActor
 protocol IntegrationDataSource: AnyObject {
-  var tasks: [CheckvistTask] { get }
   var listId: String { get }
-  /// The active list's name, for integrations that file work under it. Empty
-  /// when offline or before the lists have loaded.
-  var listTitle: String { get }
-  var currentTask: CheckvistTask? { get }
   var activeCredentials: CheckvistCredentials { get }
 }
 
@@ -32,10 +28,6 @@ protocol IntegrationDataSource: AnyObject {
   /// the user cannot see needs to say what it did — clearing the error is not
   /// the same as reporting a result.
   @ObservationIgnored var onStatus: ((String) -> Void)?
-  /// Closes tasks that were completed in another surface — today, boxes ticked
-  /// in AFFiNE. Owned by the caller because closing a task is the mutation
-  /// service's job, not an integration's.
-  @ObservationIgnored var onCloseTasks: (([Int]) async -> Void)?
   /// Adds the desktop workspace's selected task to Google Calendar and answers
   /// whether there was one to add. Set by `AppDelegate`, which owns the
   /// workspace; the coordinator is built before it.
@@ -78,8 +70,6 @@ protocol IntegrationDataSource: AnyObject {
 
   var obsidianInboxPath: String
   var mcpServerCommandPath: String
-  var pendingObsidianSyncTaskIds: [Int]
-  var googleCalendarEventLinksByTaskKey: [String: String]
 
   /// MCP clients found on this machine, and the result of the last setup action.
   /// Populated by `refreshDetectedMCPClients()` when the MCP settings page opens.
@@ -97,22 +87,7 @@ protocol IntegrationDataSource: AnyObject {
   let googleTasksPlugin: any GoogleTasksIntegrationPlugin
   let mcpIntegrationPlugin: any MCPIntegrationPlugin
 
-  // MARK: - Internal state
-
-  @ObservationIgnored var hasPendingSyncProcessingTask = false
-
-  private static let pendingObsidianSyncDefaultsKey = "pendingObsidianSyncTaskIdsByListId"
-  let pendingSyncQueueStore = ListScopedTaskIDStore(
-    defaultsKey: IntegrationCoordinator.pendingObsidianSyncDefaultsKey
-  )
-
   // MARK: - Computed
-
-  var hasPendingObsidianSync: Bool { !pendingObsidianSyncTaskIds.isEmpty }
-
-  var pendingSyncMenuBarPrefix: String {
-    PendingSyncQueue.menuBarPrefix(count: pendingObsidianSyncTaskIds.count)
-  }
 
   var hasResolvedMCPServerCommand: Bool {
     !mcpServerCommandPath.isEmpty
@@ -126,8 +101,7 @@ protocol IntegrationDataSource: AnyObject {
     affinePlugin: any AFFiNEIntegrationPlugin,
     googleCalendarPlugin: any GoogleCalendarIntegrationPlugin,
     googleTasksPlugin: any GoogleTasksIntegrationPlugin,
-    mcpIntegrationPlugin: any MCPIntegrationPlugin,
-    initialListId: String
+    mcpIntegrationPlugin: any MCPIntegrationPlugin
   ) {
     self.preferencesStore = preferencesStore
     self.obsidianPlugin = obsidianPlugin
@@ -159,81 +133,6 @@ protocol IntegrationDataSource: AnyObject {
       ?? preferencesStore.bool(.mcpIntegrationEnabled, default: false)
     self.obsidianInboxPath = obsidianPlugin.inboxPath
     self.mcpServerCommandPath = mcpIntegrationPlugin.serverCommandURL()?.path ?? ""
-    self.googleCalendarEventLinksByTaskKey = preferencesStore.stringDictionary(
-      .googleCalendarEventLinksByTaskKey)
-    self.pendingObsidianSyncTaskIds = ListScopedTaskIDStore(
-      defaultsKey: IntegrationCoordinator.pendingObsidianSyncDefaultsKey
-    ).load(for: initialListId)
-  }
-
-  // MARK: - Pending Obsidian Sync Queue
-
-  func loadPendingObsidianSyncQueue(for listId: String) {
-    pendingObsidianSyncTaskIds = pendingSyncQueueStore.load(for: listId)
-  }
-
-  func savePendingObsidianSyncQueue(_ queue: [Int], listId: String) {
-    let normalized = PendingSyncQueue.normalized(queue)
-    pendingObsidianSyncTaskIds = normalized
-    guard !listId.isEmpty else { return }
-    pendingSyncQueueStore.save(normalized, for: listId)
-  }
-
-  func enqueuePendingObsidianSync(taskId: Int, listId: String) {
-    savePendingObsidianSyncQueue(
-      PendingSyncQueue.enqueue(taskId, into: pendingObsidianSyncTaskIds), listId: listId)
-  }
-
-  func dequeuePendingObsidianSync(taskId: Int, listId: String) {
-    savePendingObsidianSyncQueue(
-      PendingSyncQueue.dequeue(taskId, from: pendingObsidianSyncTaskIds), listId: listId)
-  }
-
-  func reconcilePendingObsidianSyncQueueWithOpenTasks(openTaskIds: Set<Int>, listId: String) {
-    let filtered = PendingSyncQueue.reconciled(
-      pendingObsidianSyncTaskIds, withOpenTaskIds: openTaskIds)
-    // Only write when something actually went, so a routine fetch doesn't churn
-    // the preferences store or the observation bus.
-    guard filtered != pendingObsidianSyncTaskIds else { return }
-    savePendingObsidianSyncQueue(filtered, listId: listId)
-  }
-
-  // MARK: - Google Calendar Event Links
-
-  func hasGoogleCalendarEventLink(taskId: Int, listId: String) -> Bool {
-    IntegrationLinkStore.hasEventLink(
-      taskId: taskId, listId: listId, in: googleCalendarEventLinksByTaskKey)
-  }
-
-  func googleCalendarEventLinkURL(taskId: Int, listId: String) -> URL? {
-    IntegrationLinkStore.eventLinkURL(
-      taskId: taskId, listId: listId, in: googleCalendarEventLinksByTaskKey)
-  }
-
-  func recordGoogleCalendarEventLink(
-    taskId: Int,
-    listId: String,
-    eventURL: URL?
-  ) {
-    googleCalendarEventLinksByTaskKey = IntegrationLinkStore.recording(
-      eventURL: eventURL, taskId: taskId, listId: listId,
-      into: googleCalendarEventLinksByTaskKey)
-    preferencesStore.set(googleCalendarEventLinksByTaskKey, for: .googleCalendarEventLinksByTaskKey)
-  }
-
-  // MARK: - Open Link
-
-  func openTaskLink(task: CheckvistTask) {
-    guard let detector = try? NSDataDetector(types: NSTextCheckingResult.CheckingType.link.rawValue)
-    else { return }
-    let range = NSRange(task.content.startIndex..., in: task.content)
-    if let match = detector.firstMatch(in: task.content, range: range),
-      let url = match.url,
-      let scheme = url.scheme?.lowercased(),
-      scheme == "http" || scheme == "https"
-    {
-      NSWorkspace.shared.open(url)
-    }
   }
 
   // MARK: - Google Calendar
@@ -280,27 +179,6 @@ protocol IntegrationDataSource: AnyObject {
       onError?("No task selected.")
       return
     }
-    onError?(nil)
-  }
-
-  func openSavedGoogleCalendarEventLink(taskId explicitTaskId: Int? = nil) {
-    guard googleCalendarIntegrationEnabled else {
-      onError?("Enable Google Calendar integration in Preferences first.")
-      return
-    }
-    guard let ds = dataSource else { onError?("Internal error: no data source."); return }
-    let targetTaskId = explicitTaskId ?? ds.currentTask?.id
-    guard let targetTaskId else {
-      onError?("No task selected.")
-      return
-    }
-    guard let url = googleCalendarEventLinkURL(taskId: targetTaskId, listId: ds.listId),
-      url.scheme?.lowercased() == "https"
-    else {
-      onError?("No saved browser link for this Google Calendar event.")
-      return
-    }
-    NSWorkspace.shared.open(url)
     onError?(nil)
   }
 
@@ -541,165 +419,4 @@ protocol IntegrationDataSource: AnyObject {
     onIntegrationStateChanged?()
   }
 
-  func linkTaskToObsidianFolder(taskId explicitTaskId: Int? = nil) {
-    guard obsidianIntegrationEnabled else {
-      onError?("Enable Obsidian integration in Preferences first.")
-      return
-    }
-    guard let ds = dataSource else { onError?("Internal error: no data source."); return }
-    guard
-      let task = explicitTaskId.flatMap({ id in ds.tasks.first(where: { $0.id == id }) })
-        ?? ds.currentTask
-    else {
-      onError?("No task selected.")
-      return
-    }
-
-    do {
-      _ = try obsidianPlugin.chooseLinkedFolder(forTaskId: task.id, taskContent: task.content)
-      onError?(nil)
-    } catch {
-      onError?("Failed to link Obsidian folder.")
-    }
-  }
-
-  func createAndLinkTaskObsidianFolder(taskId explicitTaskId: Int? = nil) {
-    guard obsidianIntegrationEnabled else {
-      onError?("Enable Obsidian integration in Preferences first.")
-      return
-    }
-    guard let ds = dataSource else { onError?("Internal error: no data source."); return }
-    guard
-      let task = explicitTaskId.flatMap({ id in ds.tasks.first(where: { $0.id == id }) })
-        ?? ds.currentTask
-    else {
-      onError?("No task selected.")
-      return
-    }
-
-    do {
-      _ = try obsidianPlugin.createAndLinkFolder(forTaskId: task.id, taskContent: task.content)
-      onError?(nil)
-    } catch {
-      onError?("Failed to create and link Obsidian folder.")
-    }
-  }
-
-  func clearTaskObsidianFolderLink(taskId explicitTaskId: Int? = nil) {
-    guard let ds = dataSource else { onError?("Internal error: no data source."); return }
-    guard let targetTaskId = explicitTaskId ?? ds.currentTask?.id else {
-      onError?("No task selected.")
-      return
-    }
-    obsidianPlugin.clearLinkedFolder(forTaskId: targetTaskId)
-    onError?(nil)
-  }
-
-  func hasObsidianFolderLink(taskId: Int) -> Bool {
-    obsidianPlugin.hasLinkedFolder(forTaskId: taskId)
-  }
-
-  func obsidianLinkedFolderAncestorTaskId(
-    for task: CheckvistTask, taskList: [CheckvistTask]
-  ) -> Int? {
-    let taskById = Dictionary(uniqueKeysWithValues: taskList.map { ($0.id, $0) })
-    var candidateTask: CheckvistTask? = task
-
-    while let current = candidateTask {
-      if obsidianPlugin.hasLinkedFolder(forTaskId: current.id) {
-        return current.id
-      }
-
-      guard let parentId = current.parentId, parentId != 0 else { break }
-      candidateTask = taskById[parentId]
-    }
-
-    return nil
-  }
-
-  func syncTaskToObsidian(taskId explicitTaskId: Int? = nil, openMode: ObsidianOpenMode) async {
-    guard obsidianIntegrationEnabled else {
-      onError?("Enable Obsidian integration in Preferences first.")
-      return
-    }
-    guard let ds = dataSource else { onError?("Internal error: no data source."); return }
-    guard let targetTaskId = explicitTaskId ?? ds.currentTask?.id else {
-      onError?("No task selected.")
-      return
-    }
-    guard let task = ds.tasks.first(where: { $0.id == targetTaskId }) ?? ds.currentTask else {
-      onError?("Task not found.")
-      return
-    }
-
-    let listId = ds.listId
-    let linkedFolderTaskId = obsidianLinkedFolderAncestorTaskId(for: task, taskList: ds.tasks)
-    if linkedFolderTaskId == nil && obsidianInboxPath.isEmpty {
-      let success = chooseObsidianInboxFolder()
-      if !success { return }
-    }
-
-    do {
-      _ = try obsidianPlugin.syncTask(
-        task,
-        listId: listId,
-        linkedFolderTaskId: linkedFolderTaskId,
-        openMode: openMode,
-        syncDate: Date()
-      )
-      dequeuePendingObsidianSync(taskId: targetTaskId, listId: listId)
-      onError?(nil)
-    } catch {
-      enqueuePendingObsidianSync(taskId: targetTaskId, listId: listId)
-      onError?(
-        error.localizedDescription.isEmpty
-          ? "Obsidian sync failed. Added to pending queue."
-          : error.localizedDescription
-      )
-    }
-  }
-
-  func processPendingObsidianSyncQueue() async {
-    guard obsidianIntegrationEnabled else { return }
-    guard !pendingObsidianSyncTaskIds.isEmpty else { return }
-    guard !hasPendingSyncProcessingTask else { return }
-    guard let ds = dataSource else { return }
-    hasPendingSyncProcessingTask = true
-    defer { hasPendingSyncProcessingTask = false }
-
-    let pendingTaskIds = pendingObsidianSyncTaskIds
-    let listId = ds.listId
-
-    for taskId in pendingTaskIds {
-      guard let task = ds.tasks.first(where: { $0.id == taskId }) else {
-        dequeuePendingObsidianSync(taskId: taskId, listId: listId)
-        continue
-      }
-      do {
-        let linkedFolderTaskId = obsidianLinkedFolderAncestorTaskId(
-          for: task, taskList: ds.tasks)
-        _ = try obsidianPlugin.syncTask(
-          task,
-          listId: listId,
-          linkedFolderTaskId: linkedFolderTaskId,
-          openMode: .standard,
-          syncDate: Date()
-        )
-        dequeuePendingObsidianSync(taskId: taskId, listId: listId)
-      } catch ObsidianSyncError.inboxFolderNotConfigured {
-        // Nothing in the queue can succeed without a folder, and retrying the
-        // rest would only log the same thing once per task. Say so once and
-        // leave the queue for when there is one.
-        logger.notice("Pending Obsidian syncs are waiting for an inbox folder to be chosen.")
-        onError?(ObsidianSyncError.inboxFolderNotConfigured.localizedDescription)
-        return
-      } catch {
-        // Keep queued; we'll retry on the next connectivity transition. Logged
-        // rather than swallowed, so a note that never lands is diagnosable.
-        logger.error(
-          "Pending Obsidian sync for task \(taskId, privacy: .public) failed: \(error.localizedDescription, privacy: .public)"
-        )
-      }
-    }
-  }
 }

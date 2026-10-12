@@ -32,9 +32,12 @@ import SwiftUI
     storeProvider: { [weak self] in self?.workspaceStoreProvider?() },
     isEnabled: { [weak self] in self?.integrations.googleTasksIntegrationEnabled ?? false })
 
-  let repository: TaskRepository
-
-  let navigationState: NavigationState
+  /// Checkvist as an import source: the account, its lists, and which of
+  /// them the workspace copies.
+  let checkvist: CheckvistAccount
+  /// Copies the Checkvist lists the workspace lacks, now. Set by `AppDelegate`,
+  /// which owns the workspace; the settings page's Import button calls it.
+  @ObservationIgnored var importCheckvistNow: (() async -> Void)?
 
   /// Transient one-line feedback under the list. Clears itself after three
   /// seconds.
@@ -72,17 +75,7 @@ import SwiftUI
     static let hyper = 0x1B00
   }
 
-  let startDates: StartDateManager
-
-  let recurrence: RecurrenceManager
-
-  let timer: TimerManager
-
   var integrations: IntegrationCoordinator
-
-  var quickEntry: QuickEntryManager
-
-  let focusSessionManager: FocusSessionManager
 
   let dailyLog: DailyLogManager
   /// Which completion celebration is active, and the flourish the popover
@@ -101,29 +94,11 @@ import SwiftUI
   let diagnosticsLog = DiagnosticsLog()
 
   let preferences: PreferencesManager
-  var onboardingService: OnboardingService!
 
   @ObservationIgnored var isApplyingLaunchAtLoginChange = false
-  /// Loading a saved key must not be treated as a user edit: otherwise the
-  /// repository callback immediately writes it back to Keychain after reading
-  /// it, defeating the single explicit-access guarantee.
-  @ObservationIgnored var isLoadingStoredRemoteKey = false
   @ObservationIgnored let preferencesStore = PreferencesStore()
   let userPluginManager: UserPluginManager
   @ObservationIgnored private(set) var lifecycle: LifecycleController!
-  private(set) var undoService: UndoService!
-  @ObservationIgnored private(set) var taskMutationService: TaskMutationService!
-  @ObservationIgnored private(set) var syncService: SyncService!
-  /// Strong-held because `IntegrationCoordinator.dataSource` is `weak`.
-  /// Bridges the protocol to repository/coordinator so AppCoordinator needn't
-  /// conform.
-  @ObservationIgnored private var integrationDataSourceAdapter: IntegrationDataSourceAdapter!
-  /// Strong-held for the same reason as the adapter above:
-  /// `DailyLogManager.dataSource` is `weak`.
-  @ObservationIgnored private var dailyLogDataSourceAdapter: DailyLogDataSourceAdapter!
-  /// Owned here (rather than on `LifecycleController`) so `deinit`, which is
-  /// nonisolated, can call `stop()` without hopping back onto the main actor.
-  @ObservationIgnored let reachabilityMonitor = NetworkReachabilityMonitor()
   /// Where the Checkvist remote key is persisted.
   ///
   /// The key is password-equivalent, so release builds keep it in the keychain
@@ -144,7 +119,6 @@ import SwiftUI
   }
 
   init(pluginRegistry: PluginRegistry) {
-    let resolvedLocalTaskStore = LocalTaskStore()
     let resolvedCheckvistSyncPlugin =
       pluginRegistry.activeCheckvistSyncPlugin ?? NativeCheckvistSyncPlugin()
     let resolvedObsidianPlugin =
@@ -194,18 +168,11 @@ import SwiftUI
     // credentials, so a stale code-signature ACL cannot prompt at launch.
     let initialRemoteKey = resolvedCheckvistSyncPlugin.startupRemoteKey(
       useKeychainStorageAtInit: useKeychainStorageAtInit)
-
-    let navigationState = NavigationState()
-    self.navigationState = navigationState
-
-    // Create task repository with all task-related state
-    let repository = TaskRepository(
+    let checkvist = CheckvistAccount(
+      plugin: resolvedCheckvistSyncPlugin,
       preferencesStore: preferencesStore,
-      checkvistSyncPlugin: resolvedCheckvistSyncPlugin,
-      localTaskStore: resolvedLocalTaskStore,
-      initialRemoteKey: initialRemoteKey
-    )
-    self.repository = repository
+      initialRemoteKey: initialRemoteKey)
+    self.checkvist = checkvist
 
     let storedListId = preferencesStore.string(.checkvistListId)
     let storedUsername = preferencesStore.string(.checkvistUsername)
@@ -213,12 +180,10 @@ import SwiftUI
     let storedPluginSelectionOnboardingCompletedFlag = preferencesStore.optionalBool(
       .pluginSelectionOnboardingCompleted)
 
-    self.focusSessionManager = FocusSessionManager(preferencesStore: preferencesStore)
     self.dailyLog = DailyLogManager(
       preferencesStore: preferencesStore,
       plugin: resolvedDailyLogPlugin
     )
-    // OnboardingService will compute onboardingCompleted in its init.
 
     if storedPluginSelectionOnboardingCompletedFlag == nil {
       let storedObsidianIntegrationEnabled = preferencesStore.optionalBool(
@@ -237,12 +202,6 @@ import SwiftUI
         preferencesStore.set(true, for: .pluginSelectionOnboardingCompleted)
       }
     }
-    let timer = TimerManager(preferencesStore: preferencesStore)
-    self.timer = timer
-    self.startDates = StartDateManager(preferencesStore: preferencesStore)
-    self.recurrence = RecurrenceManager(preferencesStore: preferencesStore)
-    let quickEntry = QuickEntryManager()
-    self.quickEntry = quickEntry
     // Retains the registry, unlike the other capabilities: the celebration
     // preset is switchable from Settings, so resolving it once here would pin
     // whatever was active at launch.
@@ -252,85 +211,36 @@ import SwiftUI
     )
     self.celebration = celebration
     self.theme = ThemeManager(preferencesStore: preferencesStore, registry: pluginRegistry)
-    // The other half of the cancellation contract. `runInline` has always
-    // promised to return false when the user moved on mid-animation, and every
-    // preset carried a `catch` for it, but nothing in the app ever cancelled
-    // the work — so the promise was unreachable. This is what fires it.
-    navigationState.onNavigationChanged = { [weak celebration] in
-      celebration?.cancelInFlight()
-    }
     let integrations = IntegrationCoordinator(
       preferencesStore: preferencesStore,
       obsidianPlugin: resolvedObsidianPlugin,
       affinePlugin: resolvedAFFiNEPlugin,
       googleCalendarPlugin: resolvedGoogleCalendarPlugin,
       googleTasksPlugin: resolvedGoogleTasksPlugin,
-      mcpIntegrationPlugin: resolvedMCPIntegrationPlugin,
-      initialListId: storedListId
+      mcpIntegrationPlugin: resolvedMCPIntegrationPlugin
     )
     self.integrations = integrations
-    self.onboardingService = OnboardingService(
-      preferencesStore: preferencesStore,
-      repository: repository,
-      integrations: integrations
-    )
+    integrations.dataSource = checkvist
 
-    self.taskMutationService = TaskMutationService(host: self, repository: repository)
-    self.undoService = UndoService(performer: self.taskMutationService)
-    self.syncService = SyncService(host: self, repository: repository)
-    self.lifecycle = LifecycleController(
-      coordinator: self,
-      reachabilityMonitor: reachabilityMonitor
-    )
+    self.lifecycle = LifecycleController(coordinator: self)
     self.lifecycle.start()
-    timer.onTick = { [weak self] taskId, elapsed in
-      self?.focusSessionManager.handleTaskElapsed(elapsed, forTaskId: taskId)
+    checkvist.usesKeychainStorage = { [weak self] in self?.usesKeychainStorage ?? true }
+    checkvist.onCredentialsChanged = { [weak integrations] seedIsStale in
+      // The `takt` command was seeded with the account the app signed in
+      // with; a new name or a cleared key leaves that seed stale.
+      if seedIsStale { integrations?.clearSeededCLICredentials() }
     }
-    focusSessionManager.onFocusBlockEnded = { [weak timer] in
-      timer?.pauseTimer()
+    checkvist.onErrorMessageSet = { [weak self] message in
+      self?.diagnosticsLog.record(category: "Checkvist", message: message, isFailure: true)
     }
-    let integrationDataSourceAdapter = IntegrationDataSourceAdapter(
-      repository: repository,
-      coordinator: self
-    )
-    self.integrationDataSourceAdapter = integrationDataSourceAdapter
-    integrations.dataSource = integrationDataSourceAdapter
-    let dailyLogDataSourceAdapter = DailyLogDataSourceAdapter(
-      repository: repository,
-      startDates: startDates
-    )
-    self.dailyLogDataSourceAdapter = dailyLogDataSourceAdapter
-    dailyLog.dataSource = dailyLogDataSourceAdapter
     dailyLog.onError = { [weak self] message in
-      self?.repository.errorMessage = message
-    }
-    // Ticking a daily used to be entirely silent — a separate funnel from task
-    // completion, with no feedback of any kind. It gets the same haptic and the
-    // same celebration now. No cancellation semantics: unlike a task close there
-    // is no request to abandon, the tick has already landed locally.
-    dailyLog.onDailyTicked = { [weak self] daily in
-      guard let self else { return }
-      NSHapticFeedbackManager.defaultPerformer.perform(
-        .generic, performanceTime: .drawCompleted)
-      let event = self.completionEvent(for: .daily(id: daily.id), alreadyRecorded: true)
-      Task { @MainActor in
-        _ = await self.celebration.runInline(event)
-        self.celebration.presentFlourish(for: event)
-      }
-    }
-    // A finished focus block is the one piece of "what I did today" that no
-    // task mutation records, so it's captured here rather than through the
-    // `TaskMutationHost` seam.
-    focusSessionManager.onFocusSessionCompleted = { [weak self] taskId, seconds in
-      guard let self else { return }
-      let title = self.repository.tasks.first { $0.id == taskId }?.content ?? ""
-      self.dailyLog.recordFocusSession(taskId: taskId, title: title, seconds: seconds)
+      guard let message else { return }
+      self?.diagnosticsLog.record(category: "Daily log", message: message, isFailure: true)
+      self?.statusMessage = message
     }
     Task { @MainActor [weak self] in
-      // Deferred rather than run inline: the data source is only wired a few
-      // lines above, and this must not be the thing that snapshots an empty
-      // plan before the task list has loaded. Covers launching without ever
-      // opening the popover; `showPopoverWindow` handles the rest.
+      // Deferred: writing a closed day's note touches the dailies folder,
+      // which launch does not need to wait for.
       self?.dailyLog.refreshForToday()
     }
   }
@@ -339,80 +249,21 @@ import SwiftUI
     self.init(pluginRegistry: .nativeFirst())
   }
 
-  deinit {
-    reachabilityMonitor.stop()
-  }
 }
-
-extension TaskMutationService: UndoActionPerforming {}
 
 extension AppCoordinator {
   // MARK: - Keychain / Debug
 
   func handleCredentialStorageModeChanged() {
-    let current = repository.remoteKey.trimmingCharacters(in: .whitespacesAndNewlines)
-    if usesKeychainStorage {
-      if !current.isEmpty {
-        if let failure = repository.checkvistSyncPlugin.persistRemoteKey(
-          current, useKeychainStorage: true)
-        {
-          repository.errorMessage = failure
-        }
-      } else {
-        repository.hasAttemptedRemoteKeyBootstrap = false
-        loadRemoteKeyFromKeychainIfNeeded()
-      }
-    } else {
-      repository.checkvistSyncPlugin.persistRemoteKeyForDebugStorageMode(current)
-    }
-  }
-
-  @MainActor func loadCredentialsFromKeychain() {
-    repository.hasAttemptedRemoteKeyBootstrap = false
-    loadRemoteKeyFromKeychainIfNeeded()
-  }
-
-  func loadRemoteKeyFromKeychainIfNeeded() {
-    let currentState = RemoteKeyBootstrapState(
-      remoteKey: repository.remoteKey,
-      hasAttemptedBootstrap: repository.hasAttemptedRemoteKeyBootstrap
-    )
-    let nextState = RemoteKeyBootstrapPolicy.bootstrap(
-      state: currentState,
-      usesKeychainStorage: usesKeychainStorage,
-      loadFromKeychain: { repository.checkvistSyncPlugin.loadRemoteKeyFromKeychain() }
-    )
-    isLoadingStoredRemoteKey = true
-    repository.remoteKey = nextState.remoteKey
-    isLoadingStoredRemoteKey = false
-    repository.hasAttemptedRemoteKeyBootstrap = nextState.hasAttemptedBootstrap
+    checkvist.credentialStorageModeChanged()
   }
 
   @MainActor func resetOnboardingForDebug() {
     #if DEBUG
-      repository.checkvistSyncPlugin.clearAuthentication()
+      checkvist.signOut()
       integrations.clearSeededCLICredentials()
-      repository.errorMessage = nil
-      let resetState = OnboardingResetPolicy.reset(
-        OnboardingResetState(
-          remoteKey: repository.remoteKey,
-          onboardingCompleted: onboardingService.onboardingCompleted,
-          username: repository.username,
-          listId: repository.listId,
-          availableListsCount: repository.availableLists.count,
-          tasksCount: repository.tasks.count,
-          currentParentId: navigationState.currentParentId,
-          currentSiblingIndex: navigationState.currentSiblingIndex
-        ))
-
-      onboardingService.onboardingCompleted = resetState.onboardingCompleted
-      repository.username = resetState.username
-      repository.listId = resetState.listId
-      repository.availableLists = []
-      repository.tasks = []
-      navigationState.currentParentId = resetState.currentParentId
-      navigationState.currentSiblingIndex = resetState.currentSiblingIndex
-
+      checkvist.username = ""
+      checkvist.defaultListId = ""
       preferencesStore.remove(.checkvistUsername)
       preferencesStore.remove(.checkvistListId)
       preferencesStore.remove(.onboardingCompleted)
@@ -423,7 +274,7 @@ extension AppCoordinator {
 
   var activePluginSettingsPages: [any PluginSettingsPageProviding] {
     [
-      repository.checkvistSyncPlugin as any Plugin,
+      checkvist.plugin as any Plugin,
       integrations.obsidianPlugin as any Plugin,
       integrations.affinePlugin as any Plugin,
       integrations.googleCalendarPlugin as any Plugin,

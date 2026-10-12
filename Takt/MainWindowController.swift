@@ -75,8 +75,6 @@ final class MainWindowController: NSObject, NSWindowDelegate {
       .themedBodyFont()
       .environment(workspace)
       .environment(manager)
-      .environment(manager.navigationState)
-      .environment(manager.repository)
       .frame(minWidth: Self.minContentSize.width, minHeight: Self.minContentSize.height)
       .themed(manager.theme)
     let hostingController = NSHostingController(rootView: rootView)

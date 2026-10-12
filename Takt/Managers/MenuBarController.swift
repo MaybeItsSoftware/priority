@@ -436,8 +436,6 @@ class MenuBarController: NSObject {
 
   private func observeForTitleUpdates() {
     withObservationTracking {
-      _ = self.manager.repository.isLoading
-      _ = self.manager.repository.errorMessage
       // Starting or ending a session swaps the status item between launcher
       // and clock; the per-second redraw is the ticker's job, not this one's.
       _ = self.workspace?.activeFocusSession

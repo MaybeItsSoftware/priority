@@ -59,9 +59,9 @@ import os
   /// it — but the mark-done work was spawned as an unretained `Task {}` in the
   /// shortcut router and nothing in the app ever cancelled it, so `Task.sleep`
   /// never threw, the catch branches never ran, and the guard in
-  /// `markCurrentTaskDone` could not fire. Holding the handle here, and
-  /// cancelling it from `NavigationState.onNavigationChanged`, is what turns
-  /// ~30 lines of unreachable error handling into the behaviour they describe.
+  /// `markCurrentTaskDone` could not fire. Holding the handle here, so a new
+  /// celebration can cancel the one before it, is what makes the error
+  /// handling reachable.
   @ObservationIgnored private var inlineTask: Task<Bool, Never>?
 
   /// Set when the watchdog gave up on an overrunning preset, so the outcome can
@@ -180,11 +180,8 @@ import os
 
   /// Abandons whatever celebration is in flight.
   ///
-  /// Wired to `NavigationState.onNavigationChanged`: moving to another row,
-  /// zooming into a subtree, or closing the popover all mean the user is no
-  /// longer looking at the row they just completed, and a close request that
-  /// lands after that is worse than one that never goes out — the row it
-  /// removes is not the row they are watching.
+  /// A celebration that starts while another is still running calls the
+  /// first one off, so two never draw over the same moment.
   func cancelInFlight() {
     guard let inlineTask else { return }
     self.inlineTask = nil

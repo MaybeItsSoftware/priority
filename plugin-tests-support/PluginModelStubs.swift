@@ -138,42 +138,6 @@ final class CheckvistSession {
   }
 }
 
-@MainActor
-final class CheckvistTaskRepository {
-  var nextFetchedTasks: [CheckvistTask] = []
-  var fetchError: Error?
-  var isCacheOutdatedResult = false
-
-  private(set) var fetchTasksCallCount = 0
-  private(set) var persistedPayload: CheckvistTaskCachePayload?
-  var cachedPayloadByListId: [String: CheckvistTaskCachePayload] = [:]
-
-  func fetchTasks(
-    listId: String,
-    performAuthenticatedRequest:
-      @escaping ((String) throws -> URLRequest) async throws -> (Data, HTTPURLResponse)
-  ) async throws -> [CheckvistTask] {
-    fetchTasksCallCount += 1
-    if let fetchError {
-      throw fetchError
-    }
-    return nextFetchedTasks
-  }
-
-  func persistTaskCache(_ payload: CheckvistTaskCachePayload) {
-    persistedPayload = payload
-    cachedPayloadByListId[payload.listId] = payload
-  }
-
-  func loadTaskCache(for listId: String) -> CheckvistTaskCachePayload? {
-    cachedPayloadByListId[listId]
-  }
-
-  func isCacheOutdated(_ payload: CheckvistTaskCachePayload) -> Bool {
-    isCacheOutdatedResult
-  }
-}
-
 final class GoogleOAuthLoopbackReceiver {
   func start() async throws -> URL {
     URL(string: "http://127.0.0.1:8787/google-oauth-callback")!

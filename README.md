@@ -1041,7 +1041,7 @@ There is one implementation — the Rust CLI — and the app ships it at `Conten
 
 Every external integration is a plugin behind a protocol.
 
-Built in: `NativeCheckvistSyncPlugin`, `NativeObsidianIntegrationPlugin`, `NativeAFFiNEIntegrationPlugin`, `NativeGoogleCalendarIntegrationPlugin`, `NativeMCPIntegrationPlugin`, `NativeDailyLogPlugin`, `OfflineTaskSyncPlugin`.
+Built in: `NativeCheckvistSyncPlugin`, `NativeObsidianIntegrationPlugin`, `NativeAFFiNEIntegrationPlugin`, `NativeGoogleCalendarIntegrationPlugin`, `NativeMCPIntegrationPlugin`, `NativeDailyLogPlugin`.
 
 To install your own, open `Settings → Installed plugins` and click **Install plugin…** (folder, `.zip`, or `.priority-plugin`), or drop a plugin folder into `~/Library/Application Support/Takt/Plugins` and hit **Reload**.
 
@@ -1085,7 +1085,7 @@ python3 scripts/mcp_smoke_check.py
 | `scripts/` | Build, install, bundle the CLI into the app, and the MCP smoke check |
 | `docs/` | [CLI](docs/cli.md) · [MCP](docs/mcp-server.md) · [plugins](docs/plugins.md) · [state ownership](docs/state-ownership.md) · [sync](docs/sync.md) · [self-hosting sync](docs/self-hosting.md) |
 
-The same source tree is compiled by two build systems: the Xcode project builds the app, and `Package.swift` exposes six SPM libraries so the headless logic can be tested without the app shell — `TaktCore` (pure logic), `TaktWorkspace` (the GRDB workspace store), `TaktWorkspaceEditing` (the outline editing engine), `TaktSync` (the client half of multi-device sync), `TaktPlugins` (integration plugins) and `TaktAppLogic` (the app-bound state machines) — each with a test target of the same name plus `Tests` (`TaktCoreTests`, `TaktWorkspaceTests`, `TaktWorkspaceEditingTests`, `TaktSyncTests`, `TaktPluginTests`, `TaktAppLogicTests`). The first four are real single-directory targets under `Sources/` and `Takt/Editing`; the last two are curated `sources:` lists over `Takt/`, so adding or moving a file there means updating `Package.swift` too — see [CLAUDE.md](CLAUDE.md).
+The same source tree is compiled by two build systems: the Xcode project builds the app, and `Package.swift` exposes SPM libraries so the headless logic can be tested without the app shell — `TaktCore` (pure logic), `TaktWorkspace` (the workspace store over the Rust core), `TaktWorkspaceEditing` (the outline editing engine), `TaktSync` (the client half of multi-device sync), and `TaktPlugins` (integration plugins) — each with a test target of the same name plus `Tests` (`TaktCoreTests`, `TaktWorkspaceTests`, `TaktWorkspaceEditingTests`, `TaktSyncTests`, `TaktPluginTests`). The first four are real single-directory targets under `Sources/` and `Takt/Editing`; the last is a curated `sources:` list over `Takt/`, so adding or moving a file there means updating `Package.swift` too — see [CLAUDE.md](CLAUDE.md).
 
 ## Where your data lives
 

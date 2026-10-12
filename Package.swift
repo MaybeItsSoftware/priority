@@ -12,8 +12,6 @@ let pluginTargetExcludes = [
   // The Rust core; its Swift face is the TaktRustCore target.
   "core",
   "README.md",
-  "applogic-support",
-  "applogic-tests",
   "build",
   "corelogic-tests",
   "docs",
@@ -47,15 +45,8 @@ let pluginTargetExcludes = [
   // App-level source files at Takt/ root
   "Takt/AppCoordinator.swift",
   "Takt/AppDelegate.swift",
-  "Takt/DailyLogDataSourceAdapter.swift",
-  "Takt/IntegrationDataSourceAdapter.swift",
   "Takt/LifecycleController.swift",
-  "Takt/ListScopedPriorityStore.swift",
-  "Takt/ListScopedEisenhowerStore.swift",
-  "Takt/ListScopedTaskIDStore.swift",
   "Takt/MainApp.swift",
-  "Takt/NetworkReachabilityMonitor.swift",
-  "Takt/OnboardingService.swift",
   "Takt/DiagnosticsLog.swift",
   "Takt/DiagnosticsView.swift",
   "Takt/MainWindowController.swift",
@@ -65,10 +56,9 @@ let pluginTargetExcludes = [
   "Takt/Theme.swift",
   // App-only: reads UserDefaults and Application Support directly at startup.
   "Takt/LegacyNameMigration.swift",
+  "Takt/LegacyOfflineTaskStore.swift",
+  "Takt/CheckvistAccount.swift",
   "Takt/PreferencesStore.swift",
-  "Takt/OptimisticTaskID.swift",
-  "Takt/RecurrenceRule.swift",
-  "Takt/ReorderQueue.swift",
   "Takt/SettingsNavState.swift",
   "Takt/SettingsView.swift",
   "Takt/SettingsChrome.swift",
@@ -80,25 +70,12 @@ let pluginTargetExcludes = [
   "Takt/SettingsView+AppearancePane.swift",
   "Takt/SettingsView+GeneralPane.swift",
   "Takt/SettingsView+KeyboardPane.swift",
-  "Takt/AppCoordinator+ServiceHosts.swift",
-  "Takt/SyncService.swift",
-  "Takt/TaskMutationService.swift",
-  "Takt/TaskMutationService+Board.swift",
-  // The one place `CheckvistTask` meets `TaktCore`'s `VisibilityTask`. It is
-  // a `TaktAppLogic` source, and a file can only belong to one SPM target.
-  "Takt/CheckvistTask+VisibilityTask.swift",
-  "Takt/TaskServiceHosts.swift",
-  "Takt/TaskTreeFormatter.swift",
-  "Takt/UndoService.swift",
 
   // Plugin subtrees / files that are app-only or conflict with PluginModelStubs
   "Takt/Plugins/Registry",
-  // The offline store and its sync plugin are `TaktAppLogic` sources.
-  "Takt/Plugins/Native/Offline",
   "Takt/Plugins/Native/Checkvist/CheckvistAPIClient.swift",
   "Takt/Plugins/Native/Checkvist/CheckvistConnectionState.swift",
   "Takt/Plugins/Native/Checkvist/CheckvistSession.swift",
-  "Takt/Plugins/Native/Checkvist/CheckvistTaskRepository.swift",
   "Takt/Plugins/Native/Checkvist/NativeCheckvistSyncPlugin+Settings.swift",
   "Takt/Plugins/Native/Google/GoogleOAuthLoopbackReceiver.swift",
   "Takt/Plugins/Native/Google/GoogleAccountSettingsSection.swift",
@@ -138,141 +115,6 @@ let pluginTargetExcludes = [
   "Takt/Plugins/Protocols/ThemePluginProtocol.swift",
 ]
 
-// Anything that is *not* an AppLogic source. Mirrors `pluginTargetExcludes` but
-// keeps `Takt/Managers/TaskRepository.swift`, the priority/queue stores,
-// `Takt/Plugins/Native/Offline/`, etc. unblocked so SPM can pick them up.
-let appLogicTargetExcludes = [
-  "workspace-editing-tests",
-  "Takt/Editing",
-  // Top-level non-source artefacts (same set as pluginTargetExcludes; this
-  // isn't shared because exclude entries are path-based and we'd risk drift).
-  "ARCHITECTURE_IMPROVEMENT_PLAN.md",
-  "Takt.xcodeproj",
-  "CLAUDE.md",
-  // The Rust CLI crate. No Swift sources, but `path: "."` would otherwise walk
-  // all of `cli/target` on every build.
-  "cli",
-  // The Rust core; its Swift face is the TaktRustCore target.
-  "core",
-  "README.md",
-  "applogic-tests",
-  "build",
-  "corelogic-tests",
-  "docs",
-  "plugin-tests",
-  "plugin-tests-support",
-  "workspace-tests",
-  "Sources/TaktWorkspace",
-  "Sources/TaktSync",
-  "sync-tests",
-  "test-support",
-  // The sync server and the phone apps: other build systems, and their build
-  // trees are large enough that walking them slows every build.
-  "sync-server",
-  "mobile",
-  "scripts",
-
-  // App resources and other targets' source trees.
-  "Takt/Assets.xcassets",
-  "Takt/Fonts",
-  "Takt/Takt.entitlements",
-  "Takt/Takt.release.entitlements",
-  "Takt/Info.plist",
-  "Takt/WorkspaceDesktopView.swift",
-  "Takt/WorkspaceViewModel.swift",
-
-  // Takt/Managers — AppLogic only wants TaskRepository.swift from here; the
-  // rest of the directory stays app-only and is excluded file-by-file.
-  "Takt/Managers/CompletionCelebrationManager.swift",
-  "Takt/Managers/DailyLogManager.swift",
-  "Takt/Managers/FocusSessionManager.swift",
-  "Takt/Managers/GlobalShortcutManager.swift",
-  "Takt/Managers/IntegrationCoordinator.swift",
-  "Takt/Managers/IntegrationCoordinator+AFFiNE.swift",
-  "Takt/Managers/MenuBarController.swift",
-  "Takt/Managers/NavigationState.swift",
-  "Takt/Managers/PreferencesManager.swift",
-  "Takt/Managers/QuickEntryManager.swift",
-  "Takt/Managers/RecurrenceManager.swift",
-  "Takt/Managers/StartDateManager.swift",
-  "Takt/Managers/ThemeManager.swift",
-  "Takt/Managers/TimerManager.swift",
-
-  // Models — AppLogic only wants UndoableAction.swift; the rest are app-only
-  // enums. (`CheckvistConnectionState` lives with the Checkvist plugin now.)
-  "Takt/Models/AppearanceMode.swift",
-  "Takt/Models/CommandSuggestion.swift",
-  "Takt/Models/DailyChartRange.swift",
-  "Takt/Models/FocusRunSurface.swift",
-  "Takt/Models/QuickEntryMode.swift",
-
-  // App-level source files at Takt/ root that AppLogic does not need.
-  "Takt/AppCoordinator.swift",
-  "Takt/AppCoordinator+ServiceHosts.swift",
-  "Takt/AppDelegate.swift",
-  "Takt/DailyLogDataSourceAdapter.swift",
-  "Takt/IntegrationDataSourceAdapter.swift",
-  "Takt/LifecycleController.swift",
-  "Takt/MainApp.swift",
-  "Takt/NetworkReachabilityMonitor.swift",
-  "Takt/OnboardingService.swift",
-  "Takt/DiagnosticsLog.swift",
-  "Takt/DiagnosticsView.swift",
-  "Takt/MainWindowController.swift",
-  "Takt/MainWindowTitleStrip.swift",
-  "Takt/WindowContentSizing.swift",
-  // App-only: reads UserDefaults and Application Support directly at startup.
-  "Takt/LegacyNameMigration.swift",
-  "Takt/RecurrenceRule.swift",
-  "Takt/SettingsNavState.swift",
-  "Takt/SettingsView.swift",
-  "Takt/SettingsChrome.swift",
-  "Takt/CelebrationPreview.swift",
-  "Takt/TaskDeletionPrompt.swift",
-  "Takt/WorkspaceTaskDraftRow.swift",
-  "Takt/SettingsFontPicker.swift",
-  "Takt/SettingsView+AdvancedPane.swift",
-  "Takt/SettingsView+AppearancePane.swift",
-  "Takt/SettingsView+GeneralPane.swift",
-  "Takt/SettingsView+KeyboardPane.swift",
-  "Takt/TaskTreeFormatter.swift",
-  "Takt/Theme.swift",
-
-  // Plugin subtrees (AppLogic pulls `Native/Offline/` and
-  // `Checkvist/CheckvistConnectionState.swift` as sources; everything else is
-  // app-only or lives in TaktPlugins). The Checkvist folder is excluded file
-  // by file for that reason — a folder cannot be both excluded and the home
-  // of a source.
-  "Takt/Plugins/Registry",
-  "Takt/Plugins/Support",
-  "Takt/Plugins/Protocols/PluginProtocols.swift",
-  "Takt/Plugins/Protocols/PluginSettingsPageProviding.swift",
-  "Takt/Plugins/Protocols/DailyLogPluginProtocol.swift",
-  "Takt/Plugins/Protocols/CompletionCelebrationPluginProtocol.swift",
-  "Takt/Plugins/Protocols/ThemePluginProtocol.swift",
-  "Takt/Plugins/Native/AFFiNE",
-  "Takt/Plugins/Native/Celebration",
-  "Takt/Plugins/Native/Checkvist/CheckvistAPIClient.swift",
-  "Takt/Plugins/Native/Checkvist/CheckvistCredentialStore.swift",
-  "Takt/Plugins/Native/Checkvist/CheckvistEndpoints.swift",
-  "Takt/Plugins/Native/Checkvist/CheckvistModels.swift",
-  "Takt/Plugins/Native/Checkvist/CheckvistModels+Core.swift",
-  "Takt/Plugins/Native/Checkvist/CheckvistSession.swift",
-  "Takt/Plugins/Native/Checkvist/CheckvistSessionError.swift",
-  "Takt/Plugins/Native/Checkvist/CheckvistTaskCachePayload.swift",
-  "Takt/Plugins/Native/Checkvist/CheckvistTaskRepository.swift",
-  "Takt/Plugins/Native/Checkvist/NativeCheckvistSyncPlugin.swift",
-  "Takt/Plugins/Native/Checkvist/NativeCheckvistSyncPlugin+Settings.swift",
-  "Takt/Plugins/Native/DailyLog",
-  "Takt/Plugins/Native/Google",
-  "Takt/Plugins/Native/GoogleCalendar",
-  "Takt/Plugins/Native/GoogleTasks",
-  "Takt/Plugins/Native/MCP",
-  "Takt/Plugins/Native/Obsidian",
-  "Takt/Plugins/Native/Theme",
-  "Takt/Plugins/User",
-]
-
 let package = Package(
   name: "priority-core",
   // iOS is for the phone app in `mobile/ios`, which links the workspace
@@ -282,7 +124,6 @@ let package = Package(
   products: [
     .library(name: "TaktCore", targets: ["TaktCore"]),
     .library(name: "TaktPlugins", targets: ["TaktPlugins"]),
-    .library(name: "TaktAppLogic", targets: ["TaktAppLogic"]),
     .library(name: "TaktWorkspace", targets: ["TaktWorkspace"]),
     .library(name: "TaktWorkspaceEditing", targets: ["TaktWorkspaceEditing"]),
     .library(name: "TaktSync", targets: ["TaktSync"]),
@@ -342,9 +183,9 @@ let package = Package(
     ),
     .target(
       name: "TaktPlugins",
-      // Same unlock as `TaktAppLogic`: these sources compile into the Xcode
-      // app as well, and the app now links `TaktCore` rather than compiling
-      // it, so the module resolves on both sides.
+      // These sources compile into the Xcode app as well, and the app links
+      // `TaktCore` rather than compiling it, so the module resolves on both
+      // sides.
       // The Checkvist plugin calls the core (`core/src/checkvist.rs`) for
       // every request it makes and every answer it reads.
       dependencies: ["TaktCore", "TaktRustCore"],
@@ -357,7 +198,6 @@ let package = Package(
         "Takt/Plugins/Native/Checkvist/CheckvistEndpoints.swift",
         "Takt/Plugins/Native/Checkvist/CheckvistModels.swift",
         "Takt/Plugins/Native/Checkvist/CheckvistModels+Core.swift",
-        "Takt/Plugins/Native/Checkvist/CheckvistTaskCachePayload.swift",
         "Takt/Plugins/Native/Checkvist/CheckvistSessionError.swift",
         "Takt/Plugins/Native/AFFiNE/AFFiNEMCPSession.swift",
         "Takt/Plugins/Native/AFFiNE/AFFiNEExportService.swift",
@@ -380,47 +220,6 @@ let package = Package(
       dependencies: ["TaktWorkspace"],
       path: "Takt/Editing"
     ),
-    // AppLogic hosts the headless-but-app-bound state machines (TaskRepository,
-    // OfflineTaskSyncPlugin, the priority/queue/eisenhower stores, etc.) so they
-    // can be exercised by `swift test` without spinning up the Xcode app target.
-    // The Checkvist data types and `CheckvistSyncPlugin` protocol are
-    // re-declared in `applogic-support/AppLogicSharedTypes.swift` because
-    // promoting them out of `TaktPlugins` would require making them
-    // `public` — see the Phase 5.2 note in ARCHITECTURE_IMPROVEMENT_PLAN.md.
-    .target(
-      name: "TaktAppLogic",
-      // Legal at last. `TaktAppLogic`'s sources are still compiled into the
-      // Xcode app as well as into this target, and an `import TaktCore`
-      // line used to break the app build because no such module existed there.
-      // Now the app *links* TaktCore rather than compiling its sources, so
-      // the module exists on both sides and the import resolves either way.
-      dependencies: ["TaktCore"],
-      path: ".",
-      exclude: appLogicTargetExcludes,
-      sources: [
-        "Takt/Managers/TaskRepository.swift",
-        // Conforms the Checkvist model to `TaktCore`'s `VisibilityTask`.
-        // Compiled into both this target and the app, so each side's
-        // declaration of `CheckvistTask` picks up the conformance.
-        "Takt/CheckvistTask+VisibilityTask.swift",
-        "Takt/UndoService.swift",
-        "Takt/Plugins/Native/Offline/LocalTaskStore.swift",
-        "Takt/OptimisticTaskID.swift",
-        "Takt/ReorderQueue.swift",
-        "Takt/SyncService.swift",
-        "Takt/TaskMutationService.swift",
-        "Takt/TaskMutationService+Board.swift",
-        "Takt/TaskServiceHosts.swift",
-        "Takt/ListScopedPriorityStore.swift",
-        "Takt/ListScopedTaskIDStore.swift",
-        "Takt/ListScopedEisenhowerStore.swift",
-        "Takt/Plugins/Native/Offline/OfflineTaskSyncPlugin.swift",
-        "Takt/PreferencesStore.swift",
-        "Takt/Models/UndoableAction.swift",
-        "Takt/Plugins/Native/Checkvist/CheckvistConnectionState.swift",
-        "applogic-support/AppLogicSharedTypes.swift",
-      ]
-    ),
     // A second connection onto a workspace file, for tests that play another
     // process or look underneath the store, on the system SQLite.
     .target(
@@ -437,11 +236,6 @@ let package = Package(
       name: "TaktPluginTests",
       dependencies: ["TaktPlugins"],
       path: "plugin-tests"
-    ),
-    .testTarget(
-      name: "TaktAppLogicTests",
-      dependencies: ["TaktAppLogic", "TaktPlugins"],
-      path: "applogic-tests"
     ),
     .testTarget(
       name: "TaktWorkspaceTests",

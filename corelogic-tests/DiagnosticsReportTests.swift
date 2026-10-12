@@ -16,11 +16,8 @@ final class DiagnosticsReportTests: XCTestCase {
       connectionDescription: "connected (4 lists)",
       listName: "Work",
       listID: "12",
-      isNetworkReachable: true,
-      syncStatus: "Synced 2m ago",
       lastSuccessfulSyncAt: Date(timeIntervalSince1970: 1_699_999_880),
-      openTaskCount: 37,
-      pendingOfflineWorkCount: 0,
+      importedListCount: 3,
       health: health,
       recentProblems: recentProblems,
       paths: paths
@@ -30,7 +27,7 @@ final class DiagnosticsReportTests: XCTestCase {
   func testReportNamesTheListAndItsID() {
     let text = DiagnosticsReport.text(from: makeSnapshot())
     XCTAssertTrue(text.contains("Work (id 12)"))
-    XCTAssertTrue(text.contains("Open tasks:     37"))
+    XCTAssertTrue(text.contains("Imported lists: 3"))
   }
 
   func testEmptyProblemListSaysSoRatherThanLookingTruncated() {

@@ -24,12 +24,9 @@ struct CheckvistCredentials: Sendable {
   }
 }
 
-enum CheckvistTaskAction: String, Sendable, Codable {
-  case close
-  case reopen
-  case invalidate
-}
-
+/// Checkvist, as the workspace's import source: signing in, the lists, and a
+/// list's open tasks. The requests and the reading of the answers are the Rust
+/// core's (`core/src/checkvist.rs`); the remote key lives in the keychain.
 @MainActor
 protocol CheckvistSyncPlugin: Plugin {
   func startupRemoteKey(useKeychainStorageAtInit: Bool) -> String
@@ -44,44 +41,6 @@ protocol CheckvistSyncPlugin: Plugin {
   func fetchOpenTasks(listId: String, credentials: CheckvistCredentials) async throws
     -> [CheckvistTask]
   func fetchLists(credentials: CheckvistCredentials) async throws -> [CheckvistList]
-  func createList(name: String, credentials: CheckvistCredentials) async throws -> CheckvistList?
-  func performTaskAction(
-    listId: String,
-    taskId: Int,
-    action: CheckvistTaskAction,
-    credentials: CheckvistCredentials
-  ) async throws -> Bool
-  func updateTask(
-    listId: String,
-    taskId: Int,
-    content: String?,
-    due: String?,
-    credentials: CheckvistCredentials
-  ) async throws -> Bool
-  func createTask(
-    listId: String,
-    content: String,
-    parentId: Int?,
-    position: Int?,
-    credentials: CheckvistCredentials
-  ) async throws -> CheckvistTask?
-  func deleteTask(listId: String, taskId: Int, credentials: CheckvistCredentials) async throws
-    -> Bool
-  func moveTask(
-    listId: String,
-    taskId: Int,
-    position: Int,
-    credentials: CheckvistCredentials
-  ) async throws -> Bool
-  func reparentTask(
-    listId: String,
-    taskId: Int,
-    parentId: Int?,
-    credentials: CheckvistCredentials
-  ) async throws -> Bool
-  func persistTaskCache(listId: String, tasks: [CheckvistTask])
-  func loadTaskCache(for listId: String) -> CheckvistTaskCachePayload?
-  func isTaskCacheOutdated(_ payload: CheckvistTaskCachePayload) -> Bool
 }
 
 @MainActor
@@ -95,10 +54,6 @@ extension CheckvistSyncPlugin {
   func persistRemoteKeyForDebugStorageMode(_ value: String) {}
 
   func loadRemoteKeyFromKeychain() -> String? {
-    nil
-  }
-
-  func createList(name: String, credentials: CheckvistCredentials) async throws -> CheckvistList? {
     nil
   }
 }

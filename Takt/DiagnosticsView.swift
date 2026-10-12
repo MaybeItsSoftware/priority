@@ -19,7 +19,7 @@ struct DiagnosticsView: View {
 
   @State private var copyConfirmation: String?
 
-  private var repository: TaskRepository { manager.repository }
+  private var checkvist: CheckvistAccount { manager.checkvist }
 
   var body: some View {
     VStack(spacing: 0) {
@@ -84,10 +84,10 @@ struct DiagnosticsView: View {
           .foregroundStyle(theme.muted)
       }
       Spacer(minLength: 0)
-      Button("Retry Sync") {
-        Task { await manager.syncService.fetchTopTask() }
+      Button("Import from Checkvist") {
+        Task { await manager.importCheckvistNow?() }
       }
-      .disabled(repository.isLoading)
+      .disabled(checkvist.isLoading || !checkvist.canImport)
     }
     .padding(theme.space.md)
   }
@@ -96,15 +96,12 @@ struct DiagnosticsView: View {
 
   private var statusSection: some View {
     Section {
-      let summary = syncSummary
-      labelledRow("Connection", connectionDescription)
-      labelledRow("List", listDescription)
-      labelledRow("Network", repository.isNetworkReachable ? "Reachable" : "Unreachable")
-      labelledRow("Sync", summary.text, tint: severityColor(summary.severity))
-      labelledRow("Open tasks", "\(repository.tasks.count)")
-      labelledRow(
-        "Queued offline",
-        repository.hasPendingOfflineWork ? "Yes" : "None")
+      labelledRow("Checkvist", connectionDescription)
+      labelledRow("CLI list", listDescription)
+      labelledRow("Imported lists", "\(importedListCount)")
+      if let error = checkvist.errorMessage {
+        labelledRow("Last error", error, tint: theme.danger)
+      }
     } header: {
       Text("Status")
     }
@@ -212,29 +209,17 @@ struct DiagnosticsView: View {
     }
   }
 
-  private func severityColor(_ severity: SyncStatusSeverity) -> Color? {
-    switch severity {
-    case .ok: return nil
-    case .warning: return theme.warning
-    case .problem: return theme.danger
-    }
-  }
-
   // MARK: - Derived state
 
-  private var syncSummary: SyncStatusSummary {
-    SyncStatusFormatter.summary(
-      isLoading: repository.isLoading,
-      isNetworkReachable: repository.isNetworkReachable,
-      canSyncRemotely: repository.canSyncRemotely,
-      hasPendingOfflineWork: repository.hasPendingOfflineWork,
-      errorMessage: repository.errorMessage,
-      lastSuccessfulSyncAt: repository.lastSuccessfulSyncAt
-    )
+  /// The Checkvist lists the workspace holds a copy of, as the import's own
+  /// mapping counts them.
+  private var importedListCount: Int {
+    (UserDefaults.standard.dictionary(forKey: WorkspaceViewModel.checkvistWorkspaceListIDsKey) ?? [:]).count
   }
 
   private var connectionDescription: String {
-    switch repository.checkvistConnectionState {
+    guard checkvist.isEnabled else { return "Import off" }
+    switch checkvist.connectionState {
     case .disconnected: return "No credentials"
     case .connecting: return "Connecting…"
     case .awaitingConnect: return "Credentials set, not connected"
@@ -243,11 +228,15 @@ struct DiagnosticsView: View {
   }
 
   private var listDescription: String {
-    if repository.listId.isEmpty { return "Offline workspace" }
-    let name = repository.currentListName
+    if checkvist.defaultListId.isEmpty { return "None" }
+    let name = currentListName
     return name.isEmpty
-      ? "id \(repository.listId) (name unknown)"
-      : "\(name) (id \(repository.listId))"
+      ? "id \(checkvist.defaultListId) (name unknown)"
+      : "\(name) (id \(checkvist.defaultListId))"
+  }
+
+  private var currentListName: String {
+    checkvist.availableLists.first { String($0.id) == checkvist.defaultListId }?.name ?? ""
   }
 
   private var healthItems: [DiagnosticsSnapshot.HealthItem] {
@@ -257,18 +246,10 @@ struct DiagnosticsView: View {
     items.append(
       .init(
         title: "Checkvist credentials",
-        isHealthy: repository.canAttemptLogin,
-        detail: repository.canAttemptLogin
+        isHealthy: checkvist.hasCredentials,
+        detail: checkvist.hasCredentials
           ? "Username and remote key are set."
-          : "Add a username and remote key in Preferences → Preferences."))
-
-    items.append(
-      .init(
-        title: "Remote sync",
-        isHealthy: repository.canSyncRemotely,
-        detail: repository.canSyncRemotely
-          ? "Mutations go to Checkvist."
-          : "Working offline — mutations are stored locally."))
+          : "Add a username and remote key in Settings → Checkvist to import lists."))
 
     if integrations.obsidianIntegrationEnabled {
       let path = integrations.obsidianInboxPath
@@ -341,13 +322,6 @@ struct DiagnosticsView: View {
       ("Dailies", directory.appendingPathComponent("dailies.json")),
       ("User plugins", directory.appendingPathComponent("Plugins", isDirectory: true)),
     ]
-    if !repository.listId.isEmpty {
-      entries.append(
-        (
-          "Task cache",
-          directory.appendingPathComponent("tasks-cache-\(repository.listId).json")
-        ))
-    }
     let home = FileManager.default.homeDirectoryForCurrentUser
     entries.append(
       (
@@ -381,13 +355,10 @@ struct DiagnosticsView: View {
       buildNumber: Self.buildNumber,
       generatedAt: Date(),
       connectionDescription: connectionDescription,
-      listName: repository.currentListName,
-      listID: repository.listId,
-      isNetworkReachable: repository.isNetworkReachable,
-      syncStatus: syncSummary.text,
-      lastSuccessfulSyncAt: repository.lastSuccessfulSyncAt,
-      openTaskCount: repository.tasks.count,
-      pendingOfflineWorkCount: repository.hasPendingOfflineWork ? 1 : 0,
+      listName: currentListName,
+      listID: checkvist.defaultListId,
+      lastSuccessfulSyncAt: checkvist.lastSuccessfulLoadAt,
+      importedListCount: importedListCount,
       health: healthItems,
       recentProblems: manager.diagnosticsLog.entries.map {
         .init(date: $0.date, category: $0.category, message: $0.message, isFailure: $0.isFailure)

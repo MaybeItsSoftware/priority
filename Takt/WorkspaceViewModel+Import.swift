@@ -7,8 +7,7 @@ import TaktWorkspace
 /// size — it is the same type.
 extension WorkspaceViewModel {
   private static let legacyMigrationKey = "localWorkspaceMigratedOfflineTasksV1"
-  private static let checkvistMigrationKeysKey = "localWorkspaceMigratedCheckvistListIDsV1"
-  private static let checkvistWorkspaceListIDsKey = "localWorkspaceCheckvistListIDsV1"
+  static let checkvistWorkspaceListIDsKey = "localWorkspaceCheckvistListIDsV1"
 
   /// Read once by `migrateLegacyDailiesIfNeeded`, never written again.
   private static let dailyProgressTaskIDsKey = "localWorkspaceDailyProgressTaskIDsV1"
@@ -44,38 +43,6 @@ extension WorkspaceViewModel {
   /// is two chances to disagree about where the history lives.
   private func legacyDailyDefinitions() -> [Daily] {
     DailyDefinitionsStore(directoryURL: DailyLogService.defaultStoreDirectoryURL()).load().dailies
-  }
-
-  /// Imports a loaded legacy Checkvist list once. This is deliberately a copy:
-  /// once migration completes, the workspace is fully local and never needs
-  /// Checkvist in order to open or edit these tasks.
-  func importLegacyCheckvistTasks(_ tasks: [CheckvistTask], sourceListID: String) {
-    guard let store, let workspace else { return }
-    let listID = sourceListID.trimmingCharacters(in: .whitespacesAndNewlines)
-    guard !listID.isEmpty, !tasks.isEmpty else { return }
-
-    let defaults = UserDefaults.standard
-    var migratedListIDs = Set(defaults.stringArray(forKey: Self.checkvistMigrationKeysKey) ?? [])
-    guard !migratedListIDs.contains(listID) else { return }
-
-    let seeds = CheckvistWire.importSeeds(prefix: "checkvist:\(listID):", tasks: tasks)
-
-    do {
-      let outcome = try store.importTasks(
-        workspaceId: workspace.id,
-        listName: "Imported from Checkvist — \(listID)",
-        sourceSystem: Self.checkvistSourceSystem,
-        coreSeeds: seeds)
-      migratedListIDs.insert(listID)
-      defaults.set(Array(migratedListIDs).sorted(), forKey: Self.checkvistMigrationKeysKey)
-      try load()
-      if let outcome {
-        selectList(outcome.list.id)
-      }
-      errorMessage = nil
-    } catch {
-      errorMessage = error.localizedDescription
-    }
   }
 
   /// The remote ids of the Checkvist lists this workspace already holds a copy
