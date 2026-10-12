@@ -103,6 +103,9 @@ struct WorkspaceTaskMarker: View {
   @State private var isHovered = false
   let task: WorkspaceTask
   var isSubtask = false
+  /// The subtask's `└` in another colour than the border's: the accent,
+  /// on a board row whose link is lit, so the mark and its line are one.
+  var elbowColour: Color?
 
   var body: some View {
     Group {
@@ -111,7 +114,7 @@ struct WorkspaceTaskMarker: View {
       } else if isHovered {
         Image(systemName: "circle").foregroundStyle(theme.muted)
       } else if isSubtask {
-        WorkspaceSubtaskElbow()
+        WorkspaceSubtaskElbow(colour: elbowColour)
       } else {
         // Held at the circle's size, so the row's height and the hover
         // target are the same whichever mark shows.
@@ -130,10 +133,12 @@ struct WorkspaceTaskMarker: View {
 /// moves.
 struct WorkspaceSubtaskElbow: View {
   @Environment(\.theme) private var theme
+  /// The border's, unless the row asks otherwise.
+  var colour: Color?
 
   var body: some View {
     Text("└").font(theme.monoCaptionFont).hidden()
-      .overlay { WorkspaceBoardLinkElbow(colour: theme.border) }
+      .overlay { WorkspaceBoardLinkElbow(colour: colour ?? theme.border) }
   }
 }
 

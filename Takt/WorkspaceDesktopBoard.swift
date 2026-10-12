@@ -747,7 +747,9 @@ struct WorkspaceKanbanCard: View {
       Button {
         if item.task.isList { model.openItemList(item.task) } else { model.toggleTask(item.task) }
       } label: {
-        WorkspaceTaskMarker(task: item.task, isSubtask: true)
+        WorkspaceTaskMarker(
+          task: item.task, isSubtask: true,
+          elbowColour: rowLink.map { litLinkIDs.contains($0.childID) } == true ? theme.primary : nil)
           .frame(width: step)
           .contentShape(Rectangle())
       }
