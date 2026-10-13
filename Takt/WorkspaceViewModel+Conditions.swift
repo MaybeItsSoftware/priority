@@ -66,17 +66,26 @@ extension WorkspaceViewModel {
     UserDefaults.standard.set(Array(focusContext.conditionIDs).sorted(), forKey: key)
   }
 
-  /// The conditions you can say are true right now: every live one, plus any
-  /// archived one that is either on or still required by a task, so it can be
-  /// turned off or satisfied.
-  var selectableFocusConditions: [TaskCondition] {
-    focusConditions.filter { condition in
-      !condition.isArchived || focusContext.conditionIDs.contains(condition.id)
-        || taskPlanningByID.values.contains { plan in
-          (plan.requirementGroups ?? []).contains { $0.contains(condition.id) }
-        }
-    }
+  /// What "Available now" offers, under category headings: only the
+  /// conditions an open task requires, plus any that is on so it can be
+  /// turned off. Empty when no open task needs a condition. The rule is the
+  /// Rust core's, so the phones offer the same.
+  var availableConditionSections: [TaskConditionSection] {
+    TaskConditionSection.available(focusConditions, required: requiredConditionIDs, active: focusContext.conditionIDs)
   }
+
+  /// The conditions you can say are true right now, in the order the tab
+  /// shows them.
+  var selectableFocusConditions: [TaskCondition] {
+    availableConditionSections.flatMap(\.conditions)
+  }
+
+  /// Every condition under its heading, for managing them.
+  var conditionSections: [TaskConditionSection] { TaskConditionSection.sections(focusConditions) }
+
+  /// The categories a condition can be filed under: Location, then every
+  /// other one in use.
+  var conditionCategories: [String] { TaskConditionSection.categories(focusConditions) }
 
   /// The active conditions' names, or nil with none on.
   var focusContextSummary: String? {
@@ -86,22 +95,37 @@ extension WorkspaceViewModel {
   /// - Returns: the new condition, or nil if it could not be made (the
   ///   error is in `errorMessage`).
   @discardableResult
-  func createCondition(name: String, isLocation: Bool) -> TaskCondition? {
+  func createCondition(name: String, category: String?) -> TaskCondition? {
     guard let store, let workspace else { return nil }
     var created: TaskCondition?
     perform {
-      created = try store.createCondition(workspaceId: workspace.id, name: name, isLocation: isLocation)
+      created = try store.createCondition(workspaceId: workspace.id, name: name, category: category)
       reloadNextUpNow()
     }
     return created
   }
 
-  func saveCondition(_ condition: TaskCondition, name: String, isLocation: Bool, isArchived: Bool) {
+  func saveCondition(_ condition: TaskCondition, name: String, isArchived: Bool) {
     guard let store else { return }
     perform {
-      try store.saveCondition(id: condition.id, name: name, isLocation: isLocation, isArchived: isArchived)
+      try store.saveCondition(id: condition.id, name: name, isLocation: condition.isLocation, isArchived: isArchived)
       reloadNextUp(); taskEditor.refresh(store: store)
     }
+  }
+
+  /// Files a condition under a category, or none. Location makes it a place.
+  func setConditionCategory(_ condition: TaskCondition, category: String?) {
+    guard let store, TaskConditionSection.normalizedCategory(category) != condition.category else { return }
+    perform {
+      try store.setConditionCategory(id: condition.id, category: category)
+      reloadNextUp(); taskEditor.refresh(store: store)
+    }
+  }
+
+  /// The category finder, for a condition (saved as soon as one is chosen)
+  /// or for the new-condition row.
+  func presentConditionCategoryFinder(for condition: TaskCondition?) {
+    presentOverlay(.conditionCategory(WorkspaceConditionCategoryRequest(conditionID: condition?.id)))
   }
 
   func applyPlanningToDescendants(of task: WorkspaceTask) {

@@ -4,15 +4,18 @@ import SwiftUI
 
 /// The right dock's Conditions tab, in two halves under one cursor.
 ///
-/// **Available now** is the conditions that hold here — a place replaces the
-/// last place, anything else combines — with the time you have, what you want
-/// from it and when to stop trusting the answer. **Conditions** is the list
-/// itself: add one, rename it in its row, make it a place, archive it, and
+/// **Available now** is the conditions that hold here, under their category
+/// headings — a Location replaces the last one, anything else combines — and
+/// only those an open task needs, so a condition nothing waits on is not
+/// asked about. Then the time you have, what you want from it and when to
+/// stop trusting the answer. **Conditions** is every condition, by category:
+/// add one, rename it in its row, file it under a category, archive it, and
 /// see how many open tasks need it.
 ///
 /// `↑` `↓` walk both halves, Space turns a condition on or off, Return or F2
-/// renames (on the new-condition row, puts the caret in its field), `p`
-/// makes it a place, `e` archives it, `c` clears, Esc goes back to the work.
+/// renames (on the new-condition row, puts the caret in its field), `t`
+/// files it under a category, `e` archives it, `c` clears, Esc goes back to
+/// the work.
 struct WorkspaceConditionsPane: View {
   @Environment(WorkspaceViewModel.self) private var model
   @Environment(\.theme) private var theme
@@ -56,21 +59,27 @@ struct WorkspaceConditionsPane: View {
         Text("Anywhere").font(theme.captionFont).foregroundStyle(theme.dim)
       }
     }
-    if model.focusConditions.isEmpty {
-      Text(WorkspaceConditionCopy.explanation + " None yet: add one below.")
+    let sections = model.availableConditionSections
+    if sections.isEmpty {
+      Text(model.focusConditions.isEmpty
+        ? WorkspaceConditionCopy.explanation + " None yet: add one below."
+        : "No open tasks need a condition.")
         .font(theme.captionFont)
         .foregroundStyle(theme.muted)
         .fixedSize(horizontal: false, vertical: true)
         .focusSurfaceGutter()
         .padding(.bottom, theme.space.sm)
     }
-    ForEach(model.selectableFocusConditions) { condition in
-      let stop = WorkspaceConditionsStop.available(condition.id)
-      WorkspaceAvailableConditionRow(
-        condition: condition,
-        isOn: model.focusContext.conditionIDs.contains(condition.id),
-        isCursor: cursor == stop, hasKeyboard: hasKeyboard && cursor == stop)
-        .id(stop.anchor)
+    ForEach(sections) { section in
+      WorkspaceConditionsCategoryHeading(title: section.title)
+      ForEach(section.conditions) { condition in
+        let stop = WorkspaceConditionsStop.available(condition.id)
+        WorkspaceAvailableConditionRow(
+          condition: condition,
+          isOn: model.focusContext.conditionIDs.contains(condition.id),
+          isCursor: cursor == stop, hasKeyboard: hasKeyboard && cursor == stop)
+          .id(stop.anchor)
+      }
     }
     if !model.suggestedContextIDs.isEmpty {
       lastContext
@@ -171,15 +180,16 @@ struct WorkspaceConditionsPane: View {
       .padding(.bottom, theme.space.sm)
     WorkspaceNewConditionRow(isCursor: cursor == .add, hasKeyboard: hasKeyboard && cursor == .add)
       .id(WorkspaceConditionsStop.add.anchor)
-    ForEach(model.focusConditions) { condition in
-      let stop = WorkspaceConditionsStop.condition(condition.id)
-      WorkspaceConditionManageRow(
-        condition: condition, requiredBy: counts[condition.id] ?? 0,
-        isRenaming: model.renamingConditionID == condition.id,
-        isCursor: cursor == stop, hasKeyboard: hasKeyboard && cursor == stop)
-        // Keyed on what it shows, so a rename or a switch saved elsewhere
-        // starts the row's name field afresh.
-        .id(stop.anchor)
+    ForEach(model.conditionSections) { section in
+      WorkspaceConditionsCategoryHeading(title: section.title)
+      ForEach(section.conditions) { condition in
+        let stop = WorkspaceConditionsStop.condition(condition.id)
+        WorkspaceConditionManageRow(
+          condition: condition, requiredBy: counts[condition.id] ?? 0,
+          isRenaming: model.renamingConditionID == condition.id,
+          isCursor: cursor == stop, hasKeyboard: hasKeyboard && cursor == stop)
+          .id(stop.anchor)
+      }
     }
     if let error = model.errorMessage {
       Text(error)
@@ -209,8 +219,26 @@ private struct WorkspaceConditionsSectionHeader<Trailing: View>: View {
   }
 }
 
-/// A condition you can say holds: a box for a circumstance, a radio for a
-/// place, since you are in one place at a time. Clicking it turns it on or off.
+/// A category's heading in either half: quieter than the half's own.
+private struct WorkspaceConditionsCategoryHeading: View {
+  @Environment(\.theme) private var theme
+  let title: String
+
+  var body: some View {
+    Text(title)
+      .font(theme.captionFont)
+      .foregroundStyle(theme.muted)
+      .lineLimit(1)
+      .frame(maxWidth: .infinity, alignment: .leading)
+      .focusSurfaceGutter()
+      .padding(.top, theme.space.sm)
+      .padding(.bottom, theme.space.xxs)
+      .accessibilityAddTraits(.isHeader)
+  }
+}
+
+/// A condition you can say holds: a box, or a radio under Location, since
+/// you are in one place at a time. Clicking it turns it on or off.
 private struct WorkspaceAvailableConditionRow: View {
   @Environment(WorkspaceViewModel.self) private var model
   @Environment(\.theme) private var theme
@@ -237,9 +265,6 @@ private struct WorkspaceAvailableConditionRow: View {
       if condition.isArchived {
         Text("Archived").font(theme.captionFont).foregroundStyle(theme.dim)
       }
-      Text(condition.isLocation ? "Place" : "Circumstance")
-        .font(theme.captionFont)
-        .foregroundStyle(theme.muted)
     }
     .frame(maxWidth: .infinity, alignment: .leading)
     .padding(.vertical, theme.rowVerticalPadding)
@@ -253,7 +278,7 @@ private struct WorkspaceAvailableConditionRow: View {
     }
     .commandHelp(
       .conditionsToggle,
-      note: condition.isLocation ? "A place: turning it on replaces the last one" : "A circumstance: combines with the rest")
+      note: condition.isLocation ? "A location: turning it on replaces the last one" : "Combines with the rest")
     .accessibilityElement(children: .combine)
     .accessibilityLabel(condition.name)
     .accessibilityAddTraits(isOn ? [.isButton, .isSelected] : [.isButton])
@@ -269,7 +294,6 @@ private struct WorkspaceNewConditionRow: View {
   let isCursor: Bool
   let hasKeyboard: Bool
   @State private var name = ""
-  @State private var isLocation = false
   @FocusState private var isFieldFocused: Bool
 
   private var trimmed: String { name.trimmingCharacters(in: .whitespacesAndNewlines) }
@@ -287,10 +311,10 @@ private struct WorkspaceNewConditionRow: View {
           isFieldFocused = false
           model.finishConditionsEditing()
         }
-      Toggle("Place", isOn: $isLocation)
-        .toggleStyle(.themedSwitch)
-        .fixedSize()
-        .help("A place replaces the last place when you say where you are; anything else combines")
+      WorkspaceConditionCategoryMenu(
+        category: model.newConditionCategory,
+        choose: { model.newConditionCategory = $0 },
+        newCategory: { model.presentConditionCategoryFinder(for: nil) })
     }
     .font(theme.captionFont)
     .padding(.vertical, theme.rowVerticalPadding)
@@ -313,15 +337,15 @@ private struct WorkspaceNewConditionRow: View {
       model.finishConditionsEditing()
       return
     }
-    guard model.createCondition(name: trimmed, isLocation: isLocation) != nil else { return }
+    // The category stays chosen, for the next one in it.
+    guard model.createCondition(name: trimmed, category: model.newConditionCategory) != nil else { return }
     name = ""
-    isLocation = false
     DispatchQueue.main.async { isFieldFocused = true }
   }
 }
 
 /// One condition to manage: its name (a field while it is being renamed),
-/// how many open tasks need it, whether it is a place, and archiving.
+/// how many open tasks need it, its category, and archiving.
 private struct WorkspaceConditionManageRow: View {
   @Environment(WorkspaceViewModel.self) private var model
   @Environment(\.theme) private var theme
@@ -355,11 +379,11 @@ private struct WorkspaceConditionManageRow: View {
           .foregroundStyle(theme.dim)
           .help("\(requiredBy) open \(requiredBy == 1 ? "task needs" : "tasks need") it")
       }
-      Toggle("Place", isOn: Binding(get: { condition.isLocation }, set: { save(isLocation: $0) }))
-        .toggleStyle(.themedSwitch)
-        .fixedSize()
-        .commandHelp(.conditionsTogglePlace)
-      Button { save(isArchived: !condition.isArchived) } label: {
+      WorkspaceConditionCategoryMenu(
+        category: condition.category,
+        choose: { model.setConditionCategory(condition, category: $0) },
+        newCategory: { model.presentConditionCategoryFinder(for: condition) })
+      Button { model.saveCondition(condition, name: condition.name, isArchived: !condition.isArchived) } label: {
         Image(systemName: condition.isArchived ? "arrow.uturn.backward" : "archivebox")
       }
       .buttonStyle(.plain)
@@ -384,11 +408,6 @@ private struct WorkspaceConditionManageRow: View {
     .commandHelp(.conditionsEdit, note: "Double-click to rename")
   }
 
-  private func save(isLocation: Bool? = nil, isArchived: Bool? = nil) {
-    model.saveCondition(
-      condition, name: condition.name, isLocation: isLocation ?? condition.isLocation,
-      isArchived: isArchived ?? condition.isArchived)
-  }
 }
 
 /// A condition's name as a field: Return saves the rename, Esc drops it.
@@ -421,7 +440,7 @@ private struct WorkspaceConditionNameField: View {
   private func save() {
     let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
     if !trimmed.isEmpty, trimmed != condition.name {
-      model.saveCondition(condition, name: trimmed, isLocation: condition.isLocation, isArchived: condition.isArchived)
+      model.saveCondition(condition, name: trimmed, isArchived: condition.isArchived)
     }
     finish()
   }

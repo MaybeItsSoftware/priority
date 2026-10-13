@@ -29,6 +29,8 @@ enum WorkspaceOverlay: Identifiable {
   case blocker(WorkspaceBlockerRequest)
   /// The conditions a task needs, ticked: `cc`.
   case conditions(WorkspaceConditionPickerRequest)
+  /// The category a condition is filed under, or the new-condition row's.
+  case conditionCategory(WorkspaceConditionCategoryRequest)
   /// A new list or folder. Where it goes is `creationParentFolderID` and
   /// `creationIsNested` on the model, set by whoever asked.
   case create(WorkspaceCreationKind)
@@ -51,6 +53,7 @@ enum WorkspaceOverlay: Identifiable {
     case .waiting(let request): "waiting:\(request.id)"
     case .blocker(let request): "blocker:\(request.id)"
     case .conditions(let request): "conditions:\(request.id)"
+    case .conditionCategory(let request): "condition-category:\(request.id)"
     case .create(let kind): "create:\(kind.rawValue)"
     case .newBoardColumn: "column"
     case .renameBoardColumn(let id): "column-rename:\(id)"

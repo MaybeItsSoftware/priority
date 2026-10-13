@@ -33,12 +33,13 @@ struct WorkspaceConditionPicker: View {
   private static let newRowID = "new-condition"
 
   /// Every condition you could require, plus any archived one this task
-  /// already needs so it can be ticked off. In the tab's order, filtered the
-  /// way the list finder filters, and never reordered by a tick.
+  /// already needs so it can be ticked off. Under their category headings
+  /// with nothing typed; filtered the way the list finder filters once you
+  /// type, and never reordered by a tick.
   private var conditions: [TaskCondition] {
-    let offered = model.focusConditions.filter {
+    let offered = TaskConditionSection.sections(model.focusConditions.filter {
       !$0.isArchived || TaskRequirementToggle.requires($0.id, in: groups)
-    }
+    }).flatMap(\.conditions)
     let needle = query.trimmingCharacters(in: .whitespaces)
     guard !needle.isEmpty else { return offered }
     let scored: [(TaskCondition, Int)] = offered.compactMap { condition in
@@ -77,6 +78,15 @@ struct WorkspaceConditionPicker: View {
           ScrollView {
             LazyVStack(alignment: .leading, spacing: 0) {
               ForEach(Array(items.enumerated()), id: \.element.id) { index, condition in
+                if let heading = heading(before: index, in: items) {
+                  Text(heading)
+                    .font(theme.captionFont)
+                    .foregroundStyle(theme.muted)
+                    .padding(.horizontal, theme.space.md)
+                    .padding(.top, theme.space.sm)
+                    .padding(.bottom, theme.space.xxs)
+                    .accessibilityAddTraits(.isHeader)
+                }
                 row(condition, count: counts[condition.id] ?? 0)
                   .overlayRow(isSelected: index == (selection ?? 0))
                   .id(condition.id)
@@ -153,8 +163,11 @@ struct WorkspaceConditionPicker: View {
           .lineLimit(1)
       }
       Spacer(minLength: theme.space.sm)
-      if condition.isLocation { MicroLabel("Place") }
-      if condition.isArchived { MicroLabel("Archived") }
+      // Typed into, the rows leave their headings, so each says its own.
+      if !query.trimmingCharacters(in: .whitespaces).isEmpty {
+        Text(condition.categoryTitle).font(theme.captionFont).foregroundStyle(theme.muted)
+      }
+      if condition.isArchived { Text("Archived").font(theme.captionFont).foregroundStyle(theme.dim) }
       if count > 0 {
         Text("\(count)")
           .font(theme.monoCaptionFont)
@@ -164,6 +177,13 @@ struct WorkspaceConditionPicker: View {
     }
     .accessibilityElement(children: .combine)
     .accessibilityAddTraits(isRequired ? .isSelected : [])
+  }
+
+  /// The category heading that starts at `index`, with nothing typed.
+  private func heading(before index: Int, in items: [TaskCondition]) -> String? {
+    guard query.trimmingCharacters(in: .whitespaces).isEmpty else { return nil }
+    guard index == 0 || items[index - 1].categoryTitle != items[index].categoryTitle else { return nil }
+    return items[index].categoryTitle
   }
 
   /// The other conditions sharing a requirement with this one — "or Campus"
@@ -228,7 +248,7 @@ extension WorkspaceViewModel {
   /// task it was made for.
   @discardableResult
   func requireNewCondition(named name: String, on task: WorkspaceTask) -> [[String]]? {
-    guard let condition = createCondition(name: name, isLocation: false) else { return requirementGroups(of: task) }
+    guard let condition = createCondition(name: name, category: nil) else { return requirementGroups(of: task) }
     return toggleRequirement(condition.id, on: task)
   }
 }

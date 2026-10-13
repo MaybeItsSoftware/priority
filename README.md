@@ -335,7 +335,10 @@ puts it away.
 ### Conditions
 
 A **condition** is a place or circumstance a task needs before it is worth
-starting — *Home*, *Campus*, *Floor space*. A task that requires one stays out
+starting — *Home*, *Campus*, *Floor space*. Each is filed under a
+**category** — *Location*, *Equipment*, *Energy*, whatever you type — or
+none, which shows under *Other*. **Location** is the one category with a rule:
+you are in one place at a time, so its conditions are exclusive. A task that requires one stays out
 of the day and the panel until you say that condition holds; a task with no
 conditions is available whenever. Its row and card show what it needs as
 tags, one per requirement (*Home*, *Campus or Library*): in the success
@@ -343,13 +346,14 @@ colour while it holds, in the warning colour while it is what keeps the task
 back.
 
 **Requiring one** is `cc` on the task (or **Conditions** in the palette and
-the Task menu). A finder opens with every condition as a row with a box:
+the Task menu). A finder opens with every condition as a row with a box,
+under its category's heading (once you type, each row names its category instead):
 type to narrow, `↑`/`↓` to choose, and `Space` or `Return` ticks the row or
 unticks it — saved at once, one undo step each. Type a name nothing is called
 yet and the last row is **New condition “…”**: `Return` makes it and requires
 it together (two undo steps, the requirement first, since the condition
-outlives the task). It stays open for the next one, and `Esc` closes it. A
-second **place** joins the first as either-or (*Home or Campus*) rather than
+outlives the task); it is made with no category. It stays open for the next one, and `Esc` closes it. A
+second **Location** joins the first as either-or (*Home or Campus*) rather than
 asking for both, since you can only be in one. `Space` ticks once you have
 moved with the arrows, or with nothing typed; otherwise it is a space in the
 name. `Cmd+Return` goes to the Conditions tab.
@@ -361,25 +365,38 @@ shows the active conditions (or *Anywhere*). The focus panel has the same line
 above its field: clicking it, or `Cmd+Alt+8` there, hands over to the window's
 tab.
 
-- **Available now**: the conditions as rows — a box for a circumstance, a
-  radio for a place. `Space` (or a click) turns one on or off. A **place**
-  replaces the last place, since you are in one at a time; other conditions
-  combine. `c` clears them all. Under the rows are an available-time window, a
+- **Available now**: the conditions under their category headings — a radio
+  under Location, a box anywhere else — and **only those an open task
+  needs**: a condition nothing open requires changes nothing, so it is not
+  asked about, and a category with none of those is left out. One that is on
+  always stays, so it can be turned off. With nothing needing a condition it
+  says *No open tasks need a condition*. `Space` (or a click) turns one on or
+  off. A **Location** replaces the last one, since you are in one place at a
+  time; other conditions combine. `c` clears them all. Under the rows are an available-time window, a
   goal (make progress or finish something) and an expiry. What you set is kept
   across relaunches; a context that expires is offered back with **Use
   again** (`Shift+U`).
 - **Conditions**: a new-condition row (`a` or `Cmd+N` puts the caret in it,
-  `Return` makes the condition, with a **Place** switch beside it), then every
-  condition with how many open tasks need it. `Return` or `F2` renames one in
-  its row (tasks keep their requirements), `p` makes it a place or not, `e`
-  archives or restores it. **Manage conditions…** in the palette opens the tab
+  `Return` makes the condition, filed under the category in the menu beside
+  it — from a condition's row, that condition's category; `t` on the row
+  picks another), then every condition under its category heading with how
+  many open tasks need it. `Return` or `F2` renames one in its row (tasks
+  keep their requirements), `t` files it under a category — a finder of the
+  categories in use, Location first, then *No category*; type a name nothing
+  uses for **New category “…”** — and `e` archives or restores it. Filing one
+  under Location makes it a place; filing it elsewhere makes it not one. **Manage conditions…** in the palette opens the tab
   on the new-condition row.
 - `↑`/`↓` (or `j`/`k`) walk both halves with one cursor; `Esc` or `←` hands
   the keyboard back to the work and leaves the dock open, `r` puts it away.
 - **In the inspector**: the Plan section's **Add required condition** does
-  what `cc` does with the mouse — **New condition…** at the foot of its menu
-  makes one and requires it — and **Or…** widens a requirement to either of
-  two.
+  what `cc` does with the mouse, its conditions under their category
+  headings — **New condition…** at the foot of its menu makes one (with a
+  category menu beside its name) and requires it — and **Or…** widens a
+  requirement to either of two.
+
+On Android, the Focus screen's **Where you are** follows the same rule: only
+the conditions an open task needs, under their category headings, and **New
+condition** asks for a category (one in use, or typed).
 
 ### The focus panel
 

@@ -12,7 +12,7 @@ enum WorkspaceConditionsStop: Hashable {
   case available(String)
   /// The new-condition row: Return puts the caret in its field.
   case add
-  /// A condition in the "Conditions" half: rename, place, archive.
+  /// A condition in the "Conditions" half: rename, category, archive.
   case condition(String)
 
   /// The condition the row is about, if it is about one.
@@ -34,7 +34,7 @@ enum WorkspaceConditionsStop: Hashable {
 }
 
 /// The right dock's Conditions tab: saying what is available now, and adding,
-/// renaming, re-placing and archiving the conditions themselves.
+/// renaming, filing under a category and archiving the conditions themselves.
 ///
 /// It replaces a popover on the status bar, another on the focus panel, a
 /// picker overlay and a manager overlay — four ways into two halves of one
@@ -43,7 +43,8 @@ enum WorkspaceConditionsStop: Hashable {
 extension WorkspaceViewModel {
   /// Every row the cursor can stand on, top to bottom.
   var conditionsStops: [WorkspaceConditionsStop] {
-    selectableFocusConditions.map { .available($0.id) } + [.add] + focusConditions.map { .condition($0.id) }
+    selectableFocusConditions.map { .available($0.id) } + [.add]
+      + conditionSections.flatMap(\.conditions).map { .condition($0.id) }
   }
 
   /// The row the keyboard is on. A cursor whose row has gone — a condition
@@ -105,17 +106,19 @@ extension WorkspaceViewModel {
       }
     case .conditionsEdit: editConditionsStop()
     case .conditionsNew:
+      // From a condition, the new one starts in that condition's category.
+      if let condition = conditionUnderCursor { newConditionCategory = condition.category }
       conditionsCursor = .add
       conditionsAddFieldRequest += 1
-    case .conditionsTogglePlace:
-      if let condition = conditionUnderCursor {
-        saveCondition(
-          condition, name: condition.name, isLocation: !condition.isLocation, isArchived: condition.isArchived)
+    case .conditionsCategory:
+      if conditionsCursorStop == .add {
+        presentConditionCategoryFinder(for: nil)
+      } else if let condition = conditionUnderCursor {
+        presentConditionCategoryFinder(for: condition)
       }
     case .conditionsArchive:
       if let condition = conditionUnderCursor {
-        saveCondition(
-          condition, name: condition.name, isLocation: condition.isLocation, isArchived: !condition.isArchived)
+        saveCondition(condition, name: condition.name, isArchived: !condition.isArchived)
       }
     case .conditionsClear: clearFocusConditions()
     case .conditionsUseAgain: if !suggestedContextIDs.isEmpty { confirmSuggestedContext() }

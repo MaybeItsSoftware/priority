@@ -5,7 +5,8 @@ import SwiftUI
 /// The words conditions are explained in, once, so the inspector and the
 /// Conditions tab say the same thing.
 enum WorkspaceConditionCopy {
-  static let explanation = "Conditions are places or circumstances a task needs — Home, Campus, Floor space."
+  static let explanation =
+    "Conditions are places or circumstances a task needs — Home, Campus, Floor space — filed under categories."
   static let none = "No conditions — available whenever"
 }
 
@@ -92,7 +93,6 @@ struct WorkspaceTaskPlanningEditor: View {
   let values: TaskEditorValues
   @State private var isAddingCondition = false
   @State private var newConditionName = ""
-  @State private var newConditionIsLocation = false
   @FocusState private var isNewConditionFocused: Bool
 
   var body: some View {
@@ -135,22 +135,19 @@ struct WorkspaceTaskPlanningEditor: View {
             }.font(theme.captionFont)
           }
           ThemedMenu("Or…") {
-            ForEach(model.focusConditions.filter { !$0.isArchived && !group.contains($0.id) }) { condition in
-              Button(condition.name) { edit { $0.requirementGroups?[index].append(condition.id) } }
-            }
+            WorkspaceConditionMenuSections(
+              offering: { !$0.isArchived && !group.contains($0.id) },
+              choose: { condition in edit { $0.requirementGroups?[index].append(condition.id) } })
           }.font(theme.captionFont).inspectorStop("condition.\(index).or")
         }
       }
       ThemedMenu("Add required condition", systemImage: "plus", expands: true) {
-        ForEach(model.focusConditions.filter { condition in
-          !condition.isArchived && !(values.requirementGroups ?? []).contains([condition.id])
-        }) { condition in
-          Button(condition.name) { require(condition.id) }
-        }
+        WorkspaceConditionMenuSections(
+          offering: { !$0.isArchived && !(values.requirementGroups ?? []).contains([$0.id]) },
+          choose: { require($0.id) })
         if model.focusConditions.contains(where: { !$0.isArchived }) { Divider() }
         Button("New condition…") {
           newConditionName = ""
-          newConditionIsLocation = false
           isAddingCondition = true
         }
       }
@@ -164,10 +161,10 @@ struct WorkspaceTaskPlanningEditor: View {
             .focused($isNewConditionFocused)
             .onSubmit(addNewCondition)
             .onExitCommand { isAddingCondition = false }
-          Toggle("Place", isOn: $newConditionIsLocation)
-            .toggleStyle(.themedSwitch)
-            .fixedSize()
-            .help("A place replaces the last place when you say where you are; anything else combines")
+          WorkspaceConditionCategoryMenu(
+            category: model.newConditionCategory,
+            choose: { model.newConditionCategory = $0 },
+            newCategory: { model.presentConditionCategoryFinder(for: nil) })
           Button("Add", action: addNewCondition)
             .buttonStyle(FocusActionButtonStyle())
             .disabled(newConditionName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
@@ -206,7 +203,7 @@ struct WorkspaceTaskPlanningEditor: View {
   /// conditions is where you find out you need one that does not exist yet.
   private func addNewCondition() {
     let name = newConditionName.trimmingCharacters(in: .whitespacesAndNewlines)
-    guard !name.isEmpty, let created = model.createCondition(name: name, isLocation: newConditionIsLocation) else { return }
+    guard !name.isEmpty, let created = model.createCondition(name: name, category: model.newConditionCategory) else { return }
     require(created.id)
     isAddingCondition = false
     newConditionName = ""
@@ -218,6 +215,24 @@ struct WorkspaceTaskPlanningEditor: View {
       groups[index].removeAll { $0 == id }
       groups.removeAll( where: \.isEmpty)
       values.requirementGroups = groups.isEmpty ? nil : groups
+    }
+  }
+}
+
+/// The conditions a menu offers, under their category headings.
+struct WorkspaceConditionMenuSections: View {
+  @Environment(WorkspaceViewModel.self) private var model
+  let offering: (TaskCondition) -> Bool
+  let choose: (TaskCondition) -> Void
+
+  var body: some View {
+    let sections = TaskConditionSection.sections(model.focusConditions.filter(offering))
+    ForEach(sections) { section in
+      Section(section.title) {
+        ForEach(section.conditions) { condition in
+          Button(condition.name) { choose(condition) }
+        }
+      }
     }
   }
 }

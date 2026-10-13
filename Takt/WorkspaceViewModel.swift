@@ -964,6 +964,8 @@ enum WorkspaceSidebarItem: Identifiable {
   /// not carry thousands of ranked tasks across to the main thread.
   var focusLadder: [ScoredNextUp] = []
   var focusConditions: [TaskCondition] = []
+  /// The conditions an open task requires: what "Available now" offers.
+  var requiredConditionIDs: Set<String> = []
   var taskLoggedSeconds: [String: Int] = [:]
   var taskPlanningByID: [String: TaskPlanning] = [:]
   var focusContext = FocusContext()
@@ -974,6 +976,9 @@ enum WorkspaceSidebarItem: Identifiable {
   var renamingConditionID: String?
   /// Moves to put the caret in the Conditions tab's new-condition field.
   var conditionsAddFieldRequest = 0
+  /// The category the Conditions tab's new-condition row files under; nil
+  /// is none.
+  var newConditionCategory: String?
   var contextExpiresAt: Date?
   var availableUntil: Date?
   var blockedFocusTasks: [BlockedFocusTask] = []

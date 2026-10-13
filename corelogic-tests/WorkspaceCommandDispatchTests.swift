@@ -131,7 +131,7 @@ final class WorkspaceCommandDispatchTests: XCTestCase {
     }
     let expected: [String: WorkspaceCommandID] = [
       "space": .conditionsToggle, "enter": .conditionsEdit, "f2": .conditionsEdit, "a": .conditionsNew,
-      "cmd+n": .conditionsNew, "p": .conditionsTogglePlace, "e": .conditionsArchive, "c": .conditionsClear,
+      "cmd+n": .conditionsNew, "t": .conditionsCategory, "e": .conditionsArchive, "c": .conditionsClear,
       "shift+u": .conditionsUseAgain, "escape": .conditionsClose, "left": .conditionsClose,
     ]
     for (key, id) in expected {

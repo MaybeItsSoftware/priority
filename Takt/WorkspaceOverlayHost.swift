@@ -68,6 +68,8 @@ struct WorkspaceOverlayHost: View {
       WorkspaceBlockerFinder(overlayID: overlay.id, request: request)
     case .conditions(let request):
       WorkspaceConditionPicker(overlayID: overlay.id, request: request)
+    case .conditionCategory(let request):
+      WorkspaceConditionCategoryFinder(overlayID: overlay.id, request: request)
     case .create(let kind):
       WorkspaceNameOverlay(
         overlayID: overlay.id, title: kind.title, prompt: "Name",

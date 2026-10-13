@@ -565,7 +565,7 @@ fn conditions() -> Vec<Spec> {
             &["space"],
         )
         .on(Conditions)
-        .note("A place replaces the last place; anything else combines"),
+        .note("Location replaces the last place; anything else combines"),
         c(
             "conditionsEdit",
             "Rename the condition",
@@ -582,13 +582,13 @@ fn conditions() -> Vec<Spec> {
         )
         .on(Conditions),
         c(
-            "conditionsTogglePlace",
-            "Make it a place, or not",
+            "conditionsCategory",
+            "File the condition under a category",
             "Conditions",
-            &["p"],
+            &["t"],
         )
         .on(Conditions)
-        .note("You are in one place at a time, so turning a place on turns the last one off"),
+        .note("Location, Equipment… or a new one. Location is one at a time: turning a place on turns the last one off"),
         c(
             "conditionsArchive",
             "Archive or restore the condition",
