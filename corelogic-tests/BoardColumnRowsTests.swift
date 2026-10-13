@@ -21,6 +21,28 @@ final class BoardColumnRowsTests: XCTestCase {
     XCTAssertEqual(cardFirst.cardByRow["x"], "x")
   }
 
+  /// Everything's board makes a card of every open task, so a parent's
+  /// subtasks are rows on its card and cards of their own below it in the
+  /// same column. The arrow keys walk each row once, where its selection is
+  /// drawn: listed twice, the cursor found the first copy again on stepping
+  /// onto the second and went back to the first subtask, round and round.
+  func testARowDrawnTwiceIsWalkedOnceWhereItsSelectionIsDrawn() {
+    let rows = BoardColumnRows(cards: [
+      (id: "p", rowIDs: ["a", "b", "c"]), (id: "a", rowIDs: []), (id: "b", rowIDs: ["b1"]),
+      (id: "b1", rowIDs: []), (id: "c", rowIDs: []), (id: "q", rowIDs: []),
+    ])
+    XCTAssertEqual(rows.ids, ["p", "a", "b", "c", "b1", "q"])
+    var cursor = "p"
+    var walked = [cursor]
+    for _ in 1..<rows.ids.count {
+      let index = rows.ids.firstIndex(of: cursor)!
+      cursor = rows.ids[CursorStepping.index(from: index, by: 1, count: rows.ids.count)]
+      walked.append(cursor)
+    }
+    XCTAssertEqual(walked, rows.ids)
+    XCTAssertEqual(rows.cardByRow["b1"], "b")
+  }
+
   func testEmptyHasNoRows() {
     XCTAssertEqual(BoardColumnRows.empty.ids, [])
     XCTAssertFalse(BoardColumnRows.empty.contains("a"))
