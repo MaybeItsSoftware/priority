@@ -59,58 +59,6 @@ extension CheckvistSyncPlugin {
 }
 
 @MainActor
-protocol ObsidianIntegrationPlugin: Plugin {
-  var inboxPath: String { get }
-  func chooseInboxFolder() throws -> String?
-  func clearInboxFolder()
-  func chooseLinkedFolder(forTaskId taskId: Int, taskContent: String) throws -> String?
-  func createAndLinkFolder(forTaskId taskId: Int, taskContent: String) throws -> String?
-  func clearLinkedFolder(forTaskId taskId: Int)
-  func hasLinkedFolder(forTaskId taskId: Int) -> Bool
-  func hasSyncedNote(task: CheckvistTask, linkedFolderTaskId: Int?) -> Bool
-  func syncTask(
-    _ task: CheckvistTask,
-    listId: String,
-    linkedFolderTaskId: Int?,
-    openMode: ObsidianOpenMode,
-    syncDate: Date
-  ) throws -> URL
-}
-
-@MainActor
-protocol AFFiNEIntegrationPlugin: Plugin {
-  /// Whether an `affine-mcp` helper was found. Credentials are the helper's
-  /// business — Priority never sees an AFFiNE password — so this is as far as
-  /// "configured" goes on this side.
-  var isConfigured: Bool { get }
-  var serverCommandPath: String { get set }
-  var workspaceId: String { get set }
-  /// The document a new checklist is filed under, so it appears in the sidebar
-  /// rather than only in search.
-  var parentDocId: String { get set }
-  var resolvedServerCommandPath: String? { get }
-  /// Every path searched for the helper, as a message worth showing.
-  func helperDiagnostic() -> String
-  func availableWorkspaces() async throws -> [AFFiNEWorkspace]
-  func selectWorkspace(_ workspace: AFFiNEWorkspace)
-  /// Squares a list with its AFFiNE checklist: what was ticked in AFFiNE is
-  /// closed through `closingTicked`, and what is still open is written back.
-  func syncChecklist(
-    tasks: [CheckvistTask],
-    listId: String,
-    listTitle: String,
-    closingTicked: ([Int]) async -> [CheckvistTask]
-  ) async throws -> AFFiNEChecklistOutcome
-  /// - Parameter renderedSection: the day as `DailyNoteMarkdown` renders it,
-  ///   passed in rather than built here so the vault and the workspace show the
-  ///   same day.
-  func exportDay(_ day: Date, renderedSection: String, titlePattern: String) async throws
-    -> AFFiNEDocumentRef
-  func checklistDocumentURL(forListId listId: String) -> URL?
-  func forgetChecklistDocument(forListId listId: String)
-}
-
-@MainActor
 protocol GoogleCalendarIntegrationPlugin: Plugin {
   func makeCreateEventURL(task: CheckvistTask, listId: String, now: Date) -> URL?
   func createEvent(task: CheckvistTask, listId: String, now: Date) async throws

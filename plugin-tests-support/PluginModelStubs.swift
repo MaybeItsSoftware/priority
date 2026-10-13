@@ -1,7 +1,7 @@
 import Foundation
 
-// Fakes for the four app-only services (`ObsidianSyncService`,
-// `CheckvistSession`, `CheckvistTaskRepository`, `GoogleOAuthLoopbackReceiver`)
+// Fakes for the app-only services (`CheckvistSession`,
+// `CheckvistTaskRepository`, `GoogleOAuthLoopbackReceiver`)
 // that the plugin code references directly. The classes here share the name
 // of the real services so `TaktPlugins` compiles the same plugin source
 // against these in-memory stand-ins, while the Xcode app target compiles
@@ -9,77 +9,12 @@ import Foundation
 //
 // Originally this file also duplicated the data models (`CheckvistTask`,
 // `CheckvistNote`, `CheckvistList`, `CheckvistTaskCachePayload`,
-// `ObsidianOpenMode`, `CheckvistSessionError`). Those were promoted to
+// `CheckvistSessionError`). Those were promoted to
 // canonical sources under `Takt/Plugins/Native/...` and are now
 // compiled into `TaktPlugins` directly — see Phase 5.2 of
 // `ARCHITECTURE_IMPROVEMENT_PLAN.md`. The remaining service fakes are still
 // here pending a follow-on refactor that introduces protocol seams for the
 // services themselves.
-
-@MainActor
-final class ObsidianSyncService {
-  var inboxPath = ""
-  var chooseInboxFolderResult: String?
-  var chooseLinkedFolderResult: String?
-  var createAndLinkFolderResult: String?
-  var syncResultURL = URL(fileURLWithPath: "/tmp/obsidian-task.md")
-  var syncedNoteTaskIDs: Set<Int> = []
-  private var linkedFolderByTask: [Int: String] = [:]
-
-  private(set) var lastSyncCall:
-    (
-      task: CheckvistTask,
-      listId: String,
-      linkedFolderTaskId: Int?,
-      openMode: ObsidianOpenMode,
-      syncDate: Date
-    )?
-
-  func chooseInboxFolder() throws -> String? {
-    chooseInboxFolderResult
-  }
-
-  func clearInboxFolder() {
-    inboxPath = ""
-  }
-
-  func chooseLinkedFolder(forTaskId taskId: Int, taskContent: String) throws -> String? {
-    if let chosen = chooseLinkedFolderResult {
-      linkedFolderByTask[taskId] = chosen
-    }
-    return chooseLinkedFolderResult
-  }
-
-  func createAndLinkFolder(forTaskId taskId: Int, taskContent: String) throws -> String? {
-    if let created = createAndLinkFolderResult {
-      linkedFolderByTask[taskId] = created
-    }
-    return createAndLinkFolderResult
-  }
-
-  func clearLinkedFolder(forTaskId taskId: Int) {
-    linkedFolderByTask.removeValue(forKey: taskId)
-  }
-
-  func hasLinkedFolder(forTaskId taskId: Int) -> Bool {
-    linkedFolderByTask[taskId] != nil
-  }
-
-  func hasSyncedNote(task: CheckvistTask, linkedFolderTaskId: Int?) -> Bool {
-    syncedNoteTaskIDs.contains(task.id)
-  }
-
-  func syncTask(
-    _ task: CheckvistTask,
-    listId: String,
-    linkedFolderTaskId: Int?,
-    openMode: ObsidianOpenMode,
-    syncDate: Date
-  ) throws -> URL {
-    lastSyncCall = (task, listId, linkedFolderTaskId, openMode, syncDate)
-    return syncResultURL
-  }
-}
 
 @MainActor
 final class CheckvistSession {

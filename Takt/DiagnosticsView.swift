@@ -251,25 +251,6 @@ struct DiagnosticsView: View {
           ? "Username and remote key are set."
           : "Add a username and remote key in Settings → Checkvist to import lists."))
 
-    if integrations.obsidianIntegrationEnabled {
-      let path = integrations.obsidianInboxPath
-      items.append(
-        .init(
-          title: "Obsidian",
-          isHealthy: !path.isEmpty,
-          detail: path.isEmpty ? "No inbox folder chosen." : path))
-    }
-
-    if integrations.affineIntegrationEnabled {
-      // `helperDiagnostic()` already returns every path it searched — the plugin
-      // was written to be asked this question.
-      items.append(
-        .init(
-          title: "AFFiNE helper",
-          isHealthy: integrations.affinePlugin.isConfigured,
-          detail: integrations.affinePlugin.helperDiagnostic()))
-    }
-
     if integrations.googleCalendarIntegrationEnabled {
       let plugin = integrations.googleCalendarPlugin
       items.append(

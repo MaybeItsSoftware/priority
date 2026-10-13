@@ -39,11 +39,11 @@ final class DiagnosticsReportTests: XCTestCase {
     let text = DiagnosticsReport.text(
       from: makeSnapshot(health: [
         .init(title: "Checkvist", isHealthy: true, detail: "signed in"),
-        .init(title: "AFFiNE helper", isHealthy: false, detail: "not found on PATH"),
+        .init(title: "Google Calendar", isHealthy: false, detail: "not signed in"),
       ]))
     XCTAssertTrue(text.contains("[ok] Checkvist"))
-    XCTAssertTrue(text.contains("[!!] AFFiNE helper"))
-    XCTAssertTrue(text.contains("not found on PATH"))
+    XCTAssertTrue(text.contains("[!!] Google Calendar"))
+    XCTAssertTrue(text.contains("not signed in"))
   }
 
   // MARK: - Redaction

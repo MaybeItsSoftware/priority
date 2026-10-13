@@ -4,9 +4,8 @@
 //! Three differences from Rust's own string methods matter: Swift compares
 //! strings by canonical equivalence (a precomposed `é` equals `e` plus a
 //! combining accent), it splits and counts by grapheme cluster, so `\r\n` is
-//! one `Character` that is not `\n`, and Foundation's `.whitespaces` set is
-//! the horizontal spaces only, without the line breaks `char::is_whitespace`
-//! includes.
+//! one `Character` that is not `\n`, and Foundation's whitespace and newline
+//! sets are Unicode's White_Space between them.
 
 use unicode_normalization::UnicodeNormalization;
 use unicode_segmentation::UnicodeSegmentation;
@@ -42,52 +41,9 @@ pub(crate) fn character_count(text: &str) -> usize {
     text.graphemes(true).count()
 }
 
-/// Swift's `split(separator: "\n", omittingEmptySubsequences: false)`. A
-/// `\r\n` is one `Character` that is not `\n`, so it does not split.
-pub(crate) fn lines(text: &str) -> Vec<&str> {
-    let bytes = text.as_bytes();
-    let mut lines = Vec::new();
-    let mut start = 0;
-    for (index, byte) in bytes.iter().enumerate() {
-        if *byte == b'\n' && (index == 0 || bytes[index - 1] != b'\r') {
-            lines.push(&text[start..index]);
-            start = index + 1;
-        }
-    }
-    lines.push(&text[start..]);
-    lines
-}
-
-/// Foundation's `CharacterSet.whitespaces`: tab and the space separators.
-pub(crate) fn is_horizontal_space(character: char) -> bool {
-    matches!(
-        character,
-        '\t' | ' ' | '\u{a0}' | '\u{1680}' | '\u{2000}'
-            ..='\u{200a}' | '\u{202f}' | '\u{205f}' | '\u{3000}'
-    )
-}
-
-/// Foundation's `CharacterSet.newlines`.
-pub(crate) fn is_newline(character: char) -> bool {
-    matches!(
-        character,
-        '\n' | '\u{b}' | '\u{c}' | '\r' | '\u{85}' | '\u{2028}' | '\u{2029}'
-    )
-}
-
-/// `trimmingCharacters(in: .whitespaces)`.
-pub(crate) fn trim_spaces(text: &str) -> &str {
-    text.trim_matches(is_horizontal_space)
-}
-
-/// `trimmingCharacters(in: .newlines)`.
-pub(crate) fn trim_newlines(text: &str) -> &str {
-    text.trim_matches(is_newline)
-}
-
-/// `trimmingCharacters(in: .whitespacesAndNewlines)`. The union of the two
-/// sets above is exactly Unicode's White_Space, which is what `str::trim`
-/// strips.
+/// `trimmingCharacters(in: .whitespacesAndNewlines)`: Foundation's
+/// whitespace and newline sets together are exactly Unicode's White_Space,
+/// which is what `str::trim` strips.
 pub(crate) fn trim(text: &str) -> &str {
     text.trim()
 }
@@ -113,16 +69,7 @@ mod tests {
     }
 
     #[test]
-    fn a_windows_line_ending_does_not_split() {
-        assert_eq!(lines("a\r\nb\nc"), vec!["a\r\nb", "c"]);
-        assert_eq!(lines("\n"), vec!["", ""]);
-        assert_eq!(lines(""), vec![""]);
-    }
-
-    #[test]
-    fn spaces_trim_without_newlines() {
-        assert_eq!(trim_spaces("\t a \n"), "a \n");
-        assert_eq!(trim_newlines("\n a \r\n"), " a ");
+    fn trim_strips_spaces_and_newlines() {
         assert_eq!(trim("\u{3000}a\u{2028}"), "a");
     }
 }

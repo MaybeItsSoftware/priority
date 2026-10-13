@@ -217,7 +217,7 @@ Goal: add value at the boundary without compromising local ownership.
 
 - Checkvist: import first; only design two-way sync after conflict policy, source IDs, delete semantics, and offline queue behavior are specified and tested.
 - Calendar: optional time-block export/import with an explicit mapping and no invisible task edits.
-- Obsidian/AFFiNE/MCP: retain as optional plugins; convert any task mutation path to target the local workspace first.
+- MCP: retain as an optional plugin. The Obsidian task sync and AFFiNE plugins were deleted once nothing could reach them (2026-10-13); Obsidian daily notes stay with the Daily Log plugin.
 - Add integration status, permissions, retry controls, and a clear “disconnect without deleting local data” flow.
 
 ## Phase 6 — Remove legacy surface

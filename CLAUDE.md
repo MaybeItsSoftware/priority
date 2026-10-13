@@ -51,7 +51,7 @@ Consequences when editing:
 
 - `Package.swift` has a large `pluginTargetExcludes` list and an explicit `sources:` list for the `path: "."` target. Adding a new plugin file requires updating them, or `swift test` starts failing even though Xcode still builds. `Sources/TaktCore/` needs no such bookkeeping — it is a real single-target directory, so a new file there is picked up by both builds.
 - `TaktCore` must stay free of AppKit/SwiftUI/UI dependencies — it is consumed by the test target without the app. New declarations there need `public` to be visible to the app, and a `public struct` needs an explicit `public init` (the synthesised memberwise one is internal).
-- `TaktPlugins` deliberately excludes each plugin's `+Settings.swift` extension and any service that pulls in app types (e.g. `CheckvistAPIClient.swift`, `ObsidianSyncService.swift`). Keep cross-plugin / app-only types out of the curated `sources:` list.
+- `TaktPlugins` deliberately excludes each plugin's `+Settings.swift` extension and any service that pulls in app types (e.g. `GoogleTasksMirrorService.swift`, `MCPClientInstaller.swift`). Keep cross-plugin / app-only types out of the curated `sources:` list.
 - **A file can only belong to one SPM target.** That still holds for `TaktPlugins`, whose sources are compiled by both build systems. It *can* `import TaktCore`, because the app links that module rather than compiling its sources, so the import resolves on both sides.
 
 ## App Composition
@@ -63,7 +63,7 @@ Consequences when editing:
 
 ## Plugin Architecture
 
-All external integrations (the Checkvist import, Obsidian, AFFiNE, Google Calendar, MCP) are plugins behind protocols in `Takt/Plugins/Protocols/PluginProtocols.swift`. Native implementations live one folder per plugin under `Takt/Plugins/Native/<Name>/`, registered through `PluginRegistry` (`PluginRegistry.nativeFirst()` is the production factory).
+All external integrations (the Checkvist import, Google Calendar, Google Tasks, MCP, the daily log and its Obsidian daily notes) are plugins behind protocols in `Takt/Plugins/Protocols/PluginProtocols.swift`. Native implementations live one folder per plugin under `Takt/Plugins/Native/<Name>/`, registered through `PluginRegistry` (`PluginRegistry.nativeFirst()` is the production factory).
 
 Conventions enforced by `docs/plugins.md`:
 

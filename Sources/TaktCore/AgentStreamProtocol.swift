@@ -17,8 +17,8 @@ import Foundation
 /// of each line — the part that breaks when the CLI changes — is tested
 /// without launching anything. See `docs/agent-panel.md`.
 
-/// The agent's lines are `JSONValue` (`MCPWire.swift`) — the same Sendable
-/// JSON the AFFiNE session reads its server with — plus what the panel needs:
+/// The agent's lines are `JSONValue` (`JSONValue.swift`), Sendable JSON,
+/// plus what the panel needs:
 /// parsing a line, printing a value, and reading a number either way.
 ///
 /// A tool's input is kept whole as one, so it can be shown, summarised and

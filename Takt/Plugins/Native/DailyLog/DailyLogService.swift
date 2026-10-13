@@ -12,7 +12,7 @@ import TaktCore
 /// reads a daily note for task state, so there is no sync and no conflict —
 /// only a one-way append. That is what makes it safe to run unattended.
 ///
-/// Not `@MainActor`-isolated as a whole, matching `ObsidianSyncService`: the
+/// Not `@MainActor`-isolated as a whole: the
 /// plugin that owns it is main-actor, but a main-actor initialiser can't be
 /// used as a default argument (those evaluate at the call site, which is
 /// nonisolated). Only the method that drives `NSOpenPanel` needs the actor.
@@ -623,8 +623,7 @@ final class DailyLogService {
   // MARK: - Folder bookmark
 
   /// The bookmark machinery itself — resolving, refreshing when stale, holding
-  /// access around reads and writes — is `SecurityScopedFolderBookmark`,
-  /// shared with `ObsidianSyncService`.
+  /// access around reads and writes — is `SecurityScopedFolderBookmark`.
   private func resolvedFolderURL() throws -> URL {
     guard let folderBookmark else { throw DailyLogError.folderNotConfigured }
     return try SecurityScopedFolderBookmark.resolve(folderBookmark) { [weak self] refreshed in

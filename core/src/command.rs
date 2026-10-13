@@ -70,16 +70,6 @@ pub enum PaletteCommand {
     },
     PriorityBack,
     ClearPriority,
-    SyncObsidian,
-    SyncObsidianNewWindow,
-    ChooseObsidianInbox,
-    ClearObsidianInbox,
-    LinkObsidianFolder,
-    CreateObsidianFolder,
-    ClearObsidianFolderLink,
-    SyncAffine,
-    OpenAffineDocument,
-    SyncAffineDay,
     SyncGoogleCalendar,
     RefreshMcpPath,
     CopyMcpClientConfig,
@@ -188,24 +178,6 @@ pub fn parse(input: &str) -> PaletteCommand {
         "expand all" => C::ExpandAll,
         "collapse all" => C::CollapseAll,
         "clear priority" | "unpriority" => C::ClearPriority,
-        "sync obsidian" | "send to obsidian" | "obsidian" => C::SyncObsidian,
-        "open obsidian new window" | "obsidian new window" | "open in new window" => {
-            C::SyncObsidianNewWindow
-        }
-        "choose obsidian inbox" | "choose inbox folder" | "obsidian inbox" => {
-            C::ChooseObsidianInbox
-        }
-        "clear obsidian inbox" | "clear inbox folder" => C::ClearObsidianInbox,
-        "link obsidian folder" | "link folder" | "obsidian folder" => C::LinkObsidianFolder,
-        "create obsidian folder" | "new obsidian folder" | "make obsidian folder" => {
-            C::CreateObsidianFolder
-        }
-        "clear obsidian folder" | "unlink obsidian folder" | "clear folder link" => {
-            C::ClearObsidianFolderLink
-        }
-        "affine daily" | "sync affine day" | "affine log" => C::SyncAffineDay,
-        "sync affine" | "send to affine" | "affine" => C::SyncAffine,
-        "open affine" | "open affine document" => C::OpenAffineDocument,
         "sync google calendar"
         | "google calendar"
         | "gcal"

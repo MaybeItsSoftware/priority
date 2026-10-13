@@ -200,7 +200,7 @@ struct SettingsView: View {
       // Themes have a page of their own kind: Appearance draws the gallery.
       .filter { !($0 is any ThemePlugin) }
       .map { page in
-        // "Native Obsidian Integration" reads as "Obsidian" in a sidebar.
+        // "Native Google Calendar Integration" reads as "Google Calendar" in a sidebar.
         var name = page.displayName
         for prefix in ["Native "] where name.hasPrefix(prefix) { name.removeFirst(prefix.count) }
         for suffix in [" Integration", " Plugin"] where name.hasSuffix(suffix) {

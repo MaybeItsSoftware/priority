@@ -234,7 +234,7 @@ final class MCPClientInstaller {
   }
 
   /// Every read and write under a bookmark-resolved directory has to happen
-  /// inside one of these. Mirrors `ObsidianSyncService.withSecurityScope`.
+  /// inside one of these, as `SecurityScopedFolderBookmark.withAccess` does.
   private func withSecurityScope<T>(_ url: URL, _ body: () throws -> T) rethrows -> T {
     let accessed = url.startAccessingSecurityScopedResource()
     defer {

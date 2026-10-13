@@ -3,8 +3,6 @@
 Takt ships with native plugins only. Plugins are self-contained and live under:
 
 - `Takt/Plugins/Native/Checkvist/`
-- `Takt/Plugins/Native/Obsidian/`
-- `Takt/Plugins/Native/AFFiNE/`
 - `Takt/Plugins/Native/GoogleCalendar/`
 - `Takt/Plugins/Native/MCP/`
 - `Takt/Plugins/Native/DailyLog/`
@@ -22,8 +20,6 @@ Plugin contracts are defined under `Takt/Plugins/Protocols/`:
 
 - `Plugin` — the base identity contract every plugin conforms to
 - `CheckvistSyncPlugin`
-- `ObsidianIntegrationPlugin`
-- `AFFiNEIntegrationPlugin`
 - `GoogleCalendarIntegrationPlugin`
 - `MCPIntegrationPlugin`
 - `DailyLogPlugin` (in its own file, `Protocols/DailyLogPluginProtocol.swift` — see below)
@@ -48,29 +44,6 @@ Plugin registration lives in `Takt/Plugins/Registry/PluginRegistry.swift`.
 - Authentication/token lifecycle (`login`, `clearAuthentication`).
 - Task/list fetch and task mutation operations.
 - Cache persistence and stale-cache checks.
-
-### Obsidian (`ObsidianIntegrationPlugin`)
-
-- Inbox/linked-folder selection and clearing.
-- Markdown export/open behavior via `syncTask(...)`.
-
-### AFFiNE (`AFFiNEIntegrationPlugin`)
-
-- Locating the user-installed `affine-mcp` helper, and reporting where it looked.
-- Workspace discovery and selection.
-- The two-way checklist: writing a list's open tasks as todo blocks under
-  `## Tasks`, and reading back the boxes ticked in AFFiNE.
-- Writing a day's `## Log` block, from `DailyNoteMarkdown`'s rendering.
-- Remembering which document each list's checklist lives in.
-
-Closing a ticked task is *not* the plugin's job — `syncChecklist` hands the
-ticked ids to a `closingTicked` callback and `IntegrationCoordinator+AFFiNE`
-applies them through the mutation service, then feeds the refreshed list back
-so the write reflects the closes.
-
-The plugin is an MCP *client*: AFFiNE documents are Yjs block trees rather than
-text, so the writing is done by `affine-mcp-server` over stdio and Takt never
-handles an AFFiNE credential. See `docs/affine.md`.
 
 ### Google Calendar (`GoogleCalendarIntegrationPlugin`)
 

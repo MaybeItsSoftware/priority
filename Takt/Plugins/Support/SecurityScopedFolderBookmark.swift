@@ -1,8 +1,7 @@
 import Foundation
 
 /// The security-scoped bookmark dance, once, for every plugin that remembers a
-/// folder the user picked in an open panel (Obsidian's inbox and linked
-/// folders, the daily-log notes folder).
+/// folder the user picked in an open panel (today, the daily-log notes folder).
 ///
 /// The app is not sandboxed — `Takt.release.entitlements` has no
 /// `app-sandbox` key — so `startAccessingSecurityScopedResource` is currently

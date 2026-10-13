@@ -7,9 +7,7 @@ import Foundation
 /// what sits between its own markers and nothing else. The markers are HTML
 /// comments so they are invisible in Obsidian's reading view, and re-writing
 /// is idempotent — the same block written twice replaces itself rather than
-/// stacking. `DailyNoteMarkdown` uses it for the day's log section;
-/// `ObsidianSyncService` for a task's note, where it replaced a whole-file
-/// overwrite that silently discarded anything the user had added.
+/// stacking. `DailyNoteMarkdown` uses it for the day's log section.
 public struct ManagedMarkdownBlock: Equatable, Sendable {
   public let beginMarker: String
   public let endMarker: String

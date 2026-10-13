@@ -737,7 +737,7 @@ pub fn focus_duration(seconds: i64) -> String {
 }
 
 /// The managed block for a day, markers included, as spliced into an
-/// Obsidian daily note or an AFFiNE doc. `titles` needs only the
+/// Obsidian daily note. `titles` needs only the
 /// unfinished and deferred tasks; `dailies` are those expected on the day,
 /// in display order, since the log records only what was ticked.
 pub fn section(

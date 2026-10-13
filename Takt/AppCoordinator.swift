@@ -121,12 +121,6 @@ import SwiftUI
   init(pluginRegistry: PluginRegistry) {
     let resolvedCheckvistSyncPlugin =
       pluginRegistry.activeCheckvistSyncPlugin ?? NativeCheckvistSyncPlugin()
-    let resolvedObsidianPlugin =
-      pluginRegistry.activeObsidianPlugin
-      ?? NativeObsidianIntegrationPlugin()
-    let resolvedAFFiNEPlugin =
-      pluginRegistry.activeAFFiNEPlugin
-      ?? NativeAFFiNEIntegrationPlugin()
     // The fallbacks share one account for the same reason the registry's
     // plugins do: two Google integrations, one Google user.
     let fallbackGoogleAccount = GoogleAccount()
@@ -146,8 +140,6 @@ import SwiftUI
     self.userPluginManager = UserPluginManager(
       builtInPluginIdentifiers: [
         resolvedCheckvistSyncPlugin.pluginIdentifier,
-        resolvedObsidianPlugin.pluginIdentifier,
-        resolvedAFFiNEPlugin.pluginIdentifier,
         resolvedGoogleCalendarPlugin.pluginIdentifier,
         resolvedGoogleTasksPlugin.pluginIdentifier,
         resolvedMCPIntegrationPlugin.pluginIdentifier,
@@ -186,6 +178,8 @@ import SwiftUI
     )
 
     if storedPluginSelectionOnboardingCompletedFlag == nil {
+      // The Obsidian task-sync plugin is gone, but whether it was ever
+      // switched on still says this is not a first launch.
       let storedObsidianIntegrationEnabled = preferencesStore.optionalBool(
         .obsidianIntegrationEnabled)
       let storedGoogleCalendarIntegrationEnabled = preferencesStore.optionalBool(
@@ -213,8 +207,6 @@ import SwiftUI
     self.theme = ThemeManager(preferencesStore: preferencesStore, registry: pluginRegistry)
     let integrations = IntegrationCoordinator(
       preferencesStore: preferencesStore,
-      obsidianPlugin: resolvedObsidianPlugin,
-      affinePlugin: resolvedAFFiNEPlugin,
       googleCalendarPlugin: resolvedGoogleCalendarPlugin,
       googleTasksPlugin: resolvedGoogleTasksPlugin,
       mcpIntegrationPlugin: resolvedMCPIntegrationPlugin
@@ -275,8 +267,6 @@ extension AppCoordinator {
   var activePluginSettingsPages: [any PluginSettingsPageProviding] {
     [
       checkvist.plugin as any Plugin,
-      integrations.obsidianPlugin as any Plugin,
-      integrations.affinePlugin as any Plugin,
       integrations.googleCalendarPlugin as any Plugin,
       integrations.googleTasksPlugin as any Plugin,
       integrations.mcpIntegrationPlugin as any Plugin,

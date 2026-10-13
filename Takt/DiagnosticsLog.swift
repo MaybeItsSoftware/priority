@@ -6,8 +6,8 @@ import Observation
 /// The app is otherwise honest but forgetful about failure: `errorMessage` is
 /// overwritten by the next thing that fails and cleared by the next fetch that
 /// starts, `statusMessage` erases itself after three seconds, and integration
-/// errors go into a closure that retains nothing. Three seconds after an AFFiNE
-/// sync fails, the only surviving evidence is in `os_log` — which is no use to
+/// errors go into a closure that retains nothing. Three seconds after a Google
+/// Calendar sync fails, the only surviving evidence is in `os_log` — which is no use to
 /// someone being asked what happened.
 ///
 /// Not persisted. This answers "what has this run of the app been doing", and a

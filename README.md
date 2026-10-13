@@ -50,13 +50,13 @@ to filter them, walk them with `↑`/`↓`, or jump with `⌘1`–`⌘9`:
 | Focus | Where a started block runs, and whether each block is scored |
 | Appearance | The theme gallery, light/dark/system, the interface, heading and numeral fonts, and the text size |
 | Keyboard | The three global hotkeys (show the window, focus panel `⌃⌥⇧⌘F`, Quick Add `⌃⌥⇧⌘D`, which opens one of the window's overlays over whatever app you are in, in the theme you have chosen: the field, the chips that say what `30m`, `@fri`, `#work` and `!1` will set as the window's add row does, and under it every list in the list finder's rows — `↑`/`↓` pick the list, `←`/`→` move the caret and, from either end of the text, the start day, `Return` files it, `Esc` or a click away drops it), the list Quick Add captures into, and `keymap.json` |
-| Integrations | One page per integration — Checkvist, Obsidian, AFFiNE, Google Calendar, Google Tasks, MCP, Daily Log — and your installed plugins |
+| Integrations | One page per integration — Checkvist, Google Calendar, Google Tasks, MCP, Daily Log — and your installed plugins |
 | Sync | The account that keeps the Mac and phones on one workspace, on Takt's server or [your own](docs/self-hosting.md) |
 | Advanced | Export the workspace as Markdown or JSON, diagnostics, and the app's data folder |
 
 None of it is required: the workspace is local-first and works with every row
-left alone. Checkvist, Obsidian and Google Calendar are set up from their own
-pages under **Integrations**, when you want them.
+left alone. Checkvist, Google Calendar and the Obsidian daily notes (Daily Log)
+are set up from their own pages under **Integrations**, when you want them.
 
 ## Keyboard flow
 
@@ -516,8 +516,6 @@ repeat`, `remove repeat` and `clear repeat` all do the same thing.
 | **Outline** | `expand`, `collapse`, `expand all`, `collapse all`, `enter children`, `exit parent`, `move up`, `move down`, `add sibling`, `add child`, `open link`, `edit` |
 | **View** | `list <name>`, `toggle children` / `toggle subtree`, `toggle context`, `toggle hide future`, `command palette` |
 | **Timer** | `toggle timer`, `pause timer` |
-| **Obsidian** | `sync obsidian`, `open obsidian new window`, `link` / `create` / `clear obsidian folder`, `choose obsidian inbox` |
-| **AFFiNE** | `sync affine`, `open affine`, `affine daily` |
 | **Calendar** | `sync google calendar`, `open google calendar` |
 | **MCP** | `mcp guide`, `mcp config`, `copy mcp config`, `refresh mcp path` |
 | **App** | `preferences`, `search`, `quick add`, `refresh lists`, `upload offline tasks`, `window`, `diagnostics` |
@@ -847,7 +845,7 @@ reported on the status line and in Diagnostics, never fatal.
 a sheet on the main window and answers "why does this look wrong?":
 
 - **Status** — connection, current list, network, sync age, open task count, and whether anything is queued offline.
-- **Health** — a green tick or an orange triangle per integration, with the detail underneath. The AFFiNE row lists every path it searched for the helper; the MCP row shows the resolved command; the Google Calendar and Google Tasks rows show whether the shared Google sign-in covers them.
+- **Health** — a green tick or an orange triangle per integration, with the detail underneath. The MCP row shows the resolved command; the Google Calendar and Google Tasks rows show whether the shared Google sign-in covers them.
 - **Recent problems** — every failure this session, timestamped. Worth having because nothing else keeps one: the error line is overwritten by the next thing that fails, the status message erases itself after three seconds, and integration errors were not retained at all. Not written to disk — it covers this run of the app, not last fortnight's.
 - **Data** — where everything lives, with a Reveal button each, including `~/.config/takt/config.json`, which belongs to the CLI rather than the app and is a recurring source of confusion.
 
@@ -961,31 +959,6 @@ _Unfinished:_
 
 Only the text between the markers is ever touched, and rewriting a day replaces its own block rather than stacking a second one. **Creating missing notes is off by default**, so the plugin can't beat a Templater or Daily Notes template to the file — turn it on only if nothing else builds your dailies.
 
-## AFFiNE
-
-Takt keeps a two-way checklist in an [AFFiNE](https://affine.pro) workspace. `sync affine` writes your list's open tasks as real todo blocks under a `## Tasks` heading in that list's document — and reads back what you ticked in AFFiNE, closing those tasks in Checkvist before it writes:
-
-```markdown
-## Tasks
-
-- [ ] [Write the release notes](https://checkvist.com/checklists/12#t34)
-  - [ ] [Draft the summary](https://checkvist.com/checklists/12#t35)
-- [x] [Ship the DMG](https://checkvist.com/checklists/12#t31)   ← ticked here, closed there
-```
-
-`affine daily` writes the day's log into that day's document, the same block the Obsidian writer produces.
-
-AFFiNE documents are CRDT block trees rather than text, so the writing is done by [`affine-mcp-server`](https://github.com/DAWNCR0W/affine-mcp-server), which Takt launches and drives over MCP:
-
-```bash
-npm install -g affine-mcp-server
-affine-mcp login
-```
-
-Then switch the plugin on in `Settings → AFFiNE` and click **Load Workspaces**. Your AFFiNE credentials stay in that helper's own config — Takt never handles them. Takt owns the `## Tasks` heading and what sits under it; everything else in the document is yours, and an item you typed in by hand is put back rather than deleted.
-
-**Details: [docs/affine.md](docs/affine.md)**
-
 ## Command line
 
 `takt` is a Rust CLI covering the same ground: your lists, your dailies, your day log. It talks to the Checkvist API directly and reads Takt's local files off disk, so it works whether or not the app is running — and its writes take the same `flock(2)` the app does, so both can be open at once.
@@ -1041,7 +1014,7 @@ There is one implementation — the Rust CLI — and the app ships it at `Conten
 
 Every external integration is a plugin behind a protocol.
 
-Built in: `NativeCheckvistSyncPlugin`, `NativeObsidianIntegrationPlugin`, `NativeAFFiNEIntegrationPlugin`, `NativeGoogleCalendarIntegrationPlugin`, `NativeMCPIntegrationPlugin`, `NativeDailyLogPlugin`.
+Built in: `NativeCheckvistSyncPlugin`, `NativeGoogleCalendarIntegrationPlugin`, `NativeMCPIntegrationPlugin`, `NativeDailyLogPlugin`.
 
 To install your own, open `Settings → Installed plugins` and click **Install plugin…** (folder, `.zip`, or `.priority-plugin`), or drop a plugin folder into `~/Library/Application Support/Takt/Plugins` and hit **Reload**.
 
@@ -1096,7 +1069,7 @@ The same source tree is compiled by two build systems: the Xcode project builds 
 | Login keychain, service `uk.co.maybeitsadam.priority` | The app's Checkvist remote key (the service keeps its pre-Takt name) |
 | `~/.config/takt/config.json` | The CLI's own credentials, mode 0600 |
 
-Nothing is sent anywhere except Checkvist, and Google Calendar, Google Tasks or Obsidian if you enable them.
+Nothing is sent anywhere except Checkvist, and Google Calendar or Google Tasks if you enable them (Obsidian daily notes are written to a folder on this Mac).
 
 Google Tasks, when enabled, is a **mirror**: each list becomes a Google Tasks list of the same name, and Takt is the source of authority. Ticking a task off on your phone completes it here, notes you add there are kept, and a task you type there is adopted — but an edit that overwrites what Takt holds is replaced and written to a conflict log. `docs/google-tasks.md` has the full table.
 

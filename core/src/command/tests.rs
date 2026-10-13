@@ -131,37 +131,6 @@ fn priority_ranks() {
 }
 
 #[test]
-fn obsidian_aliases() {
-    for alias in ["sync obsidian", "send to obsidian", "obsidian"] {
-        assert_eq!(p(alias), C::SyncObsidian);
-    }
-    for alias in [
-        "open obsidian new window",
-        "obsidian new window",
-        "open in new window",
-    ] {
-        assert_eq!(p(alias), C::SyncObsidianNewWindow);
-    }
-    for alias in ["link obsidian folder", "link folder", "obsidian folder"] {
-        assert_eq!(p(alias), C::LinkObsidianFolder);
-    }
-    for alias in [
-        "create obsidian folder",
-        "new obsidian folder",
-        "make obsidian folder",
-    ] {
-        assert_eq!(p(alias), C::CreateObsidianFolder);
-    }
-    for alias in [
-        "clear obsidian folder",
-        "unlink obsidian folder",
-        "clear folder link",
-    ] {
-        assert_eq!(p(alias), C::ClearObsidianFolderLink);
-    }
-}
-
-#[test]
 fn integration_aliases() {
     for alias in [
         "sync google calendar",
@@ -172,9 +141,6 @@ fn integration_aliases() {
     ] {
         assert_eq!(p(alias), C::SyncGoogleCalendar);
     }
-    assert_eq!(p("affine daily"), C::SyncAffineDay);
-    assert_eq!(p("affine"), C::SyncAffine);
-    assert_eq!(p("open affine document"), C::OpenAffineDocument);
     assert_eq!(p("mcp guide"), C::OpenMcpGuide);
     assert_eq!(p("palette"), C::OpenCommandPalette);
 }

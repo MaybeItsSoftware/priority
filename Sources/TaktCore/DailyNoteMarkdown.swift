@@ -10,7 +10,7 @@ import TaktRustCore
 /// Everything outside the markers belongs to the user and is never touched.
 ///
 /// The block's text is the Rust core's (`core/src/day_log.rs`); splicing it in
-/// stays with `ManagedMarkdownBlock`, which the AFFiNE export shares.
+/// stays with `ManagedMarkdownBlock`.
 public enum DailyNoteMarkdown {
   /// The block is `ManagedMarkdownBlock.takt`; these two are kept so existing
   /// callers and tests keep reading.

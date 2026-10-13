@@ -677,20 +677,6 @@ internal object IntegrityCheckingUniffiLib {
     internal fun ensureInitialized() = Unit
     external fun uniffi_takt_core_checksum_func_core_version(
     ): Int
-    external fun uniffi_takt_core_checksum_func_affine_body_under(
-    ): Int
-    external fun uniffi_takt_core_checksum_func_affine_checklist_matches(
-    ): Int
-    external fun uniffi_takt_core_checksum_func_affine_checklist_read(
-    ): Int
-    external fun uniffi_takt_core_checksum_func_affine_checklist_rewrite(
-    ): Int
-    external fun uniffi_takt_core_checksum_func_affine_checklist_section(
-    ): Int
-    external fun uniffi_takt_core_checksum_func_affine_merged(
-    ): Int
-    external fun uniffi_takt_core_checksum_func_affine_task_id_in_permalink(
-    ): Int
     external fun uniffi_takt_core_checksum_func_agent_read_only_tools(
     ): Int
     external fun uniffi_takt_core_checksum_func_agent_write_tools(
@@ -1863,20 +1849,6 @@ internal object UniffiLib {
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_func_core_version(uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
-    external fun uniffi_takt_core_fn_func_affine_body_under(`heading`: RustBuffer.ByValue,`markdown`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
-    ): RustBuffer.ByValue
-    external fun uniffi_takt_core_fn_func_affine_checklist_matches(`items`: RustBuffer.ByValue,`tasks`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
-    ): Byte
-    external fun uniffi_takt_core_fn_func_affine_checklist_read(`markdown`: RustBuffer.ByValue,`heading`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
-    ): RustBuffer.ByValue
-    external fun uniffi_takt_core_fn_func_affine_checklist_rewrite(`existing`: RustBuffer.ByValue,`tasks`: RustBuffer.ByValue,`heading`: RustBuffer.ByValue,`tickedAny`: Byte,uniffi_out_err: UniffiRustCallStatus, 
-    ): RustBuffer.ByValue
-    external fun uniffi_takt_core_fn_func_affine_checklist_section(`tasks`: RustBuffer.ByValue,`carriedOver`: RustBuffer.ByValue,`heading`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
-    ): RustBuffer.ByValue
-    external fun uniffi_takt_core_fn_func_affine_merged(`section`: RustBuffer.ByValue,`heading`: RustBuffer.ByValue,`existing`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
-    ): RustBuffer.ByValue
-    external fun uniffi_takt_core_fn_func_affine_task_id_in_permalink(`permalink`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
-    ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_func_agent_read_only_tools(uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_func_agent_write_tools(uniffi_out_err: UniffiRustCallStatus, 
@@ -2343,27 +2315,6 @@ private fun uniffiCheckContractApiVersion(lib: IntegrityCheckingUniffiLib) {
 @Suppress("UNUSED_PARAMETER")
 private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
     if ((lib.uniffi_takt_core_checksum_func_core_version() and 0xFFFF) != 3784) {
-        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
-    }
-    if ((lib.uniffi_takt_core_checksum_func_affine_body_under() and 0xFFFF) != 53160) {
-        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
-    }
-    if ((lib.uniffi_takt_core_checksum_func_affine_checklist_matches() and 0xFFFF) != 10604) {
-        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
-    }
-    if ((lib.uniffi_takt_core_checksum_func_affine_checklist_read() and 0xFFFF) != 22446) {
-        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
-    }
-    if ((lib.uniffi_takt_core_checksum_func_affine_checklist_rewrite() and 0xFFFF) != 11578) {
-        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
-    }
-    if ((lib.uniffi_takt_core_checksum_func_affine_checklist_section() and 0xFFFF) != 22489) {
-        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
-    }
-    if ((lib.uniffi_takt_core_checksum_func_affine_merged() and 0xFFFF) != 34494) {
-        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
-    }
-    if ((lib.uniffi_takt_core_checksum_func_affine_task_id_in_permalink() and 0xFFFF) != 7955) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_func_agent_read_only_tools() and 0xFFFF) != 53195) {
@@ -9346,166 +9297,6 @@ public object FfiConverterTypeSyncPull: FfiConverter<SyncPull, Long> {
 
     override fun write(value: SyncPull, buf: ByteBuffer) {
         buf.putLong(lower(value))
-    }
-}
-
-
-
-/**
- * A todo line read back out of a checklist.
- */
-data class AffineChecklistItem (
-    /**
-     * None for an item Takt did not write.
-     */
-    var `taskId`: kotlin.Long?
-    , 
-    var `title`: kotlin.String
-    , 
-    var `isChecked`: kotlin.Boolean
-    , 
-    var `depth`: kotlin.Long
-    , 
-    /**
-     * The line as read, so an item Takt does not own goes back unchanged.
-     */
-    var `raw`: kotlin.String
-    
-){
-    
-
-    
-
-    
-    companion object
-}
-
-/**
- * @suppress
- */
-public object FfiConverterTypeAffineChecklistItem: FfiConverterRustBuffer<AffineChecklistItem> {
-    override fun read(buf: ByteBuffer): AffineChecklistItem {
-        return AffineChecklistItem(
-            FfiConverterOptionalLong.read(buf),
-            FfiConverterString.read(buf),
-            FfiConverterBoolean.read(buf),
-            FfiConverterLong.read(buf),
-            FfiConverterString.read(buf),
-        )
-    }
-
-    override fun allocationSize(value: AffineChecklistItem) = (
-            FfiConverterOptionalLong.allocationSize(value.`taskId`) +
-            FfiConverterString.allocationSize(value.`title`) +
-            FfiConverterBoolean.allocationSize(value.`isChecked`) +
-            FfiConverterLong.allocationSize(value.`depth`) +
-            FfiConverterString.allocationSize(value.`raw`)
-    )
-
-    override fun write(value: AffineChecklistItem, buf: ByteBuffer) {
-            FfiConverterOptionalLong.write(value.`taskId`, buf)
-            FfiConverterString.write(value.`title`, buf)
-            FfiConverterBoolean.write(value.`isChecked`, buf)
-            FfiConverterLong.write(value.`depth`, buf)
-            FfiConverterString.write(value.`raw`, buf)
-    }
-}
-
-
-
-/**
- * Everything a sync reads out of a checklist, in one pass.
- */
-data class AffineChecklistRead (
-    /**
-     * Every todo line in the section, in document order.
-     */
-    var `items`: List<AffineChecklistItem>
-    , 
-    /**
-     * Lines in the section Takt did not write: hand-typed items and prose.
-     */
-    var `unownedLines`: List<kotlin.String>
-    
-){
-    
-
-    
-
-    
-    companion object
-}
-
-/**
- * @suppress
- */
-public object FfiConverterTypeAffineChecklistRead: FfiConverterRustBuffer<AffineChecklistRead> {
-    override fun read(buf: ByteBuffer): AffineChecklistRead {
-        return AffineChecklistRead(
-            FfiConverterSequenceTypeAffineChecklistItem.read(buf),
-            FfiConverterSequenceString.read(buf),
-        )
-    }
-
-    override fun allocationSize(value: AffineChecklistRead) = (
-            FfiConverterSequenceTypeAffineChecklistItem.allocationSize(value.`items`) +
-            FfiConverterSequenceString.allocationSize(value.`unownedLines`)
-    )
-
-    override fun write(value: AffineChecklistRead, buf: ByteBuffer) {
-            FfiConverterSequenceTypeAffineChecklistItem.write(value.`items`, buf)
-            FfiConverterSequenceString.write(value.`unownedLines`, buf)
-    }
-}
-
-
-
-/**
- * A task as it is written into a checklist.
- */
-data class AffineChecklistTask (
-    var `id`: kotlin.Long
-    , 
-    var `title`: kotlin.String
-    , 
-    var `permalink`: kotlin.String?
-    , 
-    var `depth`: kotlin.Long
-    
-){
-    
-
-    
-
-    
-    companion object
-}
-
-/**
- * @suppress
- */
-public object FfiConverterTypeAffineChecklistTask: FfiConverterRustBuffer<AffineChecklistTask> {
-    override fun read(buf: ByteBuffer): AffineChecklistTask {
-        return AffineChecklistTask(
-            FfiConverterLong.read(buf),
-            FfiConverterString.read(buf),
-            FfiConverterOptionalString.read(buf),
-            FfiConverterLong.read(buf),
-        )
-    }
-
-    override fun allocationSize(value: AffineChecklistTask) = (
-            FfiConverterLong.allocationSize(value.`id`) +
-            FfiConverterString.allocationSize(value.`title`) +
-            FfiConverterOptionalString.allocationSize(value.`permalink`) +
-            FfiConverterLong.allocationSize(value.`depth`)
-    )
-
-    override fun write(value: AffineChecklistTask, buf: ByteBuffer) {
-            FfiConverterLong.write(value.`id`, buf)
-            FfiConverterString.write(value.`title`, buf)
-            FfiConverterOptionalString.write(value.`permalink`, buf)
-            FfiConverterLong.write(value.`depth`, buf)
     }
 }
 
@@ -22304,36 +22095,6 @@ sealed class PaletteCommand {
     object ClearPriority : PaletteCommand()
     
     
-    object SyncObsidian : PaletteCommand()
-    
-    
-    object SyncObsidianNewWindow : PaletteCommand()
-    
-    
-    object ChooseObsidianInbox : PaletteCommand()
-    
-    
-    object ClearObsidianInbox : PaletteCommand()
-    
-    
-    object LinkObsidianFolder : PaletteCommand()
-    
-    
-    object CreateObsidianFolder : PaletteCommand()
-    
-    
-    object ClearObsidianFolderLink : PaletteCommand()
-    
-    
-    object SyncAffine : PaletteCommand()
-    
-    
-    object OpenAffineDocument : PaletteCommand()
-    
-    
-    object SyncAffineDay : PaletteCommand()
-    
-    
     object SyncGoogleCalendar : PaletteCommand()
     
     
@@ -22441,26 +22202,16 @@ public object FfiConverterTypePaletteCommand : FfiConverterRustBuffer<PaletteCom
                 )
             37 -> PaletteCommand.PriorityBack
             38 -> PaletteCommand.ClearPriority
-            39 -> PaletteCommand.SyncObsidian
-            40 -> PaletteCommand.SyncObsidianNewWindow
-            41 -> PaletteCommand.ChooseObsidianInbox
-            42 -> PaletteCommand.ClearObsidianInbox
-            43 -> PaletteCommand.LinkObsidianFolder
-            44 -> PaletteCommand.CreateObsidianFolder
-            45 -> PaletteCommand.ClearObsidianFolderLink
-            46 -> PaletteCommand.SyncAffine
-            47 -> PaletteCommand.OpenAffineDocument
-            48 -> PaletteCommand.SyncAffineDay
-            49 -> PaletteCommand.SyncGoogleCalendar
-            50 -> PaletteCommand.RefreshMcpPath
-            51 -> PaletteCommand.CopyMcpClientConfig
-            52 -> PaletteCommand.OpenMcpGuide
-            53 -> PaletteCommand.QuickAdd
-            54 -> PaletteCommand.ToggleContext
-            55 -> PaletteCommand.ToggleChildrenInMenus
-            56 -> PaletteCommand.EditAtStart
-            57 -> PaletteCommand.OpenCommandPalette
-            58 -> PaletteCommand.Unknown(
+            39 -> PaletteCommand.SyncGoogleCalendar
+            40 -> PaletteCommand.RefreshMcpPath
+            41 -> PaletteCommand.CopyMcpClientConfig
+            42 -> PaletteCommand.OpenMcpGuide
+            43 -> PaletteCommand.QuickAdd
+            44 -> PaletteCommand.ToggleContext
+            45 -> PaletteCommand.ToggleChildrenInMenus
+            46 -> PaletteCommand.EditAtStart
+            47 -> PaletteCommand.OpenCommandPalette
+            48 -> PaletteCommand.Unknown(
                 FfiConverterString.read(buf),
                 )
             else -> throw RuntimeException("invalid enum value, something is very wrong!!")
@@ -22703,66 +22454,6 @@ public object FfiConverterTypePaletteCommand : FfiConverterRustBuffer<PaletteCom
                 4UL
             )
         }
-        is PaletteCommand.SyncObsidian -> {
-            // Add the size for the Int that specifies the variant plus the size needed for all fields
-            (
-                4UL
-            )
-        }
-        is PaletteCommand.SyncObsidianNewWindow -> {
-            // Add the size for the Int that specifies the variant plus the size needed for all fields
-            (
-                4UL
-            )
-        }
-        is PaletteCommand.ChooseObsidianInbox -> {
-            // Add the size for the Int that specifies the variant plus the size needed for all fields
-            (
-                4UL
-            )
-        }
-        is PaletteCommand.ClearObsidianInbox -> {
-            // Add the size for the Int that specifies the variant plus the size needed for all fields
-            (
-                4UL
-            )
-        }
-        is PaletteCommand.LinkObsidianFolder -> {
-            // Add the size for the Int that specifies the variant plus the size needed for all fields
-            (
-                4UL
-            )
-        }
-        is PaletteCommand.CreateObsidianFolder -> {
-            // Add the size for the Int that specifies the variant plus the size needed for all fields
-            (
-                4UL
-            )
-        }
-        is PaletteCommand.ClearObsidianFolderLink -> {
-            // Add the size for the Int that specifies the variant plus the size needed for all fields
-            (
-                4UL
-            )
-        }
-        is PaletteCommand.SyncAffine -> {
-            // Add the size for the Int that specifies the variant plus the size needed for all fields
-            (
-                4UL
-            )
-        }
-        is PaletteCommand.OpenAffineDocument -> {
-            // Add the size for the Int that specifies the variant plus the size needed for all fields
-            (
-                4UL
-            )
-        }
-        is PaletteCommand.SyncAffineDay -> {
-            // Add the size for the Int that specifies the variant plus the size needed for all fields
-            (
-                4UL
-            )
-        }
         is PaletteCommand.SyncGoogleCalendar -> {
             // Add the size for the Int that specifies the variant plus the size needed for all fields
             (
@@ -22987,84 +22678,44 @@ public object FfiConverterTypePaletteCommand : FfiConverterRustBuffer<PaletteCom
                 buf.putInt(38)
                 Unit
             }
-            is PaletteCommand.SyncObsidian -> {
+            is PaletteCommand.SyncGoogleCalendar -> {
                 buf.putInt(39)
                 Unit
             }
-            is PaletteCommand.SyncObsidianNewWindow -> {
+            is PaletteCommand.RefreshMcpPath -> {
                 buf.putInt(40)
                 Unit
             }
-            is PaletteCommand.ChooseObsidianInbox -> {
+            is PaletteCommand.CopyMcpClientConfig -> {
                 buf.putInt(41)
                 Unit
             }
-            is PaletteCommand.ClearObsidianInbox -> {
+            is PaletteCommand.OpenMcpGuide -> {
                 buf.putInt(42)
                 Unit
             }
-            is PaletteCommand.LinkObsidianFolder -> {
+            is PaletteCommand.QuickAdd -> {
                 buf.putInt(43)
                 Unit
             }
-            is PaletteCommand.CreateObsidianFolder -> {
+            is PaletteCommand.ToggleContext -> {
                 buf.putInt(44)
                 Unit
             }
-            is PaletteCommand.ClearObsidianFolderLink -> {
+            is PaletteCommand.ToggleChildrenInMenus -> {
                 buf.putInt(45)
                 Unit
             }
-            is PaletteCommand.SyncAffine -> {
+            is PaletteCommand.EditAtStart -> {
                 buf.putInt(46)
                 Unit
             }
-            is PaletteCommand.OpenAffineDocument -> {
+            is PaletteCommand.OpenCommandPalette -> {
                 buf.putInt(47)
                 Unit
             }
-            is PaletteCommand.SyncAffineDay -> {
-                buf.putInt(48)
-                Unit
-            }
-            is PaletteCommand.SyncGoogleCalendar -> {
-                buf.putInt(49)
-                Unit
-            }
-            is PaletteCommand.RefreshMcpPath -> {
-                buf.putInt(50)
-                Unit
-            }
-            is PaletteCommand.CopyMcpClientConfig -> {
-                buf.putInt(51)
-                Unit
-            }
-            is PaletteCommand.OpenMcpGuide -> {
-                buf.putInt(52)
-                Unit
-            }
-            is PaletteCommand.QuickAdd -> {
-                buf.putInt(53)
-                Unit
-            }
-            is PaletteCommand.ToggleContext -> {
-                buf.putInt(54)
-                Unit
-            }
-            is PaletteCommand.ToggleChildrenInMenus -> {
-                buf.putInt(55)
-                Unit
-            }
-            is PaletteCommand.EditAtStart -> {
-                buf.putInt(56)
-                Unit
-            }
-            is PaletteCommand.OpenCommandPalette -> {
-                buf.putInt(57)
-                Unit
-            }
             is PaletteCommand.Unknown -> {
-                buf.putInt(58)
+                buf.putInt(48)
                 FfiConverterString.write(value.`input`, buf)
                 Unit
             }
@@ -25612,62 +25263,6 @@ public object FfiConverterSequenceString: FfiConverterRustBuffer<List<kotlin.Str
         buf.putInt(value.size)
         value.iterator().forEach {
             FfiConverterString.write(it, buf)
-        }
-    }
-}
-
-
-
-
-/**
- * @suppress
- */
-public object FfiConverterSequenceTypeAffineChecklistItem: FfiConverterRustBuffer<List<AffineChecklistItem>> {
-    override fun read(buf: ByteBuffer): List<AffineChecklistItem> {
-        val len = buf.getInt()
-        return List<AffineChecklistItem>(len) {
-            FfiConverterTypeAffineChecklistItem.read(buf)
-        }
-    }
-
-    override fun allocationSize(value: List<AffineChecklistItem>): ULong {
-        val sizeForLength = 4UL
-        val sizeForItems = value.map { FfiConverterTypeAffineChecklistItem.allocationSize(it) }.sum()
-        return sizeForLength + sizeForItems
-    }
-
-    override fun write(value: List<AffineChecklistItem>, buf: ByteBuffer) {
-        buf.putInt(value.size)
-        value.iterator().forEach {
-            FfiConverterTypeAffineChecklistItem.write(it, buf)
-        }
-    }
-}
-
-
-
-
-/**
- * @suppress
- */
-public object FfiConverterSequenceTypeAffineChecklistTask: FfiConverterRustBuffer<List<AffineChecklistTask>> {
-    override fun read(buf: ByteBuffer): List<AffineChecklistTask> {
-        val len = buf.getInt()
-        return List<AffineChecklistTask>(len) {
-            FfiConverterTypeAffineChecklistTask.read(buf)
-        }
-    }
-
-    override fun allocationSize(value: List<AffineChecklistTask>): ULong {
-        val sizeForLength = 4UL
-        val sizeForItems = value.map { FfiConverterTypeAffineChecklistTask.allocationSize(it) }.sum()
-        return sizeForLength + sizeForItems
-    }
-
-    override fun write(value: List<AffineChecklistTask>, buf: ByteBuffer) {
-        buf.putInt(value.size)
-        value.iterator().forEach {
-            FfiConverterTypeAffineChecklistTask.write(it, buf)
         }
     }
 }
@@ -28359,127 +27954,6 @@ public object FfiConverterMapStringTypeSyncValue: FfiConverterRustBuffer<Map<kot
     UniffiLib.uniffi_takt_core_fn_func_core_version(
     
         _status)
-}
-    )
-    }
-    
-
-        /**
-         * What is written under `heading`, heading line excluded, or None when the
-         * document has no such heading: "the section is empty" and "there is no
-         * section" mean different things to a caller deciding whether to create it.
-         */ fun `affineBodyUnder`(`heading`: kotlin.String, `markdown`: kotlin.String): kotlin.String? {
-            return FfiConverterOptionalString.lift(
-    uniffiRustCall() { _status ->
-    UniffiLib.uniffi_takt_core_fn_func_affine_body_under(
-    
-        
-        FfiConverterString.lower(`heading`),
-        FfiConverterString.lower(`markdown`),_status)
-}
-    )
-    }
-    
-
-        /**
-         * Whether the items already say what Takt is about to write. Compared item
-         * by item, because the text differs by escaping every time.
-         */ fun `affineChecklistMatches`(`items`: List<AffineChecklistItem>, `tasks`: List<AffineChecklistTask>): kotlin.Boolean {
-            return FfiConverterBoolean.lift(
-    uniffiRustCall() { _status ->
-    UniffiLib.uniffi_takt_core_fn_func_affine_checklist_matches(
-    
-        
-        FfiConverterSequenceTypeAffineChecklistItem.lower(`items`),
-        FfiConverterSequenceTypeAffineChecklistTask.lower(`tasks`),_status)
-}
-    )
-    }
-    
-
-        /**
-         * The section's todo items and the lines Takt does not own, in one pass.
-         * A document without the heading reads as nothing rather than everything.
-         */ fun `affineChecklistRead`(`markdown`: kotlin.String, `heading`: kotlin.String): AffineChecklistRead {
-            return FfiConverterTypeAffineChecklistRead.lift(
-    uniffiRustCall() { _status ->
-    UniffiLib.uniffi_takt_core_fn_func_affine_checklist_read(
-    
-        
-        FfiConverterString.lower(`markdown`),
-        FfiConverterString.lower(`heading`),_status)
-}
-    )
-    }
-    
-
-        /**
-         * The document with its checklist rewritten to `tasks`, keeping the lines
-         * Takt does not own, or None when nothing was ticked (`ticked_any` false)
-         * and the checklist already says the same: rewriting would churn the
-         * document's history for no change anyone made.
-         */ fun `affineChecklistRewrite`(`existing`: kotlin.String, `tasks`: List<AffineChecklistTask>, `heading`: kotlin.String, `tickedAny`: kotlin.Boolean): kotlin.String? {
-            return FfiConverterOptionalString.lift(
-    uniffiRustCall() { _status ->
-    UniffiLib.uniffi_takt_core_fn_func_affine_checklist_rewrite(
-    
-        
-        FfiConverterString.lower(`existing`),
-        FfiConverterSequenceTypeAffineChecklistTask.lower(`tasks`),
-        FfiConverterString.lower(`heading`),
-        FfiConverterBoolean.lower(`tickedAny`),_status)
-}
-    )
-    }
-    
-
-        /**
-         * The checklist section. `carried_over` is lines found in the section that
-         * Takt did not write: the section is Takt's to rewrite, but a note someone
-         * typed into it is not Takt's to delete.
-         */ fun `affineChecklistSection`(`tasks`: List<AffineChecklistTask>, `carriedOver`: List<kotlin.String>, `heading`: kotlin.String): kotlin.String {
-            return FfiConverterString.lift(
-    uniffiRustCall() { _status ->
-    UniffiLib.uniffi_takt_core_fn_func_affine_checklist_section(
-    
-        
-        FfiConverterSequenceTypeAffineChecklistTask.lower(`tasks`),
-        FfiConverterSequenceString.lower(`carriedOver`),
-        FfiConverterString.lower(`heading`),_status)
-}
-    )
-    }
-    
-
-        /**
-         * Splices `section` into `existing`, replacing the block `heading` already
-         * owns and appending one otherwise. The block ends at the next heading of
-         * the same level or shallower, so a `###` Takt wrote goes with it and the
-         * `##` the user wrote below survives.
-         */ fun `affineMerged`(`section`: kotlin.String, `heading`: kotlin.String, `existing`: kotlin.String): kotlin.String {
-            return FfiConverterString.lift(
-    uniffiRustCall() { _status ->
-    UniffiLib.uniffi_takt_core_fn_func_affine_merged(
-    
-        
-        FfiConverterString.lower(`section`),
-        FfiConverterString.lower(`heading`),
-        FfiConverterString.lower(`existing`),_status)
-}
-    )
-    }
-    
-
-        /**
-         * The task id a Checkvist permalink ends with (`#t<id>`). Matching on that
-         * rather than the host keeps a self-hosted or rewritten link working.
-         */ fun `affineTaskIdInPermalink`(`permalink`: kotlin.String): kotlin.Long? {
-            return FfiConverterOptionalLong.lift(
-    uniffiRustCall() { _status ->
-    UniffiLib.uniffi_takt_core_fn_func_affine_task_id_in_permalink(
-    
-        
-        FfiConverterString.lower(`permalink`),_status)
 }
     )
     }

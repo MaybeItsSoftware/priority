@@ -4751,221 +4751,6 @@ public func FfiConverterTypeSyncPull_lower(_ value: SyncPull) -> UInt64 {
 
 
 /**
- * A todo line read back out of a checklist.
- */
-public struct AffineChecklistItem: Equatable, Hashable {
-    /**
-     * None for an item Takt did not write.
-     */
-    public var taskId: Int64?
-    public var title: String
-    public var isChecked: Bool
-    public var depth: Int64
-    /**
-     * The line as read, so an item Takt does not own goes back unchanged.
-     */
-    public var raw: String
-
-    // Default memberwise initializers are never public by default, so we
-    // declare one manually.
-    public init(
-        /**
-         * None for an item Takt did not write.
-         */taskId: Int64?, title: String, isChecked: Bool, depth: Int64, 
-        /**
-         * The line as read, so an item Takt does not own goes back unchanged.
-         */raw: String) {
-        self.taskId = taskId
-        self.title = title
-        self.isChecked = isChecked
-        self.depth = depth
-        self.raw = raw
-    }
-
-    
-
-    
-}
-
-#if compiler(>=6)
-extension AffineChecklistItem: Sendable {}
-#endif
-
-#if swift(>=5.8)
-@_documentation(visibility: private)
-#endif
-public struct FfiConverterTypeAffineChecklistItem: FfiConverterRustBuffer {
-    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> AffineChecklistItem {
-        return
-            try AffineChecklistItem(
-                taskId: FfiConverterOptionInt64.read(from: &buf), 
-                title: FfiConverterString.read(from: &buf), 
-                isChecked: FfiConverterBool.read(from: &buf), 
-                depth: FfiConverterInt64.read(from: &buf), 
-                raw: FfiConverterString.read(from: &buf)
-        )
-    }
-
-    public static func write(_ value: AffineChecklistItem, into buf: inout [UInt8]) {
-        FfiConverterOptionInt64.write(value.taskId, into: &buf)
-        FfiConverterString.write(value.title, into: &buf)
-        FfiConverterBool.write(value.isChecked, into: &buf)
-        FfiConverterInt64.write(value.depth, into: &buf)
-        FfiConverterString.write(value.raw, into: &buf)
-    }
-}
-
-
-#if swift(>=5.8)
-@_documentation(visibility: private)
-#endif
-public func FfiConverterTypeAffineChecklistItem_lift(_ buf: RustBuffer) throws -> AffineChecklistItem {
-    return try FfiConverterTypeAffineChecklistItem.lift(buf)
-}
-
-#if swift(>=5.8)
-@_documentation(visibility: private)
-#endif
-public func FfiConverterTypeAffineChecklistItem_lower(_ value: AffineChecklistItem) -> RustBuffer {
-    return FfiConverterTypeAffineChecklistItem.lower(value)
-}
-
-
-/**
- * Everything a sync reads out of a checklist, in one pass.
- */
-public struct AffineChecklistRead: Equatable, Hashable {
-    /**
-     * Every todo line in the section, in document order.
-     */
-    public var items: [AffineChecklistItem]
-    /**
-     * Lines in the section Takt did not write: hand-typed items and prose.
-     */
-    public var unownedLines: [String]
-
-    // Default memberwise initializers are never public by default, so we
-    // declare one manually.
-    public init(
-        /**
-         * Every todo line in the section, in document order.
-         */items: [AffineChecklistItem], 
-        /**
-         * Lines in the section Takt did not write: hand-typed items and prose.
-         */unownedLines: [String]) {
-        self.items = items
-        self.unownedLines = unownedLines
-    }
-
-    
-
-    
-}
-
-#if compiler(>=6)
-extension AffineChecklistRead: Sendable {}
-#endif
-
-#if swift(>=5.8)
-@_documentation(visibility: private)
-#endif
-public struct FfiConverterTypeAffineChecklistRead: FfiConverterRustBuffer {
-    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> AffineChecklistRead {
-        return
-            try AffineChecklistRead(
-                items: FfiConverterSequenceTypeAffineChecklistItem.read(from: &buf), 
-                unownedLines: FfiConverterSequenceString.read(from: &buf)
-        )
-    }
-
-    public static func write(_ value: AffineChecklistRead, into buf: inout [UInt8]) {
-        FfiConverterSequenceTypeAffineChecklistItem.write(value.items, into: &buf)
-        FfiConverterSequenceString.write(value.unownedLines, into: &buf)
-    }
-}
-
-
-#if swift(>=5.8)
-@_documentation(visibility: private)
-#endif
-public func FfiConverterTypeAffineChecklistRead_lift(_ buf: RustBuffer) throws -> AffineChecklistRead {
-    return try FfiConverterTypeAffineChecklistRead.lift(buf)
-}
-
-#if swift(>=5.8)
-@_documentation(visibility: private)
-#endif
-public func FfiConverterTypeAffineChecklistRead_lower(_ value: AffineChecklistRead) -> RustBuffer {
-    return FfiConverterTypeAffineChecklistRead.lower(value)
-}
-
-
-/**
- * A task as it is written into a checklist.
- */
-public struct AffineChecklistTask: Equatable, Hashable {
-    public var id: Int64
-    public var title: String
-    public var permalink: String?
-    public var depth: Int64
-
-    // Default memberwise initializers are never public by default, so we
-    // declare one manually.
-    public init(id: Int64, title: String, permalink: String?, depth: Int64) {
-        self.id = id
-        self.title = title
-        self.permalink = permalink
-        self.depth = depth
-    }
-
-    
-
-    
-}
-
-#if compiler(>=6)
-extension AffineChecklistTask: Sendable {}
-#endif
-
-#if swift(>=5.8)
-@_documentation(visibility: private)
-#endif
-public struct FfiConverterTypeAffineChecklistTask: FfiConverterRustBuffer {
-    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> AffineChecklistTask {
-        return
-            try AffineChecklistTask(
-                id: FfiConverterInt64.read(from: &buf), 
-                title: FfiConverterString.read(from: &buf), 
-                permalink: FfiConverterOptionString.read(from: &buf), 
-                depth: FfiConverterInt64.read(from: &buf)
-        )
-    }
-
-    public static func write(_ value: AffineChecklistTask, into buf: inout [UInt8]) {
-        FfiConverterInt64.write(value.id, into: &buf)
-        FfiConverterString.write(value.title, into: &buf)
-        FfiConverterOptionString.write(value.permalink, into: &buf)
-        FfiConverterInt64.write(value.depth, into: &buf)
-    }
-}
-
-
-#if swift(>=5.8)
-@_documentation(visibility: private)
-#endif
-public func FfiConverterTypeAffineChecklistTask_lift(_ buf: RustBuffer) throws -> AffineChecklistTask {
-    return try FfiConverterTypeAffineChecklistTask.lift(buf)
-}
-
-#if swift(>=5.8)
-@_documentation(visibility: private)
-#endif
-public func FfiConverterTypeAffineChecklistTask_lower(_ value: AffineChecklistTask) -> RustBuffer {
-    return FfiConverterTypeAffineChecklistTask.lower(value)
-}
-
-
-/**
  * A row of `focus_awards`. `FocusAward`.
  */
 public struct AwardRow: Equatable, Hashable {
@@ -20191,16 +19976,6 @@ public enum PaletteCommand: Equatable, Hashable {
     )
     case priorityBack
     case clearPriority
-    case syncObsidian
-    case syncObsidianNewWindow
-    case chooseObsidianInbox
-    case clearObsidianInbox
-    case linkObsidianFolder
-    case createObsidianFolder
-    case clearObsidianFolderLink
-    case syncAffine
-    case openAffineDocument
-    case syncAffineDay
     case syncGoogleCalendar
     case refreshMcpPath
     case copyMcpClientConfig
@@ -20319,45 +20094,25 @@ public struct FfiConverterTypePaletteCommand: FfiConverterRustBuffer {
         
         case 38: return .clearPriority
         
-        case 39: return .syncObsidian
+        case 39: return .syncGoogleCalendar
         
-        case 40: return .syncObsidianNewWindow
+        case 40: return .refreshMcpPath
         
-        case 41: return .chooseObsidianInbox
+        case 41: return .copyMcpClientConfig
         
-        case 42: return .clearObsidianInbox
+        case 42: return .openMcpGuide
         
-        case 43: return .linkObsidianFolder
+        case 43: return .quickAdd
         
-        case 44: return .createObsidianFolder
+        case 44: return .toggleContext
         
-        case 45: return .clearObsidianFolderLink
+        case 45: return .toggleChildrenInMenus
         
-        case 46: return .syncAffine
+        case 46: return .editAtStart
         
-        case 47: return .openAffineDocument
+        case 47: return .openCommandPalette
         
-        case 48: return .syncAffineDay
-        
-        case 49: return .syncGoogleCalendar
-        
-        case 50: return .refreshMcpPath
-        
-        case 51: return .copyMcpClientConfig
-        
-        case 52: return .openMcpGuide
-        
-        case 53: return .quickAdd
-        
-        case 54: return .toggleContext
-        
-        case 55: return .toggleChildrenInMenus
-        
-        case 56: return .editAtStart
-        
-        case 57: return .openCommandPalette
-        
-        case 58: return .unknown(input: try FfiConverterString.read(from: &buf)
+        case 48: return .unknown(input: try FfiConverterString.read(from: &buf)
         )
         
         default: throw UniffiInternalError.unexpectedEnumCase
@@ -20527,84 +20282,44 @@ public struct FfiConverterTypePaletteCommand: FfiConverterRustBuffer {
             writeInt(&buf, Int32(38))
         
         
-        case .syncObsidian:
+        case .syncGoogleCalendar:
             writeInt(&buf, Int32(39))
         
         
-        case .syncObsidianNewWindow:
+        case .refreshMcpPath:
             writeInt(&buf, Int32(40))
         
         
-        case .chooseObsidianInbox:
+        case .copyMcpClientConfig:
             writeInt(&buf, Int32(41))
         
         
-        case .clearObsidianInbox:
+        case .openMcpGuide:
             writeInt(&buf, Int32(42))
         
         
-        case .linkObsidianFolder:
+        case .quickAdd:
             writeInt(&buf, Int32(43))
         
         
-        case .createObsidianFolder:
+        case .toggleContext:
             writeInt(&buf, Int32(44))
         
         
-        case .clearObsidianFolderLink:
+        case .toggleChildrenInMenus:
             writeInt(&buf, Int32(45))
         
         
-        case .syncAffine:
+        case .editAtStart:
             writeInt(&buf, Int32(46))
         
         
-        case .openAffineDocument:
+        case .openCommandPalette:
             writeInt(&buf, Int32(47))
         
         
-        case .syncAffineDay:
-            writeInt(&buf, Int32(48))
-        
-        
-        case .syncGoogleCalendar:
-            writeInt(&buf, Int32(49))
-        
-        
-        case .refreshMcpPath:
-            writeInt(&buf, Int32(50))
-        
-        
-        case .copyMcpClientConfig:
-            writeInt(&buf, Int32(51))
-        
-        
-        case .openMcpGuide:
-            writeInt(&buf, Int32(52))
-        
-        
-        case .quickAdd:
-            writeInt(&buf, Int32(53))
-        
-        
-        case .toggleContext:
-            writeInt(&buf, Int32(54))
-        
-        
-        case .toggleChildrenInMenus:
-            writeInt(&buf, Int32(55))
-        
-        
-        case .editAtStart:
-            writeInt(&buf, Int32(56))
-        
-        
-        case .openCommandPalette:
-            writeInt(&buf, Int32(57))
-        
-        
         case let .unknown(input):
-            writeInt(&buf, Int32(58))
+            writeInt(&buf, Int32(48))
             FfiConverterString.write(input, into: &buf)
             
         }
@@ -22738,56 +22453,6 @@ fileprivate struct FfiConverterSequenceString: FfiConverterRustBuffer {
         seq.reserveCapacity(Int(len))
         for _ in 0 ..< len {
             seq.append(try FfiConverterString.read(from: &buf))
-        }
-        return seq
-    }
-}
-
-#if swift(>=5.8)
-@_documentation(visibility: private)
-#endif
-fileprivate struct FfiConverterSequenceTypeAffineChecklistItem: FfiConverterRustBuffer {
-    typealias SwiftType = [AffineChecklistItem]
-
-    public static func write(_ value: [AffineChecklistItem], into buf: inout [UInt8]) {
-        let len = Int32(value.count)
-        writeInt(&buf, len)
-        for item in value {
-            FfiConverterTypeAffineChecklistItem.write(item, into: &buf)
-        }
-    }
-
-    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [AffineChecklistItem] {
-        let len: Int32 = try readInt(&buf)
-        var seq = [AffineChecklistItem]()
-        seq.reserveCapacity(Int(len))
-        for _ in 0 ..< len {
-            seq.append(try FfiConverterTypeAffineChecklistItem.read(from: &buf))
-        }
-        return seq
-    }
-}
-
-#if swift(>=5.8)
-@_documentation(visibility: private)
-#endif
-fileprivate struct FfiConverterSequenceTypeAffineChecklistTask: FfiConverterRustBuffer {
-    typealias SwiftType = [AffineChecklistTask]
-
-    public static func write(_ value: [AffineChecklistTask], into buf: inout [UInt8]) {
-        let len = Int32(value.count)
-        writeInt(&buf, len)
-        for item in value {
-            FfiConverterTypeAffineChecklistTask.write(item, into: &buf)
-        }
-    }
-
-    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [AffineChecklistTask] {
-        let len: Int32 = try readInt(&buf)
-        var seq = [AffineChecklistTask]()
-        seq.reserveCapacity(Int(len))
-        for _ in 0 ..< len {
-            seq.append(try FfiConverterTypeAffineChecklistTask.read(from: &buf))
         }
         return seq
     }
@@ -25161,106 +24826,6 @@ public func coreVersion() -> String  {
 })
 }
 /**
- * What is written under `heading`, heading line excluded, or None when the
- * document has no such heading: "the section is empty" and "there is no
- * section" mean different things to a caller deciding whether to create it.
- */
-public func affineBodyUnder(heading: String, markdown: String) -> String?  {
-    return try!  FfiConverterOptionString.lift(try! rustCall() {
-        uniffiCallStatus in
-    uniffi_takt_core_fn_func_affine_body_under(
-        FfiConverterString.lower(heading),
-        FfiConverterString.lower(markdown),uniffiCallStatus
-    )
-})
-}
-/**
- * Whether the items already say what Takt is about to write. Compared item
- * by item, because the text differs by escaping every time.
- */
-public func affineChecklistMatches(items: [AffineChecklistItem], tasks: [AffineChecklistTask]) -> Bool  {
-    return try!  FfiConverterBool.lift(try! rustCall() {
-        uniffiCallStatus in
-    uniffi_takt_core_fn_func_affine_checklist_matches(
-        FfiConverterSequenceTypeAffineChecklistItem.lower(items),
-        FfiConverterSequenceTypeAffineChecklistTask.lower(tasks),uniffiCallStatus
-    )
-})
-}
-/**
- * The section's todo items and the lines Takt does not own, in one pass.
- * A document without the heading reads as nothing rather than everything.
- */
-public func affineChecklistRead(markdown: String, heading: String) -> AffineChecklistRead  {
-    return try!  FfiConverterTypeAffineChecklistRead_lift(try! rustCall() {
-        uniffiCallStatus in
-    uniffi_takt_core_fn_func_affine_checklist_read(
-        FfiConverterString.lower(markdown),
-        FfiConverterString.lower(heading),uniffiCallStatus
-    )
-})
-}
-/**
- * The document with its checklist rewritten to `tasks`, keeping the lines
- * Takt does not own, or None when nothing was ticked (`ticked_any` false)
- * and the checklist already says the same: rewriting would churn the
- * document's history for no change anyone made.
- */
-public func affineChecklistRewrite(existing: String, tasks: [AffineChecklistTask], heading: String, tickedAny: Bool) -> String?  {
-    return try!  FfiConverterOptionString.lift(try! rustCall() {
-        uniffiCallStatus in
-    uniffi_takt_core_fn_func_affine_checklist_rewrite(
-        FfiConverterString.lower(existing),
-        FfiConverterSequenceTypeAffineChecklistTask.lower(tasks),
-        FfiConverterString.lower(heading),
-        FfiConverterBool.lower(tickedAny),uniffiCallStatus
-    )
-})
-}
-/**
- * The checklist section. `carried_over` is lines found in the section that
- * Takt did not write: the section is Takt's to rewrite, but a note someone
- * typed into it is not Takt's to delete.
- */
-public func affineChecklistSection(tasks: [AffineChecklistTask], carriedOver: [String], heading: String) -> String  {
-    return try!  FfiConverterString.lift(try! rustCall() {
-        uniffiCallStatus in
-    uniffi_takt_core_fn_func_affine_checklist_section(
-        FfiConverterSequenceTypeAffineChecklistTask.lower(tasks),
-        FfiConverterSequenceString.lower(carriedOver),
-        FfiConverterString.lower(heading),uniffiCallStatus
-    )
-})
-}
-/**
- * Splices `section` into `existing`, replacing the block `heading` already
- * owns and appending one otherwise. The block ends at the next heading of
- * the same level or shallower, so a `###` Takt wrote goes with it and the
- * `##` the user wrote below survives.
- */
-public func affineMerged(section: String, heading: String, existing: String) -> String  {
-    return try!  FfiConverterString.lift(try! rustCall() {
-        uniffiCallStatus in
-    uniffi_takt_core_fn_func_affine_merged(
-        FfiConverterString.lower(section),
-        FfiConverterString.lower(heading),
-        FfiConverterString.lower(existing),uniffiCallStatus
-    )
-})
-}
-/**
- * The task id a Checkvist permalink ends with (`#t<id>`). Matching on that
- * rather than the host keeps a self-hosted or rewritten link working.
- */
-public func affineTaskIdInPermalink(permalink: String) -> Int64?  {
-    return try!  FfiConverterOptionInt64.lift(try! rustCall() {
-        uniffiCallStatus in
-    uniffi_takt_core_fn_func_affine_task_id_in_permalink(
-        FfiConverterString.lower(permalink),uniffiCallStatus
-    )
-})
-}
-/**
  * [`READ_ONLY_TOOLS`], for the apps.
  */
 public func agentReadOnlyTools() -> [String]  {
@@ -27536,27 +27101,6 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.contractVersionMismatch
     }
     if (uniffi_takt_core_checksum_func_core_version() != 3784) {
-        return InitializationResult.apiChecksumMismatch
-    }
-    if (uniffi_takt_core_checksum_func_affine_body_under() != 53160) {
-        return InitializationResult.apiChecksumMismatch
-    }
-    if (uniffi_takt_core_checksum_func_affine_checklist_matches() != 10604) {
-        return InitializationResult.apiChecksumMismatch
-    }
-    if (uniffi_takt_core_checksum_func_affine_checklist_read() != 22446) {
-        return InitializationResult.apiChecksumMismatch
-    }
-    if (uniffi_takt_core_checksum_func_affine_checklist_rewrite() != 11578) {
-        return InitializationResult.apiChecksumMismatch
-    }
-    if (uniffi_takt_core_checksum_func_affine_checklist_section() != 22489) {
-        return InitializationResult.apiChecksumMismatch
-    }
-    if (uniffi_takt_core_checksum_func_affine_merged() != 34494) {
-        return InitializationResult.apiChecksumMismatch
-    }
-    if (uniffi_takt_core_checksum_func_affine_task_id_in_permalink() != 7955) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_func_agent_read_only_tools() != 53195) {

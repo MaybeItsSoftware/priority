@@ -588,7 +588,7 @@ covered the old copies pass against it.
     | `DesktopShortcutSequence`, `DoubleTapModifier` | `TaktCore` | native: timers over `NSEvent` timing |
     | `WorkspaceCommandQuery` (palette ranking) | `TaktCore` | native: ranks the Mac's own catalogue every keystroke (step 9) |
     | `TaskDraftAnchor`, `DailyTitleEdit` | `TaktCore` | native: per-refresh UI state over rows on screen |
-    | `IntegrationLinkStore`, `DailyNotePath`, `ManagedMarkdownBlock`, Obsidian note body, Google Calendar event payload, `AgentStreamProtocol`, `AgentToolSummary`, `MCPWire` | `TaktCore`, plugins | native: integration edges that exist only on the Mac and talk to its other programs; no second copy to retire |
+    | `IntegrationLinkStore`, `DailyNotePath`, `ManagedMarkdownBlock`, Obsidian note body, Google Calendar event payload, `AgentStreamProtocol`, `AgentToolSummary`, `JSONValue` (was `MCPWire`) | `TaktCore`, plugins | native: integration edges that exist only on the Mac and talk to its other programs; no second copy to retire |
     | `TaskRepository`, `SyncService`, `TaskMutationService`, `OfflineTaskSyncPlugin`, `LocalTaskStore`, `ReorderQueue`, `UndoService`, the list-scoped priority stores, `OfflineReplayPolicy`, `AuthRetryPolicy`, `RemoteKeyBootstrapPolicy`, `CompletionRetention`, `TimerElapsedReassignmentPolicy`, `TaskFilterEngine`, `DayLogPlan`, `TaskTreeFormatter` | `Takt/`, `TaktCore` | **deleted 2026-10-13** (decided 2026-10-12), with the `TaktAppLogic` target and its tests, `NavigationState`, the service hosts and the managers only it fed. The import and the settings page run on `CheckvistAccount` over the core's `checkvist.rs`; see "The Checkvist stack, deleted" below |
     | `DiagnosticsReport`, `SyncStatusSummary`, celebrations, `FocusTimerDisplay`, `RelativeDateTextCache`, `WindowFrameClamp`, `FileLock`, helper locators, `AppTerminationPolicy`, `OnboardingResetPolicy`, `AutoRefreshThrottlePolicy` | `TaktCore` | native: presentation and OS |
     | Theme palette lookup, hex parse, typography override, folder mirror | `TaktCore/Theming`, Kotlin `theme/` | native (step 9, "Themes") |
@@ -808,8 +808,11 @@ covered the old copies pass against it.
     acted on the workspace's selection; the MCP setup now takes the account and
     the default list from `CheckvistAccount`; Obsidian's per-task sync queue,
     task links and the AFFiNE checklist and day export had no caller left in
-    the coordinator and were removed there (their plugin methods remain, with
-    no entry point); and the day log no longer records task events, because its
+    the coordinator and were removed there, and then (2026-10-13) the
+    Obsidian and AFFiNE plugins themselves, whose every remaining member
+    served only those paths — with `core/src/affine.rs`, the AFFiNE
+    markdown and helper locator in `TaktCore`, and their palette commands.
+    Obsidian daily notes are the Daily Log plugin's and stay; and the day log no longer records task events, because its
     events are keyed by Checkvist id and only the Checkvist mutation path and
     timer wrote them. The settings page's list switcher, offline upload,
     overwrite and merge-lists tools went too: each wrote to Checkvist or to the

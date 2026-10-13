@@ -90,16 +90,6 @@ public enum Command: Equatable, Sendable {
   case priority(Int)
   case priorityBack
   case clearPriority
-  case syncObsidian
-  case syncObsidianNewWindow
-  case chooseObsidianInbox
-  case clearObsidianInbox
-  case linkObsidianFolder
-  case createObsidianFolder
-  case clearObsidianFolderLink
-  case syncAFFiNE
-  case openAFFiNEDocument
-  case syncAFFiNEDay
   case syncGoogleCalendar
   case refreshMCPPath
   case copyMCPClientConfig
@@ -212,46 +202,6 @@ public enum CommandEngine {
     .init(
       label: "Upload offline tasks", command: "upload offline tasks",
       preview: "Copy the offline workspace into the active or first loaded Checkvist list",
-      keybind: nil, submitImmediately: true),
-    .init(
-      label: "Open in Obsidian", command: "sync obsidian",
-      preview: "Write selected task and notes, then open it in Obsidian", keybind: "o",
-      submitImmediately: true),
-    .init(
-      label: "Open in Obsidian (New Window)", command: "open obsidian new window",
-      preview: "Write selected task and open it in a new Obsidian window", keybind: "O",
-      submitImmediately: true),
-    .init(
-      label: "Choose Obsidian inbox folder", command: "choose obsidian inbox",
-      preview: "Pick the default Obsidian inbox used for task sync", keybind: nil,
-      submitImmediately: true),
-    .init(
-      label: "Clear Obsidian inbox folder", command: "clear obsidian inbox",
-      preview: "Remove the default Obsidian inbox folder", keybind: nil,
-      submitImmediately: true),
-    .init(
-      label: "Link Obsidian folder", command: "link obsidian folder",
-      preview: "Choose a folder for this task and its subtasks", keybind: nil,
-      submitImmediately: true),
-    .init(
-      label: "Create Obsidian folder", command: "create obsidian folder",
-      preview: "Create and link a new folder for this task subtree", keybind: nil,
-      submitImmediately: true),
-    .init(
-      label: "Clear Obsidian folder link", command: "clear obsidian folder",
-      preview: "Remove the linked folder for this task subtree", keybind: nil,
-      submitImmediately: true),
-    .init(
-      label: "Sync AFFiNE checklist", command: "sync affine",
-      preview: "Close what you ticked in AFFiNE, then write back what's still open",
-      keybind: nil, submitImmediately: true),
-    .init(
-      label: "Open AFFiNE checklist", command: "open affine",
-      preview: "Open this list's AFFiNE checklist in the browser", keybind: nil,
-      submitImmediately: true),
-    .init(
-      label: "Write today's log to AFFiNE", command: "affine daily",
-      preview: "Write today's completions and dailies into today's AFFiNE document",
       keybind: nil, submitImmediately: true),
     .init(
       label: "Create Google Calendar event", command: "sync google calendar",
@@ -442,16 +392,6 @@ extension Command {
     case .priority(let rank): self = .priority(Int(rank))
     case .priorityBack: self = .priorityBack
     case .clearPriority: self = .clearPriority
-    case .syncObsidian: self = .syncObsidian
-    case .syncObsidianNewWindow: self = .syncObsidianNewWindow
-    case .chooseObsidianInbox: self = .chooseObsidianInbox
-    case .clearObsidianInbox: self = .clearObsidianInbox
-    case .linkObsidianFolder: self = .linkObsidianFolder
-    case .createObsidianFolder: self = .createObsidianFolder
-    case .clearObsidianFolderLink: self = .clearObsidianFolderLink
-    case .syncAffine: self = .syncAFFiNE
-    case .openAffineDocument: self = .openAFFiNEDocument
-    case .syncAffineDay: self = .syncAFFiNEDay
     case .syncGoogleCalendar: self = .syncGoogleCalendar
     case .refreshMcpPath: self = .refreshMCPPath
     case .copyMcpClientConfig: self = .copyMCPClientConfig

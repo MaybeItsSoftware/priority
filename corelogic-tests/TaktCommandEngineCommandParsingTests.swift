@@ -102,36 +102,6 @@ final class CommandEngineCommandParsingTests: XCTestCase {
     XCTAssertEqual(CommandEngine.parse("unpriority"), .clearPriority)
   }
 
-  // MARK: - Obsidian
-
-  func testParseObsidianSyncAliases() {
-    XCTAssertEqual(CommandEngine.parse("sync obsidian"), .syncObsidian)
-    XCTAssertEqual(CommandEngine.parse("send to obsidian"), .syncObsidian)
-    XCTAssertEqual(CommandEngine.parse("obsidian"), .syncObsidian)
-  }
-
-  func testParseObsidianNewWindowAliases() {
-    XCTAssertEqual(CommandEngine.parse("open obsidian new window"), .syncObsidianNewWindow)
-    XCTAssertEqual(CommandEngine.parse("obsidian new window"), .syncObsidianNewWindow)
-    XCTAssertEqual(CommandEngine.parse("open in new window"), .syncObsidianNewWindow)
-  }
-
-  func testParseObsidianFolderCommands() {
-    XCTAssertEqual(CommandEngine.parse("link obsidian folder"), .linkObsidianFolder)
-    XCTAssertEqual(CommandEngine.parse("link folder"), .linkObsidianFolder)
-    XCTAssertEqual(CommandEngine.parse("obsidian folder"), .linkObsidianFolder)
-
-    XCTAssertEqual(CommandEngine.parse("create obsidian folder"), .createObsidianFolder)
-    XCTAssertEqual(CommandEngine.parse("new obsidian folder"), .createObsidianFolder)
-    XCTAssertEqual(CommandEngine.parse("make obsidian folder"), .createObsidianFolder)
-
-    XCTAssertEqual(
-      CommandEngine.parse("clear obsidian folder"), .clearObsidianFolderLink)
-    XCTAssertEqual(
-      CommandEngine.parse("unlink obsidian folder"), .clearObsidianFolderLink)
-    XCTAssertEqual(CommandEngine.parse("clear folder link"), .clearObsidianFolderLink)
-  }
-
   // MARK: - Google Calendar
 
   func testParseGoogleCalendarCommandAliases() {

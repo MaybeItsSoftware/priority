@@ -47,7 +47,7 @@ the workspace's mapping (`WorkspaceViewModel.checkvistWorkspaceListIDsKey`).
 | Manager | Owns | Notes |
 |---|---|---|
 | `PreferencesManager` | prefs-backed settings: appearance mode, hotkeys, the Quick Add list, focus behaviour, `confirmBeforeDelete`, `launchAtLogin`, etc. The theme pick and font choices are `ThemeManager`'s | |
-| `IntegrationCoordinator` | `obsidian/affine/googleCalendar/googleTasks/mcpIntegrationEnabled`, `obsidianInboxPath`, `mcpServerCommandPath`, the detected MCP clients | reads the Checkvist account and default list through `dataSource` for the MCP setup; the Google Calendar page's "Create event from selected task" goes to the workspace's selection through `addSelectedWorkspaceTaskToGoogleCalendar` |
+| `IntegrationCoordinator` | `googleCalendar/googleTasks/mcpIntegrationEnabled`, `mcpServerCommandPath`, the detected MCP clients | reads the Checkvist account and default list through `dataSource` for the MCP setup; the Google Calendar page's "Create event from selected task" goes to the workspace's selection through `addSelectedWorkspaceTaskToGoogleCalendar` |
 | `DailyLogManager` | the daily log plugin's settings, its dailies and its notes | nothing records task events into its log any more: they were keyed by Checkvist id and written only by the deleted Checkvist mutation path |
 
 ### `AppCoordinator` — genuinely owns

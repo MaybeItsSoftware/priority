@@ -91,9 +91,6 @@ let pluginTargetExcludes = [
   // revisiting once the NSOpenPanel dependency is hoisted out.
   "Takt/Plugins/Native/MCP/MCPClientInstaller.swift",
   "Takt/Plugins/Native/MCP/NativeMCPIntegrationPlugin+Settings.swift",
-  "Takt/Plugins/Native/AFFiNE/NativeAFFiNEIntegrationPlugin+Settings.swift",
-  "Takt/Plugins/Native/Obsidian/NativeObsidianIntegrationPlugin+Settings.swift",
-  "Takt/Plugins/Native/Obsidian/ObsidianSyncService.swift",
   "Takt/Plugins/Protocols/PluginSettingsPageProviding.swift",
   // App-only: the daily-log plugin traffics in `TaktCore` types (`DayLogEvent`,
   // `DayBoundary`, `DayLogAggregator`). This target can import `TaktCore`
@@ -199,11 +196,6 @@ let package = Package(
         "Takt/Plugins/Native/Checkvist/CheckvistModels.swift",
         "Takt/Plugins/Native/Checkvist/CheckvistModels+Core.swift",
         "Takt/Plugins/Native/Checkvist/CheckvistSessionError.swift",
-        "Takt/Plugins/Native/AFFiNE/AFFiNEMCPSession.swift",
-        "Takt/Plugins/Native/AFFiNE/AFFiNEExportService.swift",
-        "Takt/Plugins/Native/AFFiNE/NativeAFFiNEIntegrationPlugin.swift",
-        "Takt/Plugins/Native/Obsidian/ObsidianOpenMode.swift",
-        "Takt/Plugins/Native/Obsidian/NativeObsidianIntegrationPlugin.swift",
         "Takt/Plugins/Native/Google/GoogleAccount.swift",
         "Takt/Plugins/Native/Google/GoogleOAuthTokenStore.swift",
         "Takt/Plugins/Native/GoogleCalendar/NativeGoogleCalendarIntegrationPlugin.swift",

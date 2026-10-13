@@ -35,18 +35,6 @@ protocol IntegrationDataSource: AnyObject {
 
   // MARK: - Integration enable flags
 
-  var obsidianIntegrationEnabled: Bool {
-    didSet {
-      preferencesStore.set(obsidianIntegrationEnabled, for: .obsidianIntegrationEnabled)
-      onIntegrationStateChanged?()
-    }
-  }
-  var affineIntegrationEnabled: Bool {
-    didSet {
-      preferencesStore.set(affineIntegrationEnabled, for: .affineIntegrationEnabled)
-      onIntegrationStateChanged?()
-    }
-  }
   var googleCalendarIntegrationEnabled: Bool {
     didSet {
       preferencesStore.set(googleCalendarIntegrationEnabled, for: .googleCalendarIntegrationEnabled)
@@ -68,7 +56,6 @@ protocol IntegrationDataSource: AnyObject {
 
   // MARK: - Integration state
 
-  var obsidianInboxPath: String
   var mcpServerCommandPath: String
 
   /// MCP clients found on this machine, and the result of the last setup action.
@@ -81,8 +68,6 @@ protocol IntegrationDataSource: AnyObject {
 
   // MARK: - Plugin references
 
-  let obsidianPlugin: any ObsidianIntegrationPlugin
-  let affinePlugin: any AFFiNEIntegrationPlugin
   let googleCalendarPlugin: any GoogleCalendarIntegrationPlugin
   let googleTasksPlugin: any GoogleTasksIntegrationPlugin
   let mcpIntegrationPlugin: any MCPIntegrationPlugin
@@ -97,31 +82,19 @@ protocol IntegrationDataSource: AnyObject {
 
   init(
     preferencesStore: PreferencesStore,
-    obsidianPlugin: any ObsidianIntegrationPlugin,
-    affinePlugin: any AFFiNEIntegrationPlugin,
     googleCalendarPlugin: any GoogleCalendarIntegrationPlugin,
     googleTasksPlugin: any GoogleTasksIntegrationPlugin,
     mcpIntegrationPlugin: any MCPIntegrationPlugin
   ) {
     self.preferencesStore = preferencesStore
-    self.obsidianPlugin = obsidianPlugin
-    self.affinePlugin = affinePlugin
     self.googleCalendarPlugin = googleCalendarPlugin
     self.googleTasksPlugin = googleTasksPlugin
     self.mcpIntegrationPlugin = mcpIntegrationPlugin
 
-    let storedObsidianEnabled = preferencesStore.optionalBool(.obsidianIntegrationEnabled)
-    let storedAFFiNEEnabled = preferencesStore.optionalBool(.affineIntegrationEnabled)
     let storedGoogleEnabled = preferencesStore.optionalBool(.googleCalendarIntegrationEnabled)
     let storedGoogleTasksEnabled = preferencesStore.optionalBool(.googleTasksIntegrationEnabled)
     let storedMCPEnabled = preferencesStore.optionalBool(.mcpIntegrationEnabled)
 
-    self.obsidianIntegrationEnabled =
-      storedObsidianEnabled
-      ?? preferencesStore.bool(.obsidianIntegrationEnabled, default: false)
-    self.affineIntegrationEnabled =
-      storedAFFiNEEnabled
-      ?? preferencesStore.bool(.affineIntegrationEnabled, default: false)
     self.googleCalendarIntegrationEnabled =
       storedGoogleEnabled
       ?? preferencesStore.bool(.googleCalendarIntegrationEnabled, default: false)
@@ -131,7 +104,6 @@ protocol IntegrationDataSource: AnyObject {
     self.mcpIntegrationEnabled =
       storedMCPEnabled
       ?? preferencesStore.bool(.mcpIntegrationEnabled, default: false)
-    self.obsidianInboxPath = obsidianPlugin.inboxPath
     self.mcpServerCommandPath = mcpIntegrationPlugin.serverCommandURL()?.path ?? ""
   }
 
@@ -394,29 +366,4 @@ protocol IntegrationDataSource: AnyObject {
     _ = NSPasteboard.general.setString(
       "", forType: NSPasteboard.PasteboardType("org.nspasteboard.ConcealedType"))
   }
-
-  // MARK: - Obsidian
-
-  @discardableResult
-  func chooseObsidianInboxFolder() -> Bool {
-    do {
-      if let selectedPath = try obsidianPlugin.chooseInboxFolder() {
-        obsidianInboxPath = selectedPath
-        onIntegrationStateChanged?()
-        onError?(nil)
-        return true
-      }
-      return false
-    } catch {
-      onError?("Failed to save Obsidian folder access.")
-      return false
-    }
-  }
-
-  func clearObsidianInboxFolder() {
-    obsidianPlugin.clearInboxFolder()
-    obsidianInboxPath = ""
-    onIntegrationStateChanged?()
-  }
-
 }
