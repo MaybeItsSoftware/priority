@@ -431,6 +431,11 @@ enum WorkspaceSidebarItem: Identifiable {
 
   /// The agent panel's thread. See `WorkspaceAgentSession`.
   let agent = WorkspaceAgentSession()
+  /// The quick ask's thread (`aa`), apart from the panel's. See
+  /// `WorkspaceViewModel+QuickAsk.swift`.
+  let quickAgent = WorkspaceAgentSession()
+  /// The task the last quick ask was about.
+  var quickAskTask: WorkspaceTask?
   /// The agent's standing instructions for the account, folders and lists.
   let agentInstructions = WorkspaceAgentInstructions()
   /// Asks the agent panel's message field for the keyboard.

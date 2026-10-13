@@ -318,9 +318,20 @@ extension WorkspaceViewModel {
   /// (or the folder in scope) from the outermost in, then the list. In
   /// Everything or a filter list, the account alone.
   var agentInstructionScopes: [AgentInstructionScope] {
-    var scopes = [AgentInstructionScope(kind: .account, id: nil, name: "Account", text: agentInstructions.account)]
     let list = agentContextList
-    let innermostFolder = list != nil ? list?.folderId : isEverythingSelected ? nil : selectedFolderID
+    return agentInstructionScopes(
+      list: list, innermostFolder: list != nil ? list?.folderId : isEverythingSelected ? nil : selectedFolderID)
+  }
+
+  /// The scopes for one list, wherever the user is: the quick ask's, which is
+  /// about a task rather than about the screen.
+  func agentInstructionScopes(forListID listID: String) -> [AgentInstructionScope] {
+    let list = (lists + archivedLists).first { $0.id == listID }
+    return agentInstructionScopes(list: list, innermostFolder: list?.folderId)
+  }
+
+  private func agentInstructionScopes(list: TaskList?, innermostFolder: String?) -> [AgentInstructionScope] {
+    var scopes = [AgentInstructionScope(kind: .account, id: nil, name: "Account", text: agentInstructions.account)]
     let chain = AgentStandingInstructions.folderChain(from: innermostFolder) { id in
       folders.first { $0.id == id }?.parentFolderId
     }
@@ -415,7 +426,7 @@ extension WorkspaceViewModel {
       labels = try store.undoStep(step)
       try load()
     }
-    if !labels.isEmpty { agent.markUndone(itemID, labels: labels) }
+    if !labels.isEmpty { agentSession(holding: itemID)?.markUndone(itemID, labels: labels) }
   }
 
   /// Puts back a change taken back from its card.
@@ -427,11 +438,11 @@ extension WorkspaceViewModel {
       redone = try store.redoStep(step)
       try load()
     }
-    if redone { agent.markUndone(itemID, labels: nil) }
+    if redone { agentSession(holding: itemID)?.markUndone(itemID, labels: nil) }
   }
 
   private func agentUndoStep(_ itemID: UUID) -> String? {
-    guard let item = agent.items.first(where: { $0.id == itemID }),
+    guard let item = agentSession(holding: itemID)?.items.first(where: { $0.id == itemID }),
       case .write(let approval) = item.entry
     else { return nil }
     return approval.undoStep

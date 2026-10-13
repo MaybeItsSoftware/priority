@@ -172,7 +172,11 @@ fn task() -> Vec<Spec> {
             .note("Type to find one, Space or Return ticks it, a new name makes it. With no task selected, the Conditions tab"),
         // ⌃T rather than T: bare `t` starts `td`, `tm` and `tt`, and ⌘T goes to
         // Today.
-        c("taskTogglePlannedToday", "Plan for today, or take it off", "Task", &["ctrl+t"])
+        // `a` starts nothing on a task (only the Conditions tab's own `a`),
+        // so `aa`, for "ask the agent", is free.
+        c("taskAskAgent", "Ask the agent to do something to the task", "Task", &["aa"])
+            .note("A one-line popup: say what to do, and it does it, with an Undo and the keys that would have done the same"),
+                c("taskTogglePlannedToday", "Plan for today, or take it off", "Task", &["ctrl+t"])
             .note("Puts it in the day you arrange by hand. On Today, plans an overdue or dated row"),
         c("taskStartFocus", "Start focus on the task", "Task", &["gf"])
             .note("Or add it to the queue behind a running block"),

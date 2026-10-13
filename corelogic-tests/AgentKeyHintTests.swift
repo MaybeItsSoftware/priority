@@ -47,3 +47,32 @@ final class AgentKeyHintTests: XCTestCase {
     }
   }
 }
+
+/// The quick ask's subject line (`aa`).
+final class AgentQuickAskTests: XCTestCase {
+
+  func testTheSubjectNamesTheTaskAndItsList() {
+    let line = AgentSystemPrompt.quickAskSubject(
+      taskTitle: "Write report", taskID: "T1", listName: "Work", listID: "L1")
+    XCTAssertTrue(line.contains("task \"Write report\" (id T1) in list \"Work\" (id L1)"), line)
+    XCTAssertTrue(line.contains("\"this task\" mean that task"), line)
+  }
+
+  func testTheSubjectWithoutAListStillNamesTheTask() {
+    let line = AgentSystemPrompt.quickAskSubject(taskTitle: "Milk", taskID: "T2", listName: nil, listID: nil)
+    XCTAssertTrue(line.contains("task \"Milk\" (id T2):"), line)
+    XCTAssertFalse(line.contains("in list"), line)
+  }
+
+  func testTheQuickAskIsATaskCommandOnAa() {
+    let command = WorkspaceCommandCatalog.defaults.first { $0.id == .taskAskAgent }
+    XCTAssertEqual(command?.keys, ["aa"])
+    XCTAssertEqual(command?.group, "Task")
+    XCTAssertTrue(WorkspaceCommandCatalog.taskMenu.joined().contains(.taskAskAgent))
+    for surface in [WorkspaceCommandSurface.outline, .board, .today, .matrix] {
+      XCTAssertEqual(WorkspaceCommandCatalog.command(forKey: "aa", on: surface)?.id, .taskAskAgent, "\(surface)")
+    }
+    // The Conditions tab's own `a` still makes a condition at once.
+    XCTAssertEqual(WorkspaceCommandCatalog.command(forKey: "a", on: .conditions)?.id, .conditionsNew)
+  }
+}

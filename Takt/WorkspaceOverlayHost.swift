@@ -66,6 +66,8 @@ struct WorkspaceOverlayHost: View {
       WorkspaceWaitingOverlay(overlayID: overlay.id, request: request)
     case .blocker(let request):
       WorkspaceBlockerFinder(overlayID: overlay.id, request: request)
+    case .quickAsk(let request):
+      WorkspaceQuickAskOverlay(overlayID: overlay.id, request: request)
     case .conditions(let request):
       WorkspaceConditionPicker(overlayID: overlay.id, request: request)
     case .conditionCategory(let request):

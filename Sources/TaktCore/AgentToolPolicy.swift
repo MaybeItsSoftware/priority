@@ -256,6 +256,23 @@ public enum AgentSystemPrompt {
     return "[The user undid \(labels.count == 1 ? "this change" : "these changes") of yours: \(named).]"
   }
 
+  /// Ahead of a quick ask (`aa`): the task the request is about, by title and
+  /// id, and its list, so "make it due friday" needs no lookup — and how the
+  /// popup wants the answer, since it has room for a line or two.
+  public static func quickAskSubject(
+    taskTitle: String, taskID: String, listName: String?, listID: String?
+  ) -> String {
+    var subject = "task \"\(taskTitle)\" (id \(taskID))"
+    if let listName, !listName.isEmpty {
+      subject += " in list \"\(listName)\"" + (listID.map { " (id \($0))" } ?? "")
+    }
+    return """
+      [Quick ask, from a small popup over one task. The request is about \(subject): "it", "this" \
+      and "this task" mean that task, so act on it without searching for it first. Reply in one or \
+      two short sentences; the popup shows each change as a card.]
+      """
+  }
+
   /// A line prefixed to each message, saying what the user is looking at, so
   /// "this task" and "this list" mean something. Sent to the assistant, not
   /// shown in the transcript.

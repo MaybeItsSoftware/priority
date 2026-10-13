@@ -44,6 +44,7 @@ public enum WorkspaceCommandCatalog {
     [.taskConvertToList, .taskPromoteList, .taskExtractBranch],
     [
       .taskTogglePlannedToday, .taskToggleDaily, .taskHabit, .taskWaiting, .taskAddBlocker, .taskConditions,
+      .taskAskAgent,
       .taskOpenLink, .taskShowProgress, .taskToggleInspector,
     ],
   ]

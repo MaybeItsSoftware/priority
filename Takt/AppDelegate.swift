@@ -490,6 +490,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     // The agent's child process would otherwise learn of the quit only from
     // its stdin closing; end it here, escalating if it ignores SIGTERM.
     workspace?.agent.shutdown()
+    workspace?.quickAgent.shutdown()
     // Optional because termination can arrive before the manager is built —
     // reaching through an implicitly-unwrapped optional here used to crash the
     // MCP server on shutdown, back when `--mcp-server` ran inside this app.

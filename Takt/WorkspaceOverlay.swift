@@ -39,6 +39,8 @@ enum WorkspaceOverlay: Identifiable {
   case renameBoardColumn(String)
   /// Deleting a board column: where its tasks go, by its id.
   case deleteBoardColumn(String)
+  /// Telling the agent what to do to a task: `aa`.
+  case quickAsk(WorkspaceQuickAskRequest)
 
   var id: String {
     switch self {
@@ -58,6 +60,7 @@ enum WorkspaceOverlay: Identifiable {
     case .newBoardColumn: "column"
     case .renameBoardColumn(let id): "column-rename:\(id)"
     case .deleteBoardColumn(let id): "column-delete:\(id)"
+    case .quickAsk(let request): "quick-ask:\(request.id)"
     }
   }
 }

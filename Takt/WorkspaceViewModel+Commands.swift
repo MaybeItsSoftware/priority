@@ -161,6 +161,7 @@ extension WorkspaceViewModel {
     case .taskWaiting: presentWaitingForm()
     case .taskAddBlocker: presentBlockerFinder()
     case .taskConditions: presentConditionPicker()
+    case .taskAskAgent: presentQuickAsk()
     case .taskTogglePlannedToday: togglePlannedTodayForSelection()
     case .taskStartFocus: focusSelectedTask()
     case .taskMove: requestMoveSelectedTask()

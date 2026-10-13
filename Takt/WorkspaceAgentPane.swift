@@ -30,7 +30,7 @@ struct WorkspaceAgentPane: View {
       // a notice saying so, and the place to fix it has to stay on screen.
       if agent.executablePath == nil && !agent.isRunning {
         WorkspaceAgentSetup()
-      } else if agent.items.isEmpty {
+      } else if agent.items.isEmpty && model.quickAgent.items.isEmpty {
         emptyState
       } else {
         transcript
@@ -66,6 +66,7 @@ struct WorkspaceAgentPane: View {
     ScrollViewReader { proxy in
       ScrollView {
         LazyVStack(alignment: .leading, spacing: theme.space.md) {
+          if !model.quickAgent.items.isEmpty { quickAsk }
           ForEach(agent.items) { item in
             row(item)
               .id(item.id)
@@ -91,37 +92,6 @@ struct WorkspaceAgentPane: View {
   @ViewBuilder
   private func row(_ item: WorkspaceAgentSession.Item) -> some View {
     switch item.entry {
-    case .user(let text):
-      // A plain block with a rule down its left edge: what you said, set
-      // apart from the answer without a bubble.
-      Text(text)
-        .font(theme.bodyFont())
-        .foregroundStyle(theme.ink)
-        .textSelection(.enabled)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.leading, theme.space.sm)
-        .overlay(alignment: .leading) {
-          Rectangle().fill(theme.border).frame(width: theme.hairline)
-        }
-    case .assistant(let text):
-      Text(Self.markdown(text))
-        .font(theme.bodyFont())
-        .foregroundStyle(theme.ink)
-        .tint(theme.primary)
-        .textSelection(.enabled)
-        .frame(maxWidth: .infinity, alignment: .leading)
-    case .read(let use, let failed):
-      HStack(spacing: theme.space.xs) {
-        Text(AgentToolSummary.readLine(tool: use.name, input: use.input, name: model.agentDisplayName(for:)))
-          .lineLimit(1)
-          .truncationMode(.tail)
-        if failed == true {
-          Text("failed").foregroundStyle(theme.danger)
-        }
-      }
-      .font(theme.monoCaptionFont)
-      .foregroundStyle(theme.muted)
-      .help(use.input.jsonString(pretty: true))
     case .write(let approval):
       WorkspaceAgentApprovalCard(
         itemID: item.id, approval: approval, focusedCard: $focusedCard,
@@ -130,14 +100,46 @@ struct WorkspaceAgentPane: View {
         undo: { model.undoAgentChange(item.id) },
         redo: { model.redoAgentChange(item.id) },
         leave: { model.focusAgentInput() })
-    case .notice(let text, let isError):
-      // Markdown, so a fix's `claude` reads as something to type.
-      Text(Self.markdown(text))
-        .font(theme.captionFont)
-        .foregroundStyle(isError ? theme.danger : theme.muted)
-        .textSelection(.enabled)
-        .frame(maxWidth: .infinity, alignment: .leading)
+    default:
+      WorkspaceAgentTranscriptLine(entry: item.entry)
     }
+  }
+
+  /// The last quick ask (`aa`), above the thread: its own one-shot
+  /// conversation, kept here so it can be read again and its changes undone
+  /// after the popup is put away.
+  private var quickAsk: some View {
+    VStack(alignment: .leading, spacing: theme.space.sm) {
+      HStack(spacing: theme.space.xs) {
+        MicroLabel("Quick ask")
+        if let task = model.quickAskTask {
+          Text(task.title)
+            .font(theme.captionFont)
+            .foregroundStyle(theme.muted)
+            .lineLimit(1)
+            .truncationMode(.middle)
+        }
+        Spacer(minLength: 0)
+        if model.quickAgent.isWorking {
+          Text("working…").font(theme.monoCaptionFont).foregroundStyle(theme.dim)
+        }
+      }
+      ForEach(model.quickAgent.items) { item in
+        if case .write(let approval) = item.entry {
+          WorkspaceAgentApprovalCard(
+            itemID: item.id, approval: approval, focusedCard: nil,
+            approve: { model.quickAgent.approve(item.id) },
+            deny: { model.quickAgent.deny(item.id) },
+            undo: { model.undoAgentChange(item.id) },
+            redo: { model.redoAgentChange(item.id) },
+            leave: { model.focusAgentInput() })
+        } else {
+          WorkspaceAgentTranscriptLine(entry: item.entry)
+        }
+      }
+    }
+    .padding(.bottom, theme.space.md)
+    .overlay(alignment: .bottom) { FocusRule() }
   }
 
   /// The field and what Return will do, pinned under the transcript.
@@ -266,7 +268,11 @@ struct WorkspaceAgentApprovalCard: View {
   @Environment(\.theme) private var theme
   let itemID: UUID
   let approval: WorkspaceAgentSession.Approval
-  var focusedCard: FocusState<UUID?>.Binding
+  /// The panel's keyboard focus, which Tab gives a card. Nil where the keys
+  /// are read elsewhere — the quick ask's popup, whose field keeps the
+  /// keyboard and selects a card with `isSelected`.
+  var focusedCard: FocusState<UUID?>.Binding?
+  var isSelected = false
   let approve: () -> Void
   let deny: () -> Void
   let undo: () -> Void
@@ -278,7 +284,7 @@ struct WorkspaceAgentApprovalCard: View {
   @State private var plan: WorkspaceStepUndoPlan?
 
   private var isPending: Bool { approval.state == .pending }
-  private var isFocused: Bool { focusedCard.wrappedValue == itemID }
+  private var isFocused: Bool { isSelected || focusedCard?.wrappedValue == itemID }
   private var hasRun: Bool { approval.outcome == .applied }
   /// Undo or Redo is there to press.
   private var canTakeBack: Bool {
@@ -346,9 +352,7 @@ struct WorkspaceAgentApprovalCard: View {
     .overlay(
       Rectangle()
         .strokeBorder(borderColor, lineWidth: isFocused ? theme.focusRingWidth : theme.hairline))
-    .focusable(isPending || canTakeBack)
-    .focused(focusedCard, equals: itemID)
-    .focusEffectDisabled()
+    .modifier(WorkspaceAgentCardFocus(focusedCard: focusedCard, itemID: itemID, isFocusable: isPending || canTakeBack))
     .onKeyPress(.return) {
       if isPending {
         approve()
@@ -490,6 +494,25 @@ struct WorkspaceAgentApprovalCard: View {
       .foregroundStyle(color)
       .lineLimit(3)
       .textSelection(.enabled)
+  }
+}
+
+/// Lets the panel's Tab reach a card; nothing where the card is selected by
+/// the keys of the view it is in instead.
+private struct WorkspaceAgentCardFocus: ViewModifier {
+  let focusedCard: FocusState<UUID?>.Binding?
+  let itemID: UUID
+  let isFocusable: Bool
+
+  func body(content: Content) -> some View {
+    if let focusedCard {
+      content
+        .focusable(isFocusable)
+        .focused(focusedCard, equals: itemID)
+        .focusEffectDisabled()
+    } else {
+      content
+    }
   }
 }
 

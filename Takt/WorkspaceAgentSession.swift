@@ -91,6 +91,15 @@ import os
   /// Reads what a write would replace, for its card. Set by the workspace.
   @ObservationIgnored var currentValues: ((String, JSONValue) -> [String: String])?
 
+  /// Called at the end of every turn, for a thread no view is watching: the
+  /// quick ask's, whose popup may have been put away while it worked.
+  @ObservationIgnored var onTurnFinished: (() -> Void)?
+
+  /// A one-shot thread ends its process when its turn does: nothing can
+  /// follow up on it, and a `claude` left idle is memory for nothing. The
+  /// transcript and its cards' Undo stay.
+  @ObservationIgnored var endsAfterTurn = false
+
   /// Whether this thread's writes wait for Approve: the setting as it was
   /// when the process started.
   private(set) var asksBeforeChanges = false
@@ -506,6 +515,8 @@ import os
           Item(entry: .notice(detail.isEmpty ? "The turn ended with \(result.subtype)." : detail, isError: true)))
         adviseOn(detail)
       }
+      onTurnFinished?()
+      if endsAfterTurn { end() }
     }
   }
 
