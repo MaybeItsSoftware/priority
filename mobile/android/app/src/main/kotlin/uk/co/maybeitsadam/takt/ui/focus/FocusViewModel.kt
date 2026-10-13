@@ -70,6 +70,8 @@ data class FocusUiState(
     val ladder: ImmutableList<ScoredNextUp> = persistentListOf(),
     val blocked: ImmutableList<BlockedFocusTask> = persistentListOf(),
     val conditions: ImmutableList<TaskCondition> = persistentListOf(),
+    /** The conditions an open task requires: only these are offered under "Where you are". */
+    val requiredConditionIds: ImmutableSet<String> = persistentSetOf(),
     val hasManualOrder: Boolean = false,
     val session: FocusSession? = null,
     val activeTitle: String? = null,
@@ -142,6 +144,7 @@ class FocusViewModel(private val container: AppContainer) : ViewModel() {
                 ladder = next.ranking.ranked.filter { it.id != focus?.activeTaskId }.toImmutableList(),
                 blocked = next.ranking.blocked.toImmutableList(),
                 conditions = next.conditions.toImmutableList(),
+                requiredConditionIds = next.requiredConditionIds.toImmutableSet(),
                 hasManualOrder = next.hasManualFocusOrder,
                 session = focus,
                 activeTitle = activeTitle,
@@ -179,10 +182,11 @@ class FocusViewModel(private val container: AppContainer) : ViewModel() {
         time.value = available to FocusText.endsAt(available, now)
     }
 
-    fun createCondition(name: String, isLocation: Boolean) {
+    /** Makes a condition under a category (null for none; "Location" makes it a place). */
+    fun createCondition(name: String, category: String?) {
         val trimmed = name.trim()
         if (trimmed.isEmpty()) return
-        container.undo.perform { repo -> repo.createCondition(container.awaitSession().workspace.id, trimmed, isLocation) }
+        container.undo.perform { repo -> repo.createCondition(container.awaitSession().workspace.id, trimmed, category) }
     }
 
     // endregion

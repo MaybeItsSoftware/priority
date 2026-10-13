@@ -58,6 +58,7 @@ import java.time.LocalTime
 import uk.co.maybeitsadam.takt.core.FocusPoints
 import uk.co.maybeitsadam.takt.core.FocusTimeMode
 import uk.co.maybeitsadam.takt.core.ScoredNextUp
+import uk.co.maybeitsadam.takt.data.workspace.ConditionGroups
 import uk.co.maybeitsadam.takt.ui.commands.KeyCommand
 import uk.co.maybeitsadam.takt.ui.commands.PaletteCommand
 import uk.co.maybeitsadam.takt.ui.commands.RegisterCommands
@@ -68,14 +69,14 @@ import uk.co.maybeitsadam.takt.ui.components.Hairline
 import uk.co.maybeitsadam.takt.ui.components.IconAction
 import uk.co.maybeitsadam.takt.ui.components.MonoText
 import uk.co.maybeitsadam.takt.ui.components.PButton
-import uk.co.maybeitsadam.takt.ui.components.TaktTopBar
 import uk.co.maybeitsadam.takt.ui.components.SectionHeader
 import uk.co.maybeitsadam.takt.ui.components.SettingsAction
 import uk.co.maybeitsadam.takt.ui.components.Tag
+import uk.co.maybeitsadam.takt.ui.components.TaktTopBar
 import uk.co.maybeitsadam.takt.ui.navigation.LocalShell
-import uk.co.maybeitsadam.takt.ui.theme.TaktTheme
 import uk.co.maybeitsadam.takt.ui.theme.Metrics
 import uk.co.maybeitsadam.takt.ui.theme.PIcons
+import uk.co.maybeitsadam.takt.ui.theme.TaktTheme
 import uk.co.maybeitsadam.takt.ui.today.ChalkMenu
 import uk.co.maybeitsadam.takt.ui.today.ChalkMenuItem
 
@@ -272,6 +273,9 @@ private fun ContextControls(state: FocusUiState, context: FocusContextState, vm:
     var addingCondition by rememberSaveable { mutableStateOf(false) }
     var customMinutes by rememberSaveable { mutableStateOf(false) }
     var pickingUntil by rememberSaveable { mutableStateOf(false) }
+    val groups = remember(state.conditions, state.requiredConditionIds, context.selected) {
+        ConditionGroups.available(state.conditions, state.requiredConditionIds, context.selected)
+    }
     Column(Modifier.fillMaxWidth().padding(vertical = Metrics.sm), verticalArrangement = Arrangement.spacedBy(Metrics.xs)) {
         Text("Where you are", style = TaktTheme.type.label, color = TaktTheme.colors.mutedText, modifier = Modifier.padding(horizontal = Metrics.lg))
         Row(
@@ -279,19 +283,37 @@ private fun ContextControls(state: FocusUiState, context: FocusContextState, vm:
             horizontalArrangement = Arrangement.spacedBy(Metrics.sm),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            val visible = state.conditions.filter { !it.isArchived || it.id in context.selected }
-            for (condition in visible) {
-                val on = condition.id in context.selected
-                Tag(
-                    condition.name,
-                    color = if (on) TaktTheme.colors.primary else TaktTheme.colors.mutedText,
-                    selected = on,
-                    leading = if (condition.isLocation) Icons.Filled.LocationOn else null,
-                    modifier = Modifier.testTag("focus_condition_${condition.name}"),
-                    onClick = { vm.toggleCondition(condition) },
+            if (groups.isEmpty()) {
+                Text(
+                    "No open tasks need a condition",
+                    style = TaktTheme.type.small,
+                    color = TaktTheme.colors.mutedText,
+                    modifier = Modifier.testTag("focus_conditions_empty"),
                 )
             }
             Tag("New condition", leading = Icons.Filled.Add, onClick = { addingCondition = true })
+        }
+        // Only what an open task needs, under its category: a condition nothing
+        // waits on changes nothing, so it is not asked about.
+        for (group in groups) {
+            Text(group.title, style = TaktTheme.type.small, color = TaktTheme.colors.mutedText, modifier = Modifier.padding(horizontal = Metrics.lg))
+            Row(
+                Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = Metrics.lg),
+                horizontalArrangement = Arrangement.spacedBy(Metrics.sm),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                for (condition in group.conditions) {
+                    val on = condition.id in context.selected
+                    Tag(
+                        condition.name,
+                        color = if (on) TaktTheme.colors.primary else TaktTheme.colors.mutedText,
+                        selected = on,
+                        leading = if (group.isExclusive) Icons.Filled.LocationOn else null,
+                        modifier = Modifier.testTag("focus_condition_${condition.name}"),
+                        onClick = { vm.toggleCondition(condition) },
+                    )
+                }
+            }
         }
         Text("Time you have", style = TaktTheme.type.label, color = TaktTheme.colors.mutedText, modifier = Modifier.padding(start = Metrics.lg, end = Metrics.lg, top = Metrics.xs))
         Row(
@@ -318,7 +340,8 @@ private fun ContextControls(state: FocusUiState, context: FocusContextState, vm:
 
     if (addingCondition) {
         NewConditionDialog(
-            onCreate = { name, place -> vm.createCondition(name, place); addingCondition = false },
+            categories = remember(state.conditions) { ConditionGroups.categories(state.conditions) },
+            onCreate = { name, category -> vm.createCondition(name, category); addingCondition = false },
             onDismiss = { addingCondition = false },
         )
     }

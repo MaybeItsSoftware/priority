@@ -1,9 +1,11 @@
 package uk.co.maybeitsadam.takt.ui.focus
 
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -23,8 +25,8 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import java.time.LocalTime
 import uk.co.maybeitsadam.takt.ui.components.Tag
-import uk.co.maybeitsadam.takt.ui.theme.TaktTheme
 import uk.co.maybeitsadam.takt.ui.theme.Metrics
+import uk.co.maybeitsadam.takt.ui.theme.TaktTheme
 
 /** A flat Chalk alert: paper, 8dp, no tonal tint. */
 @Composable
@@ -71,19 +73,28 @@ fun MinutesDialog(title: String, initial: Int, onPick: (Int) -> Unit, onDismiss:
     }
 }
 
-/** A new condition: a place, a tool or a state some tasks need. */
+/**
+ * A new condition: a place, a tool or a state some tasks need, filed under a
+ * category — one in use (`categories`, Location first) or a new one typed.
+ */
 @Composable
-fun NewConditionDialog(onCreate: (name: String, isLocation: Boolean) -> Unit, onDismiss: () -> Unit) {
+fun NewConditionDialog(categories: List<String>, onCreate: (name: String, category: String?) -> Unit, onDismiss: () -> Unit) {
     var name by rememberSaveable { mutableStateOf("") }
-    var isPlace by rememberSaveable { mutableStateOf(false) }
-    ChalkDialog("New condition", onDismiss, "Add", onConfirm = { onCreate(name, isPlace) }, confirmEnabled = name.isNotBlank()) {
+    var category by rememberSaveable { mutableStateOf("") }
+    ChalkDialog("New condition", onDismiss, "Add", onConfirm = { onCreate(name, category.trim().ifEmpty { null }) }, confirmEnabled = name.isNotBlank()) {
         Column(verticalArrangement = Arrangement.spacedBy(Metrics.sm)) {
             Text("A place, a tool or a state you need to be in for some tasks.", style = TaktTheme.type.small, color = TaktTheme.colors.mutedText)
             ChalkField(name, { name = it }, "Name", KeyboardType.Text)
-            Row(horizontalArrangement = Arrangement.spacedBy(Metrics.sm)) {
-                Tag("Condition", selected = !isPlace, color = if (!isPlace) TaktTheme.colors.primary else TaktTheme.colors.mutedText) { isPlace = false }
-                Tag("Place", selected = isPlace, color = if (isPlace) TaktTheme.colors.primary else TaktTheme.colors.mutedText) { isPlace = true }
+            ChalkField(category, { category = it }, "Category (optional)", KeyboardType.Text)
+            Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(Metrics.sm)) {
+                for (option in categories) {
+                    val chosen = category.trim().equals(option, ignoreCase = true)
+                    Tag(option, selected = chosen, color = if (chosen) TaktTheme.colors.primary else TaktTheme.colors.mutedText) {
+                        category = if (chosen) "" else option
+                    }
+                }
             }
+            Text("Location is one place at a time: choosing one replaces the last.", style = TaktTheme.type.small, color = TaktTheme.colors.mutedText)
         }
     }
 }
