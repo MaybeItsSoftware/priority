@@ -14,6 +14,15 @@
 //! daily and the cascade closes the subtask (`tasks::set_status`), and the
 //! habit pass ends one whose parent was closed some other way.
 //!
+//! What happens to a missed appearance is the commitment's choice. By
+//! default it vanishes, as it always has: a daily rhythm drops a missed day
+//! at the day's end, and a weekly one (or one day a week) is carried until
+//! the next one replaces it. A commitment can instead stack its missed
+//! appearances (`dailies.stacksMissedFrom`, the day it started stacking):
+//! its card stays in Today while any scheduled day since then is not done,
+//! and each completion pays off the oldest (`dailies::log_contribution`),
+//! so every missed one takes a completion of its own.
+//!
 //! The schedule is written in the recurrence syntax a repeating task uses
 //! ("daily", "weekdays", "every friday", "every 2 weeks"), plus a list of
 //! days ("mon, wed, fri"), and stored as the daily's weekday mask and
@@ -25,7 +34,7 @@ use crate::CoreError;
 use crate::habits::{self, HabitDraft};
 use crate::periodic::{self, Cadence};
 use crate::tasks::{self, NewTask};
-use crate::time::{non_empty_name, parse_stored};
+use crate::time::{non_empty_name, parse_stored, stored};
 
 /// The column a commitment's appearance lands in.
 pub const COMMITMENT_PLACEMENT: &str = "today";
@@ -172,6 +181,10 @@ pub struct CommitmentDraft {
     /// The day it stops appearing, from its start; `None` runs until the
     /// task is done.
     pub expires_at_ms: Option<i64>,
+    /// Whether a missed appearance stays owed until done, rather than
+    /// vanishing when the next one comes (or, for a daily rhythm, at the end
+    /// of its day).
+    pub stacks_missed: bool,
 }
 
 /// One live commitment.
@@ -188,6 +201,8 @@ pub struct Commitment {
     pub schedule: CommitmentSchedule,
     /// The start of the day it stops appearing, if it has one.
     pub expires_at_ms: Option<i64>,
+    /// Whether its missed appearances stack rather than vanish.
+    pub stacks_missed: bool,
 }
 
 /// Commits to `task_id` periodically, or rewrites its commitment on
@@ -269,8 +284,65 @@ pub fn save_commitment(
         placement: COMMITMENT_PLACEMENT.to_string(),
         source_task_id: Some(task_id.to_string()),
     };
-    habits::save_habit(transaction, &habit, Some(&subtask_id), now_ms, zone)?;
+    let daily_id = habits::save_habit(transaction, &habit, Some(&subtask_id), now_ms, zone)?;
+    set_stacks_missed(transaction, &daily_id, draft.stacks_missed, now_ms, zone)?;
     Ok(subtask_id)
+}
+
+/// Turns stacking on from today, or off. Turning it on again keeps the day it
+/// started, so an edit that leaves it on does not forgive what is owed; it
+/// never reaches back before that day, so switching it on does not bill for
+/// every day missed before.
+fn set_stacks_missed(
+    transaction: &Transaction,
+    daily_id: &str,
+    stacks: bool,
+    now_ms: i64,
+    zone: &str,
+) -> Result<(), CoreError> {
+    let current: Option<String> = transaction.query_row(
+        "SELECT stacksMissedFrom FROM dailies WHERE id = ?1",
+        [daily_id],
+        |row| row.get(0),
+    )?;
+    let tz = periodic::zone(zone);
+    let target = match (stacks, current) {
+        (false, None) => return Ok(()),
+        (true, Some(_)) => return Ok(()),
+        (false, Some(_)) => None,
+        (true, None) => Some(stored(habits::start_of_day_ms(
+            habits::local_day(now_ms, tz),
+            tz,
+        ))),
+    };
+    transaction.execute(
+        "UPDATE dailies SET stacksMissedFrom = ?1, updatedAt = ?2 WHERE id = ?3",
+        rusqlite::params![target, stored(now_ms), daily_id],
+    )?;
+    habits::reconcile_habit(transaction, daily_id, now_ms, tz)?;
+    Ok(())
+}
+
+/// How many of a commitment's missed appearances are still owed on the day
+/// `now_ms` falls on: scheduled days before today that are not done, counted
+/// only while it stacks. Zero for one that vanishes, or that is no
+/// commitment.
+pub fn missed(
+    connection: &rusqlite::Connection,
+    commitment_task_id: &str,
+    now_ms: i64,
+    zone: &str,
+) -> Result<u32, CoreError> {
+    let Some(commitment) = commitment(connection, commitment_task_id)? else {
+        return Ok(0);
+    };
+    if !commitment.stacks_missed {
+        return Ok(0);
+    }
+    let tz = periodic::zone(zone);
+    let today = habits::local_day(now_ms, tz);
+    let owed = habits::owed(connection, &commitment.daily_id, now_ms, tz)?;
+    Ok(u32::try_from(owed.iter().filter(|day| **day < today).count()).unwrap_or(u32::MAX))
 }
 
 /// Stops a commitment: its daily is archived, keeping what was logged, its
@@ -296,7 +368,7 @@ pub fn stop_commitment(
 
 const COMMITMENT_COLUMNS: &str =
     "d.id, t.id, t.parentTaskId, t.title, d.activeWeekdaysMask, d.intervalDays,
-     d.expiryRule, d.expiresAt";
+     d.expiryRule, d.expiresAt, d.stacksMissedFrom IS NOT NULL";
 
 /// The live commitments on `task_id`, in the order of its subtasks.
 pub fn commitments(
@@ -363,6 +435,7 @@ fn commitment_row(row: &rusqlite::Row) -> rusqlite::Result<Commitment> {
             .then(|| expires_at.as_deref().and_then(parse_stored))
             .flatten()
             .map(|at| at.timestamp_millis()),
+        stacks_missed: row.get(8)?,
     })
 }
 

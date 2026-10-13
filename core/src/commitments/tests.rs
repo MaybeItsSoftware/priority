@@ -34,6 +34,7 @@ fn draft(rule: &str) -> CommitmentDraft {
         title: " Work on thesis ".into(),
         rule: rule.into(),
         expires_at_ms: None,
+        stacks_missed: false,
     }
 }
 
@@ -248,6 +249,7 @@ fn editing_rewrites_the_schedule_and_name_in_place() {
         title: "Draft a page".into(),
         rule: "weekdays".into(),
         expires_at_ms: None,
+        stacks_missed: false,
     };
     let again = journalled(&mut connection, "Edit Commitment", |tx| {
         save_commitment(tx, "thesis", &edited, Some(&subtask), WEDNESDAY, "UTC")
@@ -326,4 +328,169 @@ fn stopping_archives_the_daily_closes_the_subtask_and_keeps_its_history() {
     })
     .unwrap();
     assert_eq!(status(&connection, "chapter"), "open");
+}
+
+fn reconcile(connection: &mut Connection, now: i64) {
+    let tx = connection.transaction().unwrap();
+    habits::reconcile_habits(&tx, now, "UTC").unwrap();
+    tx.commit().unwrap();
+}
+
+fn done(connection: &mut Connection, daily: &str, now: i64) {
+    journalled(connection, "Log Daily", |tx| {
+        crate::dailies::log_contribution(tx, daily, 0, true, now, "UTC")
+    })
+    .unwrap();
+}
+
+fn done_days(connection: &Connection, daily: &str) -> Vec<String> {
+    let mut statement = connection
+        .prepare(
+            "SELECT dayKey FROM daily_contributions WHERE dailyId = ?1 AND completedAt IS NOT NULL ORDER BY dayKey",
+        )
+        .unwrap();
+    statement
+        .query_map([daily], |row| row.get(0))
+        .unwrap()
+        .collect::<Result<_, _>>()
+        .unwrap()
+}
+
+#[test]
+fn by_default_a_missed_appearance_vanishes() {
+    let mut connection = workspace();
+    let subtask = commit(&mut connection, &draft("mon, wed, fri"), WEDNESDAY);
+    let live = commitment(&connection, &subtask).unwrap().unwrap();
+    assert!(!live.stacks_missed);
+    // Wednesday is missed: on Thursday it has gone from Today.
+    assert!(!shows(&connection, &live.daily_id, WEDNESDAY + DAY));
+    reconcile(&mut connection, WEDNESDAY + DAY);
+    assert_eq!(column(&connection, &subtask), None);
+    assert_eq!(
+        missed(&connection, &subtask, WEDNESDAY + DAY, "UTC").unwrap(),
+        0
+    );
+    // Friday's comes, and one completion clears it: nothing is owed.
+    reconcile(&mut connection, WEDNESDAY + 2 * DAY);
+    assert_eq!(column(&connection, &subtask).as_deref(), Some("today"));
+    done(&mut connection, &live.daily_id, WEDNESDAY + 2 * DAY);
+    reconcile(&mut connection, WEDNESDAY + 2 * DAY);
+    assert_eq!(column(&connection, &subtask), None);
+    assert_eq!(done_days(&connection, &live.daily_id), vec!["2026-03-13"]);
+}
+
+#[test]
+fn a_stacking_commitment_keeps_each_missed_appearance_until_it_is_done() {
+    let mut connection = workspace();
+    let stacking = CommitmentDraft {
+        stacks_missed: true,
+        ..draft("mon, wed, fri")
+    };
+    let subtask = commit(&mut connection, &stacking, WEDNESDAY);
+    let live = commitment(&connection, &subtask).unwrap().unwrap();
+    assert!(live.stacks_missed);
+    // Wednesday is missed: on Thursday it is still in Today, owed.
+    assert!(shows(&connection, &live.daily_id, WEDNESDAY + DAY));
+    reconcile(&mut connection, WEDNESDAY + DAY);
+    assert_eq!(column(&connection, &subtask).as_deref(), Some("today"));
+    assert_eq!(
+        missed(&connection, &subtask, WEDNESDAY + DAY, "UTC").unwrap(),
+        1
+    );
+    // Friday's comes on top of it: two owed, one of them missed.
+    assert_eq!(
+        missed(&connection, &subtask, WEDNESDAY + 2 * DAY, "UTC").unwrap(),
+        1
+    );
+    // The first completion pays off Wednesday, so the card stays for Friday's.
+    done(&mut connection, &live.daily_id, WEDNESDAY + 2 * DAY);
+    assert_eq!(done_days(&connection, &live.daily_id), vec!["2026-03-11"]);
+    reconcile(&mut connection, WEDNESDAY + 2 * DAY);
+    assert_eq!(column(&connection, &subtask).as_deref(), Some("today"));
+    assert_eq!(
+        missed(&connection, &subtask, WEDNESDAY + 2 * DAY, "UTC").unwrap(),
+        0
+    );
+    // The second is Friday's own, and the stack is clear.
+    done(&mut connection, &live.daily_id, WEDNESDAY + 2 * DAY);
+    assert_eq!(
+        done_days(&connection, &live.daily_id),
+        vec!["2026-03-11", "2026-03-13"]
+    );
+    reconcile(&mut connection, WEDNESDAY + 2 * DAY);
+    assert_eq!(column(&connection, &subtask), None);
+    assert!(!shows(&connection, &live.daily_id, WEDNESDAY + 3 * DAY));
+}
+
+#[test]
+fn turning_stacking_on_does_not_bill_for_days_missed_before_it() {
+    let mut connection = workspace();
+    let subtask = commit(&mut connection, &draft("daily"), WEDNESDAY);
+    // Thursday and Friday are missed while it vanishes; stacking starts Saturday.
+    let stacking = CommitmentDraft {
+        stacks_missed: true,
+        ..draft("daily")
+    };
+    journalled(&mut connection, "Edit Commitment", |tx| {
+        save_commitment(
+            tx,
+            "thesis",
+            &stacking,
+            Some(&subtask),
+            WEDNESDAY + 3 * DAY,
+            "UTC",
+        )
+    })
+    .unwrap();
+    assert_eq!(
+        missed(&connection, &subtask, WEDNESDAY + 3 * DAY, "UTC").unwrap(),
+        0
+    );
+    assert_eq!(
+        missed(&connection, &subtask, WEDNESDAY + 5 * DAY, "UTC").unwrap(),
+        2
+    );
+    // Saving it again with stacking left on keeps what is owed.
+    journalled(&mut connection, "Edit Commitment", |tx| {
+        save_commitment(
+            tx,
+            "thesis",
+            &stacking,
+            Some(&subtask),
+            WEDNESDAY + 5 * DAY,
+            "UTC",
+        )
+    })
+    .unwrap();
+    assert_eq!(
+        missed(&connection, &subtask, WEDNESDAY + 5 * DAY, "UTC").unwrap(),
+        2
+    );
+    // Turning it off forgives them, and undoing that brings them back.
+    journalled(&mut connection, "Edit Commitment", |tx| {
+        save_commitment(
+            tx,
+            "thesis",
+            &draft("daily"),
+            Some(&subtask),
+            WEDNESDAY + 5 * DAY,
+            "UTC",
+        )
+    })
+    .unwrap();
+    assert!(
+        !commitment(&connection, &subtask)
+            .unwrap()
+            .unwrap()
+            .stacks_missed
+    );
+    assert_eq!(
+        missed(&connection, &subtask, WEDNESDAY + 5 * DAY, "UTC").unwrap(),
+        0
+    );
+    undo(&mut connection).unwrap();
+    assert_eq!(
+        missed(&connection, &subtask, WEDNESDAY + 5 * DAY, "UTC").unwrap(),
+        2
+    );
 }

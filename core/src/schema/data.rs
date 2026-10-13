@@ -34,7 +34,8 @@ pub(super) fn finish(transaction: &Transaction, identifier: &str) -> Result<(), 
         "v21_task_dependencies"
         | "v22_matrix_order"
         | "v23_filter_lists"
-        | "v25_agent_instructions" => Ok(super::triggers::reinstall(transaction)?),
+        | "v25_agent_instructions"
+        | "v26_commitment_missed_stack" => Ok(super::triggers::reinstall(transaction)?),
         "v24_condition_categories" => {
             super::triggers::reinstall(transaction)?;
             file_places_under_location(transaction)

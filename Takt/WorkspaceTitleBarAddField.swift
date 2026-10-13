@@ -8,19 +8,26 @@ import SwiftUI
 ///
 /// Only while quick capture runs. Every other new task is typed in a draft
 /// row at the place it will land (`WorkspaceTaskDraftRow`); a capture is the
-/// one add that is not into the list on screen — the arrows send it
-/// elsewhere, up and down for the list and left and right for the day it
-/// starts — so the window lists where it can go under the field.
+/// one add that is not into the list on screen — up and down send it to
+/// another list — so the window lists where it can go under the field.
 ///
 /// Drawn as the overlays' field row (`WorkspaceOverlayField`) is — a glyph,
 /// the text in the body face, no box of its own — because the window it sits
 /// in is drawn as an overlay is, and the chips after the text are the draft
 /// row's, so a capture says what it will set exactly as a task typed in the
-/// window does.
+/// window does. To the right of those, the slots (`TaskEntrySlotStrip`):
+/// → at the end of the text walks into the due day, the conditions and the
+/// estimate, which the window around it drives while they have the keys.
 struct WorkspaceTitleBarAddField: View {
   @Environment(WorkspaceViewModel.self) private var model
   @Environment(\.theme) private var theme
-  @State private var title = ""
+  @Binding var title: String
+  @Binding var slots: TaskEntryDraft
+  /// Moves on whenever the keyboard comes back to the text from a slot, so
+  /// the field takes it with the caret at the end.
+  let textFocusRequest: Int
+  let onSubmit: () -> Void
+  let onCancel: () -> Void
   @State private var isEditing = false
 
   var body: some View {
@@ -35,14 +42,17 @@ struct WorkspaceTitleBarAddField: View {
       TitleBarAddTextField(
         text: $title,
         isEditing: $isEditing,
-        focusRequest: model.quickCaptureFocusRequest,
+        focusRequest: model.quickCaptureFocusRequest + textFocusRequest,
+        holdsKeyboard: !slots.focus.isSlot,
         font: Self.fieldFont(theme),
         textColor: NSColor(theme.ink),
         placeholderColor: NSColor(theme.dim),
-        onSubmit: submit,
-        onCancel: cancel,
+        onSubmit: onSubmit,
+        onCancel: onCancel,
         onEndEditing: { model.taskInsertionReference = nil },
-        onArrow: arrow)
+        onArrow: arrow,
+        // A click into the text takes the keys back from a slot.
+        onFocus: { if slots.focus.isSlot { slots.focus = .text } })
       // What Return will file beyond the title, shown before it is pressed:
       // the parse only reads trailing words, and seeing it is what makes a
       // bare `30m` safe to accept without a prefix.
@@ -50,6 +60,7 @@ struct WorkspaceTitleBarAddField: View {
         TaskCapturePreview(capture: capture)
           .font(theme.monoCaptionFont)
       }
+      TaskEntrySlotStrip(slots: $slots)
     }
     .font(theme.bodyFont())
     .padding(.horizontal, theme.listGutter)
@@ -59,26 +70,15 @@ struct WorkspaceTitleBarAddField: View {
       note: "Add a task to \(model.addFieldDestinationTitle). \(TaskCapturePreview.syntaxHint)")
   }
 
-  private func submit() {
-    let text = title
-    guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
-    title = ""
-    model.submitAddField(named: text)
-  }
-
-  private func cancel() {
-    title = ""
-    model.cancelAddField()
-  }
-
-  /// Arrows steer quick capture; anywhere else they are the field's own.
+  /// Up and down steer quick capture to another list; → at the end of the
+  /// text, or Tab, walks into the slots. ← is the caret's.
   private func arrow(_ direction: TitleBarAddTextField.Arrow) -> Bool {
     guard model.isQuickCaptureActive else { return false }
     switch direction {
     case .up: model.moveQuickCaptureDestination(by: -1)
     case .down: model.moveQuickCaptureDestination(by: 1)
-    case .left: model.moveQuickCaptureStartDay(by: -1)
-    case .right: model.moveQuickCaptureStartDay(by: 1)
+    case .left: return false
+    case .right: slots.focus = .date
     }
     return true
   }
@@ -102,6 +102,9 @@ struct TitleBarAddTextField: NSViewRepresentable {
   @Binding var text: String
   @Binding var isEditing: Bool
   let focusRequest: Int
+  /// False while one of the slots beside it has the keys: the field lets
+  /// go of them, so its caret stops blinking at text the keys are not in.
+  var holdsKeyboard = true
   let font: NSFont
   let textColor: NSColor
   let placeholderColor: NSColor
@@ -111,12 +114,16 @@ struct TitleBarAddTextField: NSViewRepresentable {
   /// taken from the task the cursor was on does not outlive the moment.
   let onEndEditing: () -> Void
   let onArrow: (Arrow) -> Bool
+  var onFocus: () -> Void = {}
 
   func makeCoordinator() -> Coordinator { Coordinator(self) }
 
   func makeNSView(context: Context) -> Field {
     let field = Field()
-    field.onFocus = { [weak coordinator = context.coordinator] in coordinator?.parent.isEditing = true }
+    field.onFocus = { [weak coordinator = context.coordinator] in
+      coordinator?.parent.isEditing = true
+      coordinator?.parent.onFocus()
+    }
     field.delegate = context.coordinator
     field.isBordered = false
     field.drawsBackground = false
@@ -141,7 +148,16 @@ struct TitleBarAddTextField: NSViewRepresentable {
     if field.placeholderAttributedString != placeholder { field.placeholderAttributedString = placeholder }
     if context.coordinator.lastFocusRequest != focusRequest {
       context.coordinator.lastFocusRequest = focusRequest
-      DispatchQueue.main.async { field.window?.makeFirstResponder(field) }
+      DispatchQueue.main.async {
+        guard field.window?.makeFirstResponder(field) == true else { return }
+        // The caret at the end, not the whole title selected: coming back
+        // from a slot, the next key carries on the title.
+        let end = (field.stringValue as NSString).length
+        field.currentEditor()?.selectedRange = NSRange(location: end, length: 0)
+      }
+    }
+    if !holdsKeyboard, field.currentEditor() != nil {
+      DispatchQueue.main.async { field.window?.makeFirstResponder(nil) }
     }
   }
 
@@ -181,8 +197,10 @@ struct TitleBarAddTextField: NSViewRepresentable {
         return true
       case #selector(NSResponder.moveUp(_:)): return parent.onArrow(.up)
       case #selector(NSResponder.moveDown(_:)): return parent.onArrow(.down)
+      case #selector(NSResponder.insertTab(_:)): return parent.onArrow(.right)
       // Left and right move the caret, as they do in the window's own add
-      // row; only where the caret can go no further do they steer.
+      // row; only where the caret can go no further do they steer — → at
+      // the end into the slots.
       case #selector(NSResponder.moveLeft(_:)):
         let selection = textView.selectedRange()
         guard selection.length == 0, selection.location == 0 else { return false }

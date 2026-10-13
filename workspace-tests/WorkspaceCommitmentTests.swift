@@ -89,6 +89,27 @@ final class WorkspaceCommitmentTests: XCTestCase {
     XCTAssertEqual(try store.task(id: thesis.id)?.status, .open)
   }
 
+  func testAMissedAppearanceVanishesByDefaultAndStacksWhenAskedTo() throws {
+    let thesis = try store.createTask(listId: list.id, title: "Thesis")
+    let vanishing = try store.saveCommitment(
+      taskId: thesis.id, draft: WorkspaceCommitmentDraft(title: "Read", rule: "mon, wed, fri"),
+      now: day(5), calendar: calendar)
+    let stacking = try store.saveCommitment(
+      taskId: thesis.id, draft: WorkspaceCommitmentDraft(title: "Write", rule: "mon, wed, fri", stacksMissed: true),
+      now: day(5), calendar: calendar)
+    XCTAssertEqual(try store.commitment(taskId: vanishing)?.stacksMissed, false)
+    XCTAssertEqual(try store.commitment(taskId: stacking)?.stacksMissed, true)
+
+    // Monday is missed by both. On Tuesday only the stacking one still shows.
+    let tuesday = try store.dailies(on: day(6), calendar: calendar).map(\.task.id)
+    XCTAssertFalse(tuesday.contains(vanishing))
+    XCTAssertTrue(tuesday.contains(stacking))
+    XCTAssertEqual(try store.commitment(taskId: vanishing, now: day(6), calendar: calendar)?.missed, 0)
+    XCTAssertEqual(try store.commitment(taskId: stacking, now: day(6), calendar: calendar)?.missed, 1)
+    XCTAssertEqual(WorkspaceCommitment.carriesMissedDays("every friday"), true)
+    XCTAssertEqual(WorkspaceCommitment.carriesMissedDays("weekdays"), false)
+  }
+
   func testAScheduleTheSyntaxCannotReadIsRefusedWithItsMessage() throws {
     XCTAssertTrue(WorkspaceCommitment.isSchedule("every 2 weeks"))
     XCTAssertEqual(WorkspaceCommitment.normalizedRule("Every Tue and Thu"), "tue, thu")

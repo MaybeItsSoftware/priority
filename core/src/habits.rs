@@ -7,6 +7,8 @@
 //! it was made, so "every 3 days" counts from then and nothing is owed from
 //! before it.
 
+use std::collections::BTreeSet;
+
 use chrono::{DateTime, Datelike, Duration, NaiveDate, Utc};
 use chrono_tz::Tz;
 use rusqlite::{OptionalExtension, Transaction, params};
@@ -117,6 +119,46 @@ pub fn appearance(
         column: rule.placement.clone(),
         due_day: owed,
         is_carried_over: true,
+    })
+}
+
+/// The scheduled days from `from` (never before the anchor) through `day`
+/// that are not in `done`, oldest first: what a habit whose missed
+/// appearances stack still owes. Looks back at most a year.
+pub fn owed_days(
+    rule: &Rule,
+    from: NaiveDate,
+    day: NaiveDate,
+    done: &BTreeSet<NaiveDate>,
+) -> Vec<NaiveDate> {
+    let start = from
+        .max(rule.anchor)
+        .max(day - Duration::days(CARRY_LOOKBACK_DAYS));
+    start
+        .iter_days()
+        .take_while(|cursor| *cursor <= day)
+        .filter(|cursor| is_scheduled(rule, *cursor) && !done.contains(cursor))
+        .collect()
+}
+
+/// Where a habit whose missed appearances stack stands on `day`: showing
+/// while any scheduled day since `from` is not done, due on the oldest of
+/// them. `None` once every one is done, or when it has expired.
+pub fn stacked_appearance(
+    rule: &Rule,
+    from: NaiveDate,
+    day: NaiveDate,
+    done: &BTreeSet<NaiveDate>,
+    source_completed: bool,
+) -> Option<Appearance> {
+    if is_expired(rule, day, source_completed) {
+        return None;
+    }
+    let oldest = *owed_days(rule, from, day, done).first()?;
+    Some(Appearance {
+        column: rule.placement.clone(),
+        due_day: oldest,
+        is_carried_over: oldest < day,
     })
 }
 
@@ -344,12 +386,52 @@ pub(crate) fn habit_shows(
     if stored.is_expired(today, source_completed) {
         return Ok(false);
     }
-    let rule = stored.rule;
-    if is_scheduled(&rule, today) {
+    if is_scheduled(&stored.rule, today) {
         return Ok(true);
     }
-    let last_done = last_done_day(connection, daily_id)?;
-    Ok(appearance(&rule, today, last_done, source_completed).is_some())
+    Ok(stored
+        .appearance(connection, daily_id, today, source_completed)?
+        .is_some())
+}
+
+/// The scheduled days a habit whose missed appearances stack still owes on
+/// the local day `now_ms` falls on, oldest first, today's included if it is
+/// one. Empty for a habit whose missed appearances vanish.
+pub(crate) fn owed(
+    connection: &rusqlite::Connection,
+    daily_id: &str,
+    now_ms: i64,
+    zone: Tz,
+) -> Result<Vec<NaiveDate>, CoreError> {
+    let Some(stored) = stored_rule(connection, daily_id, zone)? else {
+        return Ok(Vec::new());
+    };
+    let Some(from) = stored.stacks_from else {
+        return Ok(Vec::new());
+    };
+    let done = done_days(connection, daily_id)?;
+    Ok(owed_days(
+        &stored.rule,
+        from,
+        local_day(now_ms, zone),
+        &done,
+    ))
+}
+
+fn done_days(
+    connection: &rusqlite::Connection,
+    daily_id: &str,
+) -> Result<BTreeSet<NaiveDate>, CoreError> {
+    let mut statement = connection.prepare(
+        "SELECT dayKey FROM daily_contributions WHERE dailyId = ?1 AND completedAt IS NOT NULL",
+    )?;
+    let keys: Vec<String> = statement
+        .query_map([daily_id], |row| row.get(0))?
+        .collect::<Result<_, _>>()?;
+    Ok(keys
+        .iter()
+        .filter_map(|key| NaiveDate::parse_from_str(key, "%Y-%m-%d").ok())
+        .collect())
 }
 
 fn source_is_completed(
@@ -380,7 +462,7 @@ fn last_done_day(
 }
 
 /// One habit's pass. `WorkspaceStore.reconcileHabit`.
-fn reconcile_habit(
+pub(crate) fn reconcile_habit(
     transaction: &Transaction,
     daily_id: &str,
     now_ms: i64,
@@ -413,10 +495,12 @@ fn reconcile_habit(
         }
         return Ok(true);
     }
-    let rule = stored_rule.rule;
-    let last_done = last_done_day(transaction, daily_id)?;
-    let showing = appearance(&rule, today, last_done, source_completed);
-    match reconciled_column(current.as_deref(), showing.as_ref(), &rule.placement) {
+    let showing = stored_rule.appearance(transaction, daily_id, today, source_completed)?;
+    match reconciled_column(
+        current.as_deref(),
+        showing.as_ref(),
+        &stored_rule.rule.placement,
+    ) {
         Some(target) => {
             write_column(transaction, &task_id, target.as_deref(), now_ms)?;
             Ok(true)
@@ -432,11 +516,38 @@ struct StoredRule {
     /// A commitment (a habit on a subtask of its source) ends with its
     /// source whatever its own expiry says.
     ends_with_source: bool,
+    /// The day from which its missed appearances stack; `None` vanishes.
+    stacks_from: Option<NaiveDate>,
 }
 
 impl StoredRule {
     fn is_expired(&self, day: NaiveDate, source_completed: bool) -> bool {
         is_expired(&self.rule, day, source_completed) || (self.ends_with_source && source_completed)
+    }
+
+    /// Where it stands on `day`, by whichever rule its missed days follow.
+    fn appearance(
+        &self,
+        connection: &rusqlite::Connection,
+        daily_id: &str,
+        day: NaiveDate,
+        source_completed: bool,
+    ) -> Result<Option<Appearance>, CoreError> {
+        Ok(match self.stacks_from {
+            Some(from) => stacked_appearance(
+                &self.rule,
+                from,
+                day,
+                &done_days(connection, daily_id)?,
+                source_completed,
+            ),
+            None => appearance(
+                &self.rule,
+                day,
+                last_done_day(connection, daily_id)?,
+                source_completed,
+            ),
+        })
     }
 }
 
@@ -459,12 +570,14 @@ fn stored_rule(
         String,
         Option<String>,
         bool,
+        Option<String>,
     );
     let row: Option<Row> = transaction
         .query_row(
             "SELECT taskId, activeWeekdaysMask, intervalDays, intervalAnchor, placementColumn, dropsAtDayEnd,
                     expiryRule, expiresAt, sourceTaskId, createdAt, archivedAt,
-                    COALESCE((SELECT parentTaskId FROM tasks WHERE tasks.id = dailies.taskId) = sourceTaskId, 0)
+                    COALESCE((SELECT parentTaskId FROM tasks WHERE tasks.id = dailies.taskId) = sourceTaskId, 0),
+                    stacksMissedFrom
              FROM dailies WHERE id = ?1",
             [daily_id],
             |row| {
@@ -481,6 +594,7 @@ fn stored_rule(
                     row.get(9)?,
                     row.get(10)?,
                     row.get(11)?,
+                    row.get(12)?,
                 ))
             },
         )
@@ -498,6 +612,7 @@ fn stored_rule(
         created,
         archived,
         ends_with_source,
+        stacks_from,
     )) = row
     else {
         return Ok(None);
@@ -538,6 +653,10 @@ fn stored_rule(
         },
         source_task_id: source,
         ends_with_source,
+        stacks_from: stacks_from
+            .as_deref()
+            .and_then(parse_stored)
+            .map(|at| local_day(at.timestamp_millis(), zone)),
     }))
 }
 

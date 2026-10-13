@@ -122,6 +122,10 @@ pub const MIGRATIONS: &[(&str, &str)] = &[
         "v25_agent_instructions",
         include_str!("migrations/v25_agent_instructions.sql"),
     ),
+    (
+        "v26_commitment_missed_stack",
+        include_str!("migrations/v26_commitment_missed_stack.sql"),
+    ),
 ];
 
 /// Brings the database at `path` up to date, creating it if it does not

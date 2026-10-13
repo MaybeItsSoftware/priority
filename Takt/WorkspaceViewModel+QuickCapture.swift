@@ -1,10 +1,13 @@
 import Foundation
+import TaktCore
 import TaktWorkspace
 
 /// Global capture: what the quick-add hotkey does once it has the workspace.
 /// Split from `WorkspaceViewModel.swift` — the same type — because the
-/// destination, the start day and the pill row that shows them are a
-/// self-contained piece of state nothing else reads.
+/// destination and the list that shows it are a self-contained piece of
+/// state nothing else reads. The due day, conditions and estimate the
+/// field's slots hold are the field's own (`TaskEntryDraft`), handed over
+/// with the title on Return.
 @MainActor
 extension WorkspaceViewModel {
   /// Captures into the inbox — or the list chosen in Settings → Keyboard —
@@ -21,7 +24,6 @@ extension WorkspaceViewModel {
     let target = quickCaptureHomeList
     isQuickCaptureActive = true
     quickCaptureDestinationID = target?.id ?? lists.first?.id
-    quickCaptureStartDayOffset = nil
     requestTaskComposerFocus()
   }
 
@@ -62,21 +64,6 @@ extension WorkspaceViewModel {
       ?? destinations.first
   }
 
-  var quickCaptureStartDate: Date? {
-    guard let offset = quickCaptureStartDayOffset else { return nil }
-    let start = Calendar.current.startOfDay(for: .now)
-    return Calendar.current.date(byAdding: .day, value: offset, to: start)
-  }
-
-  var quickCaptureStartLabel: String {
-    guard let offset = quickCaptureStartDayOffset, let date = quickCaptureStartDate else {
-      return "Any day"
-    }
-    if offset == 1 { return "Tomorrow" }
-    if offset == 2 { return "In 2 days" }
-    return date.formatted(.dateTime.weekday(.abbreviated).day().month(.abbreviated))
-  }
-
   func moveQuickCaptureDestination(by offset: Int) {
     let destinations = quickCaptureDestinations
     guard !destinations.isEmpty else { return }
@@ -85,19 +72,15 @@ extension WorkspaceViewModel {
     quickCaptureDestinationID = destinations[next].id
   }
 
-  func moveQuickCaptureStartDay(by offset: Int) {
-    let current = quickCaptureStartDayOffset ?? 0
-    let next = max(0, current + offset)
-    quickCaptureStartDayOffset = next == 0 ? nil : next
-  }
-
   func cancelQuickCapture() {
     isQuickCaptureActive = false
     quickCaptureDestinationID = nil
-    quickCaptureStartDayOffset = nil
   }
 
-  func submitQuickCapture(named title: String) {
+  /// Files the capture where it has been steered, with what its slots hold —
+  /// a due day and an estimate that win over the title's words, and the
+  /// conditions it needs — as one undo step.
+  func submitQuickCapture(named title: String, slots: TaskEntryDraft = TaskEntryDraft()) {
     let normalized = title.trimmingCharacters(in: .whitespacesAndNewlines)
     guard !normalized.isEmpty, let store, let destination = quickCaptureDestination else { return }
     perform {
@@ -111,7 +94,8 @@ extension WorkspaceViewModel {
       }
       let task = try store.createTask(
         capturing: normalized, listId: destination.listID, parentTaskId: parentID,
-        startAt: quickCaptureStartDate)
+        dueAt: slots.dueDate, estimateSeconds: slots.estimateSeconds,
+        requirementGroups: slots.requirementGroups)
       selectedTaskID = destination.listID == selectedListID ? task.id : nil
       cancelQuickCapture()
       reloadOutline()

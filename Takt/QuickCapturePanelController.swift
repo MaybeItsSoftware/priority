@@ -138,24 +138,152 @@ final class QuickCapturePanelController: NSObject, NSWindowDelegate {
 /// is one of them, summoned over another app: the raised surface and its
 /// hairline at the panel radius, the field row, a rule, and under it every
 /// list the capture can go to in the list finder's rows — the one it is going
-/// to selected, ↑ and ↓ moving it — then the overlays' foot of keys, with the
-/// day it starts at the end. All of it in the theme the window is in.
+/// to selected, ↑ and ↓ moving it — then the overlays' foot of keys. All of it
+/// in the theme the window is in.
+///
+/// It holds what the field's slots hold, because two of them open something
+/// in the list's place: the date slot a calendar, the conditions slot the
+/// conditions finder (`cc`'s, ticking the task not yet made). While a slot
+/// or either of those has the keys, they come through `WindowKeyMonitor`
+/// rather than a text view.
 private struct QuickCapturePanelView: View {
   @Environment(WorkspaceViewModel.self) private var model
   @Environment(\.theme) private var theme
+  @State private var title = ""
+  @State private var slots = TaskEntryDraft()
+  @State private var textFocusRequest = 0
+  /// The day the calendar's cursor is on, while it is open.
+  @State private var calendarCursor: Date?
+  /// The conditions finder, while it is open.
+  @State private var conditionsRequest: WorkspaceConditionPickerRequest?
 
   var body: some View {
     VStack(spacing: 0) {
-      WorkspaceTitleBarAddField()
+      WorkspaceTitleBarAddField(
+        title: $title, slots: $slots, textFocusRequest: textFocusRequest,
+        onSubmit: submit, onCancel: cancel)
       FocusRule()
-      QuickCaptureDestinationList()
-        .frame(maxHeight: .infinity)
-      WorkspaceOverlayFooter(
-        hints: "↑↓ list · ←→ start day · ↩ add · esc cancel",
-        trailing: model.quickCaptureStartLabel)
+      if let cursor = calendarCursor {
+        TaskEntryCalendarView(cursor: cursor, selected: slots.dueDate) { day in
+          slots.dueDate = day
+          calendarCursor = nil
+        }
+        WorkspaceOverlayFooter(hints: "←→↑↓ day · ⇧↑⇧↓ month · ↩ pick · ⌫ no date · esc back")
+      } else if let request = conditionsRequest {
+        // The finder brings its own field and foot of keys.
+        WorkspaceConditionPicker(overlayID: conditionsOverlayID(request), request: request, listHeight: nil)
+          .frame(maxHeight: .infinity)
+      } else {
+        QuickCaptureDestinationList()
+          .frame(maxHeight: .infinity)
+        WorkspaceOverlayFooter(hints: hints)
+      }
     }
     .frame(maxWidth: .infinity, maxHeight: .infinity)
     .themedSurface(theme, fill: theme.raised, radius: theme.panelRadius)
+    .background(WindowKeyMonitor(handle: handleKey))
+    // Each capture starts with empty slots; the title, as before, waits for
+    // the next one when the window was clicked away from.
+    .onChange(of: model.isQuickCaptureActive) { _, active in
+      guard active else { return }
+      slots = TaskEntryDraft()
+      calendarCursor = nil
+      conditionsRequest = nil
+    }
+  }
+
+  /// The keys that do something where the keyboard is.
+  private var hints: String {
+    switch slots.focus {
+    case .text: "↑↓ list · → date, needs, time · ↩ add · esc cancel"
+    case .date: "↑ next day · ⇧↑ next week · ↓ calendar · ⌫ none · ←→ slots · ↩ add"
+    case .conditions: "↓ or space choose · ⌫ last · ←→ slots · ↩ add"
+    case .estimate: "↑↓ step · 0–9 minutes · ⌫ none · ← slots · ↩ add"
+    }
+  }
+
+  private func conditionsOverlayID(_ request: WorkspaceConditionPickerRequest) -> String {
+    "quick-capture-conditions:\(request.id)"
+  }
+
+  /// Keys while a slot, the calendar or the conditions finder has them. In
+  /// the text they are the field's own.
+  private func handleKey(_ event: NSEvent) -> Bool {
+    guard let key = event.workspaceCommandKey else { return false }
+    if let cursor = calendarCursor {
+      switch key {
+      case "escape": calendarCursor = nil
+      case "enter", "space":
+        slots.dueDate = Calendar.current.startOfDay(for: cursor)
+        calendarCursor = nil
+      case "delete":
+        slots.dueDate = nil
+        calendarCursor = nil
+      default:
+        if let moved = TaskEntryCalendar.moved(cursor, by: key) {
+          calendarCursor = moved
+        } else if key.hasPrefix("cmd+") {
+          return false
+        }
+      }
+      return true
+    }
+    if let request = conditionsRequest {
+      // Esc puts the finder away and leaves the keys on the slot; ⌘↩, which
+      // opens the Conditions tab in the main window, does too.
+      if key == "escape" || key == "cmd+enter" {
+        conditionsRequest = nil
+        return true
+      }
+      if let handler = model.overlayKeyHandler, handler.overlayID == conditionsOverlayID(request) {
+        return handler.handle(key)
+      }
+      return false
+    }
+    guard slots.focus.isSlot else { return false }
+    switch slots.handle(key: key) {
+    case .handled:
+      if slots.focus == .text { textFocusRequest += 1 }
+    case .ignored:
+      // ⌘Q and the like still work; anything else typed at a slot is
+      // swallowed rather than sent to text that does not have the keys.
+      if key.hasPrefix("cmd+") { return false }
+    case .submit: submit()
+    case .cancel: cancel()
+    case .openCalendar:
+      calendarCursor = slots.dueDate ?? Calendar.current.startOfDay(for: .now)
+    case .openConditions:
+      conditionsRequest = WorkspaceConditionPickerRequest(
+        draftTitle: TaskCapture.parse(title).title, groups: $slots.requirementGroups)
+    }
+    return true
+  }
+
+  private func submit() {
+    let text = title
+    guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+      // Nothing to file: back to the text to type it.
+      if slots.focus.isSlot {
+        slots.focus = .text
+        textFocusRequest += 1
+      }
+      return
+    }
+    let filed = slots
+    reset()
+    model.submitQuickCapture(named: text, slots: filed)
+  }
+
+  private func cancel() {
+    reset()
+    model.cancelAddField()
+  }
+
+  private func reset() {
+    title = ""
+    slots = TaskEntryDraft()
+    calendarCursor = nil
+    conditionsRequest = nil
   }
 }
 

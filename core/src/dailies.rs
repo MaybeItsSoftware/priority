@@ -218,6 +218,10 @@ pub fn update_daily(
 /// commitment met; a part-finished focus block passes `false`. Returns the
 /// contribution's id. Replaces `WorkspaceStore.logContribution` and its
 /// Kotlin copy.
+///
+/// A habit whose missed appearances stack (`dailies.stacksMissedFrom`) pays
+/// off its oldest: completing it while an earlier scheduled day is still
+/// owed records that day, so each missed one takes a completion of its own.
 pub fn log_contribution(
     transaction: &Transaction,
     daily_id: &str,
@@ -236,7 +240,15 @@ pub fn log_contribution(
         .ok_or_else(|| CoreError::MissingDaily {
             id: daily_id.to_string(),
         })?;
-    let key = day_key(now_ms, zone);
+    let today = day_key(now_ms, zone);
+    let owed = if complete {
+        crate::habits::owed(transaction, daily_id, now_ms, crate::periodic::zone(zone))?
+            .first()
+            .map(|day| day.format("%Y-%m-%d").to_string())
+    } else {
+        None
+    };
+    let key = owed.filter(|day| *day < today).unwrap_or(today);
     let now = stored(now_ms);
     let seconds = seconds.max(0);
     let existing: Option<String> = transaction

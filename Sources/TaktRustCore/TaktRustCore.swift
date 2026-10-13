@@ -1361,6 +1361,12 @@ public protocol CoreWorkspaceProtocol: AnyObject, Sendable {
     func commitment(taskId: String) throws  -> Commitment?
     
     /**
+     * How many of a stacking commitment's missed appearances are still
+     * owed on the day `now_ms` falls on; zero for one that vanishes.
+     */
+    func commitmentMissed(commitmentTaskId: String, nowMs: Int64, zone: String) throws  -> UInt32
+    
+    /**
      * The live commitments on a task, in the order of its subtasks.
      */
     func commitments(taskId: String) throws  -> [Commitment]
@@ -3129,6 +3135,22 @@ open func commitment(taskId: String)throws  -> Commitment?  {
     uniffi_takt_core_fn_method_coreworkspace_commitment(
             self.uniffiCloneHandle(),
         FfiConverterString.lower(taskId),uniffiCallStatus
+    )
+})
+}
+    
+    /**
+     * How many of a stacking commitment's missed appearances are still
+     * owed on the day `now_ms` falls on; zero for one that vanishes.
+     */
+open func commitmentMissed(commitmentTaskId: String, nowMs: Int64, zone: String)throws  -> UInt32  {
+    return try  FfiConverterUInt32.lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_commitment_missed(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(commitmentTaskId),
+        FfiConverterInt64.lower(nowMs),
+        FfiConverterString.lower(zone),uniffiCallStatus
     )
 })
 }
@@ -6676,6 +6698,10 @@ public struct Commitment: Equatable, Hashable {
      * The start of the day it stops appearing, if it has one.
      */
     public var expiresAtMs: Int64?
+    /**
+     * Whether its missed appearances stack rather than vanish.
+     */
+    public var stacksMissed: Bool
 
     // Default memberwise initializers are never public by default, so we
     // declare one manually.
@@ -6691,7 +6717,10 @@ public struct Commitment: Equatable, Hashable {
          */rule: String, schedule: CommitmentSchedule, 
         /**
          * The start of the day it stops appearing, if it has one.
-         */expiresAtMs: Int64?) {
+         */expiresAtMs: Int64?, 
+        /**
+         * Whether its missed appearances stack rather than vanish.
+         */stacksMissed: Bool) {
         self.dailyId = dailyId
         self.taskId = taskId
         self.parentTaskId = parentTaskId
@@ -6699,6 +6728,7 @@ public struct Commitment: Equatable, Hashable {
         self.rule = rule
         self.schedule = schedule
         self.expiresAtMs = expiresAtMs
+        self.stacksMissed = stacksMissed
     }
 
     
@@ -6723,7 +6753,8 @@ public struct FfiConverterTypeCommitment: FfiConverterRustBuffer {
                 title: FfiConverterString.read(from: &buf), 
                 rule: FfiConverterString.read(from: &buf), 
                 schedule: FfiConverterTypeCommitmentSchedule.read(from: &buf), 
-                expiresAtMs: FfiConverterOptionInt64.read(from: &buf)
+                expiresAtMs: FfiConverterOptionInt64.read(from: &buf), 
+                stacksMissed: FfiConverterBool.read(from: &buf)
         )
     }
 
@@ -6735,6 +6766,7 @@ public struct FfiConverterTypeCommitment: FfiConverterRustBuffer {
         FfiConverterString.write(value.rule, into: &buf)
         FfiConverterTypeCommitmentSchedule.write(value.schedule, into: &buf)
         FfiConverterOptionInt64.write(value.expiresAtMs, into: &buf)
+        FfiConverterBool.write(value.stacksMissed, into: &buf)
     }
 }
 
@@ -6768,6 +6800,12 @@ public struct CommitmentDraft: Equatable, Hashable {
      * task is done.
      */
     public var expiresAtMs: Int64?
+    /**
+     * Whether a missed appearance stays owed until done, rather than
+     * vanishing when the next one comes (or, for a daily rhythm, at the end
+     * of its day).
+     */
+    public var stacksMissed: Bool
 
     // Default memberwise initializers are never public by default, so we
     // declare one manually.
@@ -6778,10 +6816,16 @@ public struct CommitmentDraft: Equatable, Hashable {
         /**
          * The day it stops appearing, from its start; `None` runs until the
          * task is done.
-         */expiresAtMs: Int64?) {
+         */expiresAtMs: Int64?, 
+        /**
+         * Whether a missed appearance stays owed until done, rather than
+         * vanishing when the next one comes (or, for a daily rhythm, at the end
+         * of its day).
+         */stacksMissed: Bool) {
         self.title = title
         self.rule = rule
         self.expiresAtMs = expiresAtMs
+        self.stacksMissed = stacksMissed
     }
 
     
@@ -6802,7 +6846,8 @@ public struct FfiConverterTypeCommitmentDraft: FfiConverterRustBuffer {
             try CommitmentDraft(
                 title: FfiConverterString.read(from: &buf), 
                 rule: FfiConverterString.read(from: &buf), 
-                expiresAtMs: FfiConverterOptionInt64.read(from: &buf)
+                expiresAtMs: FfiConverterOptionInt64.read(from: &buf), 
+                stacksMissed: FfiConverterBool.read(from: &buf)
         )
     }
 
@@ -6810,6 +6855,7 @@ public struct FfiConverterTypeCommitmentDraft: FfiConverterRustBuffer {
         FfiConverterString.write(value.title, into: &buf)
         FfiConverterString.write(value.rule, into: &buf)
         FfiConverterOptionInt64.write(value.expiresAtMs, into: &buf)
+        FfiConverterBool.write(value.stacksMissed, into: &buf)
     }
 }
 
@@ -28872,6 +28918,9 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_method_coreworkspace_commitment() != 61483) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_commitment_missed() != 10504) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_method_coreworkspace_commitments() != 45393) {

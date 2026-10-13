@@ -61,7 +61,7 @@ class WorkspaceSchemaTest {
             assertTrue("missing: ${expected - present}", present.containsAll(expected))
 
             val migrations = workspace.database.read { it.strings("SELECT identifier FROM grdb_migrations") }
-            assertEquals(25, migrations.size)
+            assertEquals(26, migrations.size)
             assertTrue("v17_sync" in migrations)
             assertTrue("v18_themes_and_preferences" in migrations)
             assertTrue("v19_habit_options" in migrations)
@@ -71,6 +71,7 @@ class WorkspaceSchemaTest {
             assertTrue("v23_filter_lists" in migrations)
             assertTrue("v24_condition_categories" in migrations)
             assertTrue("v25_agent_instructions" in migrations)
+            assertTrue("v26_commitment_missed_stack" in migrations)
             assertEquals(listOf(0L to 0L), workspace.database.read { db ->
                 db.query("SELECT recording, applying FROM sync_control") { it.long("recording") to it.long("applying") }
             })
@@ -98,7 +99,19 @@ class WorkspaceSchemaTest {
     // install that lacks one migration lacks every later one too, since they
     // only ever apply in order, so each rewind takes the later ones off first.
 
+    private fun rewindV26(connection: SQLiteConnection) {
+        // The journal's and the outbox's dailies triggers name the new
+        // column, so they come off first; v19's rewind finds them gone.
+        for (op in listOf("insert", "update", "delete")) {
+            connection.execSQL("DROP TRIGGER change_log_dailies_$op")
+            connection.execSQL("DROP TRIGGER sync_outbox_dailies_$op")
+        }
+        connection.execSQL("ALTER TABLE dailies DROP COLUMN stacksMissedFrom")
+        connection.execSQL("DELETE FROM grdb_migrations WHERE identifier = 'v26_commitment_missed_stack'")
+    }
+
     private fun rewindV25(connection: SQLiteConnection) {
+        rewindV26(connection)
         // Dropping the table drops its journal and outbox triggers with it.
         connection.execSQL("DROP TABLE agent_instructions")
         connection.execSQL("DELETE FROM grdb_migrations WHERE identifier = 'v25_agent_instructions'")
@@ -157,8 +170,8 @@ class WorkspaceSchemaTest {
         // The journal's and the outbox's dailies triggers name the new
         // columns, so they come off first.
         for (op in listOf("insert", "update", "delete")) {
-            connection.execSQL("DROP TRIGGER change_log_dailies_$op")
-            connection.execSQL("DROP TRIGGER sync_outbox_dailies_$op")
+            connection.execSQL("DROP TRIGGER IF EXISTS change_log_dailies_$op")
+            connection.execSQL("DROP TRIGGER IF EXISTS sync_outbox_dailies_$op")
         }
         for (column in listOf("sourceTaskId", "placementColumn", "dropsAtDayEnd", "expiryRule", "expiresAt")) {
             connection.execSQL("ALTER TABLE dailies DROP COLUMN $column")
@@ -196,13 +209,17 @@ class WorkspaceSchemaTest {
         try {
             assertEquals(expected, upgraded.read { schema(it) })
             val migrations = upgraded.read { it.strings("SELECT identifier FROM grdb_migrations") }
-            assertEquals(25, migrations.size)
-            assertEquals(25, migrations.toSet().size)
+            assertEquals(26, migrations.size)
+            assertEquals(26, migrations.toSet().size)
         } finally {
             upgraded.close()
             dir.deleteRecursively()
         }
     }
+
+    /** A v25 database takes `stacksMissedFrom` on `dailies`. */
+    @Test
+    fun aV25DatabaseUpgradesToTheFixture() = assertUpgradesToTheFixture("v25", ::rewindV26)
 
     /** A v24 database takes `agent_instructions` and its triggers. */
     @Test

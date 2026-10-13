@@ -1221,6 +1221,8 @@ internal object IntegrityCheckingUniffiLib {
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_commitment(
     ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_commitment_missed(
+    ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_commitments(
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_convert_list_to_task(
@@ -1675,6 +1677,8 @@ internal object UniffiLib {
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_method_coreworkspace_commitment(`ptr`: Long,`taskId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_method_coreworkspace_commitment_missed(`ptr`: Long,`commitmentTaskId`: RustBuffer.ByValue,`nowMs`: Long,`zone`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): Int
     external fun uniffi_takt_core_fn_method_coreworkspace_commitments(`ptr`: Long,`taskId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_method_coreworkspace_convert_list_to_task(`ptr`: Long,`id`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
@@ -3195,6 +3199,9 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_commitment() and 0xFFFF) != 61483) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_commitment_missed() and 0xFFFF) != 10504) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_commitments() and 0xFFFF) != 45393) {
@@ -4926,6 +4933,12 @@ public interface CoreWorkspaceInterface {
      * The live commitment a subtask carries, if it is one.
      */
     fun `commitment`(`taskId`: kotlin.String): Commitment?
+    
+    /**
+     * How many of a stacking commitment's missed appearances are still
+     * owed on the day `now_ms` falls on; zero for one that vanishes.
+     */
+    fun `commitmentMissed`(`commitmentTaskId`: kotlin.String, `nowMs`: kotlin.Long, `zone`: kotlin.String): kotlin.UInt
     
     /**
      * The live commitments on a task, in the order of its subtasks.
@@ -7131,6 +7144,27 @@ open class CoreWorkspace: Disposable, AutoCloseable, CoreWorkspaceInterface
         it,
         
         FfiConverterString.lower(`taskId`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * How many of a stacking commitment's missed appearances are still
+     * owed on the day `now_ms` falls on; zero for one that vanishes.
+     */
+    @Throws(CoreException::class)override fun `commitmentMissed`(`commitmentTaskId`: kotlin.String, `nowMs`: kotlin.Long, `zone`: kotlin.String): kotlin.UInt {
+            return FfiConverterUInt.lift(
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_commitment_missed(
+        it,
+        
+        FfiConverterString.lower(`commitmentTaskId`),
+        FfiConverterLong.lower(`nowMs`),
+        FfiConverterString.lower(`zone`),_status)
 }
     }
     )
@@ -11016,6 +11050,11 @@ data class Commitment (
      * The start of the day it stops appearing, if it has one.
      */
     var `expiresAtMs`: kotlin.Long?
+    , 
+    /**
+     * Whether its missed appearances stack rather than vanish.
+     */
+    var `stacksMissed`: kotlin.Boolean
     
 ){
     
@@ -11039,6 +11078,7 @@ public object FfiConverterTypeCommitment: FfiConverterRustBuffer<Commitment> {
             FfiConverterString.read(buf),
             FfiConverterTypeCommitmentSchedule.read(buf),
             FfiConverterOptionalLong.read(buf),
+            FfiConverterBoolean.read(buf),
         )
     }
 
@@ -11049,7 +11089,8 @@ public object FfiConverterTypeCommitment: FfiConverterRustBuffer<Commitment> {
             FfiConverterString.allocationSize(value.`title`) +
             FfiConverterString.allocationSize(value.`rule`) +
             FfiConverterTypeCommitmentSchedule.allocationSize(value.`schedule`) +
-            FfiConverterOptionalLong.allocationSize(value.`expiresAtMs`)
+            FfiConverterOptionalLong.allocationSize(value.`expiresAtMs`) +
+            FfiConverterBoolean.allocationSize(value.`stacksMissed`)
     )
 
     override fun write(value: Commitment, buf: ByteBuffer) {
@@ -11060,6 +11101,7 @@ public object FfiConverterTypeCommitment: FfiConverterRustBuffer<Commitment> {
             FfiConverterString.write(value.`rule`, buf)
             FfiConverterTypeCommitmentSchedule.write(value.`schedule`, buf)
             FfiConverterOptionalLong.write(value.`expiresAtMs`, buf)
+            FfiConverterBoolean.write(value.`stacksMissed`, buf)
     }
 }
 
@@ -11081,6 +11123,13 @@ data class CommitmentDraft (
      * task is done.
      */
     var `expiresAtMs`: kotlin.Long?
+    , 
+    /**
+     * Whether a missed appearance stays owed until done, rather than
+     * vanishing when the next one comes (or, for a daily rhythm, at the end
+     * of its day).
+     */
+    var `stacksMissed`: kotlin.Boolean
     
 ){
     
@@ -11100,19 +11149,22 @@ public object FfiConverterTypeCommitmentDraft: FfiConverterRustBuffer<Commitment
             FfiConverterString.read(buf),
             FfiConverterString.read(buf),
             FfiConverterOptionalLong.read(buf),
+            FfiConverterBoolean.read(buf),
         )
     }
 
     override fun allocationSize(value: CommitmentDraft) = (
             FfiConverterString.allocationSize(value.`title`) +
             FfiConverterString.allocationSize(value.`rule`) +
-            FfiConverterOptionalLong.allocationSize(value.`expiresAtMs`)
+            FfiConverterOptionalLong.allocationSize(value.`expiresAtMs`) +
+            FfiConverterBoolean.allocationSize(value.`stacksMissed`)
     )
 
     override fun write(value: CommitmentDraft, buf: ByteBuffer) {
             FfiConverterString.write(value.`title`, buf)
             FfiConverterString.write(value.`rule`, buf)
             FfiConverterOptionalLong.write(value.`expiresAtMs`, buf)
+            FfiConverterBoolean.write(value.`stacksMissed`, buf)
     }
 }
 

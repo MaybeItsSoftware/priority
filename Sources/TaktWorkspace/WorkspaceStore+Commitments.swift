@@ -18,6 +18,13 @@ public struct WorkspaceCommitment: Identifiable, Sendable, Equatable {
   public let intervalDays: Int?
   /// The start of the day it stops appearing, if it has one.
   public let expiresAt: Date?
+  /// Whether a missed appearance stays owed until it is done (true) or
+  /// vanishes when the next one comes, or at its day's end for a daily
+  /// rhythm (false, the default).
+  public let stacksMissed: Bool
+  /// How many missed appearances it still owes today; always 0 unless it
+  /// stacks.
+  public internal(set) var missed: Int = 0
 
   public var id: String { taskId }
 
@@ -30,6 +37,7 @@ public struct WorkspaceCommitment: Identifiable, Sendable, Equatable {
     weekdays = Set(core.schedule.weekdays.map { Int($0) })
     intervalDays = core.schedule.intervalDays.map { Int($0) }
     expiresAt = core.expiresAtMs.map(Date.init(coreMilliseconds:))
+    stacksMissed = core.stacksMissed
   }
 
   /// "every friday" → "Every friday"; what the inspector shows.
@@ -42,6 +50,16 @@ public struct WorkspaceCommitment: Identifiable, Sendable, Equatable {
   /// of days ("mon, wed, fri").
   public static func isSchedule(_ rule: String) -> Bool {
     commitmentSchedule(rule: rule) != nil
+  }
+
+  /// Whether a commitment on `rule` that vanishes keeps a missed appearance
+  /// until the next one replaces it (a weekly rhythm, or one day a week)
+  /// rather than dropping it at its day's end; nil for a rule it cannot read.
+  /// The core's `CommitmentSchedule::carries_missed_days`.
+  public static func carriesMissedDays(_ rule: String) -> Bool? {
+    commitmentSchedule(rule: rule).map { schedule in
+      schedule.intervalDays.map { $0 >= 7 } ?? (schedule.weekdays.count == 1)
+    }
   }
 
   /// The schedule as the core writes it back, or nil for one it cannot read.
@@ -74,11 +92,15 @@ public struct WorkspaceCommitmentDraft: Sendable, Equatable {
   public var rule: String
   /// The day it stops appearing; nil runs until the task is done.
   public var expiresAt: Date?
+  /// Whether missed appearances stack, each owed until done, rather than
+  /// vanish.
+  public var stacksMissed: Bool
 
-  public init(title: String, rule: String = "daily", expiresAt: Date? = nil) {
+  public init(title: String, rule: String = "daily", expiresAt: Date? = nil, stacksMissed: Bool = false) {
     self.title = title
     self.rule = rule
     self.expiresAt = expiresAt
+    self.stacksMissed = stacksMissed
   }
 }
 
@@ -91,7 +113,8 @@ extension WorkspaceStore {
     calendar: Calendar = .current
   ) throws -> String {
     let core = CommitmentDraft(
-      title: draft.title, rule: draft.rule, expiresAtMs: draft.expiresAt?.coreMilliseconds)
+      title: draft.title, rule: draft.rule, expiresAtMs: draft.expiresAt?.coreMilliseconds,
+      stacksMissed: draft.stacksMissed)
     return try coreWrite {
       try self.core.saveCommitment(
         taskId: taskId, draft: core, commitmentTaskId: commitmentTaskId, nowMs: now.coreMilliseconds,
@@ -109,17 +132,34 @@ extension WorkspaceStore {
   }
 
   /// The live commitments on a task, in the order of its subtasks.
-  public func commitments(forTaskId taskId: String) throws -> [WorkspaceCommitment] {
-    try Self.mappingCoreErrors { try core.commitments(taskId: taskId) }.map(WorkspaceCommitment.init)
+  public func commitments(
+    forTaskId taskId: String, now: Date = .now, calendar: Calendar = .current
+  ) throws -> [WorkspaceCommitment] {
+    try Self.mappingCoreErrors { try core.commitments(taskId: taskId) }.map { try counted($0, now, calendar) }
   }
 
   /// Every live commitment in the workspace.
-  public func allCommitments() throws -> [WorkspaceCommitment] {
-    try Self.mappingCoreErrors { try core.allCommitments() }.map(WorkspaceCommitment.init)
+  public func allCommitments(now: Date = .now, calendar: Calendar = .current) throws -> [WorkspaceCommitment] {
+    try Self.mappingCoreErrors { try core.allCommitments() }.map { try counted($0, now, calendar) }
   }
 
   /// The live commitment a subtask carries, if it is one.
-  public func commitment(taskId: String) throws -> WorkspaceCommitment? {
-    try Self.mappingCoreErrors { try core.commitment(taskId: taskId) }.map(WorkspaceCommitment.init)
+  public func commitment(
+    taskId: String, now: Date = .now, calendar: Calendar = .current
+  ) throws -> WorkspaceCommitment? {
+    try Self.mappingCoreErrors { try core.commitment(taskId: taskId) }.map { try counted($0, now, calendar) }
+  }
+
+  /// A commitment with what it owes today, asked of the core only when it
+  /// stacks.
+  private func counted(_ core: Commitment, _ now: Date, _ calendar: Calendar) throws -> WorkspaceCommitment {
+    var commitment = WorkspaceCommitment(core)
+    guard commitment.stacksMissed else { return commitment }
+    let owed = try Self.mappingCoreErrors {
+      try self.core.commitmentMissed(
+        commitmentTaskId: core.taskId, nowMs: now.coreMilliseconds, zone: calendar.timeZone.identifier)
+    }
+    commitment.missed = Int(owed)
+    return commitment
   }
 }

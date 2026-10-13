@@ -3,8 +3,26 @@ import TaktCore
 import TaktWorkspace
 
 struct WorkspaceConditionPickerRequest: Identifiable {
+  /// What the ticks are for: a task that exists, saved as each is ticked, or
+  /// one still being typed in the add field, whose ticks wait in its slot
+  /// until Return files them with it.
+  enum Target {
+    case task(WorkspaceTask)
+    case draft(title: String, groups: Binding<[[String]]>)
+  }
+
   let id = UUID()
-  let task: WorkspaceTask
+  let target: Target
+
+  init(task: WorkspaceTask) { target = .task(task) }
+  init(draftTitle: String, groups: Binding<[[String]]>) { target = .draft(title: draftTitle, groups: groups) }
+
+  var title: String {
+    switch target {
+    case .task(let task): task.title
+    case .draft(let title, _): title.isEmpty ? "New task" : title
+    }
+  }
 }
 
 /// The conditions a task needs, ticked from the keyboard: `cc`.
@@ -20,6 +38,9 @@ struct WorkspaceConditionPicker: View {
   @Environment(\.theme) private var theme
   let overlayID: String
   let request: WorkspaceConditionPickerRequest
+  /// The result list's height, fixed so it does not jump as matches narrow;
+  /// nil to take whatever its container leaves, as in quick add's window.
+  var listHeight: CGFloat? = WorkspaceOverlayMetrics.listHeight
   @State private var query = ""
   @State private var selection: Int?
   /// The task's requirements, read when the picker opens and again after
@@ -66,13 +87,13 @@ struct WorkspaceConditionPicker: View {
     let counts = model.conditionRequirementCounts
     VStack(spacing: 0) {
       WorkspaceOverlayField(
-        symbol: "location", prompt: "Needs… or type a new condition", text: $query, context: request.task.title)
+        symbol: "location", prompt: "Needs… or type a new condition", text: $query, context: request.title)
       FocusRule()
       if items.isEmpty && new == nil {
         WorkspaceOverlayHint(text: model.focusConditions.isEmpty
           ? "No conditions yet. Type one — Home, Campus, Floor space — and Return."
           : "No condition matches.")
-          .frame(height: WorkspaceOverlayMetrics.listHeight)
+          .frame(minHeight: listHeight, maxHeight: listHeight ?? .infinity)
       } else {
         ScrollViewReader { proxy in
           ScrollView {
@@ -104,7 +125,7 @@ struct WorkspaceConditionPicker: View {
               }
             }
           }
-          .frame(height: WorkspaceOverlayMetrics.listHeight)
+          .frame(minHeight: listHeight, maxHeight: listHeight ?? .infinity)
           .onChange(of: selection) { _, index in
             guard let index else { return }
             proxy.scrollTo(items.indices.contains(index) ? items[index].id : Self.newRowID)
@@ -115,7 +136,7 @@ struct WorkspaceConditionPicker: View {
         hints: "↑↓ choose · space or ↩ tick · ⌘↩ manage · esc done",
         trailing: summary)
     }
-    .onAppear { groups = model.requirementGroups(of: request.task) }
+    .onAppear { groups = currentGroups }
     .onChange(of: query) { _, _ in
       selection = nil
       hasMoved = false
@@ -203,12 +224,38 @@ struct WorkspaceConditionPicker: View {
     }.joined(separator: " + ")
   }
 
+  /// The requirements as they stand: saved on the task, or held by the draft.
+  private var currentGroups: [[String]]? {
+    switch request.target {
+    case .task(let task): model.requirementGroups(of: task)
+    case .draft(_, let groups): groups.wrappedValue
+    }
+  }
+
   private func choose(_ index: Int) {
     let items = conditions
+    let conditionID: String
     if items.indices.contains(index) {
-      groups = model.toggleRequirement(items[index].id, on: request.task)
+      conditionID = items[index].id
     } else if index == items.count, let name = newName {
-      groups = model.requireNewCondition(named: name, on: request.task)
+      if case .task(let task) = request.target {
+        groups = model.requireNewCondition(named: name, on: task)
+        return
+      }
+      // Made now — a condition outlives the task it was made for — and
+      // ticked on the draft, to be required when the task is.
+      guard let condition = model.createCondition(name: name, category: nil) else { return }
+      conditionID = condition.id
+    } else {
+      return
+    }
+    switch request.target {
+    case .task(let task):
+      groups = model.toggleRequirement(conditionID, on: task)
+    case .draft(_, let binding):
+      let places = Set(model.focusConditions.filter(\.isLocation).map(\.id))
+      binding.wrappedValue = TaskRequirementToggle.toggling(conditionID, in: binding.wrappedValue, places: places) ?? []
+      groups = binding.wrappedValue
     }
   }
 }

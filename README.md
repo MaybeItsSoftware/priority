@@ -49,7 +49,7 @@ to filter them, walk them with `↑`/`↓`, or jump with `⌘1`–`⌘9`:
 | General | Launch at login, confirming deletes, and the completion celebration with a preview |
 | Focus | Where a started block runs, and whether each block is scored |
 | Appearance | The theme gallery, light/dark/system, the interface, heading and numeral fonts, and the text size |
-| Keyboard | The three global hotkeys (show the window, focus panel `⌃⌥⇧⌘F`, Quick Add `⌃⌥⇧⌘D`, which opens one of the window's overlays over whatever app you are in, in the theme you have chosen: the field, the chips that say what `30m`, `@fri`, `#work` and `!1` will set as the window's add row does, and under it every list in the list finder's rows — `↑`/`↓` pick the list, `←`/`→` move the caret and, from either end of the text, the start day, `Return` files it, `Esc` or a click away drops it), the list Quick Add captures into, and `keymap.json` |
+| Keyboard | The three global hotkeys (show the window, focus panel `⌃⌥⇧⌘F`, Quick Add `⌃⌥⇧⌘D`, which opens one of the window's overlays over whatever app you are in, in the theme you have chosen: the field, the chips that say what `30m`, `@fri`, `#work` and `!1` will set as the window's add row does, and under it every list in the list finder's rows — `↑`/`↓` pick the list, `→` at the end of the text (or `Tab`) walks into its date, conditions and time slots — see *Quick Add's slots* below — `Return` files it, `Esc` or a click away drops it), the list Quick Add captures into, and `keymap.json` |
 | Integrations | One page per integration — Checkvist, Google Calendar, Google Tasks, MCP, Daily Log — and your installed plugins |
 | Sync | The account that keeps the Mac and phones on one workspace, on Takt's server or [your own](docs/self-hosting.md) |
 | Advanced | Export the workspace as Markdown or JSON, diagnostics, and the app's data folder |
@@ -189,6 +189,25 @@ In the row that opens for a new task (`Return`, `Shift+Return`), `Tab` makes it 
 subtask of the task above and `Shift+Tab` takes it back out, before you type or
 after. `↑` and `↓` close the row, dropping what was typed as `Escape` does, and
 carry on to the task above or below where it sat.
+
+**Quick Add's slots.** To the right of Quick Add's field sit three slots: the
+due day, the conditions the task needs, and its time to complete. `→` at the
+end of the text (or `Tab`) moves into the date slot, `→` again to conditions,
+then time; `←` (or `Shift+Tab`) goes back, and from the date slot back into
+the text with the caret at its end. A click puts the keys on a slot too.
+`Return` in any slot files the task and `Esc` drops it, as in the text.
+
+| Slot | Keys |
+|---|---|
+| Date | `↑` a day on (the first press is today), `Shift+↑` a week on, `↓` the calendar — arrows move a day or a week, `Shift+↑` / `Shift+↓` a month, `Return` picks, `Esc` back to the slot — and `Delete` no date |
+| Conditions | `↓` or `Space` opens the conditions finder `cc` uses, ticking the task not yet made; `Esc` back to the slot. `Delete` drops the last one |
+| Time | `↑` / `↓` step through 5m, 10m, 15m, 30m, 45m, 1h, 1.5h, 2h, 3h, 4h, 6h, 8h; digits type minutes; `Delete` clears it |
+
+What a slot holds wins over the same thing typed on the end of the title
+(`@fri`, `30m`), and the task, its due day, estimate and conditions are one
+undo step. The row a new task is typed in inside the window has no slots: its
+`↑` and `↓` already leave the row, and it is drawn as the row or card it will
+become, which a board column has no room to widen.
 
 Only the **trailing** words are read, and the first word from the end that is
 not one of these stops the reading — so a title is never rewritten in the

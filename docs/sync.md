@@ -144,6 +144,16 @@ three entries in the table lists; a phone stores the rows and shows none of
 them. The Mac's instructions lived in its preferences before v25, and the app
 copies them in once, outside the journal (`import_agent_instructions`).
 
+`v26_commitment_missed_stack` adds `stacksMissedFrom DATETIME` to `dailies`:
+the start of the local day from which a habit's missed appearances stack
+rather than vanish, NULL (every existing row) for vanishing. It reinstalls
+every journal and outbox trigger. While it is set, the habit pass keeps the
+card in its column while any scheduled day since then has no completed
+contribution, and `dailies::log_contribution` records a completion against
+the oldest such day rather than today. Only the commitment form sets it
+(`commitments::save_commitment`). A client older than v26 drops the column on
+pull and treats the habit as vanishing.
+
 The following are not synced: the undo journal (`undo_control`, `change_log`), the FTS index
 (rebuilt by its own triggers as synced rows land), `grdb_migrations`, and the
 sync tables themselves. Day-log files stay per device. Theme *files* do

@@ -909,6 +909,17 @@ impl CoreWorkspace {
         commitments::commitment(&self.read(), &task_id)
     }
 
+    /// How many of a stacking commitment's missed appearances are still
+    /// owed on the day `now_ms` falls on; zero for one that vanishes.
+    pub fn commitment_missed(
+        &self,
+        commitment_task_id: String,
+        now_ms: i64,
+        zone: String,
+    ) -> Result<u32, CoreError> {
+        commitments::missed(&self.read(), &commitment_task_id, now_ms, &zone)
+    }
+
     /// Applies every placed habit's options for `now`, outside the undo
     /// journal; returns whether anything changed.
     pub fn reconcile_habits(&self, now_ms: i64, zone: String) -> Result<bool, CoreError> {

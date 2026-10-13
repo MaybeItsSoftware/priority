@@ -53,10 +53,10 @@ fn a_new_database_has_exactly_the_fixtures_schema() {
 fn every_migration_is_recorded_in_order_under_grdbs_identifiers() {
     let connection = migrated();
     assert_eq!(ledger(&connection), workspace_migrations());
-    assert_eq!(workspace_migrations().len(), 25);
+    assert_eq!(workspace_migrations().len(), 26);
     assert_eq!(
         workspace_migrations().last().map(String::as_str),
-        Some("v25_agent_instructions")
+        Some("v26_commitment_missed_stack")
     );
 }
 
@@ -69,7 +69,10 @@ fn migrating_again_applies_nothing_and_keeps_the_work() {
         )
         .unwrap();
     let before = dump_schema(&connection).unwrap();
-    assert_eq!(migrate(&mut connection).unwrap(), "v25_agent_instructions");
+    assert_eq!(
+        migrate(&mut connection).unwrap(),
+        "v26_commitment_missed_stack"
+    );
     assert_eq!(dump_schema(&connection).unwrap(), before);
     let count: i64 = connection
         .query_row("SELECT COUNT(*) FROM workspaces", [], |row| row.get(0))
@@ -96,9 +99,9 @@ fn a_file_database_is_created_and_closed_again() {
     std::fs::create_dir_all(&directory).unwrap();
     let path = directory.join("workspace.sqlite");
     let latest = migrate_workspace(path.to_string_lossy().into_owned()).unwrap();
-    assert_eq!(latest, "v25_agent_instructions");
+    assert_eq!(latest, "v26_commitment_missed_stack");
     let reopened = Connection::open(&path).unwrap();
-    assert_eq!(ledger(&reopened).len(), 25);
+    assert_eq!(ledger(&reopened).len(), 26);
     std::fs::remove_dir_all(directory).unwrap();
 }
 
@@ -465,6 +468,42 @@ fn v25_adds_agent_instructions_journalled_and_synced() {
     assert_eq!(
         count(
             "SELECT COUNT(*) FROM sync_outbox WHERE tableName = 'agent_instructions' AND rowId = 'account'"
+        ),
+        1
+    );
+}
+
+/// v26: whether a habit's missed appearances stack is a column on `dailies`,
+/// so changing it is journalled and queued for sync like the rest of the row.
+#[test]
+fn v26_adds_stacks_missed_from_to_dailies_journalled_and_synced() {
+    let mut connection = migrated_through("v25_agent_instructions");
+    seed_workspace(&connection);
+    seed_list(&connection, "l", "Inbox", T0);
+    connection
+        .execute_batch(&format!(
+            "INSERT INTO tasks (id, listId, title, sortOrder, createdAt, updatedAt)
+               VALUES ('t', 'l', 'Write', 0, '{T0}', '{T0}');
+             INSERT INTO dailies (id, taskId, sortOrder, createdAt, updatedAt)
+               VALUES ('d', 't', 0, '{T0}', '{T0}');"
+        ))
+        .unwrap();
+    migrate_through(&mut connection, Some("v26_commitment_missed_stack")).unwrap();
+    connection
+        .execute_batch(&format!(
+            "UPDATE undo_control SET suppressed = 0, groupId = 'g', label = 'x' WHERE id = 0;
+             UPDATE sync_control SET recording = 1 WHERE id = 0;
+             UPDATE dailies SET stacksMissedFrom = '{T1}' WHERE id = 'd';"
+        ))
+        .unwrap();
+    let count = |sql: &str| -> i64 { connection.query_row(sql, [], |row| row.get(0)).unwrap() };
+    assert_eq!(
+        count("SELECT COUNT(*) FROM change_log WHERE tableName = 'dailies' AND rowId = 'd'"),
+        1
+    );
+    assert_eq!(
+        count(
+            "SELECT COUNT(*) FROM sync_outbox WHERE tableName = 'dailies' AND rowId = 'd' AND changedJSON LIKE '%stacksMissedFrom%'"
         ),
         1
     );
