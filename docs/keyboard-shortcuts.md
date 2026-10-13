@@ -312,7 +312,7 @@ day whatever it is, and does not move either.
 
 Whatever adds a task reads the end of what you typed: `30m` or `1h30m` sets
 the estimate, `@fri`, `@tomorrow`, `@3d` or `@2026-10-02` the due day, `#work`
-a tag and `!1`–`!4` the priority. So `Write notes 45m #work @fri !1` is one
+a tag and `!1`–`!4` the priority (1 the most urgent). So `Write notes 45m #work @fri !1` is one
 Return, not a Return and four edits. Only trailing words count, and the first
 one from the end that is not a token stops the reading, so `Read 30 pages`
 keeps its `30`; the first word is always the title's. The title bar's field

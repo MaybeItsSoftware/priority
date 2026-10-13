@@ -205,11 +205,11 @@ fn start_dates_and_the_rest_of_the_fields() {
     );
     assert_eq!(
         shown(&connection, vec![rule("priority", "at-least", "2")]),
-        ["report", "paper"]
+        ["call", "paper"]
     );
     assert_eq!(
-        shown(&connection, vec![rule("priority", "at-most", "1")]),
-        ["call"]
+        shown(&connection, vec![rule("priority", "at-most", "3")]),
+        ["report"]
     );
     assert_eq!(
         shown(&connection, vec![rule("priority", "is", "2")]),
@@ -292,7 +292,7 @@ fn rules_combine_by_all_or_any_and_show_picks_the_status() {
     ];
     assert_eq!(
         shown_by(&connection, &definition("all", "open", both.clone())),
-        ["report"]
+        ["call"]
     );
     assert_eq!(
         shown_by(&connection, &definition("any", "open", both)),

@@ -99,3 +99,26 @@ fn blocked_work_is_kept_apart_with_its_reasons() {
         [Unavailable::StartsLater { at_ms: NOW + HOUR }]
     );
 }
+
+#[test]
+fn priority_one_is_the_most_urgent_and_no_priority_comes_last() {
+    let with = |id: &str, priority: Option<i64>| Candidate {
+        priority,
+        ..task(id)
+    };
+    let ranking = evaluate(
+        &[
+            with("none", None),
+            with("four", Some(4)),
+            with("one", Some(1)),
+            with("three", Some(3)),
+            with("two", Some(2)),
+        ],
+        NOW,
+        "UTC",
+        &FocusContext::default(),
+    );
+    assert_eq!(ids(&ranking), ["one", "two", "three", "four", "none"]);
+    assert_eq!(ranking.ranked[0].reason, "priority");
+    assert_eq!(ranking.ranked[4].reason, "order");
+}

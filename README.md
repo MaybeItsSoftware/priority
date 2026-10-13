@@ -93,7 +93,7 @@ something you already have to know.
 | `Return` | **Always** add a task, as in Checkvist — below the selection — on the board, below the card a selected subtask is drawn on — and at the foot of the day on Today. On a subtask's own card in another column than its parent's, the new task is a plain card of that column, at the foot of its plain cards, rather than another subtask of the parent |
 | `Space` / `x` | **Always** complete the task (or reopen it) — unless you are typing |
 | `Shift+Space` | Cancel the task, or reinstate it — it stopped mattering, rather than got done |
-| `1`–`4` / `0` | Set the task's priority at once, as `!1`–`!4` does when you type a task, or clear it — on the outline, the board, the matrix and Today. The number shows in a small box beside the title; one undo step each |
+| `1`–`4` / `0` | Set the task's priority at once (1 is the most urgent), as `!1`–`!4` does when you type a task, or clear it — on the outline, the board, the matrix and Today. The number shows in a small box beside the title; one undo step each |
 | `tc` | Hide or show completed tasks — a completed task stays put for three seconds and then leaves the list; `tc` shows them all again |
 | `gf` | Start a focus block on the task — on Today, queue it behind a running block |
 | `Cmd+Shift+Return` | Finish the running focus block — completes its task and asks how it went, as Done does. Works from anywhere in the window, inside a field too |
@@ -170,12 +170,12 @@ afterwards:
 | `30m`, `1h`, `1.5h`, `1h30m` | The estimate (up to a day) |
 | `@today`, `@tomorrow`, `@fri`, `@3d`, `@2w`, `@2026-10-02` | The day it is due — a weekday means the next one, today included. `^` works as well as `@`, as in Checkvist (`^fri`) |
 | `#work` | A tag — it has to start with a letter, so `#12` stays in the title |
-| `!1`–`!4` | The priority |
+| `!1`–`!4` | The priority — 1 is the most urgent, 4 the least |
 | `wait:Sam` | Waiting on Sam — filed in the Waiting on column straight away |
 
 `Write the release notes 45m #work @fri !1` files a task called "Write the
 release notes", estimated at 45 minutes, tagged `work`, due on Friday, at
-priority 1.
+priority 1 — the most urgent.
 
 The same endings work when you **edit a title in place**. In the outline,
 `F2`, `ee` or a click on the task already selected turns its title into a field
@@ -597,8 +597,8 @@ menu shows each action's key on the right, as bound.
 
 Today, Everything and the Inbox are the stock lists at the top of the sidebar.
 Under them sit your **filter lists**: saved, named rules asked of every task
-in every active list — "tagged work and due within 7 days", "priority at least
-3 and not blocked", "waiting on Sam". Selecting one shows Everything narrowed
+in every active list — "tagged work and due within 7 days", "priority 2 or more
+urgent and not blocked", "waiting on Sam". Selecting one shows Everything narrowed
 to its matches, on the board, the outline or the matrix. Its rules can test a
 tag, the due or start date, priority, the list or folder, whether it is
 planned for today, blocked or waiting, its estimate, its board column, or

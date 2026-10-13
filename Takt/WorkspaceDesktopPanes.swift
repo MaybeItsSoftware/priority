@@ -294,7 +294,7 @@ struct WorkspacePriorityBadge: View {
         .background(shape.fill(theme.well))
         .overlay(shape.strokeBorder(theme.border, lineWidth: theme.hairline))
         .fixedSize()
-        .help("Priority \(priority) — 1–4 sets it, 0 clears it")
+        .help("Priority \(priority) — 1 is the most urgent; 1–4 sets it, 0 clears it")
         .accessibilityLabel("Priority \(priority)")
     }
   }

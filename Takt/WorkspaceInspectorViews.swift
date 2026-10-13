@@ -468,7 +468,7 @@ struct LocalTaskInspector: View {
     return [ThemedPickerOption(current, value: current)] + iconOptions
   }
 
-  static let priorityNames = ["None", "Low", "Medium", "High", "Urgent"]
+  static var priorityNames: [String] { TaskEditorValues.priorityNames }
 
   private func binding<Value>(_ keyPath: WritableKeyPath<TaskEditorValues, Value>, fallback: Value) -> Binding<Value> {
     Binding(

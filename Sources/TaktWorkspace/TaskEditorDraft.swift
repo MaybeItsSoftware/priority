@@ -56,6 +56,11 @@ public struct TaskEditorSnapshot: Codable, Equatable, Sendable {
 
 /// Raw text stays intact until Save, including temporarily invalid input.
 public struct TaskEditorValues: Codable, Equatable, Sendable {
+  /// What each stored priority is called, indexed by the value: 0 is none,
+  /// then 1 (the most urgent) to 4 (the least) — the digit keys, `!1`–`!4`
+  /// and the next-up ranking all read it that way round.
+  public static let priorityNames = ["None", "Urgent", "High", "Medium", "Low"]
+
   public var title: String
   public var notes: String
   public var dueAt: Date?

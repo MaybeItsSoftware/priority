@@ -219,7 +219,10 @@ fn precedence(left: &Candidate, right: &Candidate, now_ms: i64, zone: Tz) -> Ord
             if task.start_at_ms.is_none() { 1.0 } else { 0.0 },
             if commitment { 0.0 } else { 1.0 },
             -(task.matrix_importance.unwrap_or(0) as f64),
-            -(task.priority.unwrap_or(0) as f64),
+            // 1 is the most urgent, 4 the least; no priority comes after all four.
+            task.priority
+                .filter(|p| (1..=4).contains(p))
+                .map_or(5.0, |p| p as f64),
             if days <= DUE_HORIZON_DAYS {
                 days
             } else {
@@ -306,7 +309,7 @@ fn score(task: Candidate, now_ms: i64, zone: Tz) -> Scored {
                 || task.matrix_urgency.unwrap_or(0) > 0
             {
                 "importance"
-            } else if task.priority.unwrap_or(0) > 0 {
+            } else if task.priority.is_some_and(|p| (1..=4).contains(&p)) {
                 "priority"
             } else if effective_deadline(&task, zone)
                 .is_some_and(|due| (due - now_ms) as f64 / 1000.0 <= DUE_HORIZON_DAYS * 86_400.0)

@@ -269,7 +269,7 @@ struct TaskInspector: View {
         selection: Binding(
           get: { inspector.values?.priority ?? 0 },
           set: { value in inspector.edit(model, immediate: true) { $0.priority = value } }),
-        tint: values.priority >= 3 ? theme.danger : theme.primary,
+        tint: (1...2).contains(values.priority) ? theme.danger : theme.primary,
         identifier: "inspector.priority")
       InspectorRow("Estimate") {
         HStack(spacing: theme.space.sm) {

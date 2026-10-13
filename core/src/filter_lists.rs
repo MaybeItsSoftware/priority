@@ -200,8 +200,8 @@ pub fn filter_rule_catalog() -> Vec<FilterFieldSpec> {
             "priority",
             "Priority",
             &[
-                ("at-least", "is at least", "number"),
-                ("at-most", "is at most", "number"),
+                ("at-least", "is at least as urgent as", "number"),
+                ("at-most", "is no more urgent than", "number"),
                 ("is", "is", "number"),
                 ("any", "is set", "none"),
                 ("none", "is not set", "none"),
@@ -952,14 +952,15 @@ pub(crate) fn holds(rule: &FilterRule, task: &Facts, context: &Context) -> Optio
                 .is_some_and(|days| local_day(at, context.zone) <= days_from(context.today, days))
         }),
         ("start", _) => compare_day(task.start_at_ms.map(|at| local_day(at, context.zone)))?,
+        // 1 is the most urgent, so "at least as urgent as 2" is 1 or 2.
         ("priority", "at-least") => task
             .priority
             .zip(number(value))
-            .is_some_and(|(p, n)| p >= n),
+            .is_some_and(|(p, n)| p <= n),
         ("priority", "at-most") => task
             .priority
             .zip(number(value))
-            .is_some_and(|(p, n)| p <= n),
+            .is_some_and(|(p, n)| p >= n),
         ("priority", "is") => task
             .priority
             .zip(number(value))

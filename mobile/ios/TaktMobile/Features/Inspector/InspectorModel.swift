@@ -296,7 +296,7 @@ final class InspectorModel {
     conditions.first { $0.id == id }?.name ?? "Missing condition"
   }
 
-  static let priorityNames = ["None", "Low", "Medium", "High", "Urgent"]
+  static var priorityNames: [String] { TaskEditorValues.priorityNames }
 
   /// A conflicting field's two values, written out for the banner.
   func display(_ field: TaskEditorField, in values: TaskEditorValues) -> String {

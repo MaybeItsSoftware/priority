@@ -665,6 +665,8 @@ fn workspace_tool_definitions() -> Vec<Value> {
          are whole numbers (due within 0 means due by today, overdue included); date is \
          yyyy-mm-dd; lists is comma-separated list ids and folder a folder id, both from \
          workspace_tree; column a kanban column id; text matches title or notes. \
+         Priority runs 1 (the most urgent) to 4, so priority at-least 2 is 1 or 2 \
+         and at-most 3 is 3 or 4. \
          Example: tagged work and due within a week is \
          [{{\"field\":\"tag\",\"op\":\"has\",\"value\":\"work\"}},\
          {{\"field\":\"due\",\"op\":\"within\",\"value\":\"7\"}}].",

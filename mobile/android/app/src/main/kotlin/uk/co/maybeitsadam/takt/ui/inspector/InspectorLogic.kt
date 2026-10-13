@@ -317,8 +317,8 @@ fun joinTags(tags: List<String>): String = tags.joinToString(", ")
 
 /**
  * Priority as the capture syntax writes it: `!1` (most urgent) to `!4`, or
- * none. Numbers rather than names, because the desktop inspector's names run
- * the other way from `!1` and the Android colours follow `!1`.
+ * none. 1 is the most urgent everywhere, as the colours say: raspberry, amber,
+ * azure, muted.
  */
 object PriorityLabels {
     val order: List<Int> = listOf(0, 1, 2, 3, 4)
