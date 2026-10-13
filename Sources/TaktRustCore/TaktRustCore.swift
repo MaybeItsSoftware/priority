@@ -13801,6 +13801,67 @@ public func FfiConverterTypeOutgoingChange_lower(_ value: OutgoingChange) -> Rus
 
 
 /**
+ * One outline row as a drop reads it: where it sits in the tree.
+ */
+public struct OutlineDropRow: Equatable, Hashable {
+    public var depth: UInt32
+    public var parentId: String?
+    public var listId: String
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(depth: UInt32, parentId: String?, listId: String) {
+        self.depth = depth
+        self.parentId = parentId
+        self.listId = listId
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension OutlineDropRow: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeOutlineDropRow: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> OutlineDropRow {
+        return
+            try OutlineDropRow(
+                depth: FfiConverterUInt32.read(from: &buf), 
+                parentId: FfiConverterOptionString.read(from: &buf), 
+                listId: FfiConverterString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: OutlineDropRow, into buf: inout [UInt8]) {
+        FfiConverterUInt32.write(value.depth, into: &buf)
+        FfiConverterOptionString.write(value.parentId, into: &buf)
+        FfiConverterString.write(value.listId, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeOutlineDropRow_lift(_ buf: RustBuffer) throws -> OutlineDropRow {
+    return try FfiConverterTypeOutlineDropRow.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeOutlineDropRow_lower(_ value: OutlineDropRow) -> RustBuffer {
+    return FfiConverterTypeOutlineDropRow.lower(value)
+}
+
+
+/**
  * A task in an outline, with how deep it sits. `TaskOutlineItem`.
  */
 public struct OutlineItem: Equatable, Hashable {
@@ -19087,6 +19148,100 @@ public func FfiConverterTypeMilestoneOccasion_lower(_ value: MilestoneOccasion) 
 
 
 /**
+ * How a drag in the outline lands in the tree. Every index is into the rows
+ * the caller passed, so no id crosses back.
+ */
+
+public enum OutlineDropPlan: Equatable, Hashable {
+    
+    /**
+     * Placed before its sibling `target`.
+     */
+    case before(target: UInt32
+    )
+    /**
+     * Moved after the last of its siblings.
+     */
+    case toEnd
+    /**
+     * Joins the children of `anchor`'s parent, in `anchor`'s list: before
+     * `anchor` when `before`, else at the end of those children.
+     */
+    case reparent(anchor: UInt32, before: Bool
+    )
+
+
+
+
+
+}
+
+#if compiler(>=6)
+extension OutlineDropPlan: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeOutlineDropPlan: FfiConverterRustBuffer {
+    typealias SwiftType = OutlineDropPlan
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> OutlineDropPlan {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .before(target: try FfiConverterUInt32.read(from: &buf)
+        )
+        
+        case 2: return .toEnd
+        
+        case 3: return .reparent(anchor: try FfiConverterUInt32.read(from: &buf), before: try FfiConverterBool.read(from: &buf)
+        )
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: OutlineDropPlan, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case let .before(target):
+            writeInt(&buf, Int32(1))
+            FfiConverterUInt32.write(target, into: &buf)
+            
+        
+        case .toEnd:
+            writeInt(&buf, Int32(2))
+        
+        
+        case let .reparent(anchor,before):
+            writeInt(&buf, Int32(3))
+            FfiConverterUInt32.write(anchor, into: &buf)
+            FfiConverterBool.write(before, into: &buf)
+            
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeOutlineDropPlan_lift(_ buf: RustBuffer) throws -> OutlineDropPlan {
+    return try FfiConverterTypeOutlineDropPlan.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeOutlineDropPlan_lower(_ value: OutlineDropPlan) -> RustBuffer {
+    return FfiConverterTypeOutlineDropPlan.lower(value)
+}
+
+
+
+/**
  * What a palette command asks for. Each case is one of Swift's `Command`
  * cases, which wraps it.
  */
@@ -21256,6 +21411,30 @@ fileprivate struct FfiConverterOptionTypeCoreThemeAppearance: FfiConverterRustBu
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterOptionTypeOutlineDropPlan: FfiConverterRustBuffer {
+    typealias SwiftType = OutlineDropPlan?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterTypeOutlineDropPlan.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterTypeOutlineDropPlan.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterOptionTypePeriodicCadence: FfiConverterRustBuffer {
     typealias SwiftType = PeriodicCadence?
 
@@ -22989,6 +23168,31 @@ fileprivate struct FfiConverterSequenceTypeOutgoingChange: FfiConverterRustBuffe
         seq.reserveCapacity(Int(len))
         for _ in 0 ..< len {
             seq.append(try FfiConverterTypeOutgoingChange.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterSequenceTypeOutlineDropRow: FfiConverterRustBuffer {
+    typealias SwiftType = [OutlineDropRow]
+
+    public static func write(_ value: [OutlineDropRow], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeOutlineDropRow.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [OutlineDropRow] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [OutlineDropRow]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeOutlineDropRow.read(from: &buf))
         }
         return seq
     }
@@ -25397,6 +25601,31 @@ public func focusDeferralDate(deferral: FocusDeferral, nowMs: Int64, zone: Strin
 })
 }
 /**
+ * Where a row dragged from `source` and dropped at `destination` lands.
+ *
+ * `destination` is the index in `rows`, before the move, that the row is
+ * inserted in front of (SwiftUI's `onMove` offset; Compose's reorder passes
+ * the same). The moved row takes its visible subtree with it, and a drop
+ * inside that block changes nothing. The drop is read from the rows
+ * directly above and below where it lands: in front of a sibling it goes
+ * before that sibling; after a sibling it goes before the next sibling at
+ * that level, or to the end; among another parent's children it joins that
+ * parent, before the row it was dropped in front of when that row is at
+ * least as deep as the one above, else at the end of the row above's
+ * siblings. Two rows are siblings when they share a parent and a list.
+ * This is the iPhone's rule, which Android follows too.
+ */
+public func outlineDropPlan(rows: [OutlineDropRow], source: UInt32, destination: UInt32) -> OutlineDropPlan?  {
+    return try!  FfiConverterOptionTypeOutlineDropPlan.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_outline_drop_plan(
+        FfiConverterSequenceTypeOutlineDropRow.lower(rows),
+        FfiConverterUInt32.lower(source),
+        FfiConverterUInt32.lower(destination),uniffiCallStatus
+    )
+})
+}
+/**
  * Vim's `f` and `F` over rows: the index of the next row (or previous, when
  * `forward` is false) whose title begins with `character`, reading a title
  * from its first letter or digit and ignoring case and accents. The walk
@@ -26366,6 +26595,9 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_func_focus_deferral_date() != 35466) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_outline_drop_plan() != 6755) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_func_vim_find() != 17940) {

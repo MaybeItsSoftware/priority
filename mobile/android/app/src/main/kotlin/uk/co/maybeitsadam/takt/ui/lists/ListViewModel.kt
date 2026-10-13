@@ -249,7 +249,17 @@ class ListViewModel(
         when (val drop = OutlineShaping.planDrop(rows, from, to)) {
             is OutlineDrop.Before -> undo.perform { it.moveTaskBefore(moved.id, drop.targetId) }
             OutlineDrop.ToEnd -> undo.perform { it.moveTaskWithinSiblings(moved.id, Int.MAX_VALUE / 2) }
-            null -> if (from != to) undo.say("Drag among its siblings; indent or outdent to change its parent")
+            is OutlineDrop.Reparent -> {
+                // A list's top level is its visible root's children.
+                val parent = drop.parentId ?: snapshot.value?.data?.let { d ->
+                    OutlineShaping.sections(d).firstOrNull { it.list.id == drop.listId }?.rootParentId
+                }
+                undo.perform { repo ->
+                    repo.moveTask(moved.id, drop.listId, parent)
+                    drop.beforeId?.let { repo.moveTaskBefore(moved.id, it) }
+                }
+            }
+            null -> Unit
         }
     }
 

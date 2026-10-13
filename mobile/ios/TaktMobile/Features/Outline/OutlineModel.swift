@@ -112,36 +112,19 @@ enum OutlineDrop: Equatable {
 
 enum OutlineDropPlanner {
   /// `destination` is SwiftUI's `onMove` offset: the index in `rows`, before
-  /// the move, that the row is inserted in front of.
+  /// the move, that the row is inserted in front of. The rule is the core's,
+  /// through `OutlineDropRule`.
   static func plan(rows: [OutlineRow], source: Int, destination: Int) -> OutlineDrop? {
-    guard rows.indices.contains(source) else { return nil }
-    let moved = rows[source]
-    // The moved row takes its visible subtree with it.
-    var end = source + 1
-    while end < rows.count, rows[end].depth > moved.depth { end += 1 }
-    if destination >= source && destination <= end { return nil }
-    var remaining = rows
-    remaining.removeSubrange(source..<end)
-    let adjusted = destination > source ? destination - (end - source) : destination
-    let below = remaining.indices.contains(adjusted) ? remaining[adjusted] : nil
-    let above = adjusted > 0 ? remaining[adjusted - 1] : nil
-
-    if let below, below.parentID == moved.parentID { return .before(below.id) }
-    if let above, above.parentID == moved.parentID {
-      // After the last of its siblings, or after one whose children follow.
-      let next = remaining[adjusted...].first { $0.depth <= above.depth }
-      if let next, next.parentID == moved.parentID { return .before(next.id) }
-      return .toEnd
+    let plan = OutlineDropRule.plan(
+      rows: rows.map { OutlineDropRule.Row(depth: $0.depth, parentID: $0.parentID, listID: $0.listID) },
+      source: source, destination: destination)
+    switch plan {
+    case nil: return nil
+    case .before(let target): return .before(rows[target].id)
+    case .toEnd: return .toEnd
+    case .reparent(let anchor, let before):
+      return .reparent(parentID: rows[anchor].parentID, before: before ? rows[anchor].id : nil)
     }
-    // Into another parent's children: the parent of the row it was dropped
-    // in front of, or else of the row above.
-    if let below, above == nil || below.depth >= above!.depth {
-      return .reparent(parentID: below.parentID, before: below.id)
-    }
-    if let above {
-      return .reparent(parentID: above.parentID, before: nil)
-    }
-    return nil
   }
 }
 

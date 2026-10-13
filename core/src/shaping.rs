@@ -300,5 +300,109 @@ pub fn vim_find(
         .find(|index| initials[*index as usize].as_deref() == Some(target.as_str()))
 }
 
+/// One outline row as a drop reads it: where it sits in the tree.
+#[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
+pub struct OutlineDropRow {
+    pub depth: u32,
+    pub parent_id: Option<String>,
+    pub list_id: String,
+}
+
+/// How a drag in the outline lands in the tree. Every index is into the rows
+/// the caller passed, so no id crosses back.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, uniffi::Enum)]
+pub enum OutlineDropPlan {
+    /// Placed before its sibling `target`.
+    Before { target: u32 },
+    /// Moved after the last of its siblings.
+    ToEnd,
+    /// Joins the children of `anchor`'s parent, in `anchor`'s list: before
+    /// `anchor` when `before`, else at the end of those children.
+    Reparent { anchor: u32, before: bool },
+}
+
+/// Where a row dragged from `source` and dropped at `destination` lands.
+///
+/// `destination` is the index in `rows`, before the move, that the row is
+/// inserted in front of (SwiftUI's `onMove` offset; Compose's reorder passes
+/// the same). The moved row takes its visible subtree with it, and a drop
+/// inside that block changes nothing. The drop is read from the rows
+/// directly above and below where it lands: in front of a sibling it goes
+/// before that sibling; after a sibling it goes before the next sibling at
+/// that level, or to the end; among another parent's children it joins that
+/// parent, before the row it was dropped in front of when that row is at
+/// least as deep as the one above, else at the end of the row above's
+/// siblings. Two rows are siblings when they share a parent and a list.
+/// This is the iPhone's rule, which Android follows too.
+#[uniffi::export]
+pub fn outline_drop_plan(
+    rows: Vec<OutlineDropRow>,
+    source: u32,
+    destination: u32,
+) -> Option<OutlineDropPlan> {
+    let source = source as usize;
+    let destination = destination as usize;
+    let moved = rows.get(source)?;
+    let mut end = source + 1;
+    while end < rows.len() && rows[end].depth > moved.depth {
+        end += 1;
+    }
+    if destination >= source && destination <= end {
+        return None;
+    }
+    let remaining: Vec<usize> = (0..source).chain(end..rows.len()).collect();
+    let adjusted = if destination > source {
+        destination - (end - source)
+    } else {
+        destination
+    };
+    let sibling = |index: usize| {
+        rows[index].parent_id == moved.parent_id && rows[index].list_id == moved.list_id
+    };
+    let below = remaining.get(adjusted).copied();
+    let above = adjusted
+        .checked_sub(1)
+        .and_then(|index| remaining.get(index).copied());
+
+    if let Some(below) = below.filter(|&index| sibling(index)) {
+        return Some(OutlineDropPlan::Before {
+            target: below as u32,
+        });
+    }
+    if let Some(above) = above.filter(|&index| sibling(index)) {
+        // After the last of its siblings, or after one whose children follow.
+        let next = remaining
+            .iter()
+            .skip(adjusted)
+            .copied()
+            .find(|&index| rows[index].depth <= rows[above].depth);
+        return Some(match next.filter(|&index| sibling(index)) {
+            Some(next) => OutlineDropPlan::Before {
+                target: next as u32,
+            },
+            None => OutlineDropPlan::ToEnd,
+        });
+    }
+    // Into another parent's children: the parent of the row it was dropped in
+    // front of, or else of the row above.
+    match (below, above) {
+        (Some(below), None) => Some(OutlineDropPlan::Reparent {
+            anchor: below as u32,
+            before: true,
+        }),
+        (Some(below), Some(above)) if rows[below].depth >= rows[above].depth => {
+            Some(OutlineDropPlan::Reparent {
+                anchor: below as u32,
+                before: true,
+            })
+        }
+        (_, Some(above)) => Some(OutlineDropPlan::Reparent {
+            anchor: above as u32,
+            before: false,
+        }),
+        (None, None) => None,
+    }
+}
+
 #[cfg(test)]
 mod tests;

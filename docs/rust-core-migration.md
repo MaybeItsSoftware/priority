@@ -568,7 +568,7 @@ covered the old copies pass against it.
     | `FocusDeferral` (in an hour, this afternoon, tomorrow, next week) | iOS `FocusModel`, Kotlin `FocusModel.kt` | iOS + Kotlin | move |
     | `FocusContextSelection` (condition toggle, restore) | `TaktCore`, iOS `FocusModel`, Kotlin `FocusViewModel` | all three | move |
     | Task editor: estimate parsing, three-way reconcile, save validation | `TaktWorkspace/TaskEditorDraft`, Kotlin `TaskEditorDraft.kt`, `InspectorLogic.InspectorValidation` | Swift + Kotlin | move |
-    | Outline drop planning (sibling-only reorder, no-op detection) | iOS `OutlineDropPlanner`, Kotlin `OutlineShaping.planDrop` | iOS + Kotlin | native, a decision owed: the two are different rules, not one written twice. The iPhone reads the drop from the rows directly above and below and reparents into another parent's children; Android looks past deeper rows to the nearest sibling, only reorders, and refuses a drop that changes nothing. One core function would mean choosing one behaviour for both phones |
+    | Outline drop planning (sibling-only reorder, no-op detection) | iOS `OutlineDropPlanner`, Kotlin `OutlineShaping.planDrop` | iOS + Kotlin | **done 2026-10-13**: decided 2026-10-12 for the iPhone's rule; `outline_drop_plan` in `shaping.rs`, see "The outline drop" below |
     | Kotlin outline walk and sidebar index fallbacks (`WorkspaceListTree.outline`, `WorkspaceSidebarIndex.build`, `ListsTreeShaping.openCounts`) | Kotlin, beside the core's `outline`, `sidebar_index_with_open_counts` | Kotlin + core | native as test oracles, as `WorkspaceListTree` is on the Mac (step 9) |
     | `TaskOutlineFolding`, `MatrixGeometry`, `RootDueBucket` | Swift, Kotlin | both | native: per-point maths and fold state held only in UI memory (step 9) |
     | Date and duration text (`Format`, `WaitingFollowUp.label`, `FocusPoints.formatted`, `SyncStatusText`) | iOS, Kotlin, Mac | all three | native: locale presentation |
@@ -673,6 +673,29 @@ covered the old copies pass against it.
     canonical decomposition, where Foundation folded them) are in
     `shaping.rs`; `CursorStepping` and `VimFind` wrap them, one call per
     key press, and their suites run unchanged.
+
+    **The outline drop (done 2026-10-13).** Decided 2026-10-12: the iPhone's
+    rule is the rule for both phones. `outline_drop_plan` in `shaping.rs`
+    takes each drawn row's depth, parent and list, and the drag's source and
+    destination, and answers with row indices: before a sibling, to the end of
+    its siblings, or into the children of the parent of an anchor row, before
+    that row or at the end. It reads the drop from the rows directly above and
+    below where it lands; a drop inside the carried subtree changes nothing.
+    Siblings share a parent and a list, which the iPhone never needed (its
+    drags are within one tree) and which keeps Android's Everything from
+    putting a task before another list's root as though it were a sibling.
+    `OutlineDropRule` in `TaktCore` wraps it, and the iPhone's
+    `OutlineDropPlanner` maps the indices back to ids; Android's
+    `OutlineShaping.planDrop` calls it directly and its `ListViewModel` gained
+    the reparent (a move to the anchor's list and parent, then a place before
+    the anchor). One call per drop. The iPhone's `OutlineDropPlannerTests` run
+    unchanged against it and are ported to `shaping/tests.rs`. What changed is
+    Android's: a drop among another parent's children (`b` in front of `a2` in
+    `ListsShapingTest`) now joins that parent, before `a2`, where it was
+    refused with "Drag among its siblings"; more generally Android no longer
+    looks past deeper rows to the nearest sibling, so a drop with deeper rows
+    on both sides joins their parent, where it was refused or kept at its own
+    level.
 
     **The Checkvist stack, deleted (done 2026-10-13).** Decided 2026-10-12:
     the Checkvist-era task stack is deleted rather than ported, because

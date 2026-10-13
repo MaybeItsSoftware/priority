@@ -176,8 +176,9 @@ class ListsShapingTest {
         assertEquals(OutlineDrop.Before("a1"), OutlineShaping.planDrop(rows, 2, 1))
         // Where it already is.
         assertNull(OutlineShaping.planDrop(rows, 1, 2))
-        // Into another parent's children.
-        assertNull(OutlineShaping.planDrop(rows, 4, 2))
+        // Into another parent's children: b joins a, before a2 (the iPhone's
+        // rule, now the core's; this used to be refused).
+        assertEquals(OutlineDrop.Reparent("home", "a", "a2"), OutlineShaping.planDrop(rows, 4, 2))
     }
 
     @Test fun unplacedCardsGoToTheFirstColumnAndSubtasksFollowTheirParent() {

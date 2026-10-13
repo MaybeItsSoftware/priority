@@ -279,3 +279,151 @@ fn find_with_nothing_to_find_is_nothing() {
     assert_eq!(vim_find(Vec::new(), None, "a".into(), true), None);
     assert_eq!(vim_find(titles(), None, "ab".into(), true), None);
 }
+
+// Outline drops: ported from the iPhone's `OutlineDropPlannerTests`, the
+// rule's oracle, and Android's `ListsShapingTest` cases on the same tree.
+
+fn drop_row(depth: u32, parent: Option<&str>) -> OutlineDropRow {
+    OutlineDropRow {
+        depth,
+        parent_id: parent.map(str::to_string),
+        list_id: "L".to_string(),
+    }
+}
+
+fn flat(count: usize) -> Vec<OutlineDropRow> {
+    (0..count).map(|_| drop_row(0, None)).collect()
+}
+
+/// a, a1, a2, a2x, b: a2x is a2's child.
+fn nested() -> Vec<OutlineDropRow> {
+    vec![
+        drop_row(0, None),
+        drop_row(1, Some("a")),
+        drop_row(1, Some("a")),
+        drop_row(2, Some("a2")),
+        drop_row(0, None),
+    ]
+}
+
+#[test]
+fn dropping_before_a_sibling_places_it_before_that_sibling() {
+    assert_eq!(
+        outline_drop_plan(flat(3), 2, 0),
+        Some(OutlineDropPlan::Before { target: 0 })
+    );
+}
+
+#[test]
+fn dropping_after_the_last_sibling_moves_it_to_the_end() {
+    assert_eq!(
+        outline_drop_plan(flat(3), 0, 3),
+        Some(OutlineDropPlan::ToEnd)
+    );
+}
+
+#[test]
+fn dropping_among_another_parents_children_reparents() {
+    // a, a1, a2, b: b dropped in front of a2 joins a, before a2.
+    let rows = vec![
+        drop_row(0, None),
+        drop_row(1, Some("a")),
+        drop_row(1, Some("a")),
+        drop_row(0, None),
+    ];
+    assert_eq!(
+        outline_drop_plan(rows, 3, 2),
+        Some(OutlineDropPlan::Reparent {
+            anchor: 2,
+            before: true
+        })
+    );
+}
+
+#[test]
+fn dropping_a_row_onto_itself_does_nothing() {
+    assert_eq!(outline_drop_plan(flat(2), 0, 1), None);
+    // Nor anywhere inside the subtree it carries.
+    assert_eq!(outline_drop_plan(nested(), 2, 4), None);
+    assert_eq!(outline_drop_plan(nested(), 1, 2), None);
+}
+
+#[test]
+fn a_parent_moves_with_its_subtree() {
+    assert_eq!(
+        outline_drop_plan(nested(), 4, 0),
+        Some(OutlineDropPlan::Before { target: 0 })
+    );
+    assert_eq!(
+        outline_drop_plan(nested(), 0, 5),
+        Some(OutlineDropPlan::ToEnd)
+    );
+    assert_eq!(
+        outline_drop_plan(nested(), 2, 1),
+        Some(OutlineDropPlan::Before { target: 1 })
+    );
+}
+
+#[test]
+fn after_a_sibling_whose_children_follow_it_goes_before_the_next_sibling() {
+    // a, a1, a2, a2x, b, c: c dropped straight after a, in front of a's
+    // first child, follows its sibling a, so it goes before a's next
+    // sibling, b, rather than in among a's children.
+    let mut rows = nested();
+    rows.push(drop_row(0, None));
+    assert_eq!(
+        outline_drop_plan(rows.clone(), 5, 1),
+        Some(OutlineDropPlan::Before { target: 4 })
+    );
+    assert_eq!(
+        outline_drop_plan(rows, 5, 4),
+        Some(OutlineDropPlan::Before { target: 4 })
+    );
+}
+
+#[test]
+fn a_drop_below_a_deeper_row_joins_the_row_aboves_parent() {
+    // a1 (a's) dropped after a2x and before b: b is not as deep as a2x, so it
+    // joins a2x's parent, a2, at the end.
+    assert_eq!(
+        outline_drop_plan(nested(), 1, 4),
+        Some(OutlineDropPlan::Reparent {
+            anchor: 3,
+            before: false
+        })
+    );
+}
+
+#[test]
+fn rows_of_another_list_are_not_siblings() {
+    let rows = vec![
+        drop_row(0, None),
+        OutlineDropRow {
+            depth: 0,
+            parent_id: None,
+            list_id: "M".to_string(),
+        },
+        drop_row(0, None),
+    ];
+    // Dropped between its sibling and the other list's root, it follows its
+    // sibling: the end of its own level, not a place in the other list.
+    assert_eq!(
+        outline_drop_plan(rows.clone(), 2, 1),
+        Some(OutlineDropPlan::ToEnd)
+    );
+    // In front of the other list's root with nothing above, it joins that
+    // list's level, before that root: X, a, c with a dropped first.
+    let rows = vec![rows[1].clone(), rows[0].clone(), rows[2].clone()];
+    assert_eq!(
+        outline_drop_plan(rows, 1, 0),
+        Some(OutlineDropPlan::Reparent {
+            anchor: 0,
+            before: true
+        })
+    );
+}
+
+#[test]
+fn out_of_range_source_plans_nothing() {
+    assert_eq!(outline_drop_plan(flat(2), 5, 0), None);
+}

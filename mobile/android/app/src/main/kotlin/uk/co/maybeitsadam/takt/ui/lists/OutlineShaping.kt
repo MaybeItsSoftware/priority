@@ -7,6 +7,9 @@ import java.time.ZoneId
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
+import uniffi.takt_core.OutlineDropPlan
+import uniffi.takt_core.OutlineDropRow
+import uniffi.takt_core.outlineDropPlan
 import uk.co.maybeitsadam.takt.core.BlockedSection
 import uk.co.maybeitsadam.takt.core.NextUpSelector
 import uk.co.maybeitsadam.takt.core.TaskList
@@ -100,10 +103,15 @@ data class OutlineShape(
     }
 }
 
-/** How a drag in the outline lands: before a sibling, or after the last of them. */
+/**
+ * How a drag in the outline lands: before a sibling, after the last of them,
+ * or into another parent's children ([parentId] null for a list's top level),
+ * before [beforeId] or at the end.
+ */
 sealed interface OutlineDrop {
     data class Before(val targetId: String) : OutlineDrop
     data object ToEnd : OutlineDrop
+    data class Reparent(val listId: String, val parentId: String?, val beforeId: String?) : OutlineDrop
 }
 
 /** The pure half of the outline. Tested on the JVM. */
@@ -253,31 +261,23 @@ object OutlineShaping {
 
     /**
      * Where a drag of `rows[from]` (with its drawn subtree) dropped in front of
-     * `rows[to]` (or at the end when `to == rows.size`) lands among its
-     * siblings. Null when it would not move, or would leave its parent —
-     * changing parent is indent/outdent's job.
+     * `rows[to]` (or at the end when `to == rows.size`) lands, read from the
+     * rows directly above and below: the Rust core's `outline_drop_plan`, the
+     * iPhone's rule. Null when it would not move.
      */
     fun planDrop(rows: List<OutlineRow>, from: Int, to: Int): OutlineDrop? {
-        if (from !in rows.indices) return null
-        val moved = rows[from]
-        var end = from + 1
-        while (end < rows.size && rows[end].depth > moved.depth) end++
-        if (to in from..end) return null
-        val remaining = rows.subList(0, from) + rows.subList(end, rows.size)
-        val adjusted = (if (to > from) to - (end - from) else to).coerceIn(0, remaining.size)
-        fun sibling(row: OutlineRow) = row.listId == moved.listId && row.parentId == moved.parentId
-        val next = remaining.subList(adjusted, remaining.size).firstOrNull { it.depth <= moved.depth }
-        val prev = remaining.subList(0, adjusted).lastOrNull { it.depth <= moved.depth }
-        val drop = when {
-            next != null && sibling(next) -> OutlineDrop.Before(next.id)
-            prev != null && sibling(prev) -> OutlineDrop.ToEnd
-            else -> return null
-        }
-        // Dropping it where it already is.
-        val originalNext = rows.subList(end, rows.size).firstOrNull { it.depth <= moved.depth }
-        return when (drop) {
-            is OutlineDrop.Before -> drop.takeIf { originalNext?.id != drop.targetId }
-            OutlineDrop.ToEnd -> drop.takeIf { originalNext != null && sibling(originalNext) }
+        if (from < 0 || to < 0) return null
+        val plan = outlineDropPlan(
+            rows.map { OutlineDropRow(it.depth.coerceAtLeast(0).toUInt(), it.parentId, it.listId) },
+            from.toUInt(),
+            to.toUInt(),
+        ) ?: return null
+        return when (plan) {
+            is OutlineDropPlan.Before -> OutlineDrop.Before(rows[plan.target.toInt()].id)
+            is OutlineDropPlan.ToEnd -> OutlineDrop.ToEnd
+            is OutlineDropPlan.Reparent -> rows[plan.anchor.toInt()].let { anchor ->
+                OutlineDrop.Reparent(anchor.listId, anchor.parentId, anchor.id.takeIf { plan.before })
+            }
         }
     }
 }

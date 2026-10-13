@@ -913,6 +913,8 @@ internal object IntegrityCheckingUniffiLib {
     ): Int
     external fun uniffi_takt_core_checksum_func_focus_deferral_date(
     ): Int
+    external fun uniffi_takt_core_checksum_func_outline_drop_plan(
+    ): Int
     external fun uniffi_takt_core_checksum_func_vim_find(
     ): Int
     external fun uniffi_takt_core_checksum_func_sidebar_list_ids_in_folder(
@@ -2075,6 +2077,8 @@ internal object UniffiLib {
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_func_focus_deferral_date(`deferral`: RustBuffer.ByValue,`nowMs`: Long,`zone`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): Long
+    external fun uniffi_takt_core_fn_func_outline_drop_plan(`rows`: RustBuffer.ByValue,`source`: Int,`destination`: Int,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_func_vim_find(`titles`: RustBuffer.ByValue,`current`: RustBuffer.ByValue,`character`: RustBuffer.ByValue,`forward`: Byte,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_func_sidebar_list_ids_in_folder(`folderId`: RustBuffer.ByValue,`folders`: RustBuffer.ByValue,`lists`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
@@ -2649,6 +2653,9 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_func_focus_deferral_date() and 0xFFFF) != 35466) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_outline_drop_plan() and 0xFFFF) != 6755) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_func_vim_find() and 0xFFFF) != 17940) {
@@ -16311,6 +16318,52 @@ public object FfiConverterTypeOutgoingChange: FfiConverterRustBuffer<OutgoingCha
 
 
 /**
+ * One outline row as a drop reads it: where it sits in the tree.
+ */
+data class OutlineDropRow (
+    var `depth`: kotlin.UInt
+    , 
+    var `parentId`: kotlin.String?
+    , 
+    var `listId`: kotlin.String
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeOutlineDropRow: FfiConverterRustBuffer<OutlineDropRow> {
+    override fun read(buf: ByteBuffer): OutlineDropRow {
+        return OutlineDropRow(
+            FfiConverterUInt.read(buf),
+            FfiConverterOptionalString.read(buf),
+            FfiConverterString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: OutlineDropRow) = (
+            FfiConverterUInt.allocationSize(value.`depth`) +
+            FfiConverterOptionalString.allocationSize(value.`parentId`) +
+            FfiConverterString.allocationSize(value.`listId`)
+    )
+
+    override fun write(value: OutlineDropRow, buf: ByteBuffer) {
+            FfiConverterUInt.write(value.`depth`, buf)
+            FfiConverterOptionalString.write(value.`parentId`, buf)
+            FfiConverterString.write(value.`listId`, buf)
+    }
+}
+
+
+
+/**
  * A task in an outline, with how deep it sits. `TaskOutlineItem`.
  */
 data class OutlineItem (
@@ -21308,6 +21361,121 @@ public object FfiConverterTypeMilestoneOccasion : FfiConverterRustBuffer<Milesto
 
 
 /**
+ * How a drag in the outline lands in the tree. Every index is into the rows
+ * the caller passed, so no id crosses back.
+ */
+sealed class OutlineDropPlan {
+    
+    /**
+     * Placed before its sibling `target`.
+     */
+    data class Before(
+        val `target`: kotlin.UInt) : OutlineDropPlan()
+        
+    {
+        
+
+        companion object
+    }
+    
+    /**
+     * Moved after the last of its siblings.
+     */
+    object ToEnd : OutlineDropPlan()
+    
+    
+    /**
+     * Joins the children of `anchor`'s parent, in `anchor`'s list: before
+     * `anchor` when `before`, else at the end of those children.
+     */
+    data class Reparent(
+        val `anchor`: kotlin.UInt, 
+        val `before`: kotlin.Boolean) : OutlineDropPlan()
+        
+    {
+        
+
+        companion object
+    }
+    
+
+    
+
+    
+    
+
+
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeOutlineDropPlan : FfiConverterRustBuffer<OutlineDropPlan>{
+    override fun read(buf: ByteBuffer): OutlineDropPlan {
+        return when(buf.getInt()) {
+            1 -> OutlineDropPlan.Before(
+                FfiConverterUInt.read(buf),
+                )
+            2 -> OutlineDropPlan.ToEnd
+            3 -> OutlineDropPlan.Reparent(
+                FfiConverterUInt.read(buf),
+                FfiConverterBoolean.read(buf),
+                )
+            else -> throw RuntimeException("invalid enum value, something is very wrong!!")
+        }
+    }
+
+    override fun allocationSize(value: OutlineDropPlan): ULong = when(value) {
+        is OutlineDropPlan.Before -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterUInt.allocationSize(value.`target`)
+            )
+        }
+        is OutlineDropPlan.ToEnd -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is OutlineDropPlan.Reparent -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterUInt.allocationSize(value.`anchor`)
+                + FfiConverterBoolean.allocationSize(value.`before`)
+            )
+        }
+    }
+
+    override fun write(value: OutlineDropPlan, buf: ByteBuffer) {
+        when(value) {
+            is OutlineDropPlan.Before -> {
+                buf.putInt(1)
+                FfiConverterUInt.write(value.`target`, buf)
+                Unit
+            }
+            is OutlineDropPlan.ToEnd -> {
+                buf.putInt(2)
+                Unit
+            }
+            is OutlineDropPlan.Reparent -> {
+                buf.putInt(3)
+                FfiConverterUInt.write(value.`anchor`, buf)
+                FfiConverterBoolean.write(value.`before`, buf)
+                Unit
+            }
+        }.let { /* this makes the `when` an expression, which ensures it is exhaustive */ }
+    }
+}
+
+
+
+
+
+/**
  * What a palette command asks for. Each case is one of Swift's `Command`
  * cases, which wraps it.
  */
@@ -24231,6 +24399,38 @@ public object FfiConverterOptionalTypeCoreThemeAppearance: FfiConverterRustBuffe
 /**
  * @suppress
  */
+public object FfiConverterOptionalTypeOutlineDropPlan: FfiConverterRustBuffer<OutlineDropPlan?> {
+    override fun read(buf: ByteBuffer): OutlineDropPlan? {
+        if (buf.get().toInt() == 0) {
+            return null
+        }
+        return FfiConverterTypeOutlineDropPlan.read(buf)
+    }
+
+    override fun allocationSize(value: OutlineDropPlan?): ULong {
+        if (value == null) {
+            return 1UL
+        } else {
+            return 1UL + FfiConverterTypeOutlineDropPlan.allocationSize(value)
+        }
+    }
+
+    override fun write(value: OutlineDropPlan?, buf: ByteBuffer) {
+        if (value == null) {
+            buf.put(0)
+        } else {
+            buf.put(1)
+            FfiConverterTypeOutlineDropPlan.write(value, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
 public object FfiConverterOptionalTypePeriodicCadence: FfiConverterRustBuffer<PeriodicCadence?> {
     override fun read(buf: ByteBuffer): PeriodicCadence? {
         if (buf.get().toInt() == 0) {
@@ -26217,6 +26417,34 @@ public object FfiConverterSequenceTypeOutgoingChange: FfiConverterRustBuffer<Lis
         buf.putInt(value.size)
         value.iterator().forEach {
             FfiConverterTypeOutgoingChange.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceTypeOutlineDropRow: FfiConverterRustBuffer<List<OutlineDropRow>> {
+    override fun read(buf: ByteBuffer): List<OutlineDropRow> {
+        val len = buf.getInt()
+        return List<OutlineDropRow>(len) {
+            FfiConverterTypeOutlineDropRow.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<OutlineDropRow>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeOutlineDropRow.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<OutlineDropRow>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeOutlineDropRow.write(it, buf)
         }
     }
 }
@@ -29125,6 +29353,34 @@ public object FfiConverterMapStringTypeSyncValue: FfiConverterRustBuffer<Map<kot
         FfiConverterTypeFocusDeferral.lower(`deferral`),
         FfiConverterLong.lower(`nowMs`),
         FfiConverterString.lower(`zone`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * Where a row dragged from `source` and dropped at `destination` lands.
+         *
+         * `destination` is the index in `rows`, before the move, that the row is
+         * inserted in front of (SwiftUI's `onMove` offset; Compose's reorder passes
+         * the same). The moved row takes its visible subtree with it, and a drop
+         * inside that block changes nothing. The drop is read from the rows
+         * directly above and below where it lands: in front of a sibling it goes
+         * before that sibling; after a sibling it goes before the next sibling at
+         * that level, or to the end; among another parent's children it joins that
+         * parent, before the row it was dropped in front of when that row is at
+         * least as deep as the one above, else at the end of the row above's
+         * siblings. Two rows are siblings when they share a parent and a list.
+         * This is the iPhone's rule, which Android follows too.
+         */ fun `outlineDropPlan`(`rows`: List<OutlineDropRow>, `source`: kotlin.UInt, `destination`: kotlin.UInt): OutlineDropPlan? {
+            return FfiConverterOptionalTypeOutlineDropPlan.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_outline_drop_plan(
+    
+        
+        FfiConverterSequenceTypeOutlineDropRow.lower(`rows`),
+        FfiConverterUInt.lower(`source`),
+        FfiConverterUInt.lower(`destination`),_status)
 }
     )
     }
