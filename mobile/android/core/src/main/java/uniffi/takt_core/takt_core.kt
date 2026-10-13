@@ -1059,6 +1059,12 @@ internal object IntegrityCheckingUniffiLib {
     ): Int
     external fun uniffi_takt_core_checksum_method_syncpull_row_count(
     ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_agent_instructions(
+    ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_import_agent_instructions(
+    ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_set_agent_instructions(
+    ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_board_columns(
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_delete_board_column(
@@ -1499,6 +1505,12 @@ internal object UniffiLib {
     ): Unit
     external fun uniffi_takt_core_fn_constructor_coreworkspace_open(`path`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): Long
+    external fun uniffi_takt_core_fn_method_coreworkspace_agent_instructions(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_method_coreworkspace_import_agent_instructions(`ptr`: Long,`seeds`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Int
+    external fun uniffi_takt_core_fn_method_coreworkspace_set_agent_instructions(`ptr`: Long,`kind`: RustBuffer.ByValue,`id`: RustBuffer.ByValue,`text`: RustBuffer.ByValue,`append`: Byte,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_method_coreworkspace_board_columns(`ptr`: Long,`key`: RustBuffer.ByValue,`listIds`: RustBuffer.ByValue,`nowMs`: Long,`zone`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_method_coreworkspace_delete_board_column(`ptr`: Long,`key`: RustBuffer.ByValue,`listIds`: RustBuffer.ByValue,`columnId`: RustBuffer.ByValue,`toColumn`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
@@ -2920,6 +2932,15 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_method_syncpull_row_count() and 0xFFFF) != 50030) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_agent_instructions() and 0xFFFF) != 63569) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_import_agent_instructions() and 0xFFFF) != 16998) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_set_agent_instructions() and 0xFFFF) != 65220) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_board_columns() and 0xFFFF) != 666) {
@@ -4455,6 +4476,23 @@ public object FfiConverterTypeCoreDayLog: FfiConverter<CoreDayLog, Long> {
 public interface CoreWorkspaceInterface {
     
     /**
+     * Every scope with instructions; see [`agent_instructions`].
+     */
+    fun `agentInstructions`(): List<AgentInstruction>
+    
+    /**
+     * Brings in older instructions, outside the journal; see
+     * [`import_agent_instructions`].
+     */
+    fun `importAgentInstructions`(`seeds`: List<AgentInstructionSeed>, `nowMs`: kotlin.Long): kotlin.UInt
+    
+    /**
+     * Sets a scope's instructions as one "Edit Agent Instructions" step and
+     * returns the text it holds now.
+     */
+    fun `setAgentInstructions`(`kind`: AgentInstructionKind, `id`: kotlin.String?, `text`: kotlin.String, `append`: kotlin.Boolean, `nowMs`: kotlin.Long): kotlin.String
+    
+    /**
      * Board `key`'s columns over `list_ids`, and where its tasks are drawn.
      */
     fun `boardColumns`(`key`: kotlin.String, `listIds`: List<kotlin.String>, `nowMs`: kotlin.Long, `zone`: kotlin.String): BoardColumns
@@ -5535,6 +5573,66 @@ open class CoreWorkspace: Disposable, AutoCloseable, CoreWorkspaceInterface
             UniffiLib.uniffi_takt_core_fn_clone_coreworkspace(handle, status)
         }
     }
+
+    
+    /**
+     * Every scope with instructions; see [`agent_instructions`].
+     */
+    @Throws(CoreException::class)override fun `agentInstructions`(): List<AgentInstruction> {
+            return FfiConverterSequenceTypeAgentInstruction.lift(
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_agent_instructions(
+        it,
+        _status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * Brings in older instructions, outside the journal; see
+     * [`import_agent_instructions`].
+     */
+    @Throws(CoreException::class)override fun `importAgentInstructions`(`seeds`: List<AgentInstructionSeed>, `nowMs`: kotlin.Long): kotlin.UInt {
+            return FfiConverterUInt.lift(
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_import_agent_instructions(
+        it,
+        
+        FfiConverterSequenceTypeAgentInstructionSeed.lower(`seeds`),
+        FfiConverterLong.lower(`nowMs`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * Sets a scope's instructions as one "Edit Agent Instructions" step and
+     * returns the text it holds now.
+     */
+    @Throws(CoreException::class)override fun `setAgentInstructions`(`kind`: AgentInstructionKind, `id`: kotlin.String?, `text`: kotlin.String, `append`: kotlin.Boolean, `nowMs`: kotlin.Long): kotlin.String {
+            return FfiConverterString.lift(
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_set_agent_instructions(
+        it,
+        
+        FfiConverterTypeAgentInstructionKind.lower(`kind`),
+        FfiConverterOptionalString.lower(`id`),
+        FfiConverterString.lower(`text`),
+        FfiConverterBoolean.lower(`append`),
+        FfiConverterLong.lower(`nowMs`),_status)
+}
+    }
+    )
+    }
+    
 
     
     /**
@@ -9430,6 +9528,114 @@ public object FfiConverterTypeSyncPull: FfiConverter<SyncPull, Long> {
 
     override fun write(value: SyncPull, buf: ByteBuffer) {
         buf.putLong(lower(value))
+    }
+}
+
+
+
+/**
+ * One scope's instructions as they are stored.
+ */
+data class AgentInstruction (
+    var `kind`: AgentInstructionKind
+    , 
+    /**
+     * The folder's or list's id; nil for the account.
+     */
+    var `id`: kotlin.String?
+    , 
+    /**
+     * The folder's or list's name now; nil for the account.
+     */
+    var `name`: kotlin.String?
+    , 
+    var `text`: kotlin.String
+    , 
+    var `updatedAtMs`: kotlin.Long
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeAgentInstruction: FfiConverterRustBuffer<AgentInstruction> {
+    override fun read(buf: ByteBuffer): AgentInstruction {
+        return AgentInstruction(
+            FfiConverterTypeAgentInstructionKind.read(buf),
+            FfiConverterOptionalString.read(buf),
+            FfiConverterOptionalString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterLong.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: AgentInstruction) = (
+            FfiConverterTypeAgentInstructionKind.allocationSize(value.`kind`) +
+            FfiConverterOptionalString.allocationSize(value.`id`) +
+            FfiConverterOptionalString.allocationSize(value.`name`) +
+            FfiConverterString.allocationSize(value.`text`) +
+            FfiConverterLong.allocationSize(value.`updatedAtMs`)
+    )
+
+    override fun write(value: AgentInstruction, buf: ByteBuffer) {
+            FfiConverterTypeAgentInstructionKind.write(value.`kind`, buf)
+            FfiConverterOptionalString.write(value.`id`, buf)
+            FfiConverterOptionalString.write(value.`name`, buf)
+            FfiConverterString.write(value.`text`, buf)
+            FfiConverterLong.write(value.`updatedAtMs`, buf)
+    }
+}
+
+
+
+/**
+ * One entry to bring in from somewhere older, by [`import_agent_instructions`].
+ */
+data class AgentInstructionSeed (
+    var `kind`: AgentInstructionKind
+    , 
+    var `id`: kotlin.String?
+    , 
+    var `text`: kotlin.String
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeAgentInstructionSeed: FfiConverterRustBuffer<AgentInstructionSeed> {
+    override fun read(buf: ByteBuffer): AgentInstructionSeed {
+        return AgentInstructionSeed(
+            FfiConverterTypeAgentInstructionKind.read(buf),
+            FfiConverterOptionalString.read(buf),
+            FfiConverterString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: AgentInstructionSeed) = (
+            FfiConverterTypeAgentInstructionKind.allocationSize(value.`kind`) +
+            FfiConverterOptionalString.allocationSize(value.`id`) +
+            FfiConverterString.allocationSize(value.`text`)
+    )
+
+    override fun write(value: AgentInstructionSeed, buf: ByteBuffer) {
+            FfiConverterTypeAgentInstructionKind.write(value.`kind`, buf)
+            FfiConverterOptionalString.write(value.`id`, buf)
+            FfiConverterString.write(value.`text`, buf)
     }
 }
 
@@ -19289,6 +19495,44 @@ public object FfiConverterTypeWorkspaceRow: FfiConverterRustBuffer<WorkspaceRow>
 
 
 /**
+ * Which scope a piece of instructions is written for.
+ */
+
+enum class AgentInstructionKind {
+    
+    ACCOUNT,
+    FOLDER,
+    LIST;
+
+    
+
+
+    companion object
+}
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeAgentInstructionKind: FfiConverterRustBuffer<AgentInstructionKind> {
+    override fun read(buf: ByteBuffer) = try {
+        AgentInstructionKind.values()[buf.getInt() - 1]
+    } catch (e: IndexOutOfBoundsException) {
+        throw RuntimeException("invalid enum value, something is very wrong!!", e)
+    }
+
+    override fun allocationSize(value: AgentInstructionKind) = 4UL
+
+    override fun write(value: AgentInstructionKind, buf: ByteBuffer) {
+        buf.putInt(value.ordinal + 1)
+    }
+}
+
+
+
+
+
+/**
  * Something to ask Checkvist.
  */
 sealed class CheckvistCall {
@@ -25469,6 +25713,62 @@ public object FfiConverterSequenceString: FfiConverterRustBuffer<List<kotlin.Str
         buf.putInt(value.size)
         value.iterator().forEach {
             FfiConverterString.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceTypeAgentInstruction: FfiConverterRustBuffer<List<AgentInstruction>> {
+    override fun read(buf: ByteBuffer): List<AgentInstruction> {
+        val len = buf.getInt()
+        return List<AgentInstruction>(len) {
+            FfiConverterTypeAgentInstruction.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<AgentInstruction>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeAgentInstruction.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<AgentInstruction>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeAgentInstruction.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceTypeAgentInstructionSeed: FfiConverterRustBuffer<List<AgentInstructionSeed>> {
+    override fun read(buf: ByteBuffer): List<AgentInstructionSeed> {
+        val len = buf.getInt()
+        return List<AgentInstructionSeed>(len) {
+            FfiConverterTypeAgentInstructionSeed.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<AgentInstructionSeed>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeAgentInstructionSeed.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<AgentInstructionSeed>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeAgentInstructionSeed.write(it, buf)
         }
     }
 }

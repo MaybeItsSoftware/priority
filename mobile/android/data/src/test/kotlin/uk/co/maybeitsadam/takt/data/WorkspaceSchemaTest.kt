@@ -61,7 +61,7 @@ class WorkspaceSchemaTest {
             assertTrue("missing: ${expected - present}", present.containsAll(expected))
 
             val migrations = workspace.database.read { it.strings("SELECT identifier FROM grdb_migrations") }
-            assertEquals(24, migrations.size)
+            assertEquals(25, migrations.size)
             assertTrue("v17_sync" in migrations)
             assertTrue("v18_themes_and_preferences" in migrations)
             assertTrue("v19_habit_options" in migrations)
@@ -70,6 +70,7 @@ class WorkspaceSchemaTest {
             assertTrue("v22_matrix_order" in migrations)
             assertTrue("v23_filter_lists" in migrations)
             assertTrue("v24_condition_categories" in migrations)
+            assertTrue("v25_agent_instructions" in migrations)
             assertEquals(listOf(0L to 0L), workspace.database.read { db ->
                 db.query("SELECT recording, applying FROM sync_control") { it.long("recording") to it.long("applying") }
             })
@@ -86,7 +87,7 @@ class WorkspaceSchemaTest {
         val count = reopened.read { it.long("SELECT COUNT(*) FROM grdb_migrations WHERE identifier = 'v17_sync'") }
         assertEquals(1L, count)
         // The sync triggers are the core's, installed once each.
-        assertEquals(51L, reopened.read {
+        assertEquals(54L, reopened.read {
             it.long("SELECT COUNT(*) FROM sqlite_master WHERE name LIKE 'sync_outbox_%' AND type = 'trigger'")
         })
         reopened.close()
@@ -97,7 +98,14 @@ class WorkspaceSchemaTest {
     // install that lacks one migration lacks every later one too, since they
     // only ever apply in order, so each rewind takes the later ones off first.
 
+    private fun rewindV25(connection: SQLiteConnection) {
+        // Dropping the table drops its journal and outbox triggers with it.
+        connection.execSQL("DROP TABLE agent_instructions")
+        connection.execSQL("DELETE FROM grdb_migrations WHERE identifier = 'v25_agent_instructions'")
+    }
+
     private fun rewindV24(connection: SQLiteConnection) {
+        rewindV25(connection)
         // The journal's and the outbox's condition triggers name the new
         // column, so they come off first.
         for (op in listOf("insert", "update", "delete")) {
@@ -188,13 +196,17 @@ class WorkspaceSchemaTest {
         try {
             assertEquals(expected, upgraded.read { schema(it) })
             val migrations = upgraded.read { it.strings("SELECT identifier FROM grdb_migrations") }
-            assertEquals(24, migrations.size)
-            assertEquals(24, migrations.toSet().size)
+            assertEquals(25, migrations.size)
+            assertEquals(25, migrations.toSet().size)
         } finally {
             upgraded.close()
             dir.deleteRecursively()
         }
     }
+
+    /** A v24 database takes `agent_instructions` and its triggers. */
+    @Test
+    fun aV24DatabaseUpgradesToTheFixture() = assertUpgradesToTheFixture("v24", ::rewindV25)
 
     /** A v23 database takes `category` on `task_conditions`. */
     @Test

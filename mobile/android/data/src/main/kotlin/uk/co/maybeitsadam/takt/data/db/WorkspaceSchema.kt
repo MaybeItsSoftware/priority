@@ -24,6 +24,8 @@ object WorkspaceSchema {
         "kanban_boards" to "id",
         // `v23_filter_lists`.
         "filter_lists" to "id",
+        // `v25_agent_instructions`.
+        "agent_instructions" to "scope",
     )
 
     /** Every synced table and its key, parents first. */
@@ -43,6 +45,8 @@ object WorkspaceSchema {
         "focus_queue_items" to "id",
         "focus_work_blocks" to "id",
         "focus_awards" to "id",
+        // `v25_agent_instructions`: keyed by scope, naming no other row.
+        "agent_instructions" to "scope",
         // `v18_themes_and_preferences`. No foreign keys, so their place is free.
         "themes" to "id",
         "preferences" to "key",

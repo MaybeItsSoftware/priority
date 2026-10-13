@@ -32,6 +32,8 @@ extension WorkspaceStore {
     ("focus_queue_items", "id"),
     ("focus_work_blocks", "id"),
     ("focus_awards", "id"),
+    // `v25_agent_instructions`: keyed by scope, naming no other row.
+    ("agent_instructions", "scope"),
     // `v18_themes_and_preferences`. No foreign keys, so their place is free.
     ("themes", "id"),
     ("preferences", "key"),

@@ -944,6 +944,23 @@ public func FfiConverterTypeCoreDayLog_lower(_ value: CoreDayLog) -> UInt64 {
 public protocol CoreWorkspaceProtocol: AnyObject, Sendable {
     
     /**
+     * Every scope with instructions; see [`agent_instructions`].
+     */
+    func agentInstructions() throws  -> [AgentInstruction]
+    
+    /**
+     * Brings in older instructions, outside the journal; see
+     * [`import_agent_instructions`].
+     */
+    func importAgentInstructions(seeds: [AgentInstructionSeed], nowMs: Int64) throws  -> UInt32
+    
+    /**
+     * Sets a scope's instructions as one "Edit Agent Instructions" step and
+     * returns the text it holds now.
+     */
+    func setAgentInstructions(kind: AgentInstructionKind, id: String?, text: String, append: Bool, nowMs: Int64) throws  -> String
+    
+    /**
      * Board `key`'s columns over `list_ids`, and where its tasks are drawn.
      */
     func boardColumns(key: String, listIds: [String], nowMs: Int64, zone: String) throws  -> BoardColumns
@@ -1987,6 +2004,51 @@ public static func `open`(path: String)throws  -> CoreWorkspace  {
 }
     
 
+    
+    /**
+     * Every scope with instructions; see [`agent_instructions`].
+     */
+open func agentInstructions()throws  -> [AgentInstruction]  {
+    return try  FfiConverterSequenceTypeAgentInstruction.lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_agent_instructions(
+            self.uniffiCloneHandle(),uniffiCallStatus
+    )
+})
+}
+    
+    /**
+     * Brings in older instructions, outside the journal; see
+     * [`import_agent_instructions`].
+     */
+open func importAgentInstructions(seeds: [AgentInstructionSeed], nowMs: Int64)throws  -> UInt32  {
+    return try  FfiConverterUInt32.lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_import_agent_instructions(
+            self.uniffiCloneHandle(),
+        FfiConverterSequenceTypeAgentInstructionSeed.lower(seeds),
+        FfiConverterInt64.lower(nowMs),uniffiCallStatus
+    )
+})
+}
+    
+    /**
+     * Sets a scope's instructions as one "Edit Agent Instructions" step and
+     * returns the text it holds now.
+     */
+open func setAgentInstructions(kind: AgentInstructionKind, id: String?, text: String, append: Bool, nowMs: Int64)throws  -> String  {
+    return try  FfiConverterString.lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_set_agent_instructions(
+            self.uniffiCloneHandle(),
+        FfiConverterTypeAgentInstructionKind_lower(kind),
+        FfiConverterOptionString.lower(id),
+        FfiConverterString.lower(text),
+        FfiConverterBool.lower(append),
+        FfiConverterInt64.lower(nowMs),uniffiCallStatus
+    )
+})
+}
     
     /**
      * Board `key`'s columns over `list_ids`, and where its tasks are drawn.
@@ -4810,6 +4872,148 @@ public func FfiConverterTypeSyncPull_lower(_ value: SyncPull) -> UInt64 {
 }
 
 
+
+
+/**
+ * One scope's instructions as they are stored.
+ */
+public struct AgentInstruction: Equatable, Hashable {
+    public var kind: AgentInstructionKind
+    /**
+     * The folder's or list's id; nil for the account.
+     */
+    public var id: String?
+    /**
+     * The folder's or list's name now; nil for the account.
+     */
+    public var name: String?
+    public var text: String
+    public var updatedAtMs: Int64
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(kind: AgentInstructionKind, 
+        /**
+         * The folder's or list's id; nil for the account.
+         */id: String?, 
+        /**
+         * The folder's or list's name now; nil for the account.
+         */name: String?, text: String, updatedAtMs: Int64) {
+        self.kind = kind
+        self.id = id
+        self.name = name
+        self.text = text
+        self.updatedAtMs = updatedAtMs
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension AgentInstruction: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeAgentInstruction: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> AgentInstruction {
+        return
+            try AgentInstruction(
+                kind: FfiConverterTypeAgentInstructionKind.read(from: &buf), 
+                id: FfiConverterOptionString.read(from: &buf), 
+                name: FfiConverterOptionString.read(from: &buf), 
+                text: FfiConverterString.read(from: &buf), 
+                updatedAtMs: FfiConverterInt64.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: AgentInstruction, into buf: inout [UInt8]) {
+        FfiConverterTypeAgentInstructionKind.write(value.kind, into: &buf)
+        FfiConverterOptionString.write(value.id, into: &buf)
+        FfiConverterOptionString.write(value.name, into: &buf)
+        FfiConverterString.write(value.text, into: &buf)
+        FfiConverterInt64.write(value.updatedAtMs, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeAgentInstruction_lift(_ buf: RustBuffer) throws -> AgentInstruction {
+    return try FfiConverterTypeAgentInstruction.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeAgentInstruction_lower(_ value: AgentInstruction) -> RustBuffer {
+    return FfiConverterTypeAgentInstruction.lower(value)
+}
+
+
+/**
+ * One entry to bring in from somewhere older, by [`import_agent_instructions`].
+ */
+public struct AgentInstructionSeed: Equatable, Hashable {
+    public var kind: AgentInstructionKind
+    public var id: String?
+    public var text: String
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(kind: AgentInstructionKind, id: String?, text: String) {
+        self.kind = kind
+        self.id = id
+        self.text = text
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension AgentInstructionSeed: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeAgentInstructionSeed: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> AgentInstructionSeed {
+        return
+            try AgentInstructionSeed(
+                kind: FfiConverterTypeAgentInstructionKind.read(from: &buf), 
+                id: FfiConverterOptionString.read(from: &buf), 
+                text: FfiConverterString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: AgentInstructionSeed, into buf: inout [UInt8]) {
+        FfiConverterTypeAgentInstructionKind.write(value.kind, into: &buf)
+        FfiConverterOptionString.write(value.id, into: &buf)
+        FfiConverterString.write(value.text, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeAgentInstructionSeed_lift(_ buf: RustBuffer) throws -> AgentInstructionSeed {
+    return try FfiConverterTypeAgentInstructionSeed.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeAgentInstructionSeed_lower(_ value: AgentInstructionSeed) -> RustBuffer {
+    return FfiConverterTypeAgentInstructionSeed.lower(value)
+}
 
 
 /**
@@ -17551,6 +17755,82 @@ public func FfiConverterTypeWorkspaceRow_lower(_ value: WorkspaceRow) -> RustBuf
 
 
 /**
+ * Which scope a piece of instructions is written for.
+ */
+
+public enum AgentInstructionKind: Equatable, Hashable {
+    
+    case account
+    case folder
+    case list
+
+
+
+
+
+}
+
+#if compiler(>=6)
+extension AgentInstructionKind: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeAgentInstructionKind: FfiConverterRustBuffer {
+    typealias SwiftType = AgentInstructionKind
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> AgentInstructionKind {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .account
+        
+        case 2: return .folder
+        
+        case 3: return .list
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: AgentInstructionKind, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case .account:
+            writeInt(&buf, Int32(1))
+        
+        
+        case .folder:
+            writeInt(&buf, Int32(2))
+        
+        
+        case .list:
+            writeInt(&buf, Int32(3))
+        
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeAgentInstructionKind_lift(_ buf: RustBuffer) throws -> AgentInstructionKind {
+    return try FfiConverterTypeAgentInstructionKind.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeAgentInstructionKind_lower(_ value: AgentInstructionKind) -> RustBuffer {
+    return FfiConverterTypeAgentInstructionKind.lower(value)
+}
+
+
+
+/**
  * Something to ask Checkvist.
  */
 
@@ -22618,6 +22898,56 @@ fileprivate struct FfiConverterSequenceString: FfiConverterRustBuffer {
         seq.reserveCapacity(Int(len))
         for _ in 0 ..< len {
             seq.append(try FfiConverterString.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterSequenceTypeAgentInstruction: FfiConverterRustBuffer {
+    typealias SwiftType = [AgentInstruction]
+
+    public static func write(_ value: [AgentInstruction], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeAgentInstruction.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [AgentInstruction] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [AgentInstruction]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeAgentInstruction.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterSequenceTypeAgentInstructionSeed: FfiConverterRustBuffer {
+    typealias SwiftType = [AgentInstructionSeed]
+
+    public static func write(_ value: [AgentInstructionSeed], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeAgentInstructionSeed.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [AgentInstructionSeed] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [AgentInstructionSeed]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeAgentInstructionSeed.read(from: &buf))
         }
         return seq
     }
@@ -27932,6 +28262,15 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_method_syncpull_row_count() != 50030) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_agent_instructions() != 63569) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_import_agent_instructions() != 16998) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_set_agent_instructions() != 65220) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_method_coreworkspace_board_columns() != 666) {

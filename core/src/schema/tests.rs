@@ -53,10 +53,10 @@ fn a_new_database_has_exactly_the_fixtures_schema() {
 fn every_migration_is_recorded_in_order_under_grdbs_identifiers() {
     let connection = migrated();
     assert_eq!(ledger(&connection), workspace_migrations());
-    assert_eq!(workspace_migrations().len(), 24);
+    assert_eq!(workspace_migrations().len(), 25);
     assert_eq!(
         workspace_migrations().last().map(String::as_str),
-        Some("v24_condition_categories")
+        Some("v25_agent_instructions")
     );
 }
 
@@ -69,10 +69,7 @@ fn migrating_again_applies_nothing_and_keeps_the_work() {
         )
         .unwrap();
     let before = dump_schema(&connection).unwrap();
-    assert_eq!(
-        migrate(&mut connection).unwrap(),
-        "v24_condition_categories"
-    );
+    assert_eq!(migrate(&mut connection).unwrap(), "v25_agent_instructions");
     assert_eq!(dump_schema(&connection).unwrap(), before);
     let count: i64 = connection
         .query_row("SELECT COUNT(*) FROM workspaces", [], |row| row.get(0))
@@ -99,9 +96,9 @@ fn a_file_database_is_created_and_closed_again() {
     std::fs::create_dir_all(&directory).unwrap();
     let path = directory.join("workspace.sqlite");
     let latest = migrate_workspace(path.to_string_lossy().into_owned()).unwrap();
-    assert_eq!(latest, "v24_condition_categories");
+    assert_eq!(latest, "v25_agent_instructions");
     let reopened = Connection::open(&path).unwrap();
-    assert_eq!(ledger(&reopened).len(), 24);
+    assert_eq!(ledger(&reopened).len(), 25);
     std::fs::remove_dir_all(directory).unwrap();
 }
 
@@ -431,7 +428,7 @@ fn triggers_match_the_fixture() {
         assert_eq!(statement, stored(&name), "trigger {name}");
         checked += 1;
     }
-    assert_eq!(checked, 10 * 3 + 17 * 3);
+    assert_eq!(checked, 11 * 3 + 18 * 3);
     let before = dump_schema(&connection).unwrap();
     super::triggers::reinstall(&connection).unwrap();
     let after = dump_schema(&connection).unwrap();
@@ -442,4 +439,33 @@ fn triggers_match_the_fixture() {
     a.sort_unstable();
     b.sort_unstable();
     assert_eq!(a, b);
+}
+
+/// v25: the standing instructions get a table of their own, keyed by scope,
+/// whose writes are journalled and queued for sync like any other work.
+#[test]
+fn v25_adds_agent_instructions_journalled_and_synced() {
+    let mut connection = migrated_through("v24_condition_categories");
+    seed_workspace(&connection);
+    migrate_through(&mut connection, Some("v25_agent_instructions")).unwrap();
+    connection
+        .execute_batch(&format!(
+            "UPDATE undo_control SET suppressed = 0, groupId = 'g', label = 'x' WHERE id = 0;
+             UPDATE sync_control SET recording = 1 WHERE id = 0;
+             INSERT INTO agent_instructions (scope, text, updatedAt) VALUES ('account', 'Verbs.', '{T0}');"
+        ))
+        .unwrap();
+    let count = |sql: &str| -> i64 { connection.query_row(sql, [], |row| row.get(0)).unwrap() };
+    assert_eq!(
+        count(
+            "SELECT COUNT(*) FROM change_log WHERE tableName = 'agent_instructions' AND rowId = 'account'"
+        ),
+        1
+    );
+    assert_eq!(
+        count(
+            "SELECT COUNT(*) FROM sync_outbox WHERE tableName = 'agent_instructions' AND rowId = 'account'"
+        ),
+        1
+    );
 }

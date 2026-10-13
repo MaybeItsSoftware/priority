@@ -31,9 +31,10 @@ pub(super) fn apply(transaction: &Transaction, identifier: &str) -> Result<(), C
 /// column, so they are reinstalled from the schema as it now stands.
 pub(super) fn finish(transaction: &Transaction, identifier: &str) -> Result<(), CoreError> {
     match identifier {
-        "v21_task_dependencies" | "v22_matrix_order" | "v23_filter_lists" => {
-            Ok(super::triggers::reinstall(transaction)?)
-        }
+        "v21_task_dependencies"
+        | "v22_matrix_order"
+        | "v23_filter_lists"
+        | "v25_agent_instructions" => Ok(super::triggers::reinstall(transaction)?),
         "v24_condition_categories" => {
             super::triggers::reinstall(transaction)?;
             file_places_under_location(transaction)

@@ -23,6 +23,7 @@ pub const JOURNALLED_TABLES: &[(&str, &str)] = &[
     ("daily_contributions", "id"),
     ("kanban_boards", "id"),
     ("filter_lists", "id"),
+    ("agent_instructions", "scope"),
 ];
 
 /// Every synced table and its key, parents first.
@@ -43,6 +44,8 @@ pub const SYNCED_TABLES: &[(&str, &str)] = &[
     ("focus_queue_items", "id"),
     ("focus_work_blocks", "id"),
     ("focus_awards", "id"),
+    // `v25_agent_instructions`: keyed by scope, naming no other row.
+    ("agent_instructions", "scope"),
     ("themes", "id"),
     ("preferences", "key"),
 ];

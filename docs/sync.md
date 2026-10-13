@@ -37,6 +37,7 @@ Every row of these tables, keyed by the column shown:
 | `focus_queue_items` | `id` |
 | `focus_work_blocks` | `id` |
 | `focus_awards` | `id` |
+| `agent_instructions` | `scope` |
 | `themes` | `id` |
 | `preferences` | `key` |
 
@@ -127,6 +128,21 @@ the column on pull and still treats places as exclusive; a place it makes
 arrives with no category and is shown under Location
 (`conditions::effective_category`). Categories are free text, matched
 case-insensitively, so "equipment" typed on one device joins "Equipment".
+
+`v25_agent_instructions` adds `agent_instructions(scope TEXT PRIMARY KEY,
+text, updatedAt)`: the agent panel's standing instructions
+(`core/src/agent_instructions.rs`, `docs/agent-panel.md`), one row per scope.
+The key *is* the scope — `account`, `folder:<id>` or `list:<id>` — rather
+than a random id, so two devices that each write the account's instructions
+write the same row and the merge keeps one of them instead of two rows that
+both claim the account. It names no other row by foreign key: a row whose
+folder or list is deleted is simply never read back. The table is journalled
+(an edit, the agent's included, is an undo step) and the migration ends by
+reinstalling every journal and outbox trigger. It syncs because the agent's
+tools are the CLI's, which runs wherever the workspace is, and syncing it is
+three entries in the table lists; a phone stores the rows and shows none of
+them. The Mac's instructions lived in its preferences before v25, and the app
+copies them in once, outside the journal (`import_agent_instructions`).
 
 The following are not synced: the undo journal (`undo_control`, `change_log`), the FTS index
 (rebuilt by its own triggers as synced rows land), `grdb_migrations`, and the

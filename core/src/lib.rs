@@ -9,6 +9,7 @@
 
 uniffi::setup_scaffolding!();
 
+pub mod agent_instructions;
 pub mod agent_tools;
 pub mod board;
 pub mod board_columns;
