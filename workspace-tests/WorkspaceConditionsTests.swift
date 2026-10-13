@@ -69,6 +69,41 @@ final class WorkspaceConditionsTests: XCTestCase {
     XCTAssertEqual(try store.conditions(in: workspace.id).first { $0.id == campus.id }?.name, "On campus")
   }
 
+  func testCategoriesGroupConditionsAndAvailableNowOffersOnlyWhatOpenTasksNeed() throws {
+    let seeded = try store.conditions(in: workspace.id)
+    let home = try XCTUnwrap(seeded.first { $0.name == "Home" })
+    XCTAssertEqual(home.category, "Location", "the seeded places are filed under Location")
+    let mat = try store.createCondition(workspaceId: workspace.id, name: "Mat", category: "Equipment", now: now)
+    XCTAssertEqual(mat.category, "Equipment")
+    XCTAssertFalse(mat.isLocation)
+    try store.setConditionCategory(id: mat.id, category: "location", now: now)
+    var moved = try XCTUnwrap(store.conditions(in: workspace.id).first { $0.id == mat.id })
+    XCTAssertEqual(moved.category, "Location")
+    XCTAssertTrue(moved.isLocation, "Location is what makes it a place")
+    try store.undo()
+    moved = try XCTUnwrap(store.conditions(in: workspace.id).first { $0.id == mat.id })
+    XCTAssertEqual(moved.category, "Equipment")
+
+    let all = try store.conditions(in: workspace.id)
+    XCTAssertEqual(TaskConditionSection.sections(all).map(\.title), ["Location", "Equipment", "Other"])
+    XCTAssertEqual(TaskConditionSection.categories(all), ["Location", "Equipment"])
+
+    XCTAssertEqual(try store.requiredConditionIDs(in: workspace.id), [])
+    XCTAssertTrue(TaskConditionSection.available(all, required: [], active: []).isEmpty)
+    let gym = try task("Gym")
+    var draft = try edit(gym.id); draft.values.requirementGroups = [[mat.id]]
+    try store.saveTaskEditor(draft)
+    let required = try store.requiredConditionIDs(in: workspace.id)
+    XCTAssertEqual(required, [mat.id])
+    let available = TaskConditionSection.available(all, required: required, active: [home.id])
+    XCTAssertEqual(available.map(\.title), ["Location", "Equipment"])
+    XCTAssertEqual(available.map { $0.conditions.map(\.id) }, [[home.id], [mat.id]])
+    XCTAssertTrue(available[0].isExclusive)
+
+    try store.setStatus(.completed, for: gym.id, now: now)
+    XCTAssertEqual(try store.requiredConditionIDs(in: workspace.id), [], "a done task needs nothing")
+  }
+
   func testPlanningSaveAndUndoAreAtomicAndReopenRetainsAllFields() throws {
     let task = try task()
     let conditions = try store.conditions(in: workspace.id)

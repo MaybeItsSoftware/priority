@@ -61,7 +61,7 @@ class WorkspaceSchemaTest {
             assertTrue("missing: ${expected - present}", present.containsAll(expected))
 
             val migrations = workspace.database.read { it.strings("SELECT identifier FROM grdb_migrations") }
-            assertEquals(23, migrations.size)
+            assertEquals(24, migrations.size)
             assertTrue("v17_sync" in migrations)
             assertTrue("v18_themes_and_preferences" in migrations)
             assertTrue("v19_habit_options" in migrations)
@@ -69,6 +69,7 @@ class WorkspaceSchemaTest {
             assertTrue("v21_task_dependencies" in migrations)
             assertTrue("v22_matrix_order" in migrations)
             assertTrue("v23_filter_lists" in migrations)
+            assertTrue("v24_condition_categories" in migrations)
             assertEquals(listOf(0L to 0L), workspace.database.read { db ->
                 db.query("SELECT recording, applying FROM sync_control") { it.long("recording") to it.long("applying") }
             })
@@ -96,7 +97,19 @@ class WorkspaceSchemaTest {
     // install that lacks one migration lacks every later one too, since they
     // only ever apply in order, so each rewind takes the later ones off first.
 
+    private fun rewindV24(connection: SQLiteConnection) {
+        // The journal's and the outbox's condition triggers name the new
+        // column, so they come off first.
+        for (op in listOf("insert", "update", "delete")) {
+            connection.execSQL("DROP TRIGGER change_log_task_conditions_$op")
+            connection.execSQL("DROP TRIGGER sync_outbox_task_conditions_$op")
+        }
+        connection.execSQL("ALTER TABLE task_conditions DROP COLUMN category")
+        connection.execSQL("DELETE FROM grdb_migrations WHERE identifier = 'v24_condition_categories'")
+    }
+
     private fun rewindV23(connection: SQLiteConnection) {
+        rewindV24(connection)
         // Dropping the table drops its index and its journal and outbox triggers with it.
         connection.execSQL("DROP TABLE filter_lists")
         connection.execSQL("DELETE FROM grdb_migrations WHERE identifier = 'v23_filter_lists'")
@@ -175,13 +188,17 @@ class WorkspaceSchemaTest {
         try {
             assertEquals(expected, upgraded.read { schema(it) })
             val migrations = upgraded.read { it.strings("SELECT identifier FROM grdb_migrations") }
-            assertEquals(23, migrations.size)
-            assertEquals(23, migrations.toSet().size)
+            assertEquals(24, migrations.size)
+            assertEquals(24, migrations.toSet().size)
         } finally {
             upgraded.close()
             dir.deleteRecursively()
         }
     }
+
+    /** A v23 database takes `category` on `task_conditions`. */
+    @Test
+    fun aV23DatabaseUpgradesToTheFixture() = assertUpgradesToTheFixture("v23", ::rewindV24)
 
     /** A v22 database takes `filter_lists` and its triggers. */
     @Test

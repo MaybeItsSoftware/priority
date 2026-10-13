@@ -28,6 +28,11 @@ pub fn bootstrap(transaction: &Transaction, now_ms: i64) -> Result<String, CoreE
     )?;
     ensure_inbox(transaction, &id, now_ms)?;
     crate::schema::data::seed_conditions(transaction, &id, &now)?;
+    // Seeded as v12 had them, then filed as v24 files places.
+    transaction.execute(
+        "UPDATE task_conditions SET category = ?1 WHERE workspaceId = ?2 AND isLocation = 1",
+        params![crate::conditions::LOCATION_CATEGORY, id],
+    )?;
     Ok(id)
 }
 
@@ -182,6 +187,13 @@ mod tests {
         assert_eq!(
             count(&connection, "SELECT COUNT(*) FROM task_conditions"),
             4
+        );
+        assert_eq!(
+            count(
+                &connection,
+                "SELECT COUNT(*) FROM task_conditions WHERE category = 'Location' AND isLocation = 1"
+            ),
+            2
         );
         assert_eq!(count(&connection, "SELECT COUNT(*) FROM change_log"), 0);
 

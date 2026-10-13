@@ -671,6 +671,29 @@ class WorkspaceRepository(
         return database.read { it.condition(id) } ?: planningFail(TaskPlanningError.INVALID_CONDITION)
     }
 
+    /**
+     * Creates a condition under a category (null for none; "Location" makes it
+     * a place): the Rust core's `conditions::create_condition_in_category`.
+     */
+    suspend fun createCondition(
+        workspaceId: String,
+        name: String,
+        category: String?,
+        now: Instant = now(),
+    ): TaskCondition {
+        val id = coreWrite { it.createConditionInCategory(workspaceId, name, category, now.toEpochMilli()) }
+        return database.read { it.condition(id) } ?: planningFail(TaskPlanningError.INVALID_CONDITION)
+    }
+
+    /** Files a condition under a category, or none: the Rust core's `conditions::set_condition_category`. */
+    suspend fun setConditionCategory(id: String, category: String?, now: Instant = now()) {
+        coreWrite { it.setConditionCategory(id, category, now.toEpochMilli()) }
+    }
+
+    /** The conditions an open task requires: the Rust core's `conditions::required_condition_ids`. */
+    suspend fun requiredConditionIds(workspaceId: String): Set<String> =
+        database.read { it.core.requiredConditionIds(workspaceId).toSet() }
+
     /** Saves a condition: the Rust core's `conditions::save_condition`. */
     suspend fun saveCondition(id: String, name: String, isLocation: Boolean, isArchived: Boolean, now: Instant = now()) {
         coreWrite { it.saveCondition(id, name, isLocation, isArchived, now.toEpochMilli()) }

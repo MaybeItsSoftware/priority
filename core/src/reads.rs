@@ -68,6 +68,11 @@ impl CoreWorkspace {
         rows::conditions(&self.read(), &workspace_id)
     }
 
+    /// The conditions an open task in the workspace requires, by id, sorted.
+    pub fn required_condition_ids(&self, workspace_id: String) -> Result<Vec<String>, CoreError> {
+        crate::conditions::required_condition_ids(&self.read(), &workspace_id)
+    }
+
     /// One condition by id.
     pub fn condition(&self, id: String) -> Result<Option<ConditionRow>, CoreError> {
         rows::condition(&self.lock(), &id)

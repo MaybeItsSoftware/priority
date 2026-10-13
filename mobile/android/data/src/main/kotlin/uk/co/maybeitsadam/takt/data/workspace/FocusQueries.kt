@@ -147,6 +147,7 @@ internal fun nextUpSnapshot(
         ranking = ranking,
         dayTasks = tasksById(db, WorkspaceNextUpSnapshot.dayTaskIDs(plan, ranking)),
         hasManualFocusOrder = hasManualFocusOrder(db),
+        requiredConditionIds = workspaceId?.let { db.core.requiredConditionIds(it).toSet() } ?: emptySet(),
     )
 }
 

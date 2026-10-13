@@ -1166,6 +1166,11 @@ public protocol CoreWorkspaceProtocol: AnyObject, Sendable {
     func recentFocusAwards(limit: Int64) throws  -> [AwardRow]
     
     /**
+     * The conditions an open task in the workspace requires, by id, sorted.
+     */
+    func requiredConditionIds(workspaceId: String) throws  -> [String]
+    
+    /**
      * When tasks were completed in `[from, to)`.
      */
     func taskCompletionsBetween(fromMs: Int64, toMs: Int64) throws  -> [Int64]
@@ -1336,6 +1341,12 @@ public protocol CoreWorkspaceProtocol: AnyObject, Sendable {
      * Creates a condition as one "New Condition" step; returns its id.
      */
     func createCondition(workspaceId: String, name: String, isLocation: Bool, nowMs: Int64) throws  -> String
+    
+    /**
+     * Creates a condition under a category (none for uncategorised) as one
+     * "New Condition" step; returns its id. Location makes it a place.
+     */
+    func createConditionInCategory(workspaceId: String, name: String, category: String?, nowMs: Int64) throws  -> String
     
     /**
      * Creates a folder as one "New Folder" step.
@@ -1711,6 +1722,12 @@ public protocol CoreWorkspaceProtocol: AnyObject, Sendable {
      * Prefix search over titles and notes, best match first.
      */
     func searchTasks(workspaceId: String, query: String, includingCompleted: Bool, includingArchivedLists: Bool, limit: Int64) throws  -> [SearchHit]
+    
+    /**
+     * Files a condition under a category, or none, as one "Edit Condition"
+     * step. Location makes it a place, anything else makes it not one.
+     */
+    func setConditionCategory(id: String, category: String?, nowMs: Int64) throws 
     
     /**
      * Makes an item a task or a nested list.
@@ -2573,6 +2590,19 @@ open func recentFocusAwards(limit: Int64)throws  -> [AwardRow]  {
 }
     
     /**
+     * The conditions an open task in the workspace requires, by id, sorted.
+     */
+open func requiredConditionIds(workspaceId: String)throws  -> [String]  {
+    return try  FfiConverterSequenceString.lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_required_condition_ids(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(workspaceId),uniffiCallStatus
+    )
+})
+}
+    
+    /**
      * When tasks were completed in `[from, to)`.
      */
 open func taskCompletionsBetween(fromMs: Int64, toMs: Int64)throws  -> [Int64]  {
@@ -3018,6 +3048,23 @@ open func createCondition(workspaceId: String, name: String, isLocation: Bool, n
         FfiConverterString.lower(workspaceId),
         FfiConverterString.lower(name),
         FfiConverterBool.lower(isLocation),
+        FfiConverterInt64.lower(nowMs),uniffiCallStatus
+    )
+})
+}
+    
+    /**
+     * Creates a condition under a category (none for uncategorised) as one
+     * "New Condition" step; returns its id. Location makes it a place.
+     */
+open func createConditionInCategory(workspaceId: String, name: String, category: String?, nowMs: Int64)throws  -> String  {
+    return try  FfiConverterString.lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_create_condition_in_category(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(workspaceId),
+        FfiConverterString.lower(name),
+        FfiConverterOptionString.lower(category),
         FfiConverterInt64.lower(nowMs),uniffiCallStatus
     )
 })
@@ -4048,6 +4095,21 @@ open func searchTasks(workspaceId: String, query: String, includingCompleted: Bo
         FfiConverterInt64.lower(limit),uniffiCallStatus
     )
 })
+}
+    
+    /**
+     * Files a condition under a category, or none, as one "Edit Condition"
+     * step. Location makes it a place, anything else makes it not one.
+     */
+open func setConditionCategory(id: String, category: String?, nowMs: Int64)throws   {try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_set_condition_category(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(id),
+        FfiConverterOptionString.lower(category),
+        FfiConverterInt64.lower(nowMs),uniffiCallStatus
+    )
+}
 }
     
     /**
@@ -6644,10 +6706,21 @@ public struct ConditionRow: Equatable, Hashable {
     public var isArchived: Bool
     public var createdAtMs: Int64
     public var updatedAtMs: Int64
+    /**
+     * The category as stored ("Location", "Equipment"), or none. A place an
+     * older client made has none; `condition_effective_category` reads it
+     * as "Location".
+     */
+    public var category: String?
 
     // Default memberwise initializers are never public by default, so we
     // declare one manually.
-    public init(id: String, workspaceId: String, name: String, isLocation: Bool, isArchived: Bool, createdAtMs: Int64, updatedAtMs: Int64) {
+    public init(id: String, workspaceId: String, name: String, isLocation: Bool, isArchived: Bool, createdAtMs: Int64, updatedAtMs: Int64, 
+        /**
+         * The category as stored ("Location", "Equipment"), or none. A place an
+         * older client made has none; `condition_effective_category` reads it
+         * as "Location".
+         */category: String?) {
         self.id = id
         self.workspaceId = workspaceId
         self.name = name
@@ -6655,6 +6728,7 @@ public struct ConditionRow: Equatable, Hashable {
         self.isArchived = isArchived
         self.createdAtMs = createdAtMs
         self.updatedAtMs = updatedAtMs
+        self.category = category
     }
 
     
@@ -6679,7 +6753,8 @@ public struct FfiConverterTypeConditionRow: FfiConverterRustBuffer {
                 isLocation: FfiConverterBool.read(from: &buf), 
                 isArchived: FfiConverterBool.read(from: &buf), 
                 createdAtMs: FfiConverterInt64.read(from: &buf), 
-                updatedAtMs: FfiConverterInt64.read(from: &buf)
+                updatedAtMs: FfiConverterInt64.read(from: &buf), 
+                category: FfiConverterOptionString.read(from: &buf)
         )
     }
 
@@ -6691,6 +6766,7 @@ public struct FfiConverterTypeConditionRow: FfiConverterRustBuffer {
         FfiConverterBool.write(value.isArchived, into: &buf)
         FfiConverterInt64.write(value.createdAtMs, into: &buf)
         FfiConverterInt64.write(value.updatedAtMs, into: &buf)
+        FfiConverterOptionString.write(value.category, into: &buf)
     }
 }
 
@@ -6707,6 +6783,95 @@ public func FfiConverterTypeConditionRow_lift(_ buf: RustBuffer) throws -> Condi
 #endif
 public func FfiConverterTypeConditionRow_lower(_ value: ConditionRow) -> RustBuffer {
     return FfiConverterTypeConditionRow.lower(value)
+}
+
+
+/**
+ * Conditions under one heading.
+ */
+public struct ConditionSection: Equatable, Hashable {
+    /**
+     * The category, or none for the uncategorised.
+     */
+    public var category: String?
+    /**
+     * What the heading says: the category, or "Other".
+     */
+    public var title: String
+    /**
+     * Whether saying one holds replaces the rest: the Location heading.
+     */
+    public var isExclusive: Bool
+    /**
+     * In the order they were given.
+     */
+    public var conditions: [ConditionRow]
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(
+        /**
+         * The category, or none for the uncategorised.
+         */category: String?, 
+        /**
+         * What the heading says: the category, or "Other".
+         */title: String, 
+        /**
+         * Whether saying one holds replaces the rest: the Location heading.
+         */isExclusive: Bool, 
+        /**
+         * In the order they were given.
+         */conditions: [ConditionRow]) {
+        self.category = category
+        self.title = title
+        self.isExclusive = isExclusive
+        self.conditions = conditions
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension ConditionSection: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeConditionSection: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> ConditionSection {
+        return
+            try ConditionSection(
+                category: FfiConverterOptionString.read(from: &buf), 
+                title: FfiConverterString.read(from: &buf), 
+                isExclusive: FfiConverterBool.read(from: &buf), 
+                conditions: FfiConverterSequenceTypeConditionRow.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: ConditionSection, into buf: inout [UInt8]) {
+        FfiConverterOptionString.write(value.category, into: &buf)
+        FfiConverterString.write(value.title, into: &buf)
+        FfiConverterBool.write(value.isExclusive, into: &buf)
+        FfiConverterSequenceTypeConditionRow.write(value.conditions, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeConditionSection_lift(_ buf: RustBuffer) throws -> ConditionSection {
+    return try FfiConverterTypeConditionSection.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeConditionSection_lower(_ value: ConditionSection) -> RustBuffer {
+    return FfiConverterTypeConditionSection.lower(value)
 }
 
 
@@ -22836,6 +23001,31 @@ fileprivate struct FfiConverterSequenceTypeConditionRow: FfiConverterRustBuffer 
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterSequenceTypeConditionSection: FfiConverterRustBuffer {
+    typealias SwiftType = [ConditionSection]
+
+    public static func write(_ value: [ConditionSection], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeConditionSection.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [ConditionSection] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [ConditionSection]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeConditionSection.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterSequenceTypeContributionRow: FfiConverterRustBuffer {
     typealias SwiftType = [ContributionRow]
 
@@ -25408,6 +25598,74 @@ public func resolveDueDate(input: String, nowMs: Int64, zone: String, hours: Nam
 })
 }
 /**
+ * What "Available now" offers: only the conditions an open task requires
+ * (`required_ids`), since saying anything else holds changes nothing, plus
+ * any that is on now (`active_ids`), so it can be turned off. Under their
+ * headings, with a heading left out when nothing under it is offered. Empty
+ * when no open task needs a condition and none is on.
+ */
+public func availableConditionSections(conditions: [ConditionRow], requiredIds: [String], activeIds: [String]) -> [ConditionSection]  {
+    return try!  FfiConverterSequenceTypeConditionSection.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_available_condition_sections(
+        FfiConverterSequenceTypeConditionRow.lower(conditions),
+        FfiConverterSequenceString.lower(requiredIds),
+        FfiConverterSequenceString.lower(activeIds),uniffiCallStatus
+    )
+})
+}
+/**
+ * The categories a condition can be filed under, for a finder: Location
+ * always, then every other category the conditions use, alphabetically and
+ * once each however it is cased.
+ */
+public func conditionCategories(conditions: [ConditionRow]) -> [String]  {
+    return try!  FfiConverterSequenceString.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_condition_categories(
+        FfiConverterSequenceTypeConditionRow.lower(conditions),uniffiCallStatus
+    )
+})
+}
+/**
+ * A typed category made canonical — trimmed, none when empty, any spelling
+ * of "location" as "Location" — for a finder deciding whether what was typed
+ * is new.
+ */
+public func conditionCategoryNormalized(category: String?) -> String?  {
+    return try!  FfiConverterOptionString.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_condition_category_normalized(
+        FfiConverterOptionString.lower(category),uniffiCallStatus
+    )
+})
+}
+/**
+ * The heading a condition is shown under: its category, Location for a
+ * place filed under none, or "Other".
+ */
+public func conditionSectionTitle(condition: ConditionRow) -> String  {
+    return try!  FfiConverterString.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_condition_section_title(
+        FfiConverterTypeConditionRow_lower(condition),uniffiCallStatus
+    )
+})
+}
+/**
+ * Conditions under their headings: Location first, then every other category
+ * alphabetically, then the uncategorised under "Other". Within a heading
+ * they keep the order they were given.
+ */
+public func conditionSections(conditions: [ConditionRow]) -> [ConditionSection]  {
+    return try!  FfiConverterSequenceTypeConditionSection.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_condition_sections(
+        FfiConverterSequenceTypeConditionRow.lower(conditions),uniffiCallStatus
+    )
+})
+}
+/**
  * `yyyy-MM-dd` for the logical day containing `at_ms`.
  */
 public func dayBoundaryDayKey(boundary: DayLogBoundary, atMs: Int64) -> String  {
@@ -27226,6 +27484,21 @@ private let initializationResult: InitializationResult = {
     if (uniffi_takt_core_checksum_func_resolve_due_date() != 36836) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_takt_core_checksum_func_available_condition_sections() != 57749) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_condition_categories() != 7519) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_condition_category_normalized() != 53106) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_condition_section_title() != 32802) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_condition_sections() != 5242) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_takt_core_checksum_func_day_boundary_day_key() != 60525) {
         return InitializationResult.apiChecksumMismatch
     }
@@ -27790,6 +28063,9 @@ private let initializationResult: InitializationResult = {
     if (uniffi_takt_core_checksum_method_coreworkspace_recent_focus_awards() != 13804) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_takt_core_checksum_method_coreworkspace_required_condition_ids() != 25474) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_takt_core_checksum_method_coreworkspace_task_completions_between() != 16557) {
         return InitializationResult.apiChecksumMismatch
     }
@@ -27887,6 +28163,9 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_method_coreworkspace_create_condition() != 36493) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_create_condition_in_category() != 47209) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_method_coreworkspace_create_folder() != 9864) {
@@ -28100,6 +28379,9 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_method_coreworkspace_search_tasks() != 47825) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_set_condition_category() != 2912) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_method_coreworkspace_set_item_kind() != 55048) {

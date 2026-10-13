@@ -64,6 +64,10 @@ pub struct ConditionRow {
     pub is_archived: bool,
     pub created_at_ms: i64,
     pub updated_at_ms: i64,
+    /// The category as stored ("Location", "Equipment"), or none. A place an
+    /// older client made has none; `condition_effective_category` reads it
+    /// as "Location".
+    pub category: Option<String>,
 }
 
 /// A row of `task_metadata`. `TaskMetadata`.
@@ -233,6 +237,7 @@ impl ConditionRow {
             is_archived: row.get("isArchived")?,
             created_at_ms: required_ms(row, "createdAt")?,
             updated_at_ms: required_ms(row, "updatedAt")?,
+            category: row.get("category")?,
         })
     }
 }

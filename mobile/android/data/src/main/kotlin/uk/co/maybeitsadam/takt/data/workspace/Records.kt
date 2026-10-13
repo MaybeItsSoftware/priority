@@ -112,6 +112,7 @@ internal fun Row.toContribution() = DailyContribution(
 internal fun Row.toCondition() = TaskCondition(
     id = string("id"), workspaceId = string("workspaceId"), name = string("name"), isLocation = bool("isLocation"),
     isArchived = bool("isArchived"), createdAt = instant("createdAt"), updatedAt = instant("updatedAt"),
+    category = stringOrNull("category"),
 )
 
 internal fun Row.toWorkBlock() = FocusWorkBlock(
@@ -171,7 +172,12 @@ internal fun DayDaily.toItem() = DailyItem(daily.toDaily(), task.toTask(), contr
 
 internal fun ConditionRow.toCondition() = TaskCondition(
     id = id, workspaceId = workspaceId, name = name, isLocation = isLocation, isArchived = isArchived,
-    createdAt = createdAtMs.instant(), updatedAt = updatedAtMs.instant(),
+    createdAt = createdAtMs.instant(), updatedAt = updatedAtMs.instant(), category = category,
+)
+
+internal fun TaskCondition.toRow() = ConditionRow(
+    id = id, workspaceId = workspaceId, name = name, isLocation = isLocation, isArchived = isArchived,
+    createdAtMs = createdAt.toEpochMilli(), updatedAtMs = updatedAt.toEpochMilli(), category = category,
 )
 
 internal fun MetadataRow.toMetadata() = TaskMetadata(
@@ -364,15 +370,15 @@ internal fun Db.update(c: DailyContribution) = execute(
 )
 
 internal fun Db.insert(c: TaskCondition) = execute(
-    "INSERT INTO task_conditions (id, workspaceId, name, isLocation, isArchived, createdAt, updatedAt) " +
-        "VALUES (?, ?, ?, ?, ?, ?, ?)",
-    c.id, c.workspaceId, c.name, c.isLocation, c.isArchived, c.createdAt, c.updatedAt,
+    "INSERT INTO task_conditions (id, workspaceId, name, isLocation, isArchived, createdAt, updatedAt, category) " +
+        "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+    c.id, c.workspaceId, c.name, c.isLocation, c.isArchived, c.createdAt, c.updatedAt, c.category,
 )
 
 internal fun Db.update(c: TaskCondition) = execute(
     "UPDATE task_conditions SET workspaceId = ?, name = ?, isLocation = ?, isArchived = ?, createdAt = ?, " +
-        "updatedAt = ? WHERE id = ?",
-    c.workspaceId, c.name, c.isLocation, c.isArchived, c.createdAt, c.updatedAt, c.id,
+        "updatedAt = ?, category = ? WHERE id = ?",
+    c.workspaceId, c.name, c.isLocation, c.isArchived, c.createdAt, c.updatedAt, c.category, c.id,
 )
 
 internal fun Db.insert(b: FocusWorkBlock) = execute(

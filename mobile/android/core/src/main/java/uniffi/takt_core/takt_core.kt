@@ -759,6 +759,16 @@ internal object IntegrityCheckingUniffiLib {
     ): Int
     external fun uniffi_takt_core_checksum_func_resolve_due_date(
     ): Int
+    external fun uniffi_takt_core_checksum_func_available_condition_sections(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_condition_categories(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_condition_category_normalized(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_condition_section_title(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_condition_sections(
+    ): Int
     external fun uniffi_takt_core_checksum_func_day_boundary_day_key(
     ): Int
     external fun uniffi_takt_core_checksum_func_day_boundary_day_offset(
@@ -1135,6 +1145,8 @@ internal object IntegrityCheckingUniffiLib {
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_recent_focus_awards(
     ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_required_condition_ids(
+    ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_task_completions_between(
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_task_counts(
@@ -1200,6 +1212,8 @@ internal object IntegrityCheckingUniffiLib {
     external fun uniffi_takt_core_checksum_method_coreworkspace_convert_list_to_task(
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_create_condition(
+    ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_create_condition_in_category(
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_create_folder(
     ): Int
@@ -1342,6 +1356,8 @@ internal object IntegrityCheckingUniffiLib {
     external fun uniffi_takt_core_checksum_method_coreworkspace_schedule_task(
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_search_tasks(
+    ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_set_condition_category(
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_set_item_kind(
     ): Int
@@ -1569,6 +1585,8 @@ internal object UniffiLib {
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_method_coreworkspace_recent_focus_awards(`ptr`: Long,`limit`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_method_coreworkspace_required_condition_ids(`ptr`: Long,`workspaceId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_method_coreworkspace_task_completions_between(`ptr`: Long,`fromMs`: Long,`toMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_method_coreworkspace_task_counts(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus, 
@@ -1634,6 +1652,8 @@ internal object UniffiLib {
     external fun uniffi_takt_core_fn_method_coreworkspace_convert_list_to_task(`ptr`: Long,`id`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_method_coreworkspace_create_condition(`ptr`: Long,`workspaceId`: RustBuffer.ByValue,`name`: RustBuffer.ByValue,`isLocation`: Byte,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_method_coreworkspace_create_condition_in_category(`ptr`: Long,`workspaceId`: RustBuffer.ByValue,`name`: RustBuffer.ByValue,`category`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_method_coreworkspace_create_folder(`ptr`: Long,`workspaceId`: RustBuffer.ByValue,`name`: RustBuffer.ByValue,`parentFolderId`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
@@ -1777,6 +1797,8 @@ internal object UniffiLib {
     ): Unit
     external fun uniffi_takt_core_fn_method_coreworkspace_search_tasks(`ptr`: Long,`workspaceId`: RustBuffer.ByValue,`query`: RustBuffer.ByValue,`includingCompleted`: Byte,`includingArchivedLists`: Byte,`limit`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_method_coreworkspace_set_condition_category(`ptr`: Long,`id`: RustBuffer.ByValue,`category`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Unit
     external fun uniffi_takt_core_fn_method_coreworkspace_set_item_kind(`ptr`: Long,`id`: RustBuffer.ByValue,`kind`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
     external fun uniffi_takt_core_fn_method_coreworkspace_set_kanban_column(`ptr`: Long,`taskIds`: RustBuffer.ByValue,`column`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
@@ -1930,6 +1952,16 @@ internal object UniffiLib {
     external fun uniffi_takt_core_fn_func_palette_command_parse(`input`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_func_resolve_due_date(`input`: RustBuffer.ByValue,`nowMs`: Long,`zone`: RustBuffer.ByValue,`hours`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_available_condition_sections(`conditions`: RustBuffer.ByValue,`requiredIds`: RustBuffer.ByValue,`activeIds`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_condition_categories(`conditions`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_condition_category_normalized(`category`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_condition_section_title(`condition`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_condition_sections(`conditions`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_func_day_boundary_day_key(`boundary`: RustBuffer.ByValue,`atMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
@@ -2438,6 +2470,21 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_func_resolve_due_date() and 0xFFFF) != 36836) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_available_condition_sections() and 0xFFFF) != 57749) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_condition_categories() and 0xFFFF) != 7519) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_condition_category_normalized() and 0xFFFF) != 53106) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_condition_section_title() and 0xFFFF) != 32802) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_condition_sections() and 0xFFFF) != 5242) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_func_day_boundary_day_key() and 0xFFFF) != 60525) {
@@ -3004,6 +3051,9 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_recent_focus_awards() and 0xFFFF) != 13804) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_required_condition_ids() and 0xFFFF) != 25474) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_task_completions_between() and 0xFFFF) != 16557) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
@@ -3101,6 +3151,9 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_create_condition() and 0xFFFF) != 36493) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_create_condition_in_category() and 0xFFFF) != 47209) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_create_folder() and 0xFFFF) != 9864) {
@@ -3314,6 +3367,9 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_search_tasks() and 0xFFFF) != 47825) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_set_condition_category() and 0xFFFF) != 2912) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_set_item_kind() and 0xFFFF) != 55048) {
@@ -4621,6 +4677,11 @@ public interface CoreWorkspaceInterface {
     fun `recentFocusAwards`(`limit`: kotlin.Long): List<AwardRow>
     
     /**
+     * The conditions an open task in the workspace requires, by id, sorted.
+     */
+    fun `requiredConditionIds`(`workspaceId`: kotlin.String): List<kotlin.String>
+    
+    /**
      * When tasks were completed in `[from, to)`.
      */
     fun `taskCompletionsBetween`(`fromMs`: kotlin.Long, `toMs`: kotlin.Long): List<kotlin.Long>
@@ -4791,6 +4852,12 @@ public interface CoreWorkspaceInterface {
      * Creates a condition as one "New Condition" step; returns its id.
      */
     fun `createCondition`(`workspaceId`: kotlin.String, `name`: kotlin.String, `isLocation`: kotlin.Boolean, `nowMs`: kotlin.Long): kotlin.String
+    
+    /**
+     * Creates a condition under a category (none for uncategorised) as one
+     * "New Condition" step; returns its id. Location makes it a place.
+     */
+    fun `createConditionInCategory`(`workspaceId`: kotlin.String, `name`: kotlin.String, `category`: kotlin.String?, `nowMs`: kotlin.Long): kotlin.String
     
     /**
      * Creates a folder as one "New Folder" step.
@@ -5166,6 +5233,12 @@ public interface CoreWorkspaceInterface {
      * Prefix search over titles and notes, best match first.
      */
     fun `searchTasks`(`workspaceId`: kotlin.String, `query`: kotlin.String, `includingCompleted`: kotlin.Boolean, `includingArchivedLists`: kotlin.Boolean, `limit`: kotlin.Long): List<SearchHit>
+    
+    /**
+     * Files a condition under a category, or none, as one "Edit Condition"
+     * step. Location makes it a place, anything else makes it not one.
+     */
+    fun `setConditionCategory`(`id`: kotlin.String, `category`: kotlin.String?, `nowMs`: kotlin.Long)
     
     /**
      * Makes an item a task or a nested list.
@@ -6281,6 +6354,24 @@ open class CoreWorkspace: Disposable, AutoCloseable, CoreWorkspaceInterface
 
     
     /**
+     * The conditions an open task in the workspace requires, by id, sorted.
+     */
+    @Throws(CoreException::class)override fun `requiredConditionIds`(`workspaceId`: kotlin.String): List<kotlin.String> {
+            return FfiConverterSequenceString.lift(
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_required_condition_ids(
+        it,
+        
+        FfiConverterString.lower(`workspaceId`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
      * When tasks were completed in `[from, to)`.
      */
     @Throws(CoreException::class)override fun `taskCompletionsBetween`(`fromMs`: kotlin.Long, `toMs`: kotlin.Long): List<kotlin.Long> {
@@ -6888,6 +6979,28 @@ open class CoreWorkspace: Disposable, AutoCloseable, CoreWorkspaceInterface
         FfiConverterString.lower(`workspaceId`),
         FfiConverterString.lower(`name`),
         FfiConverterBoolean.lower(`isLocation`),
+        FfiConverterLong.lower(`nowMs`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * Creates a condition under a category (none for uncategorised) as one
+     * "New Condition" step; returns its id. Location makes it a place.
+     */
+    @Throws(CoreException::class)override fun `createConditionInCategory`(`workspaceId`: kotlin.String, `name`: kotlin.String, `category`: kotlin.String?, `nowMs`: kotlin.Long): kotlin.String {
+            return FfiConverterString.lift(
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_create_condition_in_category(
+        it,
+        
+        FfiConverterString.lower(`workspaceId`),
+        FfiConverterString.lower(`name`),
+        FfiConverterOptionalString.lower(`category`),
         FfiConverterLong.lower(`nowMs`),_status)
 }
     }
@@ -8275,6 +8388,26 @@ open class CoreWorkspace: Disposable, AutoCloseable, CoreWorkspaceInterface
     }
     )
     }
+    
+
+    
+    /**
+     * Files a condition under a category, or none, as one "Edit Condition"
+     * step. Location makes it a place, anything else makes it not one.
+     */
+    @Throws(CoreException::class)override fun `setConditionCategory`(`id`: kotlin.String, `category`: kotlin.String?, `nowMs`: kotlin.Long)
+        = 
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_set_condition_category(
+        it,
+        
+        FfiConverterString.lower(`id`),
+        FfiConverterOptionalString.lower(`category`),
+        FfiConverterLong.lower(`nowMs`),_status)
+}
+    }
+    
     
 
     
@@ -10769,6 +10902,13 @@ data class ConditionRow (
     var `createdAtMs`: kotlin.Long
     , 
     var `updatedAtMs`: kotlin.Long
+    , 
+    /**
+     * The category as stored ("Location", "Equipment"), or none. A place an
+     * older client made has none; `condition_effective_category` reads it
+     * as "Location".
+     */
+    var `category`: kotlin.String?
     
 ){
     
@@ -10792,6 +10932,7 @@ public object FfiConverterTypeConditionRow: FfiConverterRustBuffer<ConditionRow>
             FfiConverterBoolean.read(buf),
             FfiConverterLong.read(buf),
             FfiConverterLong.read(buf),
+            FfiConverterOptionalString.read(buf),
         )
     }
 
@@ -10802,7 +10943,8 @@ public object FfiConverterTypeConditionRow: FfiConverterRustBuffer<ConditionRow>
             FfiConverterBoolean.allocationSize(value.`isLocation`) +
             FfiConverterBoolean.allocationSize(value.`isArchived`) +
             FfiConverterLong.allocationSize(value.`createdAtMs`) +
-            FfiConverterLong.allocationSize(value.`updatedAtMs`)
+            FfiConverterLong.allocationSize(value.`updatedAtMs`) +
+            FfiConverterOptionalString.allocationSize(value.`category`)
     )
 
     override fun write(value: ConditionRow, buf: ByteBuffer) {
@@ -10813,6 +10955,70 @@ public object FfiConverterTypeConditionRow: FfiConverterRustBuffer<ConditionRow>
             FfiConverterBoolean.write(value.`isArchived`, buf)
             FfiConverterLong.write(value.`createdAtMs`, buf)
             FfiConverterLong.write(value.`updatedAtMs`, buf)
+            FfiConverterOptionalString.write(value.`category`, buf)
+    }
+}
+
+
+
+/**
+ * Conditions under one heading.
+ */
+data class ConditionSection (
+    /**
+     * The category, or none for the uncategorised.
+     */
+    var `category`: kotlin.String?
+    , 
+    /**
+     * What the heading says: the category, or "Other".
+     */
+    var `title`: kotlin.String
+    , 
+    /**
+     * Whether saying one holds replaces the rest: the Location heading.
+     */
+    var `isExclusive`: kotlin.Boolean
+    , 
+    /**
+     * In the order they were given.
+     */
+    var `conditions`: List<ConditionRow>
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeConditionSection: FfiConverterRustBuffer<ConditionSection> {
+    override fun read(buf: ByteBuffer): ConditionSection {
+        return ConditionSection(
+            FfiConverterOptionalString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterBoolean.read(buf),
+            FfiConverterSequenceTypeConditionRow.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: ConditionSection) = (
+            FfiConverterOptionalString.allocationSize(value.`category`) +
+            FfiConverterString.allocationSize(value.`title`) +
+            FfiConverterBoolean.allocationSize(value.`isExclusive`) +
+            FfiConverterSequenceTypeConditionRow.allocationSize(value.`conditions`)
+    )
+
+    override fun write(value: ConditionSection, buf: ByteBuffer) {
+            FfiConverterOptionalString.write(value.`category`, buf)
+            FfiConverterString.write(value.`title`, buf)
+            FfiConverterBoolean.write(value.`isExclusive`, buf)
+            FfiConverterSequenceTypeConditionRow.write(value.`conditions`, buf)
     }
 }
 
@@ -25693,6 +25899,34 @@ public object FfiConverterSequenceTypeConditionRow: FfiConverterRustBuffer<List<
 /**
  * @suppress
  */
+public object FfiConverterSequenceTypeConditionSection: FfiConverterRustBuffer<List<ConditionSection>> {
+    override fun read(buf: ByteBuffer): List<ConditionSection> {
+        val len = buf.getInt()
+        return List<ConditionSection>(len) {
+            FfiConverterTypeConditionSection.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<ConditionSection>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeConditionSection.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<ConditionSection>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeConditionSection.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
 public object FfiConverterSequenceTypeContributionRow: FfiConverterRustBuffer<List<ContributionRow>> {
     override fun read(buf: ByteBuffer): List<ContributionRow> {
         val len = buf.getInt()
@@ -28667,6 +28901,89 @@ public object FfiConverterMapStringTypeSyncValue: FfiConverterRustBuffer<Map<kot
         FfiConverterLong.lower(`nowMs`),
         FfiConverterString.lower(`zone`),
         FfiConverterTypeNamedHours.lower(`hours`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * What "Available now" offers: only the conditions an open task requires
+         * (`required_ids`), since saying anything else holds changes nothing, plus
+         * any that is on now (`active_ids`), so it can be turned off. Under their
+         * headings, with a heading left out when nothing under it is offered. Empty
+         * when no open task needs a condition and none is on.
+         */ fun `availableConditionSections`(`conditions`: List<ConditionRow>, `requiredIds`: List<kotlin.String>, `activeIds`: List<kotlin.String>): List<ConditionSection> {
+            return FfiConverterSequenceTypeConditionSection.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_available_condition_sections(
+    
+        
+        FfiConverterSequenceTypeConditionRow.lower(`conditions`),
+        FfiConverterSequenceString.lower(`requiredIds`),
+        FfiConverterSequenceString.lower(`activeIds`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * The categories a condition can be filed under, for a finder: Location
+         * always, then every other category the conditions use, alphabetically and
+         * once each however it is cased.
+         */ fun `conditionCategories`(`conditions`: List<ConditionRow>): List<kotlin.String> {
+            return FfiConverterSequenceString.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_condition_categories(
+    
+        
+        FfiConverterSequenceTypeConditionRow.lower(`conditions`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * A typed category made canonical — trimmed, none when empty, any spelling
+         * of "location" as "Location" — for a finder deciding whether what was typed
+         * is new.
+         */ fun `conditionCategoryNormalized`(`category`: kotlin.String?): kotlin.String? {
+            return FfiConverterOptionalString.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_condition_category_normalized(
+    
+        
+        FfiConverterOptionalString.lower(`category`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * The heading a condition is shown under: its category, Location for a
+         * place filed under none, or "Other".
+         */ fun `conditionSectionTitle`(`condition`: ConditionRow): kotlin.String {
+            return FfiConverterString.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_condition_section_title(
+    
+        
+        FfiConverterTypeConditionRow.lower(`condition`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * Conditions under their headings: Location first, then every other category
+         * alphabetically, then the uncategorised under "Other". Within a heading
+         * they keep the order they were given.
+         */ fun `conditionSections`(`conditions`: List<ConditionRow>): List<ConditionSection> {
+            return FfiConverterSequenceTypeConditionSection.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_condition_sections(
+    
+        
+        FfiConverterSequenceTypeConditionRow.lower(`conditions`),_status)
 }
     )
     }

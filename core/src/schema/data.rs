@@ -34,8 +34,53 @@ pub(super) fn finish(transaction: &Transaction, identifier: &str) -> Result<(), 
         "v21_task_dependencies" | "v22_matrix_order" | "v23_filter_lists" => {
             Ok(super::triggers::reinstall(transaction)?)
         }
+        "v24_condition_categories" => {
+            super::triggers::reinstall(transaction)?;
+            file_places_under_location(transaction)
+        }
         _ => Ok(()),
     }
+}
+
+/// v24: every place becomes a condition in the "Location" category, which is
+/// what makes a condition a place from here on. Neither journalled nor
+/// queued for sync: every device runs this same step on its own rows, and a
+/// place an older client makes later reads as "Location" anyway
+/// (`conditions::effective_category`).
+fn file_places_under_location(transaction: &Transaction) -> Result<(), CoreError> {
+    // Each guard is read, switched off for the one statement, and put back.
+    let guards = [
+        ("undo_control", "suppressed", 1),
+        ("sync_control", "recording", 0),
+    ];
+    let mut saved = Vec::new();
+    for (table, column, quiet) in guards {
+        let value: Option<i64> = transaction
+            .query_row(
+                &format!("SELECT {column} FROM {table} WHERE id = 0"),
+                [],
+                |row| row.get(0),
+            )
+            .ok();
+        if let Some(value) = value {
+            transaction.execute(
+                &format!("UPDATE {table} SET {column} = ?1 WHERE id = 0"),
+                [quiet],
+            )?;
+            saved.push((table, column, value));
+        }
+    }
+    transaction.execute(
+        "UPDATE task_conditions SET category = ?1 WHERE isLocation = 1",
+        [crate::conditions::LOCATION_CATEGORY],
+    )?;
+    for (table, column, value) in saved {
+        transaction.execute(
+            &format!("UPDATE {table} SET {column} = ?1 WHERE id = 0"),
+            [value],
+        )?;
+    }
+    Ok(())
 }
 
 /// v11 and v13: a list whose only root task is a wrapper named like the list

@@ -10,6 +10,10 @@ public struct TaskCondition: Codable, Identifiable, Equatable, Sendable {
   public var isArchived: Bool
   public let createdAt: Date
   public var updatedAt: Date
+  /// The category as stored ("Location", "Equipment"), or nil. Read the
+  /// heading it is shown under from `TaskConditionSection`, which also files
+  /// an older client's place, which has none, under Location.
+  public var category: String?
 }
 
 /// Stored alongside metadata so complete planning edits share one undo step.

@@ -84,6 +84,37 @@ class WorkspaceConditionsTest {
     }
 
     @Test
+    fun categoriesGroupConditionsAndWhereYouAreOffersOnlyWhatOpenTasksNeed() = fixture {
+        val home = store.conditions(workspace.id).first { it.name == "Home" }
+        assertEquals("the seeded places are filed under Location", ConditionGroups.LOCATION, home.category)
+        val mat = store.createCondition(workspace.id, "Mat", category = "Equipment", now = now)
+        assertEquals("Equipment", mat.category)
+        store.setConditionCategory(mat.id, "location", now = now)
+        val moved = store.conditions(workspace.id).first { it.id == mat.id }
+        assertEquals(ConditionGroups.LOCATION, moved.category)
+        assertTrue("Location is what makes it a place", moved.isLocation)
+        store.undo()
+        assertEquals("Equipment", store.conditions(workspace.id).first { it.id == mat.id }.category)
+
+        val all = store.conditions(workspace.id)
+        assertEquals(listOf("Location", "Equipment", "Other"), ConditionGroups.all(all).map { it.title })
+        assertEquals(listOf("Location", "Equipment"), ConditionGroups.categories(all))
+        assertTrue(ConditionGroups.available(all, store.requiredConditionIds(workspace.id), emptySet()).isEmpty())
+
+        val gym = task("Gym")
+        store.saveTaskEditor(edit(gym.id).edit { copy(requirementGroups = listOf(listOf(mat.id))) })
+        val required = store.requiredConditionIds(workspace.id)
+        assertEquals(setOf(mat.id), required)
+        val offered = ConditionGroups.available(all, required, setOf(home.id))
+        assertEquals(listOf("Location", "Equipment"), offered.map { it.title })
+        assertEquals(listOf(listOf(home.id), listOf(mat.id)), offered.map { group -> group.conditions.map { it.id } })
+        assertTrue(offered.first().isExclusive)
+
+        store.setStatus(TaskStatus.COMPLETED, gym.id, now = now)
+        assertTrue("a done task needs nothing", store.requiredConditionIds(workspace.id).isEmpty())
+    }
+
+    @Test
     fun planningSaveAndUndoAreAtomicAndReopenRetainsAllFields() = fixture {
         val task = task()
         val conditions = store.conditions(workspace.id)

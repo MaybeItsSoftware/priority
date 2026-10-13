@@ -17,6 +17,8 @@ data class WorkspaceNextUpSnapshot(
     val dayTasks: Map<String, WorkspaceTask>,
     /** Whether the ladder carries hand-placed positions. */
     val hasManualFocusOrder: Boolean,
+    /** The conditions an open task requires: what "Where you are" offers. */
+    val requiredConditionIds: Set<String> = emptySet(),
 ) {
     companion object {
         /** How many ranked tasks the day shows when nothing was planned for it. */

@@ -61,6 +61,14 @@ extension TaskCondition {
     isArchived = row.isArchived
     createdAt = Date(coreMilliseconds: row.createdAtMs)
     updatedAt = Date(coreMilliseconds: row.updatedAtMs)
+    category = row.category
+  }
+
+  /// The row the core's condition rules read.
+  var core: ConditionRow {
+    ConditionRow(
+      id: id, workspaceId: workspaceId, name: name, isLocation: isLocation, isArchived: isArchived,
+      createdAtMs: createdAt.coreMilliseconds, updatedAtMs: updatedAt.coreMilliseconds, category: category)
   }
 }
 

@@ -13,6 +13,8 @@ public struct WorkspaceNextUpSnapshot: Sendable {
   public let loggedSeconds: [String: Int]
   public let planning: [String: TaskPlanning]
   public let conditions: [TaskCondition]
+  /// The conditions an open task requires: what "Available now" offers.
+  public let requiredConditionIDs: Set<String>
   public let todayPlan: [DayPlanEntry]
   public let workProgress: WorkProgress
   public let ranking: FocusRanking
@@ -45,6 +47,7 @@ extension WorkspaceStore {
     let loggedSeconds = try loggedWorkTotals()
     let planning = try taskPlanningValues()
     let conditions = try workspaceId.map { try self.conditions(in: $0) } ?? []
+    let required = try workspaceId.map { try requiredConditionIDs(in: $0) } ?? []
     let read = try Self.mappingCoreErrors {
       try core.nextUp(
         nowMs: now.coreMilliseconds, zone: calendar.timeZone.identifier, context: context.core,
@@ -57,7 +60,7 @@ extension WorkspaceStore {
     let dayIDs = plan.map(\.id) + ranking.ranked.prefix(WorkspaceNextUpSnapshot.fallbackDayLength).map(\.candidate.id)
     return WorkspaceNextUpSnapshot(
       loggedSeconds: loggedSeconds, planning: planning, conditions: conditions,
-      todayPlan: plan, workProgress: progress, ranking: ranking,
+      requiredConditionIDs: required, todayPlan: plan, workProgress: progress, ranking: ranking,
       dayTasks: try tasks(ids: dayIDs), hasManualFocusOrder: try hasManualFocusOrder())
   }
 }

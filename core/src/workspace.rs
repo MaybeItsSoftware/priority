@@ -448,6 +448,39 @@ impl CoreWorkspace {
         })
     }
 
+    /// Creates a condition under a category (none for uncategorised) as one
+    /// "New Condition" step; returns its id. Location makes it a place.
+    pub fn create_condition_in_category(
+        &self,
+        workspace_id: String,
+        name: String,
+        category: Option<String>,
+        now_ms: i64,
+    ) -> Result<String, CoreError> {
+        journal::journalled(&mut self.lock(), "New Condition", |tx| {
+            conditions::create_condition_in_category(
+                tx,
+                &workspace_id,
+                &name,
+                category.as_deref(),
+                now_ms,
+            )
+        })
+    }
+
+    /// Files a condition under a category, or none, as one "Edit Condition"
+    /// step. Location makes it a place, anything else makes it not one.
+    pub fn set_condition_category(
+        &self,
+        id: String,
+        category: Option<String>,
+        now_ms: i64,
+    ) -> Result<(), CoreError> {
+        journal::journalled(&mut self.lock(), "Edit Condition", |tx| {
+            conditions::set_condition_category(tx, &id, category.as_deref(), now_ms)
+        })
+    }
+
     /// Saves a condition as one "Edit Condition" step.
     pub fn save_condition(
         &self,

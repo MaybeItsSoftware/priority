@@ -113,6 +113,21 @@ trigger, like v21. When two devices' workspaces are merged into the canonical
 one (`sync::adopt_workspaces`), filter lists move with the folders and lists.
 Today and Everything are definitions shipped in the core, not rows.
 
+`v24_condition_categories` adds `category TEXT` to `task_conditions`: the
+heading a condition is filed under ("Location", "Equipment", "Energy"), or
+NULL for none. It reinstalls the `task_conditions` journal and outbox
+triggers, then files every existing place (`isLocation = 1`) under
+"Location" with the journal and the outbox off, as a data step every device
+runs for itself, so the backfill is not pushed. `isLocation` stays and stays
+authoritative for exclusivity: the core's writes keep it equal to
+`category = 'Location'` (filing a condition under Location makes it a place,
+filing it anywhere else makes it not one, and making it a place through the
+old `save_condition` files it under Location). A client older than v24 drops
+the column on pull and still treats places as exclusive; a place it makes
+arrives with no category and is shown under Location
+(`conditions::effective_category`). Categories are free text, matched
+case-insensitively, so "equipment" typed on one device joins "Equipment".
+
 The following are not synced: the undo journal (`undo_control`, `change_log`), the FTS index
 (rebuilt by its own triggers as synced rows land), `grdb_migrations`, and the
 sync tables themselves. Day-log files stay per device. Theme *files* do

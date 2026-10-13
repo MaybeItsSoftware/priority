@@ -383,6 +383,8 @@ data class TaskCondition(
     val isArchived: Boolean,
     val createdAt: Instant,
     val updatedAt: Instant,
+    /** The category as stored ("Location", "Equipment"), or null; the core's `condition_sections` reads it. */
+    val category: String? = null,
 )
 
 data class FocusWorkBlock(
