@@ -31,6 +31,7 @@ pub mod error;
 pub mod export;
 pub mod filter_lists;
 pub mod focus;
+pub mod focus_context;
 pub mod google_tasks;
 pub mod habits;
 pub mod imports;

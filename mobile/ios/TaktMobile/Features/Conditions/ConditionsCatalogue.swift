@@ -6,18 +6,15 @@ import TaktWorkspace
 /// actor.
 struct ConditionsCatalogue: Sendable, Equatable {
   var conditions: [TaskCondition] = []
-  /// Task count per condition ID, over every requirement group.
+  /// How many open tasks require each condition, by ID: the core's count,
+  /// in which a completed or archived task no longer counts.
   var usage: [String: Int] = [:]
 
   static let empty = ConditionsCatalogue()
 
   static func load(store: WorkspaceStore, workspaceID: String) throws -> ConditionsCatalogue {
     let conditions = try store.conditions(in: workspaceID)
-    var usage: [String: Int] = [:]
-    for planning in try store.taskPlanningValues().values {
-      for id in Set((planning.requirementGroups ?? []).flatMap { $0 }) { usage[id, default: 0] += 1 }
-    }
-    return ConditionsCatalogue(conditions: conditions, usage: usage)
+    return ConditionsCatalogue(conditions: conditions, usage: try store.conditionUsage(in: workspaceID))
   }
 
   var active: [TaskCondition] { conditions.filter { !$0.isArchived } }

@@ -40,6 +40,10 @@ pub(super) fn finish(transaction: &Transaction, identifier: &str) -> Result<(), 
             super::triggers::reinstall(transaction)?;
             file_places_under_location(transaction)
         }
+        "v27_condition_order_and_context" => {
+            super::triggers::reinstall(transaction)?;
+            quietly(transaction, crate::conditions::number_every_workspace)
+        }
         _ => Ok(()),
     }
 }
@@ -50,7 +54,23 @@ pub(super) fn finish(transaction: &Transaction, identifier: &str) -> Result<(), 
 /// place an older client makes later reads as "Location" anyway
 /// (`conditions::effective_category`).
 fn file_places_under_location(transaction: &Transaction) -> Result<(), CoreError> {
-    // Each guard is read, switched off for the one statement, and put back.
+    quietly(transaction, |transaction| {
+        transaction.execute(
+            "UPDATE task_conditions SET category = ?1 WHERE isLocation = 1",
+            [crate::conditions::LOCATION_CATEGORY],
+        )?;
+        Ok(())
+    })
+}
+
+/// Runs `work` with the undo journal and the sync outbox switched off: for a
+/// step every device runs on its own rows with the same result, so there is
+/// nothing to undo and nothing to send. Each guard is read, switched off for
+/// the work, and put back.
+fn quietly(
+    transaction: &Transaction,
+    work: impl FnOnce(&Transaction) -> Result<(), CoreError>,
+) -> Result<(), CoreError> {
     let guards = [
         ("undo_control", "suppressed", 1),
         ("sync_control", "recording", 0),
@@ -72,10 +92,7 @@ fn file_places_under_location(transaction: &Transaction) -> Result<(), CoreError
             saved.push((table, column, value));
         }
     }
-    transaction.execute(
-        "UPDATE task_conditions SET category = ?1 WHERE isLocation = 1",
-        [crate::conditions::LOCATION_CATEGORY],
-    )?;
+    work(transaction)?;
     for (table, column, value) in saved {
         transaction.execute(
             &format!("UPDATE {table} SET {column} = ?1 WHERE id = 0"),

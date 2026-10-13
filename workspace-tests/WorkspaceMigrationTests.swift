@@ -36,6 +36,7 @@ final class WorkspaceMigrationTests: XCTestCase {
     "v24_condition_categories",
     "v25_agent_instructions",
     "v26_commitment_missed_stack",
+    "v27_condition_order_and_context",
   ]
 
   private var directoryURL: URL!

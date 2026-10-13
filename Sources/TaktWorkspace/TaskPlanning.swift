@@ -14,6 +14,9 @@ public struct TaskCondition: Codable, Identifiable, Equatable, Sendable {
   /// heading it is shown under from `TaskConditionSection`, which also files
   /// an older client's place, which has none, under Location.
   public var category: String?
+  /// Where it sits in the Conditions tab, workspace-wide; nil for one nobody
+  /// has placed. The order itself is the core's (`condition_sections`).
+  public var sortOrder: Int?
 }
 
 /// Stored alongside metadata so complete planning edits share one undo step.

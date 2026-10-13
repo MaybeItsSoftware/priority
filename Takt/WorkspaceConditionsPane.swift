@@ -101,7 +101,7 @@ struct WorkspaceConditionsPane: View {
         .buttonStyle(.plain)
         .foregroundStyle(theme.primary)
         .commandHelp(.conditionsUseAgain)
-      Button("Dismiss") { model.suggestedContextIDs = [] }
+      Button("Dismiss") { model.dismissSuggestedContext() }
         .buttonStyle(.plain)
         .foregroundStyle(theme.muted)
     }

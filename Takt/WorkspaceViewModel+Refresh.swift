@@ -281,6 +281,7 @@ extension WorkspaceViewModel {
     if taskPlanningByID != snapshot.planning { taskPlanningByID = snapshot.planning }
     if workspace != nil, focusConditions != snapshot.conditions { focusConditions = snapshot.conditions }
     if requiredConditionIDs != snapshot.requiredConditionIDs { requiredConditionIDs = snapshot.requiredConditionIDs }
+    if conditionRequirementCounts != snapshot.conditionUsage { conditionRequirementCounts = snapshot.conditionUsage }
     if todayPlan != snapshot.todayPlan { todayPlan = snapshot.todayPlan }
     if workProgress != snapshot.workProgress { workProgress = snapshot.workProgress }
     let ranked = snapshot.ranking.ranked

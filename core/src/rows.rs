@@ -68,6 +68,10 @@ pub struct ConditionRow {
     /// older client made has none; `condition_effective_category` reads it
     /// as "Location".
     pub category: Option<String>,
+    /// Where it sits in the tab, workspace-wide: under its heading in this
+    /// order, and the headings in the order of their first. None for one
+    /// nobody has placed, which comes after the placed ones under its heading.
+    pub sort_order: Option<i64>,
 }
 
 /// A row of `task_metadata`. `TaskMetadata`.
@@ -238,6 +242,8 @@ impl ConditionRow {
             created_at_ms: required_ms(row, "createdAt")?,
             updated_at_ms: required_ms(row, "updatedAt")?,
             category: row.get("category")?,
+            // Absent before v27; a database the CLI opens unmigrated has none.
+            sort_order: row.get("sortOrder").unwrap_or(None),
         })
     }
 }

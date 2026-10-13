@@ -28,6 +28,36 @@ public enum FocusContextSelection {
     Set(focusContextRestore(saved: saved, known: Array(known)))
   }
 
+  /// Whether the conditions on were said on an earlier day than `now`: a
+  /// place left on overnight is probably not where you are. The core's
+  /// `focus_context_is_stale`.
+  public static func isStale(
+    _ active: Set<String>, setAt: Date?, now: Date, timeZone: TimeZone = .current
+  ) -> Bool {
+    let context = StoredFocusContext(
+      conditionIds: Array(active), conditionsSetAtMs: setAt.map { Int64(($0.timeIntervalSince1970 * 1000).rounded()) },
+      availableUntilMs: nil, expiresAtMs: nil, mode: "progress", suggestedIds: [])
+    return focusContextIsStale(
+      context: context, nowMs: Int64((now.timeIntervalSince1970 * 1000).rounded()), zone: timeZone.identifier)
+  }
+
+  /// `current` with `on` turned on and `off` turned off; a place turned on
+  /// turns the other places off. The core's `focus_context_changed`, which
+  /// the CLI's `workspace_context_set` applies too.
+  public static func changing(
+    _ current: Set<String>, on: [String], off: [String] = [], locationIDs: Set<String>
+  ) -> Set<String> {
+    Set(focusContextChanged(current: Array(current), on: on, off: off, locationIds: Array(locationIDs)))
+  }
+
+  /// How many held-back tasks wait on each condition, by id, from each such
+  /// task's unmet requirement groups. The core's `condition_waiting_counts`.
+  public static func waitingCounts(_ missing: [[[String]]]) -> [String: Int] {
+    Dictionary(
+      conditionWaitingCounts(missing: missing).map { ($0.conditionId, Int($0.openTasks)) },
+      uniquingKeysWith: { first, _ in first })
+  }
+
   /// The context in a few words, for a status bar: the names in the order the
   /// conditions are listed, or `nil` with nothing on.
   public static func summary(_ active: Set<String>, names: [(id: String, name: String)]) -> String? {

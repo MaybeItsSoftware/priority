@@ -1,5 +1,6 @@
 import Foundation
 import TaktCore
+import TaktRustCore
 
 extension WorkspaceStore {
 
@@ -60,6 +61,66 @@ extension WorkspaceStore {
     }
   }
 
+  /// How many open tasks require each condition, by id: the Rust core's
+  /// `conditions::condition_usage`. Completed and archived tasks, and those
+  /// in archived lists, do not count.
+  public func conditionUsage(in workspaceId: String) throws -> [String: Int] {
+    let usage = try Self.mappingCoreErrors { try core.conditionUsage(workspaceId: workspaceId) }
+    return Dictionary(usage.map { ($0.conditionId, Int($0.openTasks)) }, uniquingKeysWith: { _, last in last })
+  }
+
+  /// The open tasks that require a condition, list by list.
+  public func tasksRequiring(condition id: String, in workspaceId: String) throws -> [RequiringTask] {
+    try Self.mappingCoreErrors { try core.tasksRequiringCondition(workspaceId: workspaceId, conditionId: id) }
+  }
+
+  /// Moves a condition one place up (negative) or down under its heading.
+  @discardableResult
+  public func moveCondition(id: String, by offset: Int, now: Date = .now) throws -> Bool {
+    try coreWrite { try core.moveCondition(id: id, offset: Int64(offset), nowMs: now.coreMilliseconds) }
+  }
+
+  /// Moves a whole heading (nil for "Other") one place up or down.
+  @discardableResult
+  public func moveConditionCategory(_ category: String?, in workspaceId: String, by offset: Int,
+                                    now: Date = .now) throws -> Bool {
+    try coreWrite {
+      try core.moveConditionCategory(
+        workspaceId: workspaceId, category: category, offset: Int64(offset), nowMs: now.coreMilliseconds)
+    }
+  }
+
+  /// Files every condition under one heading under another, keeping their
+  /// places; onto a category in use, the two merge.
+  @discardableResult
+  public func renameConditionCategory(_ from: String?, to: String?, in workspaceId: String,
+                                      now: Date = .now) throws -> Int {
+    Int(try coreWrite {
+      try core.renameConditionCategory(workspaceId: workspaceId, from: from, to: to, nowMs: now.coreMilliseconds)
+    })
+  }
+
+  /// Merges a condition into another: its tasks require the other, and it
+  /// is archived. Returns how many tasks changed.
+  @discardableResult
+  public func mergeConditions(_ from: String, into: String, now: Date = .now) throws -> Int {
+    Int(try coreWrite { try core.mergeConditions(from: from, into: into, nowMs: now.coreMilliseconds) })
+  }
+
+  /// What holds now, as last saved, or nil if it never was.
+  public func focusContext(in workspaceId: String) throws -> SavedFocusContext? {
+    try Self.mappingCoreErrors { try core.focusContext(workspaceId: workspaceId) }.map(SavedFocusContext.init)
+  }
+
+  /// Saves what holds now. Not an undo step. The core stamps when the
+  /// conditions on were said, whatever `conditionsSetAt` carries.
+  @discardableResult
+  public func saveFocusContext(_ context: SavedFocusContext, in workspaceId: String, now: Date = .now) throws -> Bool {
+    try Self.mappingCoreErrors {
+      try core.saveFocusContext(workspaceId: workspaceId, context: context.core, nowMs: now.coreMilliseconds)
+    }
+  }
+
   /// Copies a task's requirements, start and block rules onto its subtasks,
   /// each keeping its own due date: the Rust core's
   /// `editor::apply_planning_to_descendants`.
@@ -76,5 +137,51 @@ extension WorkspaceStore {
     // Decoded and normalised in the core: one crossing, only the planned tasks.
     let entries = try Self.mappingCoreErrors { try core.taskPlanningValues() }
     return Dictionary(entries.map { ($0.taskId, TaskPlanning($0.planning)) }, uniquingKeysWith: { _, last in last })
+  }
+}
+
+/// What holds now — the conditions on, the time available, the goal, when
+/// the answer lapses and what was set aside when it last did — as the
+/// workspace keeps it (`focus_contexts`), where the CLI and the agent can
+/// read and set it too.
+public struct SavedFocusContext: Equatable, Sendable {
+  public var conditionIDs: Set<String>
+  /// When the conditions on were said; nil with none on.
+  public var conditionsSetAt: Date?
+  public var availableUntil: Date?
+  public var expiresAt: Date?
+  public var mode: FocusTimeMode
+  public var suggestedIDs: Set<String>
+
+  public init(
+    conditionIDs: Set<String> = [], conditionsSetAt: Date? = nil, availableUntil: Date? = nil,
+    expiresAt: Date? = nil, mode: FocusTimeMode = .progress, suggestedIDs: Set<String> = []
+  ) {
+    self.conditionIDs = conditionIDs; self.conditionsSetAt = conditionsSetAt
+    self.availableUntil = availableUntil; self.expiresAt = expiresAt
+    self.mode = mode; self.suggestedIDs = suggestedIDs
+  }
+
+  init(_ core: StoredFocusContext) {
+    self.init(
+      conditionIDs: Set(core.conditionIds), conditionsSetAt: core.conditionsSetAtMs.map(Date.init(coreMilliseconds:)),
+      availableUntil: core.availableUntilMs.map(Date.init(coreMilliseconds:)), expiresAt: core.expiresAtMs.map(Date.init(coreMilliseconds:)),
+      mode: FocusTimeMode(rawValue: core.mode) ?? .progress, suggestedIDs: Set(core.suggestedIds))
+  }
+
+  var core: StoredFocusContext {
+    StoredFocusContext(
+      conditionIds: conditionIDs.sorted(), conditionsSetAtMs: conditionsSetAt?.coreMilliseconds,
+      availableUntilMs: availableUntil?.coreMilliseconds, expiresAtMs: expiresAt?.coreMilliseconds,
+      mode: mode.rawValue, suggestedIds: suggestedIDs.sorted())
+  }
+
+  /// Whether it had lapsed by `now`.
+  public func hasExpired(at now: Date) -> Bool { expiresAt.map { $0 <= now } ?? false }
+
+  /// As it stands at `now`: once expired, its conditions are set aside to be
+  /// offered back. The core's `focus_context_in_force`.
+  public func inForce(at now: Date) -> SavedFocusContext {
+    SavedFocusContext(focusContextInForce(context: core, nowMs: now.coreMilliseconds))
   }
 }

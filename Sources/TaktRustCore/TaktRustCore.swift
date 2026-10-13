@@ -1103,6 +1103,11 @@ public protocol CoreWorkspaceProtocol: AnyObject, Sendable {
     func condition(id: String) throws  -> ConditionRow?
     
     /**
+     * How many open tasks require each condition, for those any does.
+     */
+    func conditionUsage(workspaceId: String) throws  -> [ConditionUsage]
+    
+    /**
      * A workspace's conditions, oldest first.
      */
     func conditions(workspaceId: String) throws  -> [ConditionRow]
@@ -1142,6 +1147,11 @@ public protocol CoreWorkspaceProtocol: AnyObject, Sendable {
      * Awards in `[from, to)`, newest first.
      */
     func focusAwardsBetween(fromMs: Int64, toMs: Int64) throws  -> [AwardRow]
+    
+    /**
+     * What holds now, as last saved, or none if it never was.
+     */
+    func focusContext(workspaceId: String) throws  -> StoredFocusContext?
     
     /**
      * Points today, over the last seven days and ever.
@@ -1228,6 +1238,11 @@ public protocol CoreWorkspaceProtocol: AnyObject, Sendable {
      * Tasks closed in `[from, to)`, oldest first.
      */
     func tasksClosedBetween(fromMs: Int64, toMs: Int64) throws  -> [TaskRow]
+    
+    /**
+     * The open tasks that require a condition.
+     */
+    func tasksRequiringCondition(workspaceId: String, conditionId: String) throws  -> [RequiringTask]
     
     /**
      * The stored themes by id.
@@ -1546,6 +1561,25 @@ public protocol CoreWorkspaceProtocol: AnyObject, Sendable {
     func makeDaily(taskId: String, weekdays: [UInt32], intervalDays: Int64?, targetSeconds: Int64?, nowMs: Int64) throws  -> String
     
     /**
+     * Merges one condition into another as one "Merge Conditions" step:
+     * its tasks require the other, and it is archived. Returns how many
+     * tasks changed.
+     */
+    func mergeConditions(from: String, into: String, nowMs: Int64) throws  -> UInt32
+    
+    /**
+     * Moves a condition one place up (`offset` < 0) or down under its
+     * heading, as one "Move Condition" step. False at the end of the run.
+     */
+    func moveCondition(id: String, offset: Int64, nowMs: Int64) throws  -> Bool
+    
+    /**
+     * Moves a heading — a category, or none for "Other" — one place up or
+     * down, as one "Move Category" step. False at either end.
+     */
+    func moveConditionCategory(workspaceId: String, category: String?, offset: Int64, nowMs: Int64) throws  -> Bool
+    
+    /**
      * Moves a folder into another (or to the top) as one "Move Folder" step.
      */
     func moveFolder(id: String, parentFolderId: String?, nowMs: Int64) throws 
@@ -1705,6 +1739,12 @@ public protocol CoreWorkspaceProtocol: AnyObject, Sendable {
     func removeTaskBlocker(taskId: String, blockedByTaskId: String) throws  -> Bool
     
     /**
+     * Files every condition under `from` under `to`, as one "Rename
+     * Category" step; returns how many moved. Location cannot be renamed.
+     */
+    func renameConditionCategory(workspaceId: String, from: String?, to: String?, nowMs: Int64) throws  -> UInt32
+    
+    /**
      * Renames a folder as one "Rename Folder" step.
      */
     func renameFolder(id: String, name: String, nowMs: Int64) throws 
@@ -1740,6 +1780,11 @@ public protocol CoreWorkspaceProtocol: AnyObject, Sendable {
      * changed since `baseline`. Returns the task as saved.
      */
     func saveEditor(edit: EditorSnapshot, baseline: EditorSnapshot, nowMs: Int64, zone: String) throws  -> EditorSnapshot
+    
+    /**
+     * Saves what holds now. Not an undo step: where you are is not an edit.
+     */
+    func saveFocusContext(workspaceId: String, context: StoredFocusContext, nowMs: Int64) throws  -> Bool
     
     /**
      * Saves the folder settings sheet as one "Edit Folder" step.
@@ -1823,6 +1868,12 @@ public protocol CoreWorkspaceProtocol: AnyObject, Sendable {
      * writing a repeating task's next occurrence in `zone` (an IANA name).
      */
     func setStatus(taskId: String, status: String, nowMs: Int64, zone: String) throws 
+    
+    /**
+     * Sets what a task requires, as one "Edit Conditions" step. False when
+     * it already required exactly that.
+     */
+    func setTaskRequirements(taskId: String, groups: [[String]], nowMs: Int64) throws  -> Bool
     
     /**
      * Sets what a task waits on and when to chase it, as one "Waiting On" step.
@@ -2471,6 +2522,19 @@ open func condition(id: String)throws  -> ConditionRow?  {
 }
     
     /**
+     * How many open tasks require each condition, for those any does.
+     */
+open func conditionUsage(workspaceId: String)throws  -> [ConditionUsage]  {
+    return try  FfiConverterSequenceTypeConditionUsage.lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_condition_usage(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(workspaceId),uniffiCallStatus
+    )
+})
+}
+    
+    /**
      * A workspace's conditions, oldest first.
      */
 open func conditions(workspaceId: String)throws  -> [ConditionRow]  {
@@ -2574,6 +2638,19 @@ open func focusAwardsBetween(fromMs: Int64, toMs: Int64)throws  -> [AwardRow]  {
             self.uniffiCloneHandle(),
         FfiConverterInt64.lower(fromMs),
         FfiConverterInt64.lower(toMs),uniffiCallStatus
+    )
+})
+}
+    
+    /**
+     * What holds now, as last saved, or none if it never was.
+     */
+open func focusContext(workspaceId: String)throws  -> StoredFocusContext?  {
+    return try  FfiConverterOptionTypeStoredFocusContext.lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_focus_context(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(workspaceId),uniffiCallStatus
     )
 })
 }
@@ -2794,6 +2871,20 @@ open func tasksClosedBetween(fromMs: Int64, toMs: Int64)throws  -> [TaskRow]  {
             self.uniffiCloneHandle(),
         FfiConverterInt64.lower(fromMs),
         FfiConverterInt64.lower(toMs),uniffiCallStatus
+    )
+})
+}
+    
+    /**
+     * The open tasks that require a condition.
+     */
+open func tasksRequiringCondition(workspaceId: String, conditionId: String)throws  -> [RequiringTask]  {
+    return try  FfiConverterSequenceTypeRequiringTask.lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_tasks_requiring_condition(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(workspaceId),
+        FfiConverterString.lower(conditionId),uniffiCallStatus
     )
 })
 }
@@ -3646,6 +3737,56 @@ open func makeDaily(taskId: String, weekdays: [UInt32], intervalDays: Int64?, ta
 }
     
     /**
+     * Merges one condition into another as one "Merge Conditions" step:
+     * its tasks require the other, and it is archived. Returns how many
+     * tasks changed.
+     */
+open func mergeConditions(from: String, into: String, nowMs: Int64)throws  -> UInt32  {
+    return try  FfiConverterUInt32.lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_merge_conditions(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(from),
+        FfiConverterString.lower(into),
+        FfiConverterInt64.lower(nowMs),uniffiCallStatus
+    )
+})
+}
+    
+    /**
+     * Moves a condition one place up (`offset` < 0) or down under its
+     * heading, as one "Move Condition" step. False at the end of the run.
+     */
+open func moveCondition(id: String, offset: Int64, nowMs: Int64)throws  -> Bool  {
+    return try  FfiConverterBool.lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_move_condition(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(id),
+        FfiConverterInt64.lower(offset),
+        FfiConverterInt64.lower(nowMs),uniffiCallStatus
+    )
+})
+}
+    
+    /**
+     * Moves a heading — a category, or none for "Other" — one place up or
+     * down, as one "Move Category" step. False at either end.
+     */
+open func moveConditionCategory(workspaceId: String, category: String?, offset: Int64, nowMs: Int64)throws  -> Bool  {
+    return try  FfiConverterBool.lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_move_condition_category(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(workspaceId),
+        FfiConverterOptionString.lower(category),
+        FfiConverterInt64.lower(offset),
+        FfiConverterInt64.lower(nowMs),uniffiCallStatus
+    )
+})
+}
+    
+    /**
      * Moves a folder into another (or to the top) as one "Move Folder" step.
      */
 open func moveFolder(id: String, parentFolderId: String?, nowMs: Int64)throws   {try rustCallWithError(FfiConverterTypeCoreError_lift) {
@@ -4074,6 +4215,23 @@ open func removeTaskBlocker(taskId: String, blockedByTaskId: String)throws  -> B
 }
     
     /**
+     * Files every condition under `from` under `to`, as one "Rename
+     * Category" step; returns how many moved. Location cannot be renamed.
+     */
+open func renameConditionCategory(workspaceId: String, from: String?, to: String?, nowMs: Int64)throws  -> UInt32  {
+    return try  FfiConverterUInt32.lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_rename_condition_category(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(workspaceId),
+        FfiConverterOptionString.lower(from),
+        FfiConverterOptionString.lower(to),
+        FfiConverterInt64.lower(nowMs),uniffiCallStatus
+    )
+})
+}
+    
+    /**
      * Renames a folder as one "Rename Folder" step.
      */
 open func renameFolder(id: String, name: String, nowMs: Int64)throws   {try rustCallWithError(FfiConverterTypeCoreError_lift) {
@@ -4176,6 +4334,21 @@ open func saveEditor(edit: EditorSnapshot, baseline: EditorSnapshot, nowMs: Int6
         FfiConverterTypeEditorSnapshot_lower(baseline),
         FfiConverterInt64.lower(nowMs),
         FfiConverterString.lower(zone),uniffiCallStatus
+    )
+})
+}
+    
+    /**
+     * Saves what holds now. Not an undo step: where you are is not an edit.
+     */
+open func saveFocusContext(workspaceId: String, context: StoredFocusContext, nowMs: Int64)throws  -> Bool  {
+    return try  FfiConverterBool.lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_save_focus_context(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(workspaceId),
+        FfiConverterTypeStoredFocusContext_lower(context),
+        FfiConverterInt64.lower(nowMs),uniffiCallStatus
     )
 })
 }
@@ -4415,6 +4588,22 @@ open func setStatus(taskId: String, status: String, nowMs: Int64, zone: String)t
         FfiConverterString.lower(zone),uniffiCallStatus
     )
 }
+}
+    
+    /**
+     * Sets what a task requires, as one "Edit Conditions" step. False when
+     * it already required exactly that.
+     */
+open func setTaskRequirements(taskId: String, groups: [[String]], nowMs: Int64)throws  -> Bool  {
+    return try  FfiConverterBool.lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_set_task_requirements(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(taskId),
+        FfiConverterSequenceSequenceString.lower(groups),
+        FfiConverterInt64.lower(nowMs),uniffiCallStatus
+    )
+})
 }
     
     /**
@@ -7092,6 +7281,12 @@ public struct ConditionRow: Equatable, Hashable {
      * as "Location".
      */
     public var category: String?
+    /**
+     * Where it sits in the tab, workspace-wide: under its heading in this
+     * order, and the headings in the order of their first. None for one
+     * nobody has placed, which comes after the placed ones under its heading.
+     */
+    public var sortOrder: Int64?
 
     // Default memberwise initializers are never public by default, so we
     // declare one manually.
@@ -7100,7 +7295,12 @@ public struct ConditionRow: Equatable, Hashable {
          * The category as stored ("Location", "Equipment"), or none. A place an
          * older client made has none; `condition_effective_category` reads it
          * as "Location".
-         */category: String?) {
+         */category: String?, 
+        /**
+         * Where it sits in the tab, workspace-wide: under its heading in this
+         * order, and the headings in the order of their first. None for one
+         * nobody has placed, which comes after the placed ones under its heading.
+         */sortOrder: Int64?) {
         self.id = id
         self.workspaceId = workspaceId
         self.name = name
@@ -7109,6 +7309,7 @@ public struct ConditionRow: Equatable, Hashable {
         self.createdAtMs = createdAtMs
         self.updatedAtMs = updatedAtMs
         self.category = category
+        self.sortOrder = sortOrder
     }
 
     
@@ -7134,7 +7335,8 @@ public struct FfiConverterTypeConditionRow: FfiConverterRustBuffer {
                 isArchived: FfiConverterBool.read(from: &buf), 
                 createdAtMs: FfiConverterInt64.read(from: &buf), 
                 updatedAtMs: FfiConverterInt64.read(from: &buf), 
-                category: FfiConverterOptionString.read(from: &buf)
+                category: FfiConverterOptionString.read(from: &buf), 
+                sortOrder: FfiConverterOptionInt64.read(from: &buf)
         )
     }
 
@@ -7147,6 +7349,7 @@ public struct FfiConverterTypeConditionRow: FfiConverterRustBuffer {
         FfiConverterInt64.write(value.createdAtMs, into: &buf)
         FfiConverterInt64.write(value.updatedAtMs, into: &buf)
         FfiConverterOptionString.write(value.category, into: &buf)
+        FfiConverterOptionInt64.write(value.sortOrder, into: &buf)
     }
 }
 
@@ -7252,6 +7455,63 @@ public func FfiConverterTypeConditionSection_lift(_ buf: RustBuffer) throws -> C
 #endif
 public func FfiConverterTypeConditionSection_lower(_ value: ConditionSection) -> RustBuffer {
     return FfiConverterTypeConditionSection.lower(value)
+}
+
+
+/**
+ * How many open tasks require one condition.
+ */
+public struct ConditionUsage: Equatable, Hashable {
+    public var conditionId: String
+    public var openTasks: UInt32
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(conditionId: String, openTasks: UInt32) {
+        self.conditionId = conditionId
+        self.openTasks = openTasks
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension ConditionUsage: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeConditionUsage: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> ConditionUsage {
+        return
+            try ConditionUsage(
+                conditionId: FfiConverterString.read(from: &buf), 
+                openTasks: FfiConverterUInt32.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: ConditionUsage, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.conditionId, into: &buf)
+        FfiConverterUInt32.write(value.openTasks, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeConditionUsage_lift(_ buf: RustBuffer) throws -> ConditionUsage {
+    return try FfiConverterTypeConditionUsage.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeConditionUsage_lower(_ value: ConditionUsage) -> RustBuffer {
+    return FfiConverterTypeConditionUsage.lower(value)
 }
 
 
@@ -15219,6 +15479,71 @@ public func FfiConverterTypeRanking_lower(_ value: Ranking) -> RustBuffer {
 
 
 /**
+ * An open task that requires a condition.
+ */
+public struct RequiringTask: Equatable, Hashable {
+    public var taskId: String
+    public var title: String
+    public var listId: String
+    public var listName: String
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(taskId: String, title: String, listId: String, listName: String) {
+        self.taskId = taskId
+        self.title = title
+        self.listId = listId
+        self.listName = listName
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension RequiringTask: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeRequiringTask: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> RequiringTask {
+        return
+            try RequiringTask(
+                taskId: FfiConverterString.read(from: &buf), 
+                title: FfiConverterString.read(from: &buf), 
+                listId: FfiConverterString.read(from: &buf), 
+                listName: FfiConverterString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: RequiringTask, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.taskId, into: &buf)
+        FfiConverterString.write(value.title, into: &buf)
+        FfiConverterString.write(value.listId, into: &buf)
+        FfiConverterString.write(value.listName, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeRequiringTask_lift(_ buf: RustBuffer) throws -> RequiringTask {
+    return try FfiConverterTypeRequiringTask.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeRequiringTask_lower(_ value: RequiringTask) -> RustBuffer {
+    return FfiConverterTypeRequiringTask.lower(value)
+}
+
+
+/**
  * An award as the timeline counts it: it shares its block's id.
  */
 public struct ReviewAwardPoints: Equatable, Hashable {
@@ -16289,6 +16614,115 @@ public func FfiConverterTypeStepUndoPlan_lift(_ buf: RustBuffer) throws -> StepU
 #endif
 public func FfiConverterTypeStepUndoPlan_lower(_ value: StepUndoPlan) -> RustBuffer {
     return FfiConverterTypeStepUndoPlan.lower(value)
+}
+
+
+/**
+ * What holds now, as stored.
+ */
+public struct StoredFocusContext: Equatable, Hashable {
+    /**
+     * The conditions on, sorted.
+     */
+    public var conditionIds: [String]
+    /**
+     * When the conditions on were last changed; none with none on.
+     */
+    public var conditionsSetAtMs: Int64?
+    /**
+     * When the time available ends; none for no limit.
+     */
+    public var availableUntilMs: Int64?
+    /**
+     * When the conditions stop being trusted; none for never.
+     */
+    public var expiresAtMs: Int64?
+    /**
+     * "progress" or "finish".
+     */
+    public var mode: String
+    /**
+     * The conditions that held before the last expiry, offered back.
+     */
+    public var suggestedIds: [String]
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(
+        /**
+         * The conditions on, sorted.
+         */conditionIds: [String], 
+        /**
+         * When the conditions on were last changed; none with none on.
+         */conditionsSetAtMs: Int64?, 
+        /**
+         * When the time available ends; none for no limit.
+         */availableUntilMs: Int64?, 
+        /**
+         * When the conditions stop being trusted; none for never.
+         */expiresAtMs: Int64?, 
+        /**
+         * "progress" or "finish".
+         */mode: String, 
+        /**
+         * The conditions that held before the last expiry, offered back.
+         */suggestedIds: [String]) {
+        self.conditionIds = conditionIds
+        self.conditionsSetAtMs = conditionsSetAtMs
+        self.availableUntilMs = availableUntilMs
+        self.expiresAtMs = expiresAtMs
+        self.mode = mode
+        self.suggestedIds = suggestedIds
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension StoredFocusContext: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeStoredFocusContext: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> StoredFocusContext {
+        return
+            try StoredFocusContext(
+                conditionIds: FfiConverterSequenceString.read(from: &buf), 
+                conditionsSetAtMs: FfiConverterOptionInt64.read(from: &buf), 
+                availableUntilMs: FfiConverterOptionInt64.read(from: &buf), 
+                expiresAtMs: FfiConverterOptionInt64.read(from: &buf), 
+                mode: FfiConverterString.read(from: &buf), 
+                suggestedIds: FfiConverterSequenceString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: StoredFocusContext, into buf: inout [UInt8]) {
+        FfiConverterSequenceString.write(value.conditionIds, into: &buf)
+        FfiConverterOptionInt64.write(value.conditionsSetAtMs, into: &buf)
+        FfiConverterOptionInt64.write(value.availableUntilMs, into: &buf)
+        FfiConverterOptionInt64.write(value.expiresAtMs, into: &buf)
+        FfiConverterString.write(value.mode, into: &buf)
+        FfiConverterSequenceString.write(value.suggestedIds, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeStoredFocusContext_lift(_ buf: RustBuffer) throws -> StoredFocusContext {
+    return try FfiConverterTypeStoredFocusContext.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeStoredFocusContext_lower(_ value: StoredFocusContext) -> RustBuffer {
+    return FfiConverterTypeStoredFocusContext.lower(value)
 }
 
 
@@ -22794,6 +23228,30 @@ fileprivate struct FfiConverterOptionTypeSessionRow: FfiConverterRustBuffer {
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterOptionTypeStoredFocusContext: FfiConverterRustBuffer {
+    typealias SwiftType = StoredFocusContext?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterTypeStoredFocusContext.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterTypeStoredFocusContext.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterOptionTypeSyncEndpointsRecord: FfiConverterRustBuffer {
     typealias SwiftType = SyncEndpointsRecord?
 
@@ -23721,6 +24179,31 @@ fileprivate struct FfiConverterSequenceTypeConditionSection: FfiConverterRustBuf
         seq.reserveCapacity(Int(len))
         for _ in 0 ..< len {
             seq.append(try FfiConverterTypeConditionSection.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterSequenceTypeConditionUsage: FfiConverterRustBuffer {
+    typealias SwiftType = [ConditionUsage]
+
+    public static func write(_ value: [ConditionUsage], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeConditionUsage.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [ConditionUsage] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [ConditionUsage]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeConditionUsage.read(from: &buf))
         }
         return seq
     }
@@ -24904,6 +25387,31 @@ fileprivate struct FfiConverterSequenceTypeQueueEntry: FfiConverterRustBuffer {
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterSequenceTypeRequiringTask: FfiConverterRustBuffer {
+    typealias SwiftType = [RequiringTask]
+
+    public static func write(_ value: [RequiringTask], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeRequiringTask.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [RequiringTask] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [RequiringTask]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeRequiringTask.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterSequenceTypeReviewAwardPoints: FfiConverterRustBuffer {
     typealias SwiftType = [ReviewAwardPoints]
 
@@ -25621,6 +26129,31 @@ fileprivate struct FfiConverterSequenceSequenceString: FfiConverterRustBuffer {
         seq.reserveCapacity(Int(len))
         for _ in 0 ..< len {
             seq.append(try FfiConverterSequenceString.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterSequenceSequenceSequenceString: FfiConverterRustBuffer {
+    typealias SwiftType = [[[String]]]
+
+    public static func write(_ value: [[[String]]], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterSequenceSequenceString.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [[[String]]] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [[[String]]]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterSequenceSequenceString.read(from: &buf))
         }
         return seq
     }
@@ -26396,15 +26929,33 @@ public func conditionSectionTitle(condition: ConditionRow) -> String  {
 })
 }
 /**
- * Conditions under their headings: Location first, then every other category
- * alphabetically, then the uncategorised under "Other". Within a heading
- * they keep the order they were given.
+ * Conditions under their headings, in the order the workspace keeps
+ * (`sortOrder`): the headings by their first placed condition, and the
+ * conditions under each by their own. What nobody has placed — every
+ * condition before v27, and one an older client makes — comes after what
+ * has been, in the order it was given, and a heading with nothing placed
+ * falls back to Location first, then every other category alphabetically,
+ * then the uncategorised under "Other".
  */
 public func conditionSections(conditions: [ConditionRow]) -> [ConditionSection]  {
     return try!  FfiConverterSequenceTypeConditionSection.lift(try! rustCall() {
         uniffiCallStatus in
     uniffi_takt_core_fn_func_condition_sections(
         FfiConverterSequenceTypeConditionRow.lower(conditions),uniffiCallStatus
+    )
+})
+}
+/**
+ * How many held-back tasks wait on each condition: `missing` is, for each
+ * task the ranking held back for conditions, the requirement groups it
+ * found unmet. A task waits on every condition in those groups, once
+ * however many groups name it. Most-waited-on first, then by id.
+ */
+public func conditionWaitingCounts(missing: [[[String]]]) -> [ConditionUsage]  {
+    return try!  FfiConverterSequenceTypeConditionUsage.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_condition_waiting_counts(
+        FfiConverterSequenceSequenceSequenceString.lower(missing),uniffiCallStatus
     )
 })
 }
@@ -26703,6 +27254,51 @@ public func validateFilterDefinition(definition: FilterDefinition)throws  -> Fil
         uniffiCallStatus in
     uniffi_takt_core_fn_func_validate_filter_definition(
         FfiConverterTypeFilterDefinition_lower(definition),uniffiCallStatus
+    )
+})
+}
+/**
+ * `current` with `on` turned on and `off` turned off. Turning a place on
+ * turns every other place (`location_ids`) off, since you are in one place
+ * at a time; whatever else combines. Sorted.
+ */
+public func focusContextChanged(current: [String], on: [String], off: [String], locationIds: [String]) -> [String]  {
+    return try!  FfiConverterSequenceString.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_focus_context_changed(
+        FfiConverterSequenceString.lower(current),
+        FfiConverterSequenceString.lower(on),
+        FfiConverterSequenceString.lower(off),
+        FfiConverterSequenceString.lower(locationIds),uniffiCallStatus
+    )
+})
+}
+/**
+ * The context as it stands at `now_ms`: once it has expired its conditions
+ * are set aside — offered back, so "Use again" can restore them — and the
+ * expiry and stamp go with them. Otherwise `context` unchanged.
+ */
+public func focusContextInForce(context: StoredFocusContext, nowMs: Int64) -> StoredFocusContext  {
+    return try!  FfiConverterTypeStoredFocusContext_lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_focus_context_in_force(
+        FfiConverterTypeStoredFocusContext_lower(context),
+        FfiConverterInt64.lower(nowMs),uniffiCallStatus
+    )
+})
+}
+/**
+ * Whether the conditions on were said on an earlier day than `now_ms`, in
+ * `zone`: a place left on overnight is probably not where you are. Never
+ * with nothing on.
+ */
+public func focusContextIsStale(context: StoredFocusContext, nowMs: Int64, zone: String) -> Bool  {
+    return try!  FfiConverterBool.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_focus_context_is_stale(
+        FfiConverterTypeStoredFocusContext_lower(context),
+        FfiConverterInt64.lower(nowMs),
+        FfiConverterString.lower(zone),uniffiCallStatus
     )
 })
 }
@@ -28242,7 +28838,10 @@ private let initializationResult: InitializationResult = {
     if (uniffi_takt_core_checksum_func_condition_section_title() != 32802) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_takt_core_checksum_func_condition_sections() != 5242) {
+    if (uniffi_takt_core_checksum_func_condition_sections() != 53530) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_condition_waiting_counts() != 32597) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_func_day_boundary_day_key() != 60525) {
@@ -28324,6 +28923,15 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_func_validate_filter_definition() != 53236) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_focus_context_changed() != 16350) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_focus_context_in_force() != 62430) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_focus_context_is_stale() != 22807) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_func_google_tasks_plan() != 64663) {
@@ -28770,6 +29378,9 @@ private let initializationResult: InitializationResult = {
     if (uniffi_takt_core_checksum_method_coreworkspace_condition() != 23991) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_takt_core_checksum_method_coreworkspace_condition_usage() != 64645) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_takt_core_checksum_method_coreworkspace_conditions() != 7399) {
         return InitializationResult.apiChecksumMismatch
     }
@@ -28792,6 +29403,9 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_method_coreworkspace_focus_awards_between() != 21823) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_focus_context() != 61213) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_method_coreworkspace_focus_points_summary() != 18763) {
@@ -28843,6 +29457,9 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_method_coreworkspace_tasks_closed_between() != 41355) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_tasks_requiring_condition() != 7745) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_method_coreworkspace_themes() != 15304) {
@@ -29025,6 +29642,15 @@ private let initializationResult: InitializationResult = {
     if (uniffi_takt_core_checksum_method_coreworkspace_make_daily() != 20074) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_takt_core_checksum_method_coreworkspace_merge_conditions() != 12671) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_move_condition() != 64693) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_move_condition_category() != 13245) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_takt_core_checksum_method_coreworkspace_move_folder() != 35092) {
         return InitializationResult.apiChecksumMismatch
     }
@@ -29115,6 +29741,9 @@ private let initializationResult: InitializationResult = {
     if (uniffi_takt_core_checksum_method_coreworkspace_remove_task_blocker() != 29980) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_takt_core_checksum_method_coreworkspace_rename_condition_category() != 26813) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_takt_core_checksum_method_coreworkspace_rename_folder() != 13587) {
         return InitializationResult.apiChecksumMismatch
     }
@@ -29134,6 +29763,9 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_method_coreworkspace_save_editor() != 10270) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_save_focus_context() != 64775) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_method_coreworkspace_save_folder_settings() != 5349) {
@@ -29182,6 +29814,9 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_method_coreworkspace_set_status() != 17278) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_set_task_requirements() != 10531) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_method_coreworkspace_set_waiting() != 1116) {

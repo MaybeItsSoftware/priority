@@ -173,11 +173,13 @@ internal fun DayDaily.toItem() = DailyItem(daily.toDaily(), task.toTask(), contr
 internal fun ConditionRow.toCondition() = TaskCondition(
     id = id, workspaceId = workspaceId, name = name, isLocation = isLocation, isArchived = isArchived,
     createdAt = createdAtMs.instant(), updatedAt = updatedAtMs.instant(), category = category,
+    sortOrder = sortOrder,
 )
 
 internal fun TaskCondition.toRow() = ConditionRow(
     id = id, workspaceId = workspaceId, name = name, isLocation = isLocation, isArchived = isArchived,
     createdAtMs = createdAt.toEpochMilli(), updatedAtMs = updatedAt.toEpochMilli(), category = category,
+    sortOrder = sortOrder,
 )
 
 internal fun MetadataRow.toMetadata() = TaskMetadata(

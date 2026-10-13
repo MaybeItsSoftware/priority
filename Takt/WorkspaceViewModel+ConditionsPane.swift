@@ -79,16 +79,6 @@ extension WorkspaceViewModel {
     }
   }
 
-  /// How many open tasks require each condition, by condition id. Read from
-  /// the plans the ranking already holds, so it costs no query.
-  var conditionRequirementCounts: [String: Int] {
-    var counts: [String: Int] = [:]
-    for plan in taskPlanningByID.values {
-      for id in Set((plan.requirementGroups ?? []).flatMap { $0 }) { counts[id, default: 0] += 1 }
-    }
-    return counts
-  }
-
   private var conditionUnderCursor: TaskCondition? {
     conditionsCursorStop.conditionID.flatMap { id in focusConditions.first { $0.id == id } }
   }

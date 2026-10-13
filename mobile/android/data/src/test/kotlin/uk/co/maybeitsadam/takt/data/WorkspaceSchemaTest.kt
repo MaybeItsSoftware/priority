@@ -61,7 +61,7 @@ class WorkspaceSchemaTest {
             assertTrue("missing: ${expected - present}", present.containsAll(expected))
 
             val migrations = workspace.database.read { it.strings("SELECT identifier FROM grdb_migrations") }
-            assertEquals(26, migrations.size)
+            assertEquals(27, migrations.size)
             assertTrue("v17_sync" in migrations)
             assertTrue("v18_themes_and_preferences" in migrations)
             assertTrue("v19_habit_options" in migrations)
@@ -72,6 +72,7 @@ class WorkspaceSchemaTest {
             assertTrue("v24_condition_categories" in migrations)
             assertTrue("v25_agent_instructions" in migrations)
             assertTrue("v26_commitment_missed_stack" in migrations)
+            assertTrue("v27_condition_order_and_context" in migrations)
             assertEquals(listOf(0L to 0L), workspace.database.read { db ->
                 db.query("SELECT recording, applying FROM sync_control") { it.long("recording") to it.long("applying") }
             })
@@ -99,7 +100,20 @@ class WorkspaceSchemaTest {
     // install that lacks one migration lacks every later one too, since they
     // only ever apply in order, so each rewind takes the later ones off first.
 
+    private fun rewindV27(connection: SQLiteConnection) {
+        // The condition triggers name the new column, so they come off first;
+        // v27 reinstalls them, and v24's rewind finds them gone.
+        for (op in listOf("insert", "update", "delete")) {
+            connection.execSQL("DROP TRIGGER change_log_task_conditions_$op")
+            connection.execSQL("DROP TRIGGER sync_outbox_task_conditions_$op")
+        }
+        connection.execSQL("ALTER TABLE task_conditions DROP COLUMN sortOrder")
+        connection.execSQL("DROP TABLE focus_contexts")
+        connection.execSQL("DELETE FROM grdb_migrations WHERE identifier = 'v27_condition_order_and_context'")
+    }
+
     private fun rewindV26(connection: SQLiteConnection) {
+        rewindV27(connection)
         // The journal's and the outbox's dailies triggers name the new
         // column, so they come off first; v19's rewind finds them gone.
         for (op in listOf("insert", "update", "delete")) {
@@ -122,8 +136,8 @@ class WorkspaceSchemaTest {
         // The journal's and the outbox's condition triggers name the new
         // column, so they come off first.
         for (op in listOf("insert", "update", "delete")) {
-            connection.execSQL("DROP TRIGGER change_log_task_conditions_$op")
-            connection.execSQL("DROP TRIGGER sync_outbox_task_conditions_$op")
+            connection.execSQL("DROP TRIGGER IF EXISTS change_log_task_conditions_$op")
+            connection.execSQL("DROP TRIGGER IF EXISTS sync_outbox_task_conditions_$op")
         }
         connection.execSQL("ALTER TABLE task_conditions DROP COLUMN category")
         connection.execSQL("DELETE FROM grdb_migrations WHERE identifier = 'v24_condition_categories'")
@@ -209,8 +223,8 @@ class WorkspaceSchemaTest {
         try {
             assertEquals(expected, upgraded.read { schema(it) })
             val migrations = upgraded.read { it.strings("SELECT identifier FROM grdb_migrations") }
-            assertEquals(26, migrations.size)
-            assertEquals(26, migrations.toSet().size)
+            assertEquals(27, migrations.size)
+            assertEquals(27, migrations.toSet().size)
         } finally {
             upgraded.close()
             dir.deleteRecursively()
@@ -220,6 +234,10 @@ class WorkspaceSchemaTest {
     /** A v25 database takes `stacksMissedFrom` on `dailies`. */
     @Test
     fun aV25DatabaseUpgradesToTheFixture() = assertUpgradesToTheFixture("v25", ::rewindV26)
+
+    /** A v26 database takes the conditions' `sortOrder` and `focus_contexts`. */
+    @Test
+    fun aV26DatabaseUpgradesToTheFixture() = assertUpgradesToTheFixture("v26", ::rewindV27)
 
     /** A v24 database takes `agent_instructions` and its triggers. */
     @Test

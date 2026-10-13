@@ -73,6 +73,31 @@ impl CoreWorkspace {
         crate::conditions::required_condition_ids(&self.read(), &workspace_id)
     }
 
+    /// How many open tasks require each condition, for those any does.
+    pub fn condition_usage(
+        &self,
+        workspace_id: String,
+    ) -> Result<Vec<crate::conditions::ConditionUsage>, CoreError> {
+        crate::conditions::condition_usage(&self.read(), &workspace_id)
+    }
+
+    /// The open tasks that require a condition.
+    pub fn tasks_requiring_condition(
+        &self,
+        workspace_id: String,
+        condition_id: String,
+    ) -> Result<Vec<crate::conditions::RequiringTask>, CoreError> {
+        crate::conditions::tasks_requiring(&self.read(), &workspace_id, &condition_id)
+    }
+
+    /// What holds now, as last saved, or none if it never was.
+    pub fn focus_context(
+        &self,
+        workspace_id: String,
+    ) -> Result<Option<crate::focus_context::StoredFocusContext>, CoreError> {
+        crate::focus_context::load(&self.read(), &workspace_id)
+    }
+
     /// One condition by id.
     pub fn condition(&self, id: String) -> Result<Option<ConditionRow>, CoreError> {
         rows::condition(&self.lock(), &id)

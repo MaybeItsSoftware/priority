@@ -17,24 +17,61 @@ extension WorkspaceViewModel {
     return FocusContext(conditionIDs: focusContext.conditionIDs, endsAt: end, mode: focusContext.mode)
   }
 
-  private var focusContextKey: String? { workspace.map { "focus-context-\($0.id)" } }
+  /// Where the context lived before it was a row of `focus_contexts`.
+  private var legacyFocusContextKey: String? { workspace.map { "focus-context-\($0.id)" } }
 
-  /// Puts back the conditions that held when the app last quit, as the phones
-  /// do. The ranking has to have run once first, so the conditions are known
-  /// and one deleted since is not carried forward.
-  func restoreFocusContext() {
-    guard let key = focusContextKey else { return }
-    let restored = FocusContextSelection.restoring(
-      UserDefaults.standard.stringArray(forKey: key) ?? [], known: Set(focusConditions.map(\.id)))
-    guard restored != focusContext.conditionIDs else { return }
-    focusContext.conditionIDs = restored
-    reloadNextUpNow()
+  /// Puts back the context as it was saved — by this app, the CLI or the
+  /// agent — less any condition deleted since. The ranking has to have run
+  /// once first, so the conditions are known. A context saved only in the
+  /// old preferences key is moved into the workspace the first time. One
+  /// that expired while the app was away is set aside, offered back with
+  /// "Use again". Returns whether anything changed.
+  @discardableResult
+  func restoreFocusContext() -> Bool {
+    guard let store, let workspace else { return false }
+    var saved = (try? store.focusContext(in: workspace.id)) ?? nil
+    var needsSaving = false
+    if saved == nil, let key = legacyFocusContextKey, let ids = UserDefaults.standard.stringArray(forKey: key) {
+      saved = SavedFocusContext(conditionIDs: Set(ids))
+      UserDefaults.standard.removeObject(forKey: key)
+      needsSaving = true
+    }
+    guard let saved else { return false }
+    needsSaving = needsSaving || saved.hasExpired(at: .now)
+    let context = saved.inForce(at: .now)
+    let known = Set(focusConditions.map(\.id))
+    let ids = FocusContextSelection.restoring(Array(context.conditionIDs), known: known)
+    let suggested = FocusContextSelection.restoring(Array(context.suggestedIDs), known: known)
+    let changed = ids != focusContext.conditionIDs || context.mode != focusContext.mode
+      || context.availableUntil != availableUntil || context.expiresAt != contextExpiresAt
+      || suggested != suggestedContextIDs || context.conditionsSetAt != contextConditionsSetAt
+    focusContext.conditionIDs = ids
+    focusContext.mode = context.mode
+    availableUntil = context.availableUntil
+    contextExpiresAt = context.expiresAt
+    suggestedContextIDs = suggested
+    contextConditionsSetAt = context.conditionsSetAt
+    if needsSaving { saveCurrentContext() }
+    if changed { reloadNextUpNow() }
+    return changed
   }
 
   func toggleFocusCondition(_ condition: TaskCondition) {
     focusContext.conditionIDs = FocusContextSelection.toggling(
       condition.id, isLocation: condition.isLocation, in: focusContext.conditionIDs,
       locationIDs: Set(focusConditions.filter(\.isLocation).map(\.id)))
+    suggestedContextIDs = []
+    focusContextChanged()
+  }
+
+  /// Says you are at `place`, turning the last place off, or — with nil —
+  /// that you are nowhere in particular, turning every place off and leaving
+  /// the rest on. "Say where you are…".
+  func setFocusPlace(_ place: TaskCondition?) {
+    let places = Set(focusConditions.filter(\.isLocation).map(\.id))
+    focusContext.conditionIDs = FocusContextSelection.changing(
+      focusContext.conditionIDs, on: place.map { [$0.id] } ?? [],
+      off: place == nil ? Array(places) : [], locationIDs: places)
     suggestedContextIDs = []
     focusContextChanged()
   }
@@ -53,17 +90,49 @@ extension WorkspaceViewModel {
     focusContextChanged()
   }
 
+  func dismissSuggestedContext() {
+    suggestedContextIDs = []
+    saveCurrentContext()
+  }
+
   /// Every change to the context goes through here: it is saved, so the next
-  /// launch starts where this one left off, and the ladder is ranked again.
+  /// launch — and the CLI — see it, and the ladder is ranked again.
   func focusContextChanged() {
     allowsQueueResume = true
     saveCurrentContext()
     reloadNextUp()
   }
 
+  /// Saves the context into the workspace, where the core stamps when its
+  /// conditions were said, and reads the stamp back.
   private func saveCurrentContext() {
-    guard let key = focusContextKey else { return }
-    UserDefaults.standard.set(Array(focusContext.conditionIDs).sorted(), forKey: key)
+    guard let store, let workspace else { return }
+    let context = SavedFocusContext(
+      conditionIDs: focusContext.conditionIDs, conditionsSetAt: contextConditionsSetAt,
+      availableUntil: availableUntil, expiresAt: contextExpiresAt, mode: focusContext.mode,
+      suggestedIDs: suggestedContextIDs)
+    do {
+      try store.saveFocusContext(context, in: workspace.id)
+      contextConditionsSetAt = (try store.focusContext(in: workspace.id))?.conditionsSetAt
+    } catch {
+      errorMessage = error.localizedDescription
+    }
+  }
+
+  /// Whether the conditions on were said on an earlier day: probably not
+  /// where you are now.
+  var isFocusContextStale: Bool {
+    FocusContextSelection.isStale(focusContext.conditionIDs, setAt: contextConditionsSetAt, now: .now)
+  }
+
+  /// How many held-back tasks wait on each condition, by id.
+  var conditionWaitingCounts: [String: Int] {
+    FocusContextSelection.waitingCounts(blockedFocusTasks.compactMap { blocked in
+      blocked.reasons.lazy.compactMap { reason -> [[String]]? in
+        if case .missingConditions(let groups) = reason { return groups }
+        return nil
+      }.first
+    })
   }
 
   /// What "Available now" offers, under category headings: only the
@@ -228,7 +297,8 @@ extension WorkspaceViewModel {
       // Set aside rather than forgotten: offered back with "Use again", as
       // on the phones.
       if !focusContext.conditionIDs.isEmpty { suggestedContextIDs = focusContext.conditionIDs }
-      focusContext.conditionIDs = []; contextExpiresAt = nil; saveCurrentContext(); reloadNextUp()
+      focusContext.conditionIDs = []; contextExpiresAt = nil; contextConditionsSetAt = nil
+      saveCurrentContext(); reloadNextUp()
     }
     let clockJump = synchroniseFocusClock(now: now)
     let zoneChanged = lastFocusTimeZone != TimeZone.current.identifier

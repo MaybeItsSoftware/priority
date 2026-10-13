@@ -90,5 +90,7 @@ extension WorkspaceViewModel {
         self.selectedFolderID = nil
       }
     }
+    // The CLI or the agent may have said where you are.
+    restoreFocusContext()
   }
 }

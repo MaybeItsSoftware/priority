@@ -508,6 +508,92 @@ impl CoreWorkspace {
         })
     }
 
+    /// Moves a condition one place up (`offset` < 0) or down under its
+    /// heading, as one "Move Condition" step. False at the end of the run.
+    pub fn move_condition(&self, id: String, offset: i64, now_ms: i64) -> Result<bool, CoreError> {
+        journal::journalled(&mut self.lock(), "Move Condition", |tx| {
+            conditions::move_condition(tx, &id, offset, now_ms)
+        })
+    }
+
+    /// Moves a heading — a category, or none for "Other" — one place up or
+    /// down, as one "Move Category" step. False at either end.
+    pub fn move_condition_category(
+        &self,
+        workspace_id: String,
+        category: Option<String>,
+        offset: i64,
+        now_ms: i64,
+    ) -> Result<bool, CoreError> {
+        journal::journalled(&mut self.lock(), "Move Category", |tx| {
+            conditions::move_condition_category(
+                tx,
+                &workspace_id,
+                category.as_deref(),
+                offset,
+                now_ms,
+            )
+        })
+    }
+
+    /// Files every condition under `from` under `to`, as one "Rename
+    /// Category" step; returns how many moved. Location cannot be renamed.
+    pub fn rename_condition_category(
+        &self,
+        workspace_id: String,
+        from: Option<String>,
+        to: Option<String>,
+        now_ms: i64,
+    ) -> Result<u32, CoreError> {
+        journal::journalled(&mut self.lock(), "Rename Category", |tx| {
+            conditions::rename_condition_category(
+                tx,
+                &workspace_id,
+                from.as_deref(),
+                to.as_deref(),
+                now_ms,
+            )
+            .map(|count| count as u32)
+        })
+    }
+
+    /// Merges one condition into another as one "Merge Conditions" step:
+    /// its tasks require the other, and it is archived. Returns how many
+    /// tasks changed.
+    pub fn merge_conditions(
+        &self,
+        from: String,
+        into: String,
+        now_ms: i64,
+    ) -> Result<u32, CoreError> {
+        journal::journalled(&mut self.lock(), "Merge Conditions", |tx| {
+            conditions::merge_conditions(tx, &from, &into, now_ms).map(|count| count as u32)
+        })
+    }
+
+    /// Sets what a task requires, as one "Edit Conditions" step. False when
+    /// it already required exactly that.
+    pub fn set_task_requirements(
+        &self,
+        task_id: String,
+        groups: Vec<Vec<String>>,
+        now_ms: i64,
+    ) -> Result<bool, CoreError> {
+        journal::journalled(&mut self.lock(), "Edit Conditions", |tx| {
+            conditions::set_task_requirements(tx, &task_id, groups, now_ms)
+        })
+    }
+
+    /// Saves what holds now. Not an undo step: where you are is not an edit.
+    pub fn save_focus_context(
+        &self,
+        workspace_id: String,
+        context: crate::focus_context::StoredFocusContext,
+        now_ms: i64,
+    ) -> Result<bool, CoreError> {
+        self.unjournalled(|tx| crate::focus_context::save(tx, &workspace_id, &context, now_ms))
+    }
+
     /// Makes a task a standalone list in a folder (or at the top); returns the list's id.
     pub fn move_task_to_folder(
         &self,

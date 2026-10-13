@@ -53,10 +53,10 @@ fn a_new_database_has_exactly_the_fixtures_schema() {
 fn every_migration_is_recorded_in_order_under_grdbs_identifiers() {
     let connection = migrated();
     assert_eq!(ledger(&connection), workspace_migrations());
-    assert_eq!(workspace_migrations().len(), 26);
+    assert_eq!(workspace_migrations().len(), 27);
     assert_eq!(
         workspace_migrations().last().map(String::as_str),
-        Some("v26_commitment_missed_stack")
+        Some("v27_condition_order_and_context")
     );
 }
 
@@ -71,7 +71,7 @@ fn migrating_again_applies_nothing_and_keeps_the_work() {
     let before = dump_schema(&connection).unwrap();
     assert_eq!(
         migrate(&mut connection).unwrap(),
-        "v26_commitment_missed_stack"
+        "v27_condition_order_and_context"
     );
     assert_eq!(dump_schema(&connection).unwrap(), before);
     let count: i64 = connection
@@ -99,9 +99,9 @@ fn a_file_database_is_created_and_closed_again() {
     std::fs::create_dir_all(&directory).unwrap();
     let path = directory.join("workspace.sqlite");
     let latest = migrate_workspace(path.to_string_lossy().into_owned()).unwrap();
-    assert_eq!(latest, "v26_commitment_missed_stack");
+    assert_eq!(latest, "v27_condition_order_and_context");
     let reopened = Connection::open(&path).unwrap();
-    assert_eq!(ledger(&reopened).len(), 26);
+    assert_eq!(ledger(&reopened).len(), 27);
     std::fs::remove_dir_all(directory).unwrap();
 }
 
@@ -506,5 +506,76 @@ fn v26_adds_stacks_missed_from_to_dailies_journalled_and_synced() {
             "SELECT COUNT(*) FROM sync_outbox WHERE tableName = 'dailies' AND rowId = 'd' AND changedJSON LIKE '%stacksMissedFrom%'"
         ),
         1
+    );
+}
+
+/// v27: the conditions a database already holds are numbered in the order
+/// they were shown — Location, the other categories alphabetically, then
+/// the uncategorised — without journalling or queueing the numbering, and a
+/// later move is journalled and synced like the rest of the row. The context
+/// table is neither.
+#[test]
+fn v27_numbers_conditions_quietly_and_keeps_the_context_local() {
+    let mut connection = migrated_through("v26_commitment_missed_stack");
+    seed_workspace(&connection);
+    connection
+        .execute_batch(&format!(
+            "INSERT INTO task_conditions (id, workspaceId, name, isLocation, isArchived, createdAt, updatedAt, category) VALUES
+               ('quiet', 'w', 'Quiet', 0, 0, '{T0}', '{T0}', NULL),
+               ('mat', 'w', 'Mat', 0, 0, '{T0}', '{T0}', 'Equipment'),
+               ('home', 'w', 'Home', 1, 0, '{T1}', '{T1}', 'Location');
+             UPDATE sync_control SET recording = 1 WHERE id = 0;"
+        ))
+        .unwrap();
+    migrate(&mut connection).unwrap();
+    let order: Vec<(String, i64)> = connection
+        .prepare("SELECT id, sortOrder FROM task_conditions ORDER BY sortOrder")
+        .unwrap()
+        .query_map([], |row| Ok((row.get(0)?, row.get(1)?)))
+        .unwrap()
+        .collect::<Result<_, _>>()
+        .unwrap();
+    assert_eq!(
+        order,
+        vec![("home".into(), 0), ("mat".into(), 1), ("quiet".into(), 2)]
+    );
+    let count = |connection: &Connection, sql: &str| -> i64 {
+        connection.query_row(sql, [], |row| row.get(0)).unwrap()
+    };
+    assert_eq!(count(&connection, "SELECT COUNT(*) FROM change_log"), 0);
+    assert_eq!(
+        count(
+            &connection,
+            "SELECT COUNT(*) FROM sync_outbox WHERE tableName = 'task_conditions'"
+        ),
+        0
+    );
+    connection
+        .execute_batch(&format!(
+            "UPDATE undo_control SET suppressed = 0, groupId = 'g', label = 'x' WHERE id = 0;
+             UPDATE task_conditions SET sortOrder = 9 WHERE id = 'quiet';
+             INSERT INTO focus_contexts (workspaceId, updatedAt) VALUES ('w', '{T0}');"
+        ))
+        .unwrap();
+    assert_eq!(
+        count(
+            &connection,
+            "SELECT COUNT(*) FROM sync_outbox WHERE tableName = 'task_conditions' AND changedJSON LIKE '%sortOrder%'"
+        ),
+        1
+    );
+    assert_eq!(
+        count(
+            &connection,
+            "SELECT COUNT(*) FROM change_log WHERE tableName = 'focus_contexts'"
+        ),
+        0
+    );
+    assert_eq!(
+        count(
+            &connection,
+            "SELECT COUNT(*) FROM sync_outbox WHERE tableName = 'focus_contexts'"
+        ),
+        0
     );
 }

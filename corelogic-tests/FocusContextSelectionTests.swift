@@ -34,4 +34,30 @@ final class FocusContextSelectionTests: XCTestCase {
     XCTAssertNil(FocusContextSelection.summary([], names: names))
     XCTAssertNil(FocusContextSelection.summary(["gone"], names: names))
   }
+
+  func testAPlaceSaidOnAnEarlierDayIsStale() {
+    let london = TimeZone(identifier: "Europe/London")!
+    // 2024-01-01 23:00 in London, then 01:00 the next morning.
+    let evening = Date(timeIntervalSince1970: 1_704_150_000)
+    let night = evening.addingTimeInterval(2 * 3600)
+    XCTAssertFalse(FocusContextSelection.isStale(["home"], setAt: evening, now: evening.addingTimeInterval(60), timeZone: london))
+    XCTAssertTrue(FocusContextSelection.isStale(["home"], setAt: evening, now: night, timeZone: london))
+    XCTAssertFalse(FocusContextSelection.isStale([], setAt: evening, now: night, timeZone: london))
+    XCTAssertFalse(FocusContextSelection.isStale(["home"], setAt: nil, now: night, timeZone: london))
+  }
+
+  func testChangingTurnsOnePlaceOnAndOthersOff() {
+    XCTAssertEqual(
+      FocusContextSelection.changing(["home", "floor"], on: ["campus"], off: ["floor"], locationIDs: places),
+      ["campus"])
+    XCTAssertEqual(FocusContextSelection.changing(["home"], on: ["quiet"], locationIDs: places), ["home", "quiet"])
+  }
+
+  func testWaitingCountsEachTaskOncePerCondition() {
+    let counts = FocusContextSelection.waitingCounts([
+      [["campus", "library"], ["campus"]],
+      [["campus"]],
+    ])
+    XCTAssertEqual(counts, ["campus": 2, "library": 1])
+  }
 }

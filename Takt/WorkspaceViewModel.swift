@@ -991,6 +991,9 @@ enum WorkspaceSidebarItem: Identifiable {
   var focusConditions: [TaskCondition] = []
   /// The conditions an open task requires: what "Available now" offers.
   var requiredConditionIDs: Set<String> = []
+  /// How many open tasks require each condition, by id: the core's count, in
+  /// which a completed or archived task no longer counts.
+  var conditionRequirementCounts: [String: Int] = [:]
   var taskLoggedSeconds: [String: Int] = [:]
   var taskPlanningByID: [String: TaskPlanning] = [:]
   var focusContext = FocusContext()
@@ -1005,6 +1008,9 @@ enum WorkspaceSidebarItem: Identifiable {
   /// is none.
   var newConditionCategory: String?
   var contextExpiresAt: Date?
+  /// When the conditions on were said, as the workspace stamped it: what
+  /// makes a place left on overnight read as stale.
+  var contextConditionsSetAt: Date?
   var availableUntil: Date?
   var blockedFocusTasks: [BlockedFocusTask] = []
   var nextFocusEvaluationAt: Date?

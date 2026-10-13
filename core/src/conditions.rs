@@ -19,6 +19,9 @@ use crate::lists::new_id;
 use crate::rows::ConditionRow;
 use crate::time::{non_empty_name, stored};
 
+mod organise;
+pub use organise::*;
+
 /// The category whose conditions are places, and exclusive.
 pub const LOCATION_CATEGORY: &str = "Location";
 
@@ -111,6 +114,20 @@ pub fn create_condition_in_category(
     if !workspace_exists {
         return Err(CoreError::InvalidCondition);
     }
+    // A live condition already called this is the one meant: "home" when
+    // there is a Home should not make a second.
+    let existing: Option<String> = transaction
+        .query_row(
+            "SELECT id FROM task_conditions
+             WHERE workspaceId = ?1 AND isArchived = 0 AND lower(trim(name)) = lower(?2)
+             ORDER BY createdAt, id LIMIT 1",
+            params![workspace_id, name],
+            |row| row.get(0),
+        )
+        .optional()?;
+    if let Some(existing) = existing {
+        return Ok(existing);
+    }
     let category = canonical_category(transaction, workspace_id, category)?;
     let id = new_id();
     let now = stored(now_ms);
@@ -193,8 +210,11 @@ pub fn set_condition_category(
     if current == category && is_location == place {
         return Ok(());
     }
+    // Under a new heading it goes last, rather than wherever its old number
+    // would put it; the heading it left keeps its place.
     transaction.execute(
-        "UPDATE task_conditions SET category = ?1, isLocation = ?2, updatedAt = ?3 WHERE id = ?4",
+        "UPDATE task_conditions SET category = ?1, isLocation = ?2, sortOrder = NULL, updatedAt = ?3
+         WHERE id = ?4",
         params![category, place, stored(now_ms), id],
     )?;
     Ok(())
@@ -243,19 +263,22 @@ pub struct ConditionSection {
     pub conditions: Vec<ConditionRow>,
 }
 
-/// Conditions under their headings: Location first, then every other category
-/// alphabetically, then the uncategorised under "Other". Within a heading
-/// they keep the order they were given.
+/// Conditions under their headings, in the order the workspace keeps
+/// (`sortOrder`): the headings by their first placed condition, and the
+/// conditions under each by their own. What nobody has placed — every
+/// condition before v27, and one an older client makes — comes after what
+/// has been, in the order it was given, and a heading with nothing placed
+/// falls back to Location first, then every other category alphabetically,
+/// then the uncategorised under "Other".
 #[uniffi::export]
 pub fn condition_sections(conditions: Vec<ConditionRow>) -> Vec<ConditionSection> {
-    let mut named: BTreeMap<(u8, String), (String, Vec<ConditionRow>)> = BTreeMap::new();
+    let mut named: BTreeMap<String, (String, Vec<ConditionRow>)> = BTreeMap::new();
     let mut other = Vec::new();
     for condition in conditions {
         match effective_category(&condition) {
             Some(category) => {
-                let rank = u8::from(category != LOCATION_CATEGORY);
                 named
-                    .entry((rank, category.to_lowercase()))
+                    .entry(category.to_lowercase())
                     .or_insert_with(|| (category, Vec::new()))
                     .1
                     .push(condition);
@@ -280,6 +303,26 @@ pub fn condition_sections(conditions: Vec<ConditionRow>) -> Vec<ConditionSection
             conditions: other,
         });
     }
+    for section in &mut sections {
+        // Stable, so the unplaced keep the order they were given.
+        section
+            .conditions
+            .sort_by_key(|condition| condition.sort_order.unwrap_or(i64::MAX));
+    }
+    sections.sort_by_cached_key(|section| {
+        let placed = section
+            .conditions
+            .iter()
+            .filter_map(|condition| condition.sort_order)
+            .min()
+            .unwrap_or(i64::MAX);
+        let fallback = match section.category.as_deref() {
+            Some(LOCATION_CATEGORY) => 0u8,
+            Some(_) => 1,
+            None => 2,
+        };
+        (placed, fallback, section.title.to_lowercase())
+    });
     sections
 }
 
@@ -526,6 +569,7 @@ mod tests {
             created_at_ms: 0,
             updated_at_ms: 0,
             category: category.map(Into::into),
+            sort_order: None,
         }
     }
 
@@ -637,6 +681,7 @@ mod tests {
             created_at_ms: 0,
             updated_at_ms: 0,
             category: None,
+            sort_order: None,
         };
         assert_eq!(condition_section_title(place.clone()), "Location");
         let loose = ConditionRow {

@@ -385,6 +385,8 @@ data class TaskCondition(
     val updatedAt: Instant,
     /** The category as stored ("Location", "Equipment"), or null; the core's `condition_sections` reads it. */
     val category: String? = null,
+    /** Where it sits in the conditions' order, workspace-wide; null for one nobody has placed. */
+    val sortOrder: Long? = null,
 )
 
 data class FocusWorkBlock(

@@ -771,6 +771,8 @@ internal object IntegrityCheckingUniffiLib {
     ): Int
     external fun uniffi_takt_core_checksum_func_condition_sections(
     ): Int
+    external fun uniffi_takt_core_checksum_func_condition_waiting_counts(
+    ): Int
     external fun uniffi_takt_core_checksum_func_day_boundary_day_key(
     ): Int
     external fun uniffi_takt_core_checksum_func_day_boundary_day_offset(
@@ -824,6 +826,12 @@ internal object IntegrityCheckingUniffiLib {
     external fun uniffi_takt_core_checksum_func_parse_filter_definition(
     ): Int
     external fun uniffi_takt_core_checksum_func_validate_filter_definition(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_focus_context_changed(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_focus_context_in_force(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_focus_context_is_stale(
     ): Int
     external fun uniffi_takt_core_checksum_func_google_tasks_plan(
     ): Int
@@ -1121,6 +1129,8 @@ internal object IntegrityCheckingUniffiLib {
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_condition(
     ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_condition_usage(
+    ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_conditions(
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_contribution(
@@ -1136,6 +1146,8 @@ internal object IntegrityCheckingUniffiLib {
     external fun uniffi_takt_core_checksum_method_coreworkspace_focus_award(
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_focus_awards_between(
+    ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_focus_context(
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_focus_points_summary(
     ): Int
@@ -1170,6 +1182,8 @@ internal object IntegrityCheckingUniffiLib {
     external fun uniffi_takt_core_checksum_method_coreworkspace_task_planning_values(
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_tasks_closed_between(
+    ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_tasks_requiring_condition(
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_themes(
     ): Int
@@ -1291,6 +1305,12 @@ internal object IntegrityCheckingUniffiLib {
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_make_daily(
     ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_merge_conditions(
+    ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_move_condition(
+    ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_move_condition_category(
+    ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_move_folder(
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_move_folder_within_siblings(
@@ -1351,6 +1371,8 @@ internal object IntegrityCheckingUniffiLib {
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_remove_task_blocker(
     ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_rename_condition_category(
+    ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_rename_folder(
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_rename_list(
@@ -1364,6 +1386,8 @@ internal object IntegrityCheckingUniffiLib {
     external fun uniffi_takt_core_checksum_method_coreworkspace_save_condition(
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_save_editor(
+    ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_save_focus_context(
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_save_folder_settings(
     ): Int
@@ -1396,6 +1420,8 @@ internal object IntegrityCheckingUniffiLib {
     external fun uniffi_takt_core_checksum_method_coreworkspace_set_preference(
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_set_status(
+    ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_set_task_requirements(
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_set_waiting(
     ): Int
@@ -1577,6 +1603,8 @@ internal object UniffiLib {
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_method_coreworkspace_condition(`ptr`: Long,`id`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_method_coreworkspace_condition_usage(`ptr`: Long,`workspaceId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_method_coreworkspace_conditions(`ptr`: Long,`workspaceId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_method_coreworkspace_contribution(`ptr`: Long,`id`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
@@ -1592,6 +1620,8 @@ internal object UniffiLib {
     external fun uniffi_takt_core_fn_method_coreworkspace_focus_award(`ptr`: Long,`id`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_method_coreworkspace_focus_awards_between(`ptr`: Long,`fromMs`: Long,`toMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_method_coreworkspace_focus_context(`ptr`: Long,`workspaceId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_method_coreworkspace_focus_points_summary(`ptr`: Long,`todayMs`: Long,`tomorrowMs`: Long,`weekStartMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
@@ -1626,6 +1656,8 @@ internal object UniffiLib {
     external fun uniffi_takt_core_fn_method_coreworkspace_task_planning_values(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_method_coreworkspace_tasks_closed_between(`ptr`: Long,`fromMs`: Long,`toMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_method_coreworkspace_tasks_requiring_condition(`ptr`: Long,`workspaceId`: RustBuffer.ByValue,`conditionId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_method_coreworkspace_themes(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
@@ -1747,6 +1779,12 @@ internal object UniffiLib {
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_method_coreworkspace_make_daily(`ptr`: Long,`taskId`: RustBuffer.ByValue,`weekdays`: RustBuffer.ByValue,`intervalDays`: RustBuffer.ByValue,`targetSeconds`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_method_coreworkspace_merge_conditions(`ptr`: Long,`from`: RustBuffer.ByValue,`into`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Int
+    external fun uniffi_takt_core_fn_method_coreworkspace_move_condition(`ptr`: Long,`id`: RustBuffer.ByValue,`offset`: Long,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Byte
+    external fun uniffi_takt_core_fn_method_coreworkspace_move_condition_category(`ptr`: Long,`workspaceId`: RustBuffer.ByValue,`category`: RustBuffer.ByValue,`offset`: Long,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Byte
     external fun uniffi_takt_core_fn_method_coreworkspace_move_folder(`ptr`: Long,`id`: RustBuffer.ByValue,`parentFolderId`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
     external fun uniffi_takt_core_fn_method_coreworkspace_move_folder_within_siblings(`ptr`: Long,`id`: RustBuffer.ByValue,`offset`: Int,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
@@ -1807,6 +1845,8 @@ internal object UniffiLib {
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_method_coreworkspace_remove_task_blocker(`ptr`: Long,`taskId`: RustBuffer.ByValue,`blockedByTaskId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): Byte
+    external fun uniffi_takt_core_fn_method_coreworkspace_rename_condition_category(`ptr`: Long,`workspaceId`: RustBuffer.ByValue,`from`: RustBuffer.ByValue,`to`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Int
     external fun uniffi_takt_core_fn_method_coreworkspace_rename_folder(`ptr`: Long,`id`: RustBuffer.ByValue,`name`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
     external fun uniffi_takt_core_fn_method_coreworkspace_rename_list(`ptr`: Long,`id`: RustBuffer.ByValue,`name`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
@@ -1821,6 +1861,8 @@ internal object UniffiLib {
     ): Unit
     external fun uniffi_takt_core_fn_method_coreworkspace_save_editor(`ptr`: Long,`edit`: RustBuffer.ByValue,`baseline`: RustBuffer.ByValue,`nowMs`: Long,`zone`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_method_coreworkspace_save_focus_context(`ptr`: Long,`workspaceId`: RustBuffer.ByValue,`context`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Byte
     external fun uniffi_takt_core_fn_method_coreworkspace_save_folder_settings(`ptr`: Long,`id`: RustBuffer.ByValue,`name`: RustBuffer.ByValue,`parentFolderId`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
     external fun uniffi_takt_core_fn_method_coreworkspace_save_habit(`ptr`: Long,`draft`: RustBuffer.ByValue,`habitTaskId`: RustBuffer.ByValue,`nowMs`: Long,`zone`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
@@ -1853,6 +1895,8 @@ internal object UniffiLib {
     ): Byte
     external fun uniffi_takt_core_fn_method_coreworkspace_set_status(`ptr`: Long,`taskId`: RustBuffer.ByValue,`status`: RustBuffer.ByValue,`nowMs`: Long,`zone`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
+    external fun uniffi_takt_core_fn_method_coreworkspace_set_task_requirements(`ptr`: Long,`taskId`: RustBuffer.ByValue,`groups`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Byte
     external fun uniffi_takt_core_fn_method_coreworkspace_set_waiting(`ptr`: Long,`taskId`: RustBuffer.ByValue,`waitingOn`: RustBuffer.ByValue,`followUpAtMs`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
     external fun uniffi_takt_core_fn_method_coreworkspace_sidebar_index(`ptr`: Long,`listIds`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
@@ -1999,6 +2043,8 @@ internal object UniffiLib {
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_func_condition_sections(`conditions`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_condition_waiting_counts(`missing`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_func_day_boundary_day_key(`boundary`: RustBuffer.ByValue,`atMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_func_day_boundary_day_offset(`boundary`: RustBuffer.ByValue,`offset`: Long,`fromMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
@@ -2053,6 +2099,12 @@ internal object UniffiLib {
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_func_validate_filter_definition(`definition`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_focus_context_changed(`current`: RustBuffer.ByValue,`on`: RustBuffer.ByValue,`off`: RustBuffer.ByValue,`locationIds`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_focus_context_in_force(`context`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_focus_context_is_stale(`context`: RustBuffer.ByValue,`nowMs`: Long,`zone`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): Byte
     external fun uniffi_takt_core_fn_func_google_tasks_plan(`localLists`: RustBuffer.ByValue,`localTasks`: RustBuffer.ByValue,`remoteLists`: RustBuffer.ByValue,`remoteTasks`: RustBuffer.ByValue,`ledgerTasks`: RustBuffer.ByValue,`ledgerLists`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_func_keyboard_chord(`key`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
@@ -2523,7 +2575,10 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
     if ((lib.uniffi_takt_core_checksum_func_condition_section_title() and 0xFFFF) != 32802) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if ((lib.uniffi_takt_core_checksum_func_condition_sections() and 0xFFFF) != 5242) {
+    if ((lib.uniffi_takt_core_checksum_func_condition_sections() and 0xFFFF) != 53530) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_condition_waiting_counts() and 0xFFFF) != 32597) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_func_day_boundary_day_key() and 0xFFFF) != 60525) {
@@ -2605,6 +2660,15 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_func_validate_filter_definition() and 0xFFFF) != 53236) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_focus_context_changed() and 0xFFFF) != 16350) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_focus_context_in_force() and 0xFFFF) != 62430) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_focus_context_is_stale() and 0xFFFF) != 22807) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_func_google_tasks_plan() and 0xFFFF) != 64663) {
@@ -3051,6 +3115,9 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_condition() and 0xFFFF) != 23991) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_condition_usage() and 0xFFFF) != 64645) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_conditions() and 0xFFFF) != 7399) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
@@ -3073,6 +3140,9 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_focus_awards_between() and 0xFFFF) != 21823) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_focus_context() and 0xFFFF) != 61213) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_focus_points_summary() and 0xFFFF) != 18763) {
@@ -3124,6 +3194,9 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_tasks_closed_between() and 0xFFFF) != 41355) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_tasks_requiring_condition() and 0xFFFF) != 7745) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_themes() and 0xFFFF) != 15304) {
@@ -3306,6 +3379,15 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_make_daily() and 0xFFFF) != 20074) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_merge_conditions() and 0xFFFF) != 12671) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_move_condition() and 0xFFFF) != 64693) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_move_condition_category() and 0xFFFF) != 13245) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_move_folder() and 0xFFFF) != 35092) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
@@ -3396,6 +3478,9 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_remove_task_blocker() and 0xFFFF) != 29980) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_rename_condition_category() and 0xFFFF) != 26813) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_rename_folder() and 0xFFFF) != 13587) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
@@ -3415,6 +3500,9 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_save_editor() and 0xFFFF) != 10270) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_save_focus_context() and 0xFFFF) != 64775) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_save_folder_settings() and 0xFFFF) != 5349) {
@@ -3463,6 +3551,9 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_set_status() and 0xFFFF) != 17278) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_set_task_requirements() and 0xFFFF) != 10531) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_set_waiting() and 0xFFFF) != 1116) {
@@ -4677,6 +4768,11 @@ public interface CoreWorkspaceInterface {
     fun `condition`(`id`: kotlin.String): ConditionRow?
     
     /**
+     * How many open tasks require each condition, for those any does.
+     */
+    fun `conditionUsage`(`workspaceId`: kotlin.String): List<ConditionUsage>
+    
+    /**
      * A workspace's conditions, oldest first.
      */
     fun `conditions`(`workspaceId`: kotlin.String): List<ConditionRow>
@@ -4716,6 +4812,11 @@ public interface CoreWorkspaceInterface {
      * Awards in `[from, to)`, newest first.
      */
     fun `focusAwardsBetween`(`fromMs`: kotlin.Long, `toMs`: kotlin.Long): List<AwardRow>
+    
+    /**
+     * What holds now, as last saved, or none if it never was.
+     */
+    fun `focusContext`(`workspaceId`: kotlin.String): StoredFocusContext?
     
     /**
      * Points today, over the last seven days and ever.
@@ -4802,6 +4903,11 @@ public interface CoreWorkspaceInterface {
      * Tasks closed in `[from, to)`, oldest first.
      */
     fun `tasksClosedBetween`(`fromMs`: kotlin.Long, `toMs`: kotlin.Long): List<TaskRow>
+    
+    /**
+     * The open tasks that require a condition.
+     */
+    fun `tasksRequiringCondition`(`workspaceId`: kotlin.String, `conditionId`: kotlin.String): List<RequiringTask>
     
     /**
      * The stored themes by id.
@@ -5120,6 +5226,25 @@ public interface CoreWorkspaceInterface {
     fun `makeDaily`(`taskId`: kotlin.String, `weekdays`: List<kotlin.UInt>, `intervalDays`: kotlin.Long?, `targetSeconds`: kotlin.Long?, `nowMs`: kotlin.Long): kotlin.String
     
     /**
+     * Merges one condition into another as one "Merge Conditions" step:
+     * its tasks require the other, and it is archived. Returns how many
+     * tasks changed.
+     */
+    fun `mergeConditions`(`from`: kotlin.String, `into`: kotlin.String, `nowMs`: kotlin.Long): kotlin.UInt
+    
+    /**
+     * Moves a condition one place up (`offset` < 0) or down under its
+     * heading, as one "Move Condition" step. False at the end of the run.
+     */
+    fun `moveCondition`(`id`: kotlin.String, `offset`: kotlin.Long, `nowMs`: kotlin.Long): kotlin.Boolean
+    
+    /**
+     * Moves a heading — a category, or none for "Other" — one place up or
+     * down, as one "Move Category" step. False at either end.
+     */
+    fun `moveConditionCategory`(`workspaceId`: kotlin.String, `category`: kotlin.String?, `offset`: kotlin.Long, `nowMs`: kotlin.Long): kotlin.Boolean
+    
+    /**
      * Moves a folder into another (or to the top) as one "Move Folder" step.
      */
     fun `moveFolder`(`id`: kotlin.String, `parentFolderId`: kotlin.String?, `nowMs`: kotlin.Long)
@@ -5279,6 +5404,12 @@ public interface CoreWorkspaceInterface {
     fun `removeTaskBlocker`(`taskId`: kotlin.String, `blockedByTaskId`: kotlin.String): kotlin.Boolean
     
     /**
+     * Files every condition under `from` under `to`, as one "Rename
+     * Category" step; returns how many moved. Location cannot be renamed.
+     */
+    fun `renameConditionCategory`(`workspaceId`: kotlin.String, `from`: kotlin.String?, `to`: kotlin.String?, `nowMs`: kotlin.Long): kotlin.UInt
+    
+    /**
      * Renames a folder as one "Rename Folder" step.
      */
     fun `renameFolder`(`id`: kotlin.String, `name`: kotlin.String, `nowMs`: kotlin.Long)
@@ -5314,6 +5445,11 @@ public interface CoreWorkspaceInterface {
      * changed since `baseline`. Returns the task as saved.
      */
     fun `saveEditor`(`edit`: EditorSnapshot, `baseline`: EditorSnapshot, `nowMs`: kotlin.Long, `zone`: kotlin.String): EditorSnapshot
+    
+    /**
+     * Saves what holds now. Not an undo step: where you are is not an edit.
+     */
+    fun `saveFocusContext`(`workspaceId`: kotlin.String, `context`: StoredFocusContext, `nowMs`: kotlin.Long): kotlin.Boolean
     
     /**
      * Saves the folder settings sheet as one "Edit Folder" step.
@@ -5397,6 +5533,12 @@ public interface CoreWorkspaceInterface {
      * writing a repeating task's next occurrence in `zone` (an IANA name).
      */
     fun `setStatus`(`taskId`: kotlin.String, `status`: kotlin.String, `nowMs`: kotlin.Long, `zone`: kotlin.String)
+    
+    /**
+     * Sets what a task requires, as one "Edit Conditions" step. False when
+     * it already required exactly that.
+     */
+    fun `setTaskRequirements`(`taskId`: kotlin.String, `groups`: List<List<kotlin.String>>, `nowMs`: kotlin.Long): kotlin.Boolean
     
     /**
      * Sets what a task waits on and when to chase it, as one "Waiting On" step.
@@ -6233,6 +6375,24 @@ open class CoreWorkspace: Disposable, AutoCloseable, CoreWorkspaceInterface
 
     
     /**
+     * How many open tasks require each condition, for those any does.
+     */
+    @Throws(CoreException::class)override fun `conditionUsage`(`workspaceId`: kotlin.String): List<ConditionUsage> {
+            return FfiConverterSequenceTypeConditionUsage.lift(
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_condition_usage(
+        it,
+        
+        FfiConverterString.lower(`workspaceId`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
      * A workspace's conditions, oldest first.
      */
     @Throws(CoreException::class)override fun `conditions`(`workspaceId`: kotlin.String): List<ConditionRow> {
@@ -6373,6 +6533,24 @@ open class CoreWorkspace: Disposable, AutoCloseable, CoreWorkspaceInterface
         
         FfiConverterLong.lower(`fromMs`),
         FfiConverterLong.lower(`toMs`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * What holds now, as last saved, or none if it never was.
+     */
+    @Throws(CoreException::class)override fun `focusContext`(`workspaceId`: kotlin.String): StoredFocusContext? {
+            return FfiConverterOptionalTypeStoredFocusContext.lift(
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_focus_context(
+        it,
+        
+        FfiConverterString.lower(`workspaceId`),_status)
 }
     }
     )
@@ -6678,6 +6856,25 @@ open class CoreWorkspace: Disposable, AutoCloseable, CoreWorkspaceInterface
         
         FfiConverterLong.lower(`fromMs`),
         FfiConverterLong.lower(`toMs`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * The open tasks that require a condition.
+     */
+    @Throws(CoreException::class)override fun `tasksRequiringCondition`(`workspaceId`: kotlin.String, `conditionId`: kotlin.String): List<RequiringTask> {
+            return FfiConverterSequenceTypeRequiringTask.lift(
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_tasks_requiring_condition(
+        it,
+        
+        FfiConverterString.lower(`workspaceId`),
+        FfiConverterString.lower(`conditionId`),_status)
 }
     }
     )
@@ -7833,6 +8030,71 @@ open class CoreWorkspace: Disposable, AutoCloseable, CoreWorkspaceInterface
 
     
     /**
+     * Merges one condition into another as one "Merge Conditions" step:
+     * its tasks require the other, and it is archived. Returns how many
+     * tasks changed.
+     */
+    @Throws(CoreException::class)override fun `mergeConditions`(`from`: kotlin.String, `into`: kotlin.String, `nowMs`: kotlin.Long): kotlin.UInt {
+            return FfiConverterUInt.lift(
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_merge_conditions(
+        it,
+        
+        FfiConverterString.lower(`from`),
+        FfiConverterString.lower(`into`),
+        FfiConverterLong.lower(`nowMs`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * Moves a condition one place up (`offset` < 0) or down under its
+     * heading, as one "Move Condition" step. False at the end of the run.
+     */
+    @Throws(CoreException::class)override fun `moveCondition`(`id`: kotlin.String, `offset`: kotlin.Long, `nowMs`: kotlin.Long): kotlin.Boolean {
+            return FfiConverterBoolean.lift(
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_move_condition(
+        it,
+        
+        FfiConverterString.lower(`id`),
+        FfiConverterLong.lower(`offset`),
+        FfiConverterLong.lower(`nowMs`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * Moves a heading — a category, or none for "Other" — one place up or
+     * down, as one "Move Category" step. False at either end.
+     */
+    @Throws(CoreException::class)override fun `moveConditionCategory`(`workspaceId`: kotlin.String, `category`: kotlin.String?, `offset`: kotlin.Long, `nowMs`: kotlin.Long): kotlin.Boolean {
+            return FfiConverterBoolean.lift(
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_move_condition_category(
+        it,
+        
+        FfiConverterString.lower(`workspaceId`),
+        FfiConverterOptionalString.lower(`category`),
+        FfiConverterLong.lower(`offset`),
+        FfiConverterLong.lower(`nowMs`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
      * Moves a folder into another (or to the top) as one "Move Folder" step.
      */
     @Throws(CoreException::class)override fun `moveFolder`(`id`: kotlin.String, `parentFolderId`: kotlin.String?, `nowMs`: kotlin.Long)
@@ -8411,6 +8673,28 @@ open class CoreWorkspace: Disposable, AutoCloseable, CoreWorkspaceInterface
 
     
     /**
+     * Files every condition under `from` under `to`, as one "Rename
+     * Category" step; returns how many moved. Location cannot be renamed.
+     */
+    @Throws(CoreException::class)override fun `renameConditionCategory`(`workspaceId`: kotlin.String, `from`: kotlin.String?, `to`: kotlin.String?, `nowMs`: kotlin.Long): kotlin.UInt {
+            return FfiConverterUInt.lift(
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_rename_condition_category(
+        it,
+        
+        FfiConverterString.lower(`workspaceId`),
+        FfiConverterOptionalString.lower(`from`),
+        FfiConverterOptionalString.lower(`to`),
+        FfiConverterLong.lower(`nowMs`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
      * Renames a folder as one "Rename Folder" step.
      */
     @Throws(CoreException::class)override fun `renameFolder`(`id`: kotlin.String, `name`: kotlin.String, `nowMs`: kotlin.Long)
@@ -8545,6 +8829,26 @@ open class CoreWorkspace: Disposable, AutoCloseable, CoreWorkspaceInterface
         FfiConverterTypeEditorSnapshot.lower(`baseline`),
         FfiConverterLong.lower(`nowMs`),
         FfiConverterString.lower(`zone`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * Saves what holds now. Not an undo step: where you are is not an edit.
+     */
+    @Throws(CoreException::class)override fun `saveFocusContext`(`workspaceId`: kotlin.String, `context`: StoredFocusContext, `nowMs`: kotlin.Long): kotlin.Boolean {
+            return FfiConverterBoolean.lift(
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_save_focus_context(
+        it,
+        
+        FfiConverterString.lower(`workspaceId`),
+        FfiConverterTypeStoredFocusContext.lower(`context`),
+        FfiConverterLong.lower(`nowMs`),_status)
 }
     }
     )
@@ -8866,6 +9170,27 @@ open class CoreWorkspace: Disposable, AutoCloseable, CoreWorkspaceInterface
 }
     }
     
+    
+
+    
+    /**
+     * Sets what a task requires, as one "Edit Conditions" step. False when
+     * it already required exactly that.
+     */
+    @Throws(CoreException::class)override fun `setTaskRequirements`(`taskId`: kotlin.String, `groups`: List<List<kotlin.String>>, `nowMs`: kotlin.Long): kotlin.Boolean {
+            return FfiConverterBoolean.lift(
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_set_task_requirements(
+        it,
+        
+        FfiConverterString.lower(`taskId`),
+        FfiConverterSequenceSequenceString.lower(`groups`),
+        FfiConverterLong.lower(`nowMs`),_status)
+}
+    }
+    )
+    }
     
 
     
@@ -11335,6 +11660,13 @@ data class ConditionRow (
      * as "Location".
      */
     var `category`: kotlin.String?
+    , 
+    /**
+     * Where it sits in the tab, workspace-wide: under its heading in this
+     * order, and the headings in the order of their first. None for one
+     * nobody has placed, which comes after the placed ones under its heading.
+     */
+    var `sortOrder`: kotlin.Long?
     
 ){
     
@@ -11359,6 +11691,7 @@ public object FfiConverterTypeConditionRow: FfiConverterRustBuffer<ConditionRow>
             FfiConverterLong.read(buf),
             FfiConverterLong.read(buf),
             FfiConverterOptionalString.read(buf),
+            FfiConverterOptionalLong.read(buf),
         )
     }
 
@@ -11370,7 +11703,8 @@ public object FfiConverterTypeConditionRow: FfiConverterRustBuffer<ConditionRow>
             FfiConverterBoolean.allocationSize(value.`isArchived`) +
             FfiConverterLong.allocationSize(value.`createdAtMs`) +
             FfiConverterLong.allocationSize(value.`updatedAtMs`) +
-            FfiConverterOptionalString.allocationSize(value.`category`)
+            FfiConverterOptionalString.allocationSize(value.`category`) +
+            FfiConverterOptionalLong.allocationSize(value.`sortOrder`)
     )
 
     override fun write(value: ConditionRow, buf: ByteBuffer) {
@@ -11382,6 +11716,7 @@ public object FfiConverterTypeConditionRow: FfiConverterRustBuffer<ConditionRow>
             FfiConverterLong.write(value.`createdAtMs`, buf)
             FfiConverterLong.write(value.`updatedAtMs`, buf)
             FfiConverterOptionalString.write(value.`category`, buf)
+            FfiConverterOptionalLong.write(value.`sortOrder`, buf)
     }
 }
 
@@ -11445,6 +11780,47 @@ public object FfiConverterTypeConditionSection: FfiConverterRustBuffer<Condition
             FfiConverterString.write(value.`title`, buf)
             FfiConverterBoolean.write(value.`isExclusive`, buf)
             FfiConverterSequenceTypeConditionRow.write(value.`conditions`, buf)
+    }
+}
+
+
+
+/**
+ * How many open tasks require one condition.
+ */
+data class ConditionUsage (
+    var `conditionId`: kotlin.String
+    , 
+    var `openTasks`: kotlin.UInt
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeConditionUsage: FfiConverterRustBuffer<ConditionUsage> {
+    override fun read(buf: ByteBuffer): ConditionUsage {
+        return ConditionUsage(
+            FfiConverterString.read(buf),
+            FfiConverterUInt.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: ConditionUsage) = (
+            FfiConverterString.allocationSize(value.`conditionId`) +
+            FfiConverterUInt.allocationSize(value.`openTasks`)
+    )
+
+    override fun write(value: ConditionUsage, buf: ByteBuffer) {
+            FfiConverterString.write(value.`conditionId`, buf)
+            FfiConverterUInt.write(value.`openTasks`, buf)
     }
 }
 
@@ -17639,6 +18015,57 @@ public object FfiConverterTypeRanking: FfiConverterRustBuffer<Ranking> {
 
 
 /**
+ * An open task that requires a condition.
+ */
+data class RequiringTask (
+    var `taskId`: kotlin.String
+    , 
+    var `title`: kotlin.String
+    , 
+    var `listId`: kotlin.String
+    , 
+    var `listName`: kotlin.String
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeRequiringTask: FfiConverterRustBuffer<RequiringTask> {
+    override fun read(buf: ByteBuffer): RequiringTask {
+        return RequiringTask(
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: RequiringTask) = (
+            FfiConverterString.allocationSize(value.`taskId`) +
+            FfiConverterString.allocationSize(value.`title`) +
+            FfiConverterString.allocationSize(value.`listId`) +
+            FfiConverterString.allocationSize(value.`listName`)
+    )
+
+    override fun write(value: RequiringTask, buf: ByteBuffer) {
+            FfiConverterString.write(value.`taskId`, buf)
+            FfiConverterString.write(value.`title`, buf)
+            FfiConverterString.write(value.`listId`, buf)
+            FfiConverterString.write(value.`listName`, buf)
+    }
+}
+
+
+
+/**
  * An award as the timeline counts it: it shares its block's id.
  */
 data class ReviewAwardPoints (
@@ -18448,6 +18875,85 @@ public object FfiConverterTypeStepUndoPlan: FfiConverterRustBuffer<StepUndoPlan>
             FfiConverterBoolean.write(value.`isUndone`, buf)
             FfiConverterSequenceTypeUndoStep.write(value.`laterSteps`, buf)
             FfiConverterBoolean.write(value.`canRedo`, buf)
+    }
+}
+
+
+
+/**
+ * What holds now, as stored.
+ */
+data class StoredFocusContext (
+    /**
+     * The conditions on, sorted.
+     */
+    var `conditionIds`: List<kotlin.String>
+    , 
+    /**
+     * When the conditions on were last changed; none with none on.
+     */
+    var `conditionsSetAtMs`: kotlin.Long?
+    , 
+    /**
+     * When the time available ends; none for no limit.
+     */
+    var `availableUntilMs`: kotlin.Long?
+    , 
+    /**
+     * When the conditions stop being trusted; none for never.
+     */
+    var `expiresAtMs`: kotlin.Long?
+    , 
+    /**
+     * "progress" or "finish".
+     */
+    var `mode`: kotlin.String
+    , 
+    /**
+     * The conditions that held before the last expiry, offered back.
+     */
+    var `suggestedIds`: List<kotlin.String>
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeStoredFocusContext: FfiConverterRustBuffer<StoredFocusContext> {
+    override fun read(buf: ByteBuffer): StoredFocusContext {
+        return StoredFocusContext(
+            FfiConverterSequenceString.read(buf),
+            FfiConverterOptionalLong.read(buf),
+            FfiConverterOptionalLong.read(buf),
+            FfiConverterOptionalLong.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterSequenceString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: StoredFocusContext) = (
+            FfiConverterSequenceString.allocationSize(value.`conditionIds`) +
+            FfiConverterOptionalLong.allocationSize(value.`conditionsSetAtMs`) +
+            FfiConverterOptionalLong.allocationSize(value.`availableUntilMs`) +
+            FfiConverterOptionalLong.allocationSize(value.`expiresAtMs`) +
+            FfiConverterString.allocationSize(value.`mode`) +
+            FfiConverterSequenceString.allocationSize(value.`suggestedIds`)
+    )
+
+    override fun write(value: StoredFocusContext, buf: ByteBuffer) {
+            FfiConverterSequenceString.write(value.`conditionIds`, buf)
+            FfiConverterOptionalLong.write(value.`conditionsSetAtMs`, buf)
+            FfiConverterOptionalLong.write(value.`availableUntilMs`, buf)
+            FfiConverterOptionalLong.write(value.`expiresAtMs`, buf)
+            FfiConverterString.write(value.`mode`, buf)
+            FfiConverterSequenceString.write(value.`suggestedIds`, buf)
     }
 }
 
@@ -25510,6 +26016,38 @@ public object FfiConverterOptionalTypeSessionRow: FfiConverterRustBuffer<Session
 /**
  * @suppress
  */
+public object FfiConverterOptionalTypeStoredFocusContext: FfiConverterRustBuffer<StoredFocusContext?> {
+    override fun read(buf: ByteBuffer): StoredFocusContext? {
+        if (buf.get().toInt() == 0) {
+            return null
+        }
+        return FfiConverterTypeStoredFocusContext.read(buf)
+    }
+
+    override fun allocationSize(value: StoredFocusContext?): ULong {
+        if (value == null) {
+            return 1UL
+        } else {
+            return 1UL + FfiConverterTypeStoredFocusContext.allocationSize(value)
+        }
+    }
+
+    override fun write(value: StoredFocusContext?, buf: ByteBuffer) {
+        if (value == null) {
+            buf.put(0)
+        } else {
+            buf.put(1)
+            FfiConverterTypeStoredFocusContext.write(value, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
 public object FfiConverterOptionalTypeSyncEndpointsRecord: FfiConverterRustBuffer<SyncEndpointsRecord?> {
     override fun read(buf: ByteBuffer): SyncEndpointsRecord? {
         if (buf.get().toInt() == 0) {
@@ -26624,6 +27162,34 @@ public object FfiConverterSequenceTypeConditionSection: FfiConverterRustBuffer<L
         buf.putInt(value.size)
         value.iterator().forEach {
             FfiConverterTypeConditionSection.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceTypeConditionUsage: FfiConverterRustBuffer<List<ConditionUsage>> {
+    override fun read(buf: ByteBuffer): List<ConditionUsage> {
+        val len = buf.getInt()
+        return List<ConditionUsage>(len) {
+            FfiConverterTypeConditionUsage.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<ConditionUsage>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeConditionUsage.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<ConditionUsage>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeConditionUsage.write(it, buf)
         }
     }
 }
@@ -27950,6 +28516,34 @@ public object FfiConverterSequenceTypeQueueEntry: FfiConverterRustBuffer<List<Qu
 /**
  * @suppress
  */
+public object FfiConverterSequenceTypeRequiringTask: FfiConverterRustBuffer<List<RequiringTask>> {
+    override fun read(buf: ByteBuffer): List<RequiringTask> {
+        val len = buf.getInt()
+        return List<RequiringTask>(len) {
+            FfiConverterTypeRequiringTask.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<RequiringTask>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeRequiringTask.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<RequiringTask>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeRequiringTask.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
 public object FfiConverterSequenceTypeReviewAwardPoints: FfiConverterRustBuffer<List<ReviewAwardPoints>> {
     override fun read(buf: ByteBuffer): List<ReviewAwardPoints> {
         val len = buf.getInt()
@@ -28752,6 +29346,34 @@ public object FfiConverterSequenceSequenceString: FfiConverterRustBuffer<List<Li
         buf.putInt(value.size)
         value.iterator().forEach {
             FfiConverterSequenceString.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceSequenceSequenceString: FfiConverterRustBuffer<List<List<List<kotlin.String>>>> {
+    override fun read(buf: ByteBuffer): List<List<List<kotlin.String>>> {
+        val len = buf.getInt()
+        return List<List<List<kotlin.String>>>(len) {
+            FfiConverterSequenceSequenceString.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<List<List<kotlin.String>>>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterSequenceSequenceString.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<List<List<kotlin.String>>>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterSequenceSequenceString.write(it, buf)
         }
     }
 }
@@ -29727,9 +30349,13 @@ public object FfiConverterMapStringTypeSyncValue: FfiConverterRustBuffer<Map<kot
     
 
         /**
-         * Conditions under their headings: Location first, then every other category
-         * alphabetically, then the uncategorised under "Other". Within a heading
-         * they keep the order they were given.
+         * Conditions under their headings, in the order the workspace keeps
+         * (`sortOrder`): the headings by their first placed condition, and the
+         * conditions under each by their own. What nobody has placed — every
+         * condition before v27, and one an older client makes — comes after what
+         * has been, in the order it was given, and a heading with nothing placed
+         * falls back to Location first, then every other category alphabetically,
+         * then the uncategorised under "Other".
          */ fun `conditionSections`(`conditions`: List<ConditionRow>): List<ConditionSection> {
             return FfiConverterSequenceTypeConditionSection.lift(
     uniffiRustCall() { _status ->
@@ -29737,6 +30363,23 @@ public object FfiConverterMapStringTypeSyncValue: FfiConverterRustBuffer<Map<kot
     
         
         FfiConverterSequenceTypeConditionRow.lower(`conditions`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * How many held-back tasks wait on each condition: `missing` is, for each
+         * task the ranking held back for conditions, the requirement groups it
+         * found unmet. A task waits on every condition in those groups, once
+         * however many groups name it. Most-waited-on first, then by id.
+         */ fun `conditionWaitingCounts`(`missing`: List<List<List<kotlin.String>>>): List<ConditionUsage> {
+            return FfiConverterSequenceTypeConditionUsage.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_condition_waiting_counts(
+    
+        
+        FfiConverterSequenceSequenceSequenceString.lower(`missing`),_status)
 }
     )
     }
@@ -30120,6 +30763,60 @@ public object FfiConverterMapStringTypeSyncValue: FfiConverterRustBuffer<Map<kot
     
         
         FfiConverterTypeFilterDefinition.lower(`definition`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * `current` with `on` turned on and `off` turned off. Turning a place on
+         * turns every other place (`location_ids`) off, since you are in one place
+         * at a time; whatever else combines. Sorted.
+         */ fun `focusContextChanged`(`current`: List<kotlin.String>, `on`: List<kotlin.String>, `off`: List<kotlin.String>, `locationIds`: List<kotlin.String>): List<kotlin.String> {
+            return FfiConverterSequenceString.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_focus_context_changed(
+    
+        
+        FfiConverterSequenceString.lower(`current`),
+        FfiConverterSequenceString.lower(`on`),
+        FfiConverterSequenceString.lower(`off`),
+        FfiConverterSequenceString.lower(`locationIds`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * The context as it stands at `now_ms`: once it has expired its conditions
+         * are set aside — offered back, so "Use again" can restore them — and the
+         * expiry and stamp go with them. Otherwise `context` unchanged.
+         */ fun `focusContextInForce`(`context`: StoredFocusContext, `nowMs`: kotlin.Long): StoredFocusContext {
+            return FfiConverterTypeStoredFocusContext.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_focus_context_in_force(
+    
+        
+        FfiConverterTypeStoredFocusContext.lower(`context`),
+        FfiConverterLong.lower(`nowMs`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * Whether the conditions on were said on an earlier day than `now_ms`, in
+         * `zone`: a place left on overnight is probably not where you are. Never
+         * with nothing on.
+         */ fun `focusContextIsStale`(`context`: StoredFocusContext, `nowMs`: kotlin.Long, `zone`: kotlin.String): kotlin.Boolean {
+            return FfiConverterBoolean.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_focus_context_is_stale(
+    
+        
+        FfiConverterTypeStoredFocusContext.lower(`context`),
+        FfiConverterLong.lower(`nowMs`),
+        FfiConverterString.lower(`zone`),_status)
 }
     )
     }
