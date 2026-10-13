@@ -20,7 +20,7 @@ It works offline. It works from the terminal. And it exposes the whole surface t
 
 - [Install](#install) · [First run](#first-run)
 - [Keyboard flow](#keyboard-flow) · [Focus](#focus) · [Command palette](#command-palette)
-- [Views](#views) · [Waiting on](#waiting-on) · [Blocked by](#blocked-by) · [The menu bar](#the-menu-bar) · [The window](#the-window) · [Themes](#themes) · [Diagnostics](#diagnostics)
+- [Views](#views) · [Waiting on](#waiting-on) · [Blocked by](#blocked-by) · [Quick ask](#quick-ask) · [The menu bar](#the-menu-bar) · [The window](#the-window) · [Themes](#themes) · [Diagnostics](#diagnostics)
 - [Daily log](#daily-log) · [Obsidian daily notes](#obsidian-daily-notes) · [AFFiNE](#affine)
 - [Command line](#command-line) · [MCP server](#mcp-server) · [Plugins](#plugins)
 - [Build from source](#build-from-source) · [Where your data lives](#where-your-data-lives)
@@ -89,6 +89,7 @@ something you already have to know.
 | `ww` | Waiting on: who or what, and when to follow up — moves the task to Waiting on; see [Waiting on](#waiting-on) |
 | `bb` / `Cmd+Shift+B` | Blocked by: find a task this one waits on, or type a new one and `Cmd+Return` to make it just above; see [Blocked by](#blocked-by) |
 | `cc` | Conditions: tick what the task needs (Home, Floor space…), or type a new one — `Space` or `Return` ticks, `Esc` closes; with no task selected, the Conditions tab. See [Conditions](#conditions) |
+| `aa` | Ask the agent: a one-line popup over the task — "due friday", "split it into steps" — that does it there, each change a card with Undo and the keys that would have done the same; see [Quick ask](#quick-ask) |
 | `Delete` / `Cmd+Delete` / `Cmd+Shift+K` | Delete the task — it asks, and `Return` confirms |
 | `Return` | **Always** add a task, as in Checkvist — below the selection — on the board, below the card a selected subtask is drawn on — and at the foot of the day on Today. On a subtask's own card in another column than its parent's, the new task is a plain card of that column, at the foot of its plain cards, rather than another subtask of the parent |
 | `Space` / `x` | **Always** complete the task (or reopen it) — unless you are typing |
@@ -790,8 +791,13 @@ the bottom.
     verb") and it saves it to the narrowest scope that fits, as a change like
     any other, showing the instructions before and after. They
     live in the workspace, so they sync, and `takt ws instructions` reads them
-    from a terminal. See
-    [`docs/agent-panel.md`](docs/agent-panel.md).
+    from a terminal. Every change card also says **which keys would have made
+    the same change** — "Keys `D D` then type “friday”", "Keys `M M` then
+    choose the list", "Keys `Space`" — worked out by the app from the call and
+    your own keymap, so a rebound key shows as rebound; a change no key makes
+    (a daily, a filter list's rules removed) shows none. The last
+    [quick ask](#quick-ask) sits at the top of the panel, its cards undoable
+    there too. See [`docs/agent-panel.md`](docs/agent-panel.md).
 - **Main pane** — a header band with where you are on the left (the scope, and
   the way back out of an opened task) and a count or a few glyph buttons on the
   right, then the mode's content. Panes carry no footers of their own: their
@@ -841,6 +847,22 @@ the quick-add field.
 The **global focus panel** is the one surface that is not the window: it is
 the same day list, summoned over whatever app you are in, and it keeps working
 with every window closed.
+
+### Quick ask
+
+`aa` on a task (or **Ask the agent to do something to the task** in the
+palette and the Task menu) opens a one-line popup over it, the way `bb` and
+`cc` do: "Tell the agent…", with the task named on the right. Return sends it
+to the agent with that task as the subject — its title, id and list — so "make
+it due friday", "split this into steps" or "move it to Errands" needs no
+looking up. It runs as a one-shot thread of its own, so the panel's
+conversation is left alone. The popup shows the work as it happens, then the
+short reply and a card for each change, with its Undo and the keys that would
+have done the same. Tab (or ↓) selects a card and Return presses its button —
+Undo, Redo, or Approve with **Ask before changing tasks** on, when ⌫ denies.
+Esc closes the popup at any point without stopping anything; `aa` again
+brings back an ask still under way, and the last one stays at the top of the
+agent panel.
 
 ## Themes
 

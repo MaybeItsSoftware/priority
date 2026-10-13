@@ -34,6 +34,11 @@ thread.
 | `Takt/WorkspaceAgentPane.swift` | The transcript, the change card with its Undo, the setup state |
 | `Takt/WorkspaceAgentInputField.swift` | The message field (an `NSTextView`: Return sends, Shift+Return is a new line) |
 | `Takt/WorkspaceLeftDock.swift` | The dock's tab bar: Lists and Agent |
+| `core/src/agent_hints.rs` | The keys that would have made a change, from the tool call and the commands in force |
+| `Sources/TaktCore/AgentKeyHints.swift` | `AgentKeyHintLine`, the app's wrapper for it |
+| `Takt/WorkspaceAgentKeyHint.swift` | The card's "Keys" line |
+| `Takt/WorkspaceQuickAskOverlay.swift` | The quick ask's popup (`aa`) |
+| `Takt/WorkspaceViewModel+QuickAsk.swift` | Its thread, subject and card keys |
 
 The first three are pure and tested in `corelogic-tests/AgentStreamProtocolTests.swift`
 and `AgentToolPolicyTests.swift`; the stream-json fixtures there are lines
@@ -270,6 +275,90 @@ the newest card that can be undone (or the pending card, when there is one),
 **Return** there presses its button — Undo, or Redo once undone — and **Esc**
 goes back to the field. The writes the journal does not cover (the Checkvist
 `task_*` tools and the dailies) say done and have no Undo.
+
+## The keys on the card
+
+Every change card has a muted line under its fields saying how to make the
+same change from the keyboard: **Keys** `D D` then type “friday”, **Keys**
+`M M` then choose the list, **Keys** `⌘3` then `⌥2`. It is never the model's
+idea. `agent_key_hint` in the Rust core (`core/src/agent_hints.rs`) maps the
+tool's name and input to steps, each naming a catalogue command, and looks
+each one's key up in the commands it is handed — the Mac hands it
+`WorkspaceCommandCatalog.all`, the catalogue with the user's keymap laid over
+it — so a rebound command's hint shows the new key, and one whose every key is
+unbound loses its hint rather than showing a key that does nothing. A command
+with no key of its own is reached through the palette: `⇧⌘P` then its title.
+The hint is worked out once, when the card is drawn (`Approval.keyHint`), and
+shown while the change waits, runs or is done, not once it was denied or
+failed.
+
+What maps, by tool:
+
+| Tool | Keys |
+|---|---|
+| `workspace_task_add`, `task_add` | `Return` (`⌥⇧Return` under a parent) then type the title; a list adds `⇧⌘L`, notes add `N N` |
+| `workspace_task_update` | title `E E`, notes `N N` (cleared: `C N`), status `Space` or `⇧Space`, board column `⌘1` then `⌘←`/`⌘→`, kind `⇧⌘L`, pinned `⌥⌘P`, waiting `W W` — each changed field a step |
+| `task_update` | content `E E`, due `D D` (cleared: `C D`), tags `T T` (cleared: `C T`) |
+| `workspace_task_move` | to a list `M M` then choose the list; under a task `M M` then choose the new parent; otherwise `⌥↑`/`⌥↓` |
+| `task_move`, `task_reparent`, `project_move` | `⌥↑`/`⌥↓`; `M M` |
+| `task_complete`, `task_reopen`, `task_invalidate` | `Space`; `⇧Space` |
+| `workspace_task_delete`, `task_delete` | `⌫` |
+| `workspace_task_to_list` | `X X` |
+| `workspace_task_blocker_add` | `B B` then find the task it waits on |
+| `task_note_add` | `N N` then type the note |
+| `task_matrix_set` (one task in a quadrant) | `⌘3` then `⌥1`–`⌥4` |
+| `workspace_list_create`, `list_create`, `workspace_folder_create` | `⇧⌘N`; `⌥⌘N`, then type the name |
+| `workspace_list_move` | in the sidebar, `M M` then choose the folder |
+| `workspace_list_delete` | `⇧⌘⌫` |
+| `workspace_filter_list_create`, `_update` | `⌥⇧⌘N`; `⌥⇧⌘E` |
+| `workspace_board_column_set`, `_delete` | `⇧⌘C` (new), the palette's rename and rules rows; `⌃⌘C` |
+| `agent_instructions_set` on a list | `O O` |
+
+No hint: the dailies (`daily_add`, `daily_update`, `daily_tick`), removing a
+blocker and deleting a filter list (the inspector and the sidebar do those,
+with no key), the account's and a folder's instructions, a matrix call
+placing several tasks at once, and an update whose only change is one no key
+makes (links). No tool sets a workspace task's priority or due date yet, so
+the digits never appear, and the due keys only for `task_update`. The core's
+tests (`core/src/agent_hints/tests.rs`) hold every write tool to either a hint
+or that list, so a new write tool fails until it is placed.
+
+The system prompt tells the assistant the cards show the keys, so it does not
+spell them out itself.
+
+## Quick ask
+
+`aa` on a task (`taskAskAgent`, in the palette and the Task menu) opens a
+popup — the finders' panel, as `bb`, `cc` and `mm` are — with one field,
+"Tell the agent…", and the task as its micro-label. Return sends.
+
+**Its own thread.** The ask runs on `WorkspaceViewModel.quickAgent`, a second
+`WorkspaceAgentSession`, not the panel's. A request about one task is not part
+of whatever the panel's conversation is doing: sending it there would wait
+behind that thread's turn, and leave "make it due friday" in its memory for
+every later message to reckon with. Each ask starts a fresh process
+(`endsAfterTurn`), which exits when its turn ends, so nothing idles. The cost
+is no follow-up from the popup; a follow-up belongs in the panel. The last ask
+is kept, and drawn at the top of the panel's transcript under a **Quick ask**
+label, so it can be read again and its cards undone after the popup is gone.
+
+**The subject.** The message opens with `AgentSystemPrompt.quickAskSubject`:
+the task's title and id and its list's name and id, saying that "it" and
+"this task" mean that task and to answer in a sentence or two. The standing
+instructions sent are that list's (`agentInstructionScopes(forListID:)`),
+whatever is on screen. The settings are the panel's: its `claude` path and
+"Ask before changing tasks".
+
+**Keys.** The field keeps the keyboard; the popup reads the rest through the
+overlay host's key handler. Tab or ↓ selects the next card with a button,
+⇧Tab or ↑ goes back to the field, and Return presses the selected card's
+button (`WorkspaceViewModel.pressAgentCard`): Approve while it waits, then
+Undo, or Redo once undone. A waiting card is never selected for you, so a
+Return meant for the field cannot approve it; ⌫ on it denies. Esc closes the
+popup at any moment and stops nothing: the turn carries on, a waiting card
+waits, and `aa` again reopens on that ask, whatever is selected. The popup
+never closes itself. With nothing running it waits for the next ask; sending
+one replaces the last.
 
 ## Asking first
 
