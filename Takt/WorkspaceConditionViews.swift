@@ -7,7 +7,6 @@ import SwiftUI
 enum WorkspaceConditionCopy {
   static let explanation =
     "Conditions are places or circumstances a task needs — Home, Campus, Floor space — filed under categories."
-  static let none = "No conditions — available whenever"
 }
 
 /// The status bar's word on where you are: the conditions on, or "Anywhere".
@@ -86,7 +85,10 @@ struct FocusPanelContextLine: View {
   }
 }
 
-struct WorkspaceTaskPlanningEditor: View {
+/// The inspector's Conditions row: what the task needs before it is offered,
+/// one requirement a line — widened with "or…", taken away with × — and the
+/// menu that requires another, or makes a new condition and requires it.
+struct WorkspaceTaskConditionsEditor: View {
   @Environment(WorkspaceViewModel.self) private var model
   @Environment(\.theme) private var theme
   let task: WorkspaceTask
@@ -96,54 +98,16 @@ struct WorkspaceTaskPlanningEditor: View {
   @FocusState private var isNewConditionFocused: Bool
 
   var body: some View {
-    VStack(alignment: .leading, spacing: theme.space.sm) {
-      ThemedOptionalRow(
-        "Start", isSet: values.startAt != nil, stop: "start",
-        add: { edit { $0.startAt = $0.startAt ?? .now } },
-        clear: { edit { $0.startAt = nil } },
-        value: {
-          if let start = values.startAt {
-            ThemedDateField(
-              selection: Binding(get: { current.startAt ?? start }, set: { date in edit { $0.startAt = date } }),
-              includesTime: true, stop: "start.date")
-            .commandHelp(.taskEditStart)
-          }
-      })
-      .commandHelp(.taskEditStart)
-      MicroLabel("Conditions")
-      if (values.requirementGroups ?? []).isEmpty {
-        Text(WorkspaceConditionCopy.none).font(theme.captionFont).foregroundStyle(theme.muted)
-        if model.focusConditions.isEmpty {
-          Text(WorkspaceConditionCopy.explanation)
-            .font(theme.captionFont).foregroundStyle(theme.dim)
-            .fixedSize(horizontal: false, vertical: true)
+    let groups = values.requirementGroups ?? []
+    InspectorRow("Conditions") {
+      ForEach(Array(groups.enumerated()), id: \.offset) { index, group in
+        ForEach(Array(group.enumerated()), id: \.element) { position, id in
+          requirementLine(id, position: position, in: group, at: index)
         }
       }
-      ForEach(Array((values.requirementGroups ?? []).enumerated()), id: \.offset) { index, group in
-        VStack(alignment: .leading, spacing: theme.space.xs) {
-          Text(index == 0 ? "Requires" : "And requires").font(theme.captionFont).foregroundStyle(theme.muted)
-          ForEach(group, id: \.self) { id in
-            HStack(spacing: theme.space.xs) {
-              Text(model.focusConditions.first(where: { $0.id == id })?.name ?? "Missing condition")
-                .foregroundStyle(theme.ink)
-              if group.count > 1 { Text("(either)").foregroundStyle(theme.muted) }
-              Spacer()
-              Button { remove(id, from: index) } label: { Image(systemName: "minus.circle") }
-                .buttonStyle(.plain).foregroundStyle(theme.muted).inspectorStop("condition.\(index).\(id)")
-                .help("Remove requirement")
-                .accessibilityLabel("Remove requirement")
-            }.font(theme.captionFont)
-          }
-          ThemedMenu("Or…") {
-            WorkspaceConditionMenuSections(
-              offering: { !$0.isArchived && !group.contains($0.id) },
-              choose: { condition in edit { $0.requirementGroups?[index].append(condition.id) } })
-          }.font(theme.captionFont).inspectorStop("condition.\(index).or")
-        }
-      }
-      ThemedMenu("Add required condition", systemImage: "plus", expands: true) {
+      InspectorMenu(groups.isEmpty ? "Add condition" : "Add another", tone: .dim) {
         WorkspaceConditionMenuSections(
-          offering: { !$0.isArchived && !(values.requirementGroups ?? []).contains([$0.id]) },
+          offering: { !$0.isArchived && !groups.contains([$0.id]) },
           choose: { require($0.id) })
         if model.focusConditions.contains(where: { !$0.isArchived }) { Divider() }
         Button("New condition…") {
@@ -152,50 +116,69 @@ struct WorkspaceTaskPlanningEditor: View {
         }
       }
       .inspectorStop("condition.add")
-      .commandHelp(.taskConditions, note: "Tick conditions from the keyboard, or type a new one")
-      if isAddingCondition {
-        HStack(spacing: theme.space.sm) {
-          TextField("New condition", text: $newConditionName, prompt: Text("Home, Floor space…"))
-            .themedTextField()
-            .inspectorField("condition.new")
-            .focused($isNewConditionFocused)
-            .onSubmit(addNewCondition)
-            .onExitCommand { isAddingCondition = false }
-          WorkspaceConditionCategoryMenu(
-            category: model.newConditionCategory,
-            choose: { model.newConditionCategory = $0 },
-            newCategory: { model.presentConditionCategoryFinder(for: nil) })
-          Button("Add", action: addNewCondition)
-            .buttonStyle(FocusActionButtonStyle())
-            .disabled(newConditionName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-        }
-        .font(theme.captionFont)
-        .onAppear { DispatchQueue.main.async { isNewConditionFocused = true } }
-      }
-      Toggle("Must finish in one sitting", isOn: Binding(get: { current.requiresSingleSitting == true }, set: { enabled in
-        edit { $0.requiresSingleSitting = enabled ? true : nil }
-      }))
-        .toggleStyle(.themedSwitch)
-        .inspectorStop("single-sitting")
-      ThemedControlRow("Minimum block") {
-        TextField("Minimum useful block (minutes)", text: Binding(get: { current.minimumBlockMinutes ?? "" }, set: { raw in
-          edit { $0.minimumBlockMinutes = raw.isEmpty ? nil : raw }
-        }), prompt: Text("Minutes"))
-        .themedTextField()
-        .inspectorField("minimum-block")
-      }
+      .commandHelp(
+        .taskConditions,
+        note: model.focusConditions.isEmpty
+          ? WorkspaceConditionCopy.explanation : "Tick conditions from the keyboard, or type a new one")
+      if isAddingCondition { newConditionField }
       if let unavailable = model.blockedFocusTasks.first(where: { $0.id == task.id }) {
         Text(unavailable.reasons.map { model.unavailableDescription($0) }.joined(separator: " · "))
-          .font(theme.captionFont).foregroundStyle(theme.warning)
+          .font(theme.captionFont)
+          .foregroundStyle(theme.warning)
+          .padding(.horizontal, theme.space.xs)
+          .fixedSize(horizontal: false, vertical: true)
       }
-      Button("Apply saved requirements and start to subtasks") { model.applyPlanningToDescendants(of: task) }
-        .buttonStyle(FocusActionButtonStyle())
-        .inspectorStop("apply-planning")
-        .font(theme.captionFont).help("Copies saved conditions, start and block rules; keeps each subtask's own estimate and deadline")
     }
   }
 
-  private var current: TaskEditorValues { model.taskEditor.draft(for: task.id)?.values ?? values }
+  /// "Home", "or Campus", "and Floor space": a condition the task needs, with
+  /// the way to widen its requirement on the requirement's last line.
+  private func requirementLine(_ id: String, position: Int, in group: [String], at index: Int) -> some View {
+    let prefix = position > 0 ? "or " : (index > 0 ? "and " : "")
+    let name = model.focusConditions.first(where: { $0.id == id })?.name ?? "Missing condition"
+    return HStack(alignment: .firstTextBaseline, spacing: theme.space.xxs) {
+      (Text(prefix).foregroundStyle(theme.dim) + Text(name).foregroundStyle(theme.ink))
+        .font(theme.bodyFont())
+        .lineLimit(1)
+        .truncationMode(.tail)
+        .padding(.horizontal, theme.space.xs)
+        .padding(.vertical, theme.space.xxs)
+      Spacer(minLength: 0)
+      if position == group.count - 1 {
+        InspectorMenu("or…", tone: .dim) {
+          WorkspaceConditionMenuSections(
+            offering: { !$0.isArchived && !group.contains($0.id) },
+            choose: { condition in edit { $0.requirementGroups?[index].append(condition.id) } })
+        }
+        .inspectorStop("condition.\(index).or")
+        .help("Let another condition do instead")
+      }
+      InspectorClearButton(label: "Remove requirement", stop: "condition.\(index).\(id)") {
+        remove(id, from: index)
+      }
+    }
+  }
+
+  private var newConditionField: some View {
+    HStack(spacing: theme.space.xs) {
+      TextField("New condition", text: $newConditionName, prompt: Text("Home, Floor space…"))
+        .themedTextField()
+        .inspectorField("condition.new")
+        .focused($isNewConditionFocused)
+        .onSubmit(addNewCondition)
+        .onExitCommand { isAddingCondition = false }
+      WorkspaceConditionCategoryMenu(
+        category: model.newConditionCategory,
+        choose: { model.newConditionCategory = $0 },
+        newCategory: { model.presentConditionCategoryFinder(for: nil) })
+      Button("Add", action: addNewCondition)
+        .buttonStyle(FocusActionButtonStyle(compact: true))
+        .disabled(newConditionName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+    }
+    .font(theme.captionFont)
+    .onAppear { DispatchQueue.main.async { isNewConditionFocused = true } }
+  }
+
   private func edit(_ change: (inout TaskEditorValues) -> Void) { model.taskEditor.edit(task.id, change) }
   private func require(_ id: String) { edit { $0.requirementGroups = ($0.requirementGroups ?? []) + [[id]] } }
 
@@ -208,12 +191,13 @@ struct WorkspaceTaskPlanningEditor: View {
     isAddingCondition = false
     newConditionName = ""
   }
+
   private func remove(_ id: String, from index: Int) {
     edit { values in
       var groups = values.requirementGroups ?? []
       guard groups.indices.contains(index) else { return }
       groups[index].removeAll { $0 == id }
-      groups.removeAll( where: \.isEmpty)
+      groups.removeAll(where: \.isEmpty)
       values.requirementGroups = groups.isEmpty ? nil : groups
     }
   }

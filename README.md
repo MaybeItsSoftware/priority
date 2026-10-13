@@ -389,7 +389,7 @@ tab.
   on the new-condition row.
 - `↑`/`↓` (or `j`/`k`) walk both halves with one cursor; `Esc` or `←` hands
   the keyboard back to the work and leaves the dock open, `r` puts it away.
-- **In the inspector**: the Plan section's **Add required condition** does
+- **In the inspector**: the Conditions row's **Add condition** does
   what `cc` does with the mouse, its conditions under their category
   headings — **New condition…** at the foot of its menu makes one (with a
   category menu beside its name) and requires it — and **Or…** widens a
@@ -686,7 +686,7 @@ on the board, in the matrix and on Today, it sinks below its unblocked
 siblings, and it is never offered as next up. Finishing the last blocker puts
 it back where it was.
 
-The inspector's **Blocked by** section lists what the task waits on — open or
+The inspector's **Blocked by** row lists what the task waits on — open or
 done, with the list when it is another — each with a button to stop waiting on
 it, and under **Blocks** the tasks waiting on this one. Adding and removing are
 each one undo step. A task cannot wait on itself, or on a task that already
@@ -954,8 +954,8 @@ task is completed from `takt` or an assistant.
 
 ### Committing to a task periodically
 
-`Cmd+Shift+D`, or **Commit periodically** in the inspector's scheduling
-section, commits you to working on the selected task on a rhythm. It opens a
+`Cmd+Shift+D`, or **Commit periodically…** under the inspector's Repeat
+row, commits you to working on the selected task on a rhythm. It opens a
 small form rather than flipping a switch:
 
 | Row | What it sets |

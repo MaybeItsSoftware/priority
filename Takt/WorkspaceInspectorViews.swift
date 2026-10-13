@@ -19,7 +19,7 @@ struct LocalTaskInspector: View {
   var body: some View {
     // A stack, not a Group: a Group hands its modifiers to each child, and
     // the stops have to be gathered once, over all of them.
-    VStack(alignment: .leading, spacing: theme.space.md) {
+    VStack(alignment: .leading, spacing: theme.space.sm) {
       if let draft = model.taskEditor.draft(for: task.id) {
         editor(draft)
       } else if let error = model.taskEditor.errors[task.id] {
@@ -56,35 +56,44 @@ struct LocalTaskInspector: View {
     withAnimation(.easeOut(duration: 0.12)) { scroll?.scrollTo(stops[next]) }
   }
 
-  /// The editor, in the order you actually work through a task.
+  /// The editor, in the order a task is decided on.
   ///
-  /// It used to open with "Convert to task" — and on a list, with five
-  /// structural buttons — before the title field, and it ended with "Start
-  /// focus", which is the single most common thing anyone does to a task. So
-  /// the first control was the most destructive and the last was the most used.
+  /// What it is, and the thing you came to do with it. Then the three things
+  /// that decide whether it is next — when it is due, what it needs, how long
+  /// it takes — and then what it says. Then the rest, most used first, and
+  /// last the changes that turn it into something else.
   ///
-  /// Now: what it is, then what you do with it, then its content, then its
-  /// plan, then its dates, then where it lives, and only then the structural
-  /// changes that turn it into something else.
+  /// It used to be nine boxed sections under eyebrows, every control in its
+  /// own frame, every empty field drawn in full: noisy for a panel you mostly
+  /// glance at. Now a row is a muted label and a value, an empty value is one
+  /// dim "Add …", and hairlines part the groups (`WorkspaceInspectorRows`).
   @ViewBuilder
   private func editor(_ draft: TaskEditorDraft) -> some View {
-    // The title and the action under it are one group: what the task is,
-    // and the thing you came to do with it.
-    VStack(alignment: .leading, spacing: theme.space.md) {
-      title(draft)
-      primaryAction
+    InspectorGroup {
+      VStack(alignment: .leading, spacing: theme.space.sm) {
+        title(draft)
+        primaryAction
+      }
     }
-    .frame(maxWidth: .infinity, alignment: .leading)
-    .inspectorBand()
-    notes(draft)
-    planning(draft)
-    scheduling(draft)
+    FocusRule(muted: true)
+    InspectorGroup { when(draft) }
+    InspectorGroup { WorkspaceTaskConditionsEditor(task: task, values: draft.values) }
+    InspectorGroup { effort(draft) }
+    FocusRule(muted: true)
+    InspectorGroup { notes(draft) }
+    FocusRule(muted: true)
+    InspectorGroup { filing(draft) }
     if !task.isList {
-      WorkspaceWaitingInspectorSection(task: task)
-      WorkspaceDependencyInspectorSection(task: task)
+      InspectorGroup {
+        WorkspaceDependencyInspectorSection(task: task)
+        WorkspaceWaitingInspectorSection(task: task)
+      }
     }
-    filing(draft)
-    structure
+    InspectorGroup { repeating(draft) }
+    InspectorGroup { links(draft) }
+    FocusRule(muted: true)
+    InspectorGroup { actions }
+    FocusRule(muted: true)
     saveControls(draft)
   }
 
@@ -97,9 +106,6 @@ struct LocalTaskInspector: View {
       .inspectorField(Self.titleStop)
       .onSubmit { model.saveTaskEditor(task) }
       .help("Task title · ↩ or ⌘S saves")
-    if draft.isDirty {
-      Text("Unsaved changes").font(theme.captionFont).foregroundStyle(theme.muted)
-    }
     if let error = model.taskEditor.errors[task.id] {
       Text(error).font(theme.captionFont).foregroundStyle(theme.danger)
     }
@@ -150,9 +156,7 @@ struct LocalTaskInspector: View {
           .inspectorStop("focus.queue")
           .commandHelp(.taskStartFocus, note: "Add this task to the focus queue")
           Button("Open focus") { model.run(.goFocus) }
-            .buttonStyle(.plain)
-            .font(theme.captionFont)
-            .foregroundStyle(theme.primary)
+            .buttonStyle(InspectorValueButtonStyle(tone: .muted))
             .inspectorStop("focus.open")
             .commandHelp(.goFocus)
           Spacer(minLength: 0)
@@ -161,7 +165,6 @@ struct LocalTaskInspector: View {
       } else {
         Button { model.startFocus(on: task) } label: {
           Label("Start focus", systemImage: "bolt.fill")
-            .frame(maxWidth: .infinity)
         }
         .buttonStyle(FocusActionButtonStyle(prominent: true))
         .inspectorStop("focus.start")
@@ -170,103 +173,53 @@ struct LocalTaskInspector: View {
     }
   }
 
+  /// When it is due, and when it may start.
   @ViewBuilder
-  private func notes(_ draft: TaskEditorDraft) -> some View {
-    InspectorSection("Notes") {
-      TextEditor(text: binding(\.notes, fallback: draft.values.notes))
-        .font(theme.bodyFont())
-        .foregroundStyle(theme.ink)
-        .scrollContentBackground(.hidden)
-        .padding(theme.space.xs)
-        .frame(minHeight: 120)
-        .overlay(
-          RoundedRectangle(cornerRadius: theme.controlRadius)
-            .strokeBorder(theme.inputBorder, lineWidth: theme.hairline))
-        .inspectorField("notes")
-        .commandHelp(.taskEditNotes)
-    }
-  }
-
-  @ViewBuilder
-  private func planning(_ draft: TaskEditorDraft) -> some View {
-    InspectorSection("Plan") {
-      WorkspaceTaskPlanningEditor(task: task, values: draft.values)
-      let priority = binding(\.priority, fallback: draft.values.priority)
-      let priorities = Self.priorityNames.enumerated().map { ThemedPickerOption($0.element, value: $0.offset) }
-      ThemedPicker("Priority", selection: priority, options: priorities)
-        .inspectorStop("priority") { priority.step(by: $0, through: priorities) }
-      .commandHelp(.motionSetPriority)
-      ThemedControlRow("Estimate") {
-        TextField(
-          "Estimate (minutes)", text: binding(\.estimateMinutes, fallback: draft.values.estimateMinutes),
-          prompt: Text("Minutes")
-        )
-        .themedTextField()
-        .inspectorField("estimate")
-        .commandHelp(.taskEditEstimate)
-      }
-      if let seconds = model.taskLoggedSeconds[task.id], seconds > 0 {
-        Text(
-          "Worked \(FocusPoints.formatted(Double(seconds) / 60)) minutes"
-            + (task.estimateSeconds.map {
-              "; approximately \(FocusPoints.formatted(Double(max(0, $0 - seconds)) / 60)) minutes remain"
-            } ?? "")
-        )
-        .font(theme.captionFont).monospacedDigit().foregroundStyle(theme.muted)
-        if let estimate = task.estimateSeconds, seconds >= estimate {
-          Text("Estimate exhausted. Revise it or choose a session duration to keep making progress.")
-            .font(theme.captionFont).foregroundStyle(theme.warning)
+  private func when(_ draft: TaskEditorDraft) -> some View {
+    let hasDue = draft.values.dueAt != nil || draft.values.dueDate != nil
+    InspectorOptionalRow(
+      "Due", add: "Add date", isSet: hasDue, stop: "due",
+      add: {
+        model.taskEditor.edit(task.id) {
+          $0.dueDate = $0.dueDate ?? TaskCalendarDate.string(.now)
+          $0.dueAt = nil
         }
-      }
-    }
-  }
-
-  @ViewBuilder
-  private func scheduling(_ draft: TaskEditorDraft) -> some View {
-    InspectorSection("When") {
-      let hasDue = draft.values.dueAt != nil || draft.values.dueDate != nil
-      ThemedOptionalRow(
-        "Due", isSet: hasDue, stop: "due",
-        add: {
-          model.taskEditor.edit(task.id) {
-            $0.dueDate = $0.dueDate ?? TaskCalendarDate.string(.now)
-            $0.dueAt = nil
-          }
-        },
-        clear: {
-          model.taskEditor.edit(task.id) {
-            $0.dueAt = nil
-            $0.dueDate = nil
-          }
-        },
-        value: {
-          if let dueAt = draft.values.dueAt {
-            ThemedDateField(
-              selection: Binding(
-                get: { model.taskEditor.draft(for: task.id)?.values.dueAt ?? dueAt },
-                set: { date in model.taskEditor.edit(task.id) { $0.dueAt = date } }),
-              includesTime: true, stop: "due.date")
-            .commandHelp(.taskEditDue)
-          } else if let day = draft.values.dueDate {
-            ThemedDateField(
-              selection: Binding(
-                get: {
-                  TaskCalendarDate.date(model.taskEditor.draft(for: task.id)?.values.dueDate ?? day)
-                    ?? .now
-                },
-                set: { date in
-                  model.taskEditor.edit(task.id) {
-                    $0.dueDate = TaskCalendarDate.string(date)
-                    $0.dueAt = nil
-                  }
-                }), stop: "due.date")
-            .commandHelp(.taskEditDue)
-          }
+      },
+      clear: {
+        model.taskEditor.edit(task.id) {
+          $0.dueAt = nil
+          $0.dueDate = nil
+        }
+      },
+      value: {
+        if let dueAt = draft.values.dueAt {
+          ThemedDateField(
+            selection: Binding(
+              get: { model.taskEditor.draft(for: task.id)?.values.dueAt ?? dueAt },
+              set: { date in model.taskEditor.edit(task.id) { $0.dueAt = date } }),
+            includesTime: true, stop: "due.date", framed: false)
+          .commandHelp(.taskEditDue)
+        } else if let day = draft.values.dueDate {
+          ThemedDateField(
+            selection: Binding(
+              get: {
+                TaskCalendarDate.date(model.taskEditor.draft(for: task.id)?.values.dueDate ?? day)
+                  ?? .now
+              },
+              set: { date in
+                model.taskEditor.edit(task.id) {
+                  $0.dueDate = TaskCalendarDate.string(date)
+                  $0.dueAt = nil
+                }
+              }), stop: "due.date", framed: false)
+          .commandHelp(.taskEditDue)
+        }
       })
-      .commandHelp(.taskDueToday)
-      if hasDue {
+    .commandHelp(.taskDueToday)
+    if hasDue {
+      InspectorRow("Time") {
+        let exact = draft.values.dueAt != nil
         Toggle(
-          "At a set time",
           isOn: Binding(
             get: { model.taskEditor.draft(for: task.id)?.values.dueAt != nil },
             set: { exact in
@@ -280,27 +233,176 @@ struct LocalTaskInspector: View {
                 }
               }
             })
-        )
+        ) {
+          quietValue(exact ? "At a set time" : "Any time that day", tone: exact ? .ink : .dim)
+        }
         .toggleStyle(.themedSwitch)
         .inspectorStop("due.exact")
+        .help("Due at a set time rather than any time that day")
       }
-      ThemedControlRow("Repeat") {
-        TextField(
-          "Repeat", text: binding(\.recurrenceRule, fallback: draft.values.recurrenceRule),
-          prompt: Text("Every Monday"))
-        .themedTextField()
-        .inspectorField("repeat")
-        .commandHelp(.taskEditRecurrence)
+    }
+    InspectorOptionalRow(
+      "Start", add: "Add start", isSet: draft.values.startAt != nil, stop: "start",
+      add: { model.taskEditor.edit(task.id) { $0.startAt = $0.startAt ?? .now } },
+      clear: { model.taskEditor.edit(task.id) { $0.startAt = nil } },
+      value: {
+        if let start = draft.values.startAt {
+          ThemedDateField(
+            selection: Binding(
+              get: { model.taskEditor.draft(for: task.id)?.values.startAt ?? start },
+              set: { date in model.taskEditor.edit(task.id) { $0.startAt = date } }),
+            includesTime: true, stop: "start.date", framed: false)
+          .commandHelp(.taskEditStart)
+        }
+      })
+    .commandHelp(.taskEditStart)
+  }
+
+  /// How long it takes: the estimate and what has been worked against it,
+  /// and the rules for the block it is done in.
+  @ViewBuilder
+  private func effort(_ draft: TaskEditorDraft) -> some View {
+    InspectorRow("Estimate") {
+      InspectorTextField(
+        add: "Add estimate", hint: "Minutes",
+        text: binding(\.estimateMinutes, fallback: draft.values.estimateMinutes), stop: "estimate",
+        unit: "min")
+      .commandHelp(.taskEditEstimate)
+      if let seconds = model.taskLoggedSeconds[task.id], seconds > 0 {
+        Text(
+          "Worked \(FocusPoints.formatted(Double(seconds) / 60)) minutes"
+            + (task.estimateSeconds.map {
+              "; approximately \(FocusPoints.formatted(Double(max(0, $0 - seconds)) / 60)) minutes remain"
+            } ?? "")
+        )
+        .font(theme.captionFont).monospacedDigit().foregroundStyle(theme.muted)
+        .padding(.horizontal, theme.space.xs)
+        if let estimate = task.estimateSeconds, seconds >= estimate {
+          Text("Estimate exhausted. Revise it or choose a session duration to keep making progress.")
+            .font(theme.captionFont).foregroundStyle(theme.warning)
+            .padding(.horizontal, theme.space.xs)
+            .fixedSize(horizontal: false, vertical: true)
+        }
       }
-      // A task that is a daily itself — the older "daily progress" — keeps its
-      // switch so it can be turned off; committing now makes a subtask.
-      if draft.values.dailyProgress && model.commitment(carriedBy: task) == nil && !model.isHabitTask(task) {
-        Toggle("Make daily progress", isOn: binding(\.dailyProgress, fallback: draft.values.dailyProgress))
-          .toggleStyle(.themedSwitch)
-          .inspectorStop("daily")
-          .commandHelp(.taskToggleDaily, note: "Show this ongoing task in Dailies without completing the task itself")
+    }
+    InspectorRow("Min. block") {
+      InspectorTextField(
+        add: "Add minimum", hint: "Minutes",
+        text: Binding(
+          get: { model.taskEditor.draft(for: task.id)?.values.minimumBlockMinutes ?? "" },
+          set: { raw in model.taskEditor.edit(task.id) { $0.minimumBlockMinutes = raw.isEmpty ? nil : raw } }),
+        stop: "minimum-block", unit: "min")
+      .help("The shortest block worth starting it in")
+    }
+    InspectorRow("One sitting") {
+      let required = draft.values.requiresSingleSitting == true
+      Toggle(
+        isOn: Binding(
+          get: { model.taskEditor.draft(for: task.id)?.values.requiresSingleSitting == true },
+          set: { enabled in model.taskEditor.edit(task.id) { $0.requiresSingleSitting = enabled ? true : nil } })
+      ) {
+        quietValue(required ? "Must finish in one go" : "Can be split", tone: required ? .ink : .dim)
       }
+      .toggleStyle(.themedSwitch)
+      .inspectorStop("single-sitting")
+      .help("Must finish in one sitting")
+    }
+  }
+
+  /// The description: the whole width, no label, one dim line until it has
+  /// something in it.
+  private func notes(_ draft: TaskEditorDraft) -> some View {
+    InspectorTextEditor(
+      add: "Add notes", text: binding(\.notes, fallback: draft.values.notes), stop: "notes", minHeight: 96)
+    .commandHelp(.taskEditNotes)
+  }
+
+  /// Where it is filed and how it ranks.
+  @ViewBuilder
+  private func filing(_ draft: TaskEditorDraft) -> some View {
+    InspectorRow("Priority") {
+      let priority = binding(\.priority, fallback: draft.values.priority)
+      let priorities = Self.priorityNames.enumerated().map { ThemedPickerOption($0.element, value: $0.offset) }
+      let current = min(max(draft.values.priority, 0), Self.priorityNames.count - 1)
+      InspectorMenu(current == 0 ? "Add priority" : Self.priorityNames[current], tone: current == 0 ? .dim : .ink) {
+        Picker("Priority", selection: priority) {
+          ForEach(priorities) { Text($0.title).tag($0.value) }
+        }
+        .pickerStyle(.inline)
+        .labelsHidden()
+      }
+      .inspectorStop("priority") { priority.step(by: $0, through: priorities) }
+      .commandHelp(.motionSetPriority)
+      .accessibilityLabel("Priority")
+    }
+    InspectorRow("Tags") {
+      InspectorTextField(
+        add: "Add tags", hint: "Work, launch", text: binding(\.tags, fallback: draft.values.tags), stop: "tags")
+      .commandHelp(.taskEditTags)
+    }
+    InspectorRow("List") {
+      InspectorMenu(model.list(for: task)?.name ?? "Move to list") {
+        ForEach(model.lists.filter { $0.id != task.listId }) { list in
+          Button(list.name) { model.moveTask(task, toListId: list.id) }
+        }
+      }
+      .inspectorStop("move")
+      .commandHelp(.taskMove)
+    }
+    if task.isList {
+      InspectorRow("Icon") {
+        let icon = Binding(get: { model.itemSymbol(for: task) }, set: { model.setNestedListIcon($0, for: task) })
+        let options = Self.iconOptions(including: model.itemSymbol(for: task))
+        let current = options.first { $0.value == icon.wrappedValue }
+        InspectorMenu(current?.title ?? "Icon", systemImage: current?.systemImage) {
+          Picker("Icon", selection: icon) {
+            ForEach(options) { option in
+              if let symbol = option.systemImage {
+                Label(option.title, systemImage: symbol).tag(option.value)
+              } else {
+                Text(option.title).tag(option.value)
+              }
+            }
+          }
+          .pickerStyle(.inline)
+          .labelsHidden()
+        }
+        .inspectorStop("icon") { icon.step(by: $0, through: Self.iconOptions) }
+        .accessibilityLabel("Icon")
+      }
+    }
+  }
+
+  /// How it comes round again: its repeat rule, and its periodic commitments.
+  @ViewBuilder
+  private func repeating(_ draft: TaskEditorDraft) -> some View {
+    InspectorRow("Repeat") {
+      InspectorTextField(
+        add: "Add repeat", hint: "Every Monday",
+        text: binding(\.recurrenceRule, fallback: draft.values.recurrenceRule), stop: "repeat")
+      .commandHelp(.taskEditRecurrence)
       commitments
+    }
+    // A task that is a daily itself — the older "daily progress" — keeps its
+    // switch so it can be turned off; committing now makes a subtask.
+    if draft.values.dailyProgress && model.commitment(carriedBy: task) == nil && !model.isHabitTask(task) {
+      InspectorRow("Daily") {
+        Toggle(isOn: binding(\.dailyProgress, fallback: draft.values.dailyProgress)) {
+          quietValue("Make daily progress", tone: .ink)
+        }
+        .toggleStyle(.themedSwitch)
+        .inspectorStop("daily")
+        .commandHelp(.taskToggleDaily, note: "Show this ongoing task in Dailies without completing the task itself")
+      }
+    }
+  }
+
+  private func links(_ draft: TaskEditorDraft) -> some View {
+    InspectorRow("Links") {
+      InspectorTextEditor(
+        add: "Add links", text: binding(\.links, fallback: draft.values.links), stop: "links",
+        minHeight: 44, maxHeight: 90)
+      .commandHelp(.taskOpenLink, note: "One link per line; the first opens")
     }
   }
 
@@ -315,20 +417,16 @@ struct LocalTaskInspector: View {
       ForEach(model.commitments(for: task)) { commitment in
         commitmentRow(commitment, committedTo: task)
       }
-      Button { model.presentCommitmentForm(for: task, editing: nil) } label: {
-        Label("Commit periodically", systemImage: "repeat")
-      }
-      .buttonStyle(FocusActionButtonStyle())
-      .inspectorStop("commit")
-      .commandHelp(.taskToggleDaily, note: "Add a subtask that comes round in Dailies on its days until this is done")
+      Button("Commit periodically…") { model.presentCommitmentForm(for: task, editing: nil) }
+        .buttonStyle(InspectorValueButtonStyle(tone: .dim))
+        .inspectorStop("commit")
+        .commandHelp(.taskToggleDaily, note: "Add a subtask that comes round in Dailies on its days until this is done")
     }
   }
 
   private func commitmentRow(_ commitment: WorkspaceCommitment, committedTo parent: WorkspaceTask?) -> some View {
-    HStack(alignment: .firstTextBaseline, spacing: theme.space.sm) {
-      Image(systemName: "repeat")
-        .foregroundStyle(theme.muted)
-      VStack(alignment: .leading, spacing: theme.space.xxs) {
+    HStack(alignment: .firstTextBaseline, spacing: theme.space.xs) {
+      VStack(alignment: .leading, spacing: 0) {
         Text(commitment.title)
           .font(theme.bodyFont())
           .foregroundStyle(theme.ink)
@@ -340,15 +438,14 @@ struct LocalTaskInspector: View {
       Spacer(minLength: 0)
       if let parent {
         Button("Edit") { model.presentCommitmentForm(for: parent, editing: commitment) }
-          .buttonStyle(.plain)
-          .foregroundStyle(theme.primary)
+          .buttonStyle(InspectorValueButtonStyle(tone: .muted))
           .help("Change its name, schedule or end")
       }
       Button("Stop") { model.stopCommitment(commitment) }
-        .buttonStyle(.plain)
-        .foregroundStyle(theme.danger)
+        .buttonStyle(InspectorValueButtonStyle(tone: .muted))
         .help("Stop it coming round; what was logged is kept")
     }
+    .padding(.leading, theme.space.xs)
     .inspectorStop("commitment.\(commitment.taskId)")
   }
 
@@ -358,87 +455,63 @@ struct LocalTaskInspector: View {
     return "\(commitment.ruleLabel) · until \(last.formatted(.dateTime.weekday(.abbreviated).day().month(.abbreviated)))"
   }
 
+  /// What you do to the task rather than set on it, least often wanted
+  /// last: turning it into a different kind of thing is what you can least
+  /// easily undo.
   @ViewBuilder
-  private func filing(_ draft: TaskEditorDraft) -> some View {
-    InspectorSection("Filing") {
-      ThemedControlRow("Tags") {
-        TextField("Tags", text: binding(\.tags, fallback: draft.values.tags), prompt: Text("Work, launch"))
-          .themedTextField()
-          .inspectorField("tags")
-          .commandHelp(.taskEditTags)
+  private var actions: some View {
+    if !task.isList {
+      actionButton("Add to Google Calendar", systemImage: "calendar.badge.plus", stop: "calendar") {
+        model.addTaskToGoogleCalendar(task)
       }
-      ThemedMenu("Move to list", systemImage: "arrow.right", expands: true) {
-        ForEach(model.lists.filter { $0.id != task.listId }) { list in
-          Button(list.name) { model.moveTask(task, toListId: list.id) }
-        }
-      }
-      .inspectorStop("move")
-      .commandHelp(.taskMove)
-      if !task.isList {
-        Button { model.addTaskToGoogleCalendar(task) } label: {
-          Label("Add to Google Calendar", systemImage: "calendar.badge.plus")
-        }
-        .buttonStyle(FocusActionButtonStyle())
-        .inspectorStop("calendar")
-        .help("Create a linked event using the task's due date or start time")
-      }
+      .help("Create a linked event using the task's due date or start time")
     }
-    InspectorSection("Links") {
-      TextEditor(text: binding(\.links, fallback: draft.values.links))
-        .font(theme.bodyFont())
-        .foregroundStyle(theme.ink)
-        .scrollContentBackground(.hidden)
-        .padding(theme.space.xs)
-        .frame(minHeight: 52, maxHeight: 90)
-        .overlay(
-          RoundedRectangle(cornerRadius: theme.controlRadius)
-            .strokeBorder(theme.inputBorder, lineWidth: theme.hairline))
-        .inspectorField("links")
-        .commandHelp(.taskOpenLink, note: "One link per line; the first opens")
+    actionButton("Copy requirements to subtasks", systemImage: "arrow.turn.down.right", stop: "apply-planning") {
+      model.applyPlanningToDescendants(of: task)
     }
+    .help(
+      "Apply saved requirements and start to subtasks: copies saved conditions, start and block rules; "
+        + "keeps each subtask's own estimate and deadline")
+    if task.isList {
+      actionButton(
+        task.isPromoted == true ? "Unpin from sidebar" : "Pin to sidebar", systemImage: "pin", stop: "pin"
+      ) { model.toggleListPromotion(task) }
+      .commandHelp(.taskPromoteList)
+      actionButton(
+        task.status == .open ? "Complete list" : "Reopen list",
+        systemImage: task.status == .open ? "checkmark.circle" : "arrow.uturn.backward.circle", stop: "complete"
+      ) { model.toggleTask(task) }
+      .commandHelp(.taskComplete, note: task.status == .open ? "Complete the list" : "Reopen the list")
+      actionButton("Archive list", systemImage: "archivebox", stop: "archive") { model.archiveNestedList(task) }
+    }
+    actionButton(
+      task.isList ? "Convert to task" : "Convert to list",
+      systemImage: task.isList ? "checklist" : "list.bullet.indent", stop: "convert"
+    ) { model.convertItem(task) }
+    .commandHelp(task.isList ? .taskPromoteList : .taskConvertToList)
   }
 
-  /// Turning the thing into a different kind of thing. Last, because it is what
-  /// you least often want and what you can least easily undo.
-  @ViewBuilder
-  private var structure: some View {
-    InspectorSection("Structure") {
-      Button(task.isList ? "Convert to task" : "Convert to list") { model.convertItem(task) }
-        .buttonStyle(FocusActionButtonStyle())
-        .inspectorStop("convert")
-        .commandHelp(task.isList ? .taskPromoteList : .taskConvertToList)
-      if task.isList {
-        ThemedPicker(
-          "Icon",
-          selection: Binding(
-            get: { model.itemSymbol(for: task) },
-            set: { model.setNestedListIcon($0, for: task) }
-          ),
-          options: Self.iconOptions(including: model.itemSymbol(for: task))
-        )
-        .inspectorStop("icon") { offset in
-          let icon = Binding(get: { model.itemSymbol(for: task) }, set: { model.setNestedListIcon($0, for: task) })
-          icon.step(by: offset, through: Self.iconOptions)
-        }
-        HStack(spacing: theme.space.xs) {
-          Button(task.isPromoted == true ? "Unpin from sidebar" : "Pin to sidebar") {
-            model.toggleListPromotion(task)
-          }
-          .inspectorStop("pin")
-          .commandHelp(.taskPromoteList)
-          Button(task.status == .open ? "Complete list" : "Reopen list") { model.toggleTask(task) }
-            .inspectorStop("complete")
-            .commandHelp(.taskComplete, note: task.status == .open ? "Complete the list" : "Reopen the list")
-          Button("Archive list") { model.archiveNestedList(task) }.inspectorStop("archive")
-        }
-        .buttonStyle(FocusActionButtonStyle())
-      }
+  private func actionButton(
+    _ title: String, systemImage: String, stop: String, action: @escaping () -> Void
+  ) -> some View {
+    Button(action: action) {
+      Label(title, systemImage: systemImage)
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
+    .buttonStyle(InspectorValueButtonStyle(tone: .muted))
+    .inspectorStop(stop)
+  }
+
+  /// A switch's words, at the value column's inset.
+  private func quietValue(_ text: String, tone: InspectorTone) -> some View {
+    Text(text)
+      .foregroundStyle(tone.color(theme))
+      .lineLimit(1)
+      .padding(.leading, theme.space.xs)
   }
 
   @ViewBuilder
   private func saveControls(_ draft: TaskEditorDraft) -> some View {
-    FocusRule()
     HStack(spacing: theme.space.xs) {
       Button("Save") { model.saveTaskEditor(task) }
         .buttonStyle(FocusActionButtonStyle(prominent: draft.isDirty))
@@ -449,10 +522,13 @@ struct LocalTaskInspector: View {
           !draft.isDirty || draft.isUnavailable || !draft.conflicts.isEmpty
             || draft.values.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
       Button("Revert") { model.revertTaskEditor(task) }
-        .buttonStyle(FocusActionButtonStyle())
+        .buttonStyle(InspectorValueButtonStyle(tone: .muted))
         .inspectorStop("revert")
         .disabled(!draft.isDirty)
       Spacer(minLength: 0)
+      if draft.isDirty {
+        Text("Unsaved changes").font(theme.captionFont).foregroundStyle(theme.muted)
+      }
     }
     .inspectorBand()
   }

@@ -423,6 +423,9 @@ struct ThemedDateField: View {
   var includesTime = false
   /// Its name among the inspector's stops, when it is in the inspector.
   var stop: String?
+  /// In its hairline frame, as in a form; unframed, as the inspector's quiet
+  /// values are drawn — the date as text, with a hover fill.
+  var framed = true
   @State private var isPicking = false
 
   private var title: String {
@@ -435,15 +438,25 @@ struct ThemedDateField: View {
   }
 
   var body: some View {
-    Button { isPicking.toggle() } label: {
-      Label(title, systemImage: "calendar")
-        .labelStyle(.titleAndIcon)
-        .monospacedDigit()
-        .lineLimit(1)
+    Group {
+      if framed {
+        Button { isPicking.toggle() } label: {
+          Label(title, systemImage: "calendar")
+            .labelStyle(.titleAndIcon)
+            .monospacedDigit()
+            .lineLimit(1)
+        }
+        .buttonStyle(.plain)
+        .fixedSize()
+        .themedControlFrame()
+      } else {
+        Button { isPicking.toggle() } label: {
+          Text(title).monospacedDigit()
+        }
+        .buttonStyle(InspectorValueButtonStyle())
+        .fixedSize()
+      }
     }
-    .buttonStyle(.plain)
-    .fixedSize()
-    .themedControlFrame()
     .inspectorStop(stop ?? "date")
     .popover(isPresented: $isPicking, arrowEdge: .bottom) {
       VStack(alignment: .leading, spacing: theme.space.sm) {
@@ -486,62 +499,6 @@ struct ThemedDateField: View {
     return calendar.date(
       bySettingHour: time.hour ?? 0, minute: time.minute ?? 0, second: 0,
       of: day) ?? day
-  }
-}
-
-/// A value a task may or may not have — a start, a due day — as one row: its
-/// name, then either a quiet "Add" or the value with a button to clear it.
-/// What a checkbox beside a field used to say in two controls and two lines.
-struct ThemedOptionalRow<Value: View>: View {
-  @Environment(\.theme) private var theme
-  let title: String
-  let isSet: Bool
-  let add: () -> Void
-  let clear: () -> Void
-  /// Its stops' names in the inspector: `stop` for Add, `stop.clear` for the
-  /// clear button. The value names its own.
-  var stop: String
-  @ViewBuilder var value: Value
-
-  init(
-    _ title: String, isSet: Bool, stop: String? = nil, add: @escaping () -> Void, clear: @escaping () -> Void,
-    @ViewBuilder value: () -> Value
-  ) {
-    self.title = title
-    self.stop = stop ?? title.lowercased()
-    self.isSet = isSet
-    self.add = add
-    self.clear = clear
-    self.value = value()
-  }
-
-  var body: some View {
-    ThemedControlRow(title) {
-      if isSet {
-        HStack(spacing: theme.space.xs) {
-          value
-          Button(action: clear) {
-            Image(systemName: "xmark")
-              .font(theme.captionFont)
-              .foregroundStyle(theme.muted)
-              .frame(width: theme.scale.body, height: theme.scale.body)
-              .contentShape(Rectangle())
-          }
-          .buttonStyle(.plain)
-          .inspectorStop("\(stop).clear")
-          .help("Clear \(title.lowercased())")
-          .accessibilityLabel("Clear \(title.lowercased())")
-        }
-      } else {
-        Button(action: add) {
-          Label("Add", systemImage: "plus")
-            .labelStyle(.titleAndIcon)
-        }
-        .buttonStyle(FocusChipButtonStyle(isOn: false))
-        .inspectorStop(stop)
-        .accessibilityLabel("Add \(title.lowercased())")
-      }
-    }
   }
 }
 

@@ -157,8 +157,8 @@ struct WorkspaceBlockerFinder: View {
   }
 }
 
-/// The inspector's Blocked by section: what the task waits on, each with a
-/// way to stop waiting on it, the finder for another, and — read only — the
+/// The inspector's Blocked by rows: what the task waits on, each with a way
+/// to stop waiting on it, the finder for another, and — read only — the
 /// tasks that wait on this one.
 struct WorkspaceDependencyInspectorSection: View {
   @Environment(WorkspaceViewModel.self) private var model
@@ -173,35 +173,25 @@ struct WorkspaceDependencyInspectorSection: View {
   }
 
   var body: some View {
-    InspectorSection("Blocked by") {
-      ForEach(blockers) { blocker in
-        HStack(spacing: theme.space.xs) {
-          link(to: blocker, stop: "blocker.\(blocker.id)")
-          Button {
-            model.removeBlocker(blocker, from: task)
-          } label: {
-            Image(systemName: "xmark")
-              .font(theme.captionFont)
-              .foregroundStyle(theme.muted)
+    VStack(alignment: .leading, spacing: theme.space.xxs) {
+      InspectorRow("Blocked by") {
+        ForEach(blockers) { blocker in
+          HStack(alignment: .firstTextBaseline, spacing: theme.space.xxs) {
+            link(to: blocker, stop: "blocker.\(blocker.id)")
+            InspectorClearButton(label: "Stop waiting on \(blocker.title)", stop: "blocker.\(blocker.id).remove") {
+              model.removeBlocker(blocker, from: task)
+            }
           }
-          .buttonStyle(.plain)
-          .inspectorStop("blocker.\(blocker.id).remove")
-          .accessibilityLabel("Stop waiting on \(blocker.title)")
-          .help("Stop waiting on \(blocker.title)")
         }
+        Button(blockers.isEmpty ? "Add blocker" : "Add another") { model.presentBlockerFinder() }
+          .buttonStyle(InspectorValueButtonStyle(tone: .dim))
+          .inspectorStop("blocker.add")
+          .commandHelp(.taskAddBlocker, note: "Find a task this one waits on until it is done")
       }
-      Button { model.presentBlockerFinder() } label: {
-        Label(blockers.isEmpty ? "Wait on a task…" : "Wait on another…", systemImage: "link")
-      }
-      .buttonStyle(FocusActionButtonStyle())
-      .inspectorStop("blocker.add")
-      .commandHelp(.taskAddBlocker, note: "Find a task this one waits on until it is done")
       if !blocking.isEmpty {
-        Text(blocking.count == 1 ? "Blocks" : "Blocks \(blocking.count)")
-          .font(theme.captionFont)
-          .foregroundStyle(theme.muted)
-          .padding(.top, theme.space.xxs)
-        ForEach(blocking) { waiting in link(to: waiting, stop: "blocks.\(waiting.id)") }
+        InspectorRow("Blocks") {
+          ForEach(blocking) { waiting in link(to: waiting, stop: "blocks.\(waiting.id)") }
+        }
       }
     }
     .task(id: ReloadKey(taskID: task.id, revision: model.taskContentRevision)) {
@@ -210,30 +200,27 @@ struct WorkspaceDependencyInspectorSection: View {
     }
   }
 
-  /// A task named in the section: its title, done or not, and its list, and
-  /// a click goes to it.
+  /// A task named in the rows: its title, done or not, and its list when it
+  /// is another, and a click goes to it.
   private func link(to other: WorkspaceTask, stop: String) -> some View {
     let isOpen = other.status == .open
     return Button { model.selectTask(other) } label: {
       HStack(spacing: theme.space.xs) {
         Image(systemName: isOpen ? "circle" : "checkmark.circle")
+          .font(theme.captionFont)
           .foregroundStyle(isOpen ? theme.muted : theme.success)
         Text(other.title)
           .foregroundStyle(isOpen ? theme.ink : theme.muted)
           .strikethrough(!isOpen)
-          .lineLimit(1)
           .truncationMode(.tail)
         if let list = model.list(for: other), list.id != task.listId {
           Text(list.name)
             .foregroundStyle(theme.dim)
-            .lineLimit(1)
         }
         Spacer(minLength: 0)
       }
-      .font(theme.captionFont)
-      .contentShape(Rectangle())
     }
-    .buttonStyle(.plain)
+    .buttonStyle(InspectorValueButtonStyle())
     .inspectorStop(stop)
     .help(isOpen ? "\(other.title) — open" : "\(other.title) — done")
   }

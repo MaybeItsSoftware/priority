@@ -201,45 +201,42 @@ struct WorkspaceWaitingInspectorSection: View {
   }
 
   var body: some View {
-    InspectorSection("Waiting on") {
+    VStack(alignment: .leading, spacing: theme.space.xxs) {
       if isWaiting {
-        ThemedControlRow("Who or what") {
-          TextField("Waiting on", text: $tag, prompt: Text("Sam, Legal, invoice"))
-            .themedTextField()
-            .inspectorField(Self.tagStop)
-            .onSubmit { saveTag() }
-            .help("↩ saves")
-            .onChange(of: tagFocused) { _, focused in if !focused { saveTag() } }
+        InspectorRow("Waiting on") {
+          InspectorTextField(
+            add: "Add who or what", hint: "Sam, Legal, invoice", text: $tag, stop: Self.tagStop,
+            onSubmit: saveTag)
+          .help("↩ saves")
+          .onChange(of: tagFocused) { _, focused in if !focused { saveTag() } }
         }
-        ThemedOptionalRow(
-          "Follow up", isSet: details?.followUpAt != nil, stop: "waiting.follow-up",
+        InspectorOptionalRow(
+          "Follow up", add: "Add follow-up", isSet: details?.followUpAt != nil, stop: "waiting.follow-up",
           add: { save(followUpAt: Self.defaultFollowUp()) },
           clear: { save(followUpAt: nil) },
           value: {
             if let at = details?.followUpAt {
               ThemedDateField(
                 selection: Binding(get: { at }, set: { save(followUpAt: $0) }), includesTime: true,
-                stop: "waiting.follow-up.date")
+                stop: "waiting.follow-up.date", framed: false)
             }
           })
         .commandHelp(.taskWaiting, note: "Edit who and when to follow up in the Waiting on form")
       } else {
-        Button { model.presentWaitingForm() } label: {
-          Label("Waiting on…", systemImage: "hourglass")
+        InspectorRow("Waiting on") {
+          Button("Add who or what") { model.presentWaitingForm() }
+            .buttonStyle(InspectorValueButtonStyle(tone: .dim))
+            .inspectorStop("waiting.start")
+            .commandHelp(.taskWaiting, note: "Move it to Waiting on, with who and when to follow up")
         }
-        .buttonStyle(FocusActionButtonStyle())
-        .inspectorStop("waiting.start")
-        .commandHelp(.taskWaiting, note: "Move it to Waiting on, with who and when to follow up")
       }
       if let sourceId = details?.followUpOfTaskId, let source = model.task(withID: sourceId) {
-        Button { model.selectTask(source) } label: {
-          Label("Follows up \(source.title)", systemImage: "arrow.uturn.backward")
-            .lineLimit(1)
+        InspectorRow("Follows up") {
+          Button(source.title) { model.selectTask(source) }
+            .buttonStyle(InspectorValueButtonStyle(tone: .muted))
+            .inspectorStop("waiting.source")
+            .help("Go to \(source.title)")
         }
-        .buttonStyle(.plain)
-        .font(theme.captionFont)
-        .foregroundStyle(theme.muted)
-        .inspectorStop("waiting.source")
       }
     }
     .onAppear { tag = details?.waitingOn ?? "" }
