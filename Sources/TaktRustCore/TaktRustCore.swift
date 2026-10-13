@@ -6370,6 +6370,109 @@ public func FfiConverterTypeCliCredentials_lower(_ value: CliCredentials) -> Rus
 
 
 /**
+ * One row of the catalogue.
+ */
+public struct CommandEntry: Equatable, Hashable {
+    public var id: String
+    public var title: String
+    public var group: String
+    /**
+     * The keys it answers to on its own surface (everywhere, for `Anywhere`).
+     */
+    public var keys: [String]
+    /**
+     * Keys it answers to on one other surface as though it were that
+     * surface's own row, in surface order.
+     */
+    public var surfaceKeys: [SurfaceKeys]
+    public var surface: CommandSurface
+    /**
+     * A motion moves the cursor from where it is, so a palette lists it but
+     * cannot run it.
+     */
+    public var motion: Bool
+    public var note: String?
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(id: String, title: String, group: String, 
+        /**
+         * The keys it answers to on its own surface (everywhere, for `Anywhere`).
+         */keys: [String], 
+        /**
+         * Keys it answers to on one other surface as though it were that
+         * surface's own row, in surface order.
+         */surfaceKeys: [SurfaceKeys], surface: CommandSurface, 
+        /**
+         * A motion moves the cursor from where it is, so a palette lists it but
+         * cannot run it.
+         */motion: Bool, note: String?) {
+        self.id = id
+        self.title = title
+        self.group = group
+        self.keys = keys
+        self.surfaceKeys = surfaceKeys
+        self.surface = surface
+        self.motion = motion
+        self.note = note
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension CommandEntry: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeCommandEntry: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> CommandEntry {
+        return
+            try CommandEntry(
+                id: FfiConverterString.read(from: &buf), 
+                title: FfiConverterString.read(from: &buf), 
+                group: FfiConverterString.read(from: &buf), 
+                keys: FfiConverterSequenceString.read(from: &buf), 
+                surfaceKeys: FfiConverterSequenceTypeSurfaceKeys.read(from: &buf), 
+                surface: FfiConverterTypeCommandSurface.read(from: &buf), 
+                motion: FfiConverterBool.read(from: &buf), 
+                note: FfiConverterOptionString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: CommandEntry, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.id, into: &buf)
+        FfiConverterString.write(value.title, into: &buf)
+        FfiConverterString.write(value.group, into: &buf)
+        FfiConverterSequenceString.write(value.keys, into: &buf)
+        FfiConverterSequenceTypeSurfaceKeys.write(value.surfaceKeys, into: &buf)
+        FfiConverterTypeCommandSurface.write(value.surface, into: &buf)
+        FfiConverterBool.write(value.motion, into: &buf)
+        FfiConverterOptionString.write(value.note, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCommandEntry_lift(_ buf: RustBuffer) throws -> CommandEntry {
+    return try FfiConverterTypeCommandEntry.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCommandEntry_lower(_ value: CommandEntry) -> RustBuffer {
+    return FfiConverterTypeCommandEntry.lower(value)
+}
+
+
+/**
  * One live commitment.
  */
 public struct Commitment: Equatable, Hashable {
@@ -12536,6 +12639,337 @@ public func FfiConverterTypeIncomingRow_lower(_ value: IncomingRow) -> RustBuffe
 
 
 /**
+ * A key in the catalogue's spelling, taken apart for a toolkit's own key
+ * type: its modifiers and the key itself (a character, or one of
+ * [`KEY_NAMES`]).
+ */
+public struct KeyboardChord: Equatable, Hashable {
+    public var cmd: Bool
+    public var ctrl: Bool
+    public var option: Bool
+    public var shift: Bool
+    public var key: String
+    /**
+     * No modifier at all on a key that types or edits text (a character,
+     * enter, tab, delete): a text field keeps it, so a hardware keyboard
+     * shortcut on a phone must not claim it. Bare arrows and space are fine.
+     */
+    public var belongsToTyping: Bool
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(cmd: Bool, ctrl: Bool, option: Bool, shift: Bool, key: String, 
+        /**
+         * No modifier at all on a key that types or edits text (a character,
+         * enter, tab, delete): a text field keeps it, so a hardware keyboard
+         * shortcut on a phone must not claim it. Bare arrows and space are fine.
+         */belongsToTyping: Bool) {
+        self.cmd = cmd
+        self.ctrl = ctrl
+        self.option = option
+        self.shift = shift
+        self.key = key
+        self.belongsToTyping = belongsToTyping
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension KeyboardChord: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeKeyboardChord: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> KeyboardChord {
+        return
+            try KeyboardChord(
+                cmd: FfiConverterBool.read(from: &buf), 
+                ctrl: FfiConverterBool.read(from: &buf), 
+                option: FfiConverterBool.read(from: &buf), 
+                shift: FfiConverterBool.read(from: &buf), 
+                key: FfiConverterString.read(from: &buf), 
+                belongsToTyping: FfiConverterBool.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: KeyboardChord, into buf: inout [UInt8]) {
+        FfiConverterBool.write(value.cmd, into: &buf)
+        FfiConverterBool.write(value.ctrl, into: &buf)
+        FfiConverterBool.write(value.option, into: &buf)
+        FfiConverterBool.write(value.shift, into: &buf)
+        FfiConverterString.write(value.key, into: &buf)
+        FfiConverterBool.write(value.belongsToTyping, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeKeyboardChord_lift(_ buf: RustBuffer) throws -> KeyboardChord {
+    return try FfiConverterTypeKeyboardChord.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeKeyboardChord_lower(_ value: KeyboardChord) -> RustBuffer {
+    return FfiConverterTypeKeyboardChord.lower(value)
+}
+
+
+/**
+ * One binding a keymap file asks for. `command` is `None` to unbind.
+ */
+public struct KeymapBinding: Equatable, Hashable {
+    public var context: CommandSurface?
+    public var key: String
+    public var command: String?
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(context: CommandSurface?, key: String, command: String?) {
+        self.context = context
+        self.key = key
+        self.command = command
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension KeymapBinding: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeKeymapBinding: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> KeymapBinding {
+        return
+            try KeymapBinding(
+                context: FfiConverterOptionTypeCommandSurface.read(from: &buf), 
+                key: FfiConverterString.read(from: &buf), 
+                command: FfiConverterOptionString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: KeymapBinding, into buf: inout [UInt8]) {
+        FfiConverterOptionTypeCommandSurface.write(value.context, into: &buf)
+        FfiConverterString.write(value.key, into: &buf)
+        FfiConverterOptionString.write(value.command, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeKeymapBinding_lift(_ buf: RustBuffer) throws -> KeymapBinding {
+    return try FfiConverterTypeKeymapBinding.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeKeymapBinding_lower(_ value: KeymapBinding) -> RustBuffer {
+    return FfiConverterTypeKeymapBinding.lower(value)
+}
+
+
+/**
+ * An issue, said in a sentence someone editing the file can act on.
+ */
+public struct KeymapIssue: Equatable, Hashable {
+    public var kind: KeymapIssueKind
+    public var message: String
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(kind: KeymapIssueKind, message: String) {
+        self.kind = kind
+        self.message = message
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension KeymapIssue: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeKeymapIssue: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> KeymapIssue {
+        return
+            try KeymapIssue(
+                kind: FfiConverterTypeKeymapIssueKind.read(from: &buf), 
+                message: FfiConverterString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: KeymapIssue, into buf: inout [UInt8]) {
+        FfiConverterTypeKeymapIssueKind.write(value.kind, into: &buf)
+        FfiConverterString.write(value.message, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeKeymapIssue_lift(_ buf: RustBuffer) throws -> KeymapIssue {
+    return try FfiConverterTypeKeymapIssue.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeKeymapIssue_lower(_ value: KeymapIssue) -> RustBuffer {
+    return FfiConverterTypeKeymapIssue.lower(value)
+}
+
+
+public struct KeymapParse: Equatable, Hashable {
+    public var bindings: [KeymapBinding]
+    public var issues: [KeymapIssue]
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(bindings: [KeymapBinding], issues: [KeymapIssue]) {
+        self.bindings = bindings
+        self.issues = issues
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension KeymapParse: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeKeymapParse: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> KeymapParse {
+        return
+            try KeymapParse(
+                bindings: FfiConverterSequenceTypeKeymapBinding.read(from: &buf), 
+                issues: FfiConverterSequenceTypeKeymapIssue.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: KeymapParse, into buf: inout [UInt8]) {
+        FfiConverterSequenceTypeKeymapBinding.write(value.bindings, into: &buf)
+        FfiConverterSequenceTypeKeymapIssue.write(value.issues, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeKeymapParse_lift(_ buf: RustBuffer) throws -> KeymapParse {
+    return try FfiConverterTypeKeymapParse.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeKeymapParse_lower(_ value: KeymapParse) -> RustBuffer {
+    return FfiConverterTypeKeymapParse.lower(value)
+}
+
+
+public struct KeymapResolution: Equatable, Hashable {
+    /**
+     * The commands passed, in their order, with the keys in force.
+     */
+    public var commands: [CommandEntry]
+    /**
+     * Keys taken away from a surface by a `null` in a block naming it: a
+     * surface's own rows still answer, but the key is no longer inherited
+     * from `Anywhere`.
+     */
+    public var unbound: [SurfaceKeys]
+    public var issues: [KeymapIssue]
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(
+        /**
+         * The commands passed, in their order, with the keys in force.
+         */commands: [CommandEntry], 
+        /**
+         * Keys taken away from a surface by a `null` in a block naming it: a
+         * surface's own rows still answer, but the key is no longer inherited
+         * from `Anywhere`.
+         */unbound: [SurfaceKeys], issues: [KeymapIssue]) {
+        self.commands = commands
+        self.unbound = unbound
+        self.issues = issues
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension KeymapResolution: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeKeymapResolution: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> KeymapResolution {
+        return
+            try KeymapResolution(
+                commands: FfiConverterSequenceTypeCommandEntry.read(from: &buf), 
+                unbound: FfiConverterSequenceTypeSurfaceKeys.read(from: &buf), 
+                issues: FfiConverterSequenceTypeKeymapIssue.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: KeymapResolution, into buf: inout [UInt8]) {
+        FfiConverterSequenceTypeCommandEntry.write(value.commands, into: &buf)
+        FfiConverterSequenceTypeSurfaceKeys.write(value.unbound, into: &buf)
+        FfiConverterSequenceTypeKeymapIssue.write(value.issues, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeKeymapResolution_lift(_ buf: RustBuffer) throws -> KeymapResolution {
+    return try FfiConverterTypeKeymapResolution.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeKeymapResolution_lower(_ value: KeymapResolution) -> RustBuffer {
+    return FfiConverterTypeKeymapResolution.lower(value)
+}
+
+
+/**
  * A daily from before the workspace kept them, as the old plugin stored it.
  */
 public struct LegacyDailySeed: Equatable, Hashable {
@@ -15434,6 +15868,63 @@ public func FfiConverterTypeSidebarOutlineRow_lower(_ value: SidebarOutlineRow) 
 
 
 /**
+ * Keys a command answers to on one surface only.
+ */
+public struct SurfaceKeys: Equatable, Hashable {
+    public var surface: CommandSurface
+    public var keys: [String]
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(surface: CommandSurface, keys: [String]) {
+        self.surface = surface
+        self.keys = keys
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension SurfaceKeys: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeSurfaceKeys: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SurfaceKeys {
+        return
+            try SurfaceKeys(
+                surface: FfiConverterTypeCommandSurface.read(from: &buf), 
+                keys: FfiConverterSequenceString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: SurfaceKeys, into buf: inout [UInt8]) {
+        FfiConverterTypeCommandSurface.write(value.surface, into: &buf)
+        FfiConverterSequenceString.write(value.keys, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeSurfaceKeys_lift(_ buf: RustBuffer) throws -> SurfaceKeys {
+    return try FfiConverterTypeSurfaceKeys.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeSurfaceKeys_lower(_ value: SurfaceKeys) -> RustBuffer {
+    return FfiConverterTypeSurfaceKeys.lower(value)
+}
+
+
+/**
  * `GET /v1/account`: who this device is signed in as, and every device on
  * the account.
  */
@@ -17447,6 +17938,132 @@ public func FfiConverterTypeClientConfigError_lower(_ value: ClientConfigError) 
 
 
 /**
+ * Where a command applies. A surface is what is in the main pane, except
+ * `Sidebar` and `Inspector`, whose keys belong to a region.
+ */
+
+public enum CommandSurface: Equatable, Hashable {
+    
+    case anywhere
+    case today
+    case board
+    case outline
+    case matrix
+    case sidebar
+    case inspector
+    case timeline
+    case done
+    case conditions
+
+
+
+
+
+}
+
+#if compiler(>=6)
+extension CommandSurface: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeCommandSurface: FfiConverterRustBuffer {
+    typealias SwiftType = CommandSurface
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> CommandSurface {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .anywhere
+        
+        case 2: return .today
+        
+        case 3: return .board
+        
+        case 4: return .outline
+        
+        case 5: return .matrix
+        
+        case 6: return .sidebar
+        
+        case 7: return .inspector
+        
+        case 8: return .timeline
+        
+        case 9: return .done
+        
+        case 10: return .conditions
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: CommandSurface, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case .anywhere:
+            writeInt(&buf, Int32(1))
+        
+        
+        case .today:
+            writeInt(&buf, Int32(2))
+        
+        
+        case .board:
+            writeInt(&buf, Int32(3))
+        
+        
+        case .outline:
+            writeInt(&buf, Int32(4))
+        
+        
+        case .matrix:
+            writeInt(&buf, Int32(5))
+        
+        
+        case .sidebar:
+            writeInt(&buf, Int32(6))
+        
+        
+        case .inspector:
+            writeInt(&buf, Int32(7))
+        
+        
+        case .timeline:
+            writeInt(&buf, Int32(8))
+        
+        
+        case .done:
+            writeInt(&buf, Int32(9))
+        
+        
+        case .conditions:
+            writeInt(&buf, Int32(10))
+        
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCommandSurface_lift(_ buf: RustBuffer) throws -> CommandSurface {
+    return try FfiConverterTypeCommandSurface.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCommandSurface_lower(_ value: CommandSurface) -> RustBuffer {
+    return FfiConverterTypeCommandSurface.lower(value)
+}
+
+
+
+/**
  * How far back a day is from today, as a relation. `CompletedWorkDayKind`.
  */
 
@@ -19034,6 +19651,216 @@ public func FfiConverterTypeGoogleTasksOperation_lower(_ value: GoogleTasksOpera
     return FfiConverterTypeGoogleTasksOperation.lower(value)
 }
 
+
+
+/**
+ * What went wrong with part of a keymap file.
+ */
+
+public enum KeymapIssueKind: Equatable, Hashable {
+    
+    /**
+     * Not JSON, or not an array of blocks. Nothing in the file applies.
+     */
+    case unreadableFile
+    /**
+     * A block that is not an object with a `bindings` object.
+     */
+    case malformedBlock
+    /**
+     * A `context` that names no surface.
+     */
+    case unknownContext
+    /**
+     * A command id the catalogue does not have.
+     */
+    case unknownCommand
+    /**
+     * A key no key press can be spelled as.
+     */
+    case malformedKey
+    /**
+     * A command that reads which key ran it.
+     */
+    case notRebindable
+    /**
+     * A command that belongs to one surface, bound in another's context.
+     */
+    case wrongSurface
+    /**
+     * One key bound to two commands on one surface. The later wins.
+     */
+    case conflict
+
+
+
+
+
+}
+
+#if compiler(>=6)
+extension KeymapIssueKind: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeKeymapIssueKind: FfiConverterRustBuffer {
+    typealias SwiftType = KeymapIssueKind
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> KeymapIssueKind {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .unreadableFile
+        
+        case 2: return .malformedBlock
+        
+        case 3: return .unknownContext
+        
+        case 4: return .unknownCommand
+        
+        case 5: return .malformedKey
+        
+        case 6: return .notRebindable
+        
+        case 7: return .wrongSurface
+        
+        case 8: return .conflict
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: KeymapIssueKind, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case .unreadableFile:
+            writeInt(&buf, Int32(1))
+        
+        
+        case .malformedBlock:
+            writeInt(&buf, Int32(2))
+        
+        
+        case .unknownContext:
+            writeInt(&buf, Int32(3))
+        
+        
+        case .unknownCommand:
+            writeInt(&buf, Int32(4))
+        
+        
+        case .malformedKey:
+            writeInt(&buf, Int32(5))
+        
+        
+        case .notRebindable:
+            writeInt(&buf, Int32(6))
+        
+        
+        case .wrongSurface:
+            writeInt(&buf, Int32(7))
+        
+        
+        case .conflict:
+            writeInt(&buf, Int32(8))
+        
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeKeymapIssueKind_lift(_ buf: RustBuffer) throws -> KeymapIssueKind {
+    return try FfiConverterTypeKeymapIssueKind.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeKeymapIssueKind_lower(_ value: KeymapIssueKind) -> RustBuffer {
+    return FfiConverterTypeKeymapIssueKind.lower(value)
+}
+
+
+
+public 
+enum KeymapKeyError: Swift.Error, Equatable, Hashable, Foundation.LocalizedError {
+
+    
+    
+    case Malformed(reason: String
+    )
+
+    
+
+    
+
+    
+    public var errorDescription: String? {
+        String(reflecting: self)
+    }
+    
+}
+
+#if compiler(>=6)
+extension KeymapKeyError: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeKeymapKeyError: FfiConverterRustBuffer {
+    typealias SwiftType = KeymapKeyError
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> KeymapKeyError {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+
+        
+
+        
+        case 1: return .Malformed(
+            reason: try FfiConverterString.read(from: &buf)
+            )
+
+         default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: KeymapKeyError, into buf: inout [UInt8]) {
+        switch value {
+
+        
+
+        
+        
+        case let .Malformed(reason):
+            writeInt(&buf, Int32(1))
+            FfiConverterString.write(reason, into: &buf)
+            
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeKeymapKeyError_lift(_ buf: RustBuffer) throws -> KeymapKeyError {
+    return try FfiConverterTypeKeymapKeyError.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeKeymapKeyError_lower(_ value: KeymapKeyError) -> RustBuffer {
+    return FfiConverterTypeKeymapKeyError.lower(value)
+}
 
 
 /**
@@ -21290,6 +22117,30 @@ fileprivate struct FfiConverterOptionTypeImportOutcome: FfiConverterRustBuffer {
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterOptionTypeKeyboardChord: FfiConverterRustBuffer {
+    typealias SwiftType = KeyboardChord?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterTypeKeyboardChord.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterTypeKeyboardChord.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterOptionTypeListRow: FfiConverterRustBuffer {
     typealias SwiftType = ListRow?
 
@@ -21474,6 +22325,30 @@ fileprivate struct FfiConverterOptionTypeTaskRow: FfiConverterRustBuffer {
         switch try readInt(&buf) as Int8 {
         case 0: return nil
         case 1: return try FfiConverterTypeTaskRow.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterOptionTypeCommandSurface: FfiConverterRustBuffer {
+    typealias SwiftType = CommandSurface?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterTypeCommandSurface.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterTypeCommandSurface.read(from: &buf)
         default: throw UniffiInternalError.unexpectedOptionalTag
         }
     }
@@ -22188,6 +23063,31 @@ fileprivate struct FfiConverterSequenceTypeCheckvistTaskRow: FfiConverterRustBuf
         seq.reserveCapacity(Int(len))
         for _ in 0 ..< len {
             seq.append(try FfiConverterTypeCheckvistTaskRow.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterSequenceTypeCommandEntry: FfiConverterRustBuffer {
+    typealias SwiftType = [CommandEntry]
+
+    public static func write(_ value: [CommandEntry], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeCommandEntry.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [CommandEntry] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [CommandEntry]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeCommandEntry.read(from: &buf))
         }
         return seq
     }
@@ -23096,6 +23996,56 @@ fileprivate struct FfiConverterSequenceTypeIncomingRow: FfiConverterRustBuffer {
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterSequenceTypeKeymapBinding: FfiConverterRustBuffer {
+    typealias SwiftType = [KeymapBinding]
+
+    public static func write(_ value: [KeymapBinding], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeKeymapBinding.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [KeymapBinding] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [KeymapBinding]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeKeymapBinding.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterSequenceTypeKeymapIssue: FfiConverterRustBuffer {
+    typealias SwiftType = [KeymapIssue]
+
+    public static func write(_ value: [KeymapIssue], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeKeymapIssue.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [KeymapIssue] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [KeymapIssue]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeKeymapIssue.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterSequenceTypeLegacyDailySeed: FfiConverterRustBuffer {
     typealias SwiftType = [LegacyDailySeed]
 
@@ -23613,6 +24563,31 @@ fileprivate struct FfiConverterSequenceTypeSidebarOutlineRow: FfiConverterRustBu
         seq.reserveCapacity(Int(len))
         for _ in 0 ..< len {
             seq.append(try FfiConverterTypeSidebarOutlineRow.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterSequenceTypeSurfaceKeys: FfiConverterRustBuffer {
+    typealias SwiftType = [SurfaceKeys]
+
+    public static func write(_ value: [SurfaceKeys], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeSurfaceKeys.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [SurfaceKeys] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [SurfaceKeys]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeSurfaceKeys.read(from: &buf))
         }
         return seq
     }
@@ -25189,6 +26164,89 @@ public func googleTasksPlan(localLists: [GoogleTasksLocalList], localTasks: [Goo
 })
 }
 /**
+ * `cmd+shift+z` taken apart; `None` for a two-letter sequence, which no
+ * single key press is, or for a spelling that is not the catalogue's.
+ */
+public func keyboardChord(key: String) -> KeyboardChord?  {
+    return try!  FfiConverterOptionTypeKeyboardChord.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_keyboard_chord(
+        FfiConverterString.lower(key),uniffiCallStatus
+    )
+})
+}
+/**
+ * `raw` in the catalogue's spelling, or why it cannot be a key.
+ */
+public func keymapNormalizedKey(raw: String)throws  -> String  {
+    return try  FfiConverterString.lift(try rustCallWithError(FfiConverterTypeKeymapKeyError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_keymap_normalized_key(
+        FfiConverterString.lower(raw),uniffiCallStatus
+    )
+})
+}
+/**
+ * Reads a keymap file. An empty file is no bindings. Within a block, the
+ * unbinds come before the binds, each in key order, so unbinding and
+ * rebinding one key in a block does not depend on the order written.
+ */
+public func keymapParse(text: String) -> KeymapParse  {
+    return try!  FfiConverterTypeKeymapParse_lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_keymap_parse(
+        FfiConverterString.lower(text),uniffiCallStatus
+    )
+})
+}
+/**
+ * The command ids that cannot be rebound; see [`READS_ITS_KEY`].
+ */
+public func keymapReadsItsKey() -> [String]  {
+    return try!  FfiConverterSequenceString.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_keymap_reads_its_key(uniffiCallStatus
+    )
+})
+}
+/**
+ * Lays `bindings` over `defaults` (the catalogue, normally). A binding
+ * without a context adds the key on the command's own surface; one with a
+ * context adds it there, as one of that surface's own keys. Either takes the
+ * key from whatever held it on that surface. `null` without a context
+ * unbinds the key everywhere; with one, on that surface only.
+ */
+public func keymapResolve(bindings: [KeymapBinding], defaults: [CommandEntry]) -> KeymapResolution  {
+    return try!  FfiConverterTypeKeymapResolution_lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_keymap_resolve(
+        FfiConverterSequenceTypeKeymapBinding.lower(bindings),
+        FfiConverterSequenceTypeCommandEntry.lower(defaults),uniffiCallStatus
+    )
+})
+}
+/**
+ * The surface a keymap `context` names, ignoring case and outer spaces.
+ */
+public func keymapSurfaceNamed(name: String) -> CommandSurface?  {
+    return try!  FfiConverterOptionTypeCommandSurface.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_keymap_surface_named(
+        FfiConverterString.lower(name),uniffiCallStatus
+    )
+})
+}
+/**
+ * Every command, in catalogue order, with its shipped keys.
+ */
+public func workspaceCommandCatalog() -> [CommandEntry]  {
+    return try!  FfiConverterSequenceTypeCommandEntry.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_workspace_command_catalog(uniffiCallStatus
+    )
+})
+}
+/**
  * Reads stored planning JSON. `JSONDecoder().decode(TaskPlanning.self, …)`.
  */
 public func taskPlanningDecode(json: String)throws  -> Planning  {
@@ -26706,6 +27764,27 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_func_google_tasks_plan() != 64663) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_keyboard_chord() != 53307) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_keymap_normalized_key() != 45855) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_keymap_parse() != 50225) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_keymap_reads_its_key() != 30151) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_keymap_resolve() != 22009) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_keymap_surface_named() != 19260) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_workspace_command_catalog() != 5765) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_func_task_planning_decode() != 24542) {

@@ -88,40 +88,32 @@ struct KeyboardCommands: View {
     return result
   }()
 
-  /// `cmd+shift+z` → (`z`, [.command, .shift]). Nil for a sequence (`dd`) or
-  /// a key this platform has no equivalent for.
-  static func parse(_ chord: String) -> (KeyEquivalent, EventModifiers)? {
-    var parts = chord.lowercased().split(separator: "+").map(String.init)
-    guard let last = parts.popLast() else { return nil }
+  /// `cmd+shift+z` → (`z`, [.command, .shift]): the core's chord, mapped to
+  /// SwiftUI's key type. Nil for a sequence (`dd`), a key this platform has
+  /// no equivalent for, or one a text field owns (a bare letter, return, tab,
+  /// delete).
+  static func parse(_ key: String) -> (KeyEquivalent, EventModifiers)? {
+    guard let chord = WorkspaceKeyChord(key), !chord.belongsToTyping else { return nil }
     var modifiers: EventModifiers = []
-    for part in parts {
-      switch part {
-      case "cmd": modifiers.insert(.command)
-      case "shift": modifiers.insert(.shift)
-      case "option": modifiers.insert(.option)
-      case "ctrl": modifiers.insert(.control)
-      default: return nil
-      }
-    }
-    let key: KeyEquivalent
-    switch last {
-    case "up": key = .upArrow
-    case "down": key = .downArrow
-    case "left": key = .leftArrow
-    case "right": key = .rightArrow
-    case "space": key = .space
-    case "enter": key = .return
-    case "delete": key = .delete
-    case "tab": key = .tab
+    if chord.cmd { modifiers.insert(.command) }
+    if chord.ctrl { modifiers.insert(.control) }
+    if chord.option { modifiers.insert(.option) }
+    if chord.shift { modifiers.insert(.shift) }
+    let equivalent: KeyEquivalent
+    switch chord.key {
+    case "up": equivalent = .upArrow
+    case "down": equivalent = .downArrow
+    case "left": equivalent = .leftArrow
+    case "right": equivalent = .rightArrow
+    case "space": equivalent = .space
+    case "enter": equivalent = .return
+    case "delete": equivalent = .delete
+    case "tab": equivalent = .tab
     default:
-      guard last.count == 1, let character = last.first else { return nil }
-      key = KeyEquivalent(character)
+      guard chord.key.count == 1, let character = chord.key.first else { return nil }
+      equivalent = KeyEquivalent(character)
     }
-    // A bare letter would swallow typing; bare navigation keys are fine.
-    if modifiers.isEmpty, last.count == 1 { return nil }
-    // Return, tab and delete belong to whatever text field is editing.
-    if modifiers.isEmpty, ["tab", "delete", "enter"].contains(last) { return nil }
-    return (key, modifiers)
+    return (equivalent, modifiers)
   }
 
   // MARK: - Dispatch

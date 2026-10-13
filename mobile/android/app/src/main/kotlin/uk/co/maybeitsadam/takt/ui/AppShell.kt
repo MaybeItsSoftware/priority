@@ -51,7 +51,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
@@ -72,7 +71,6 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
 import uk.co.maybeitsadam.takt.app.AppContainer
 import uk.co.maybeitsadam.takt.app.QuickAddRequest
-import uk.co.maybeitsadam.takt.ui.commands.Chord
 import uk.co.maybeitsadam.takt.ui.commands.CommandPalette
 import uk.co.maybeitsadam.takt.ui.commands.CommandRegistry
 import uk.co.maybeitsadam.takt.ui.commands.KeyCommand
@@ -218,19 +216,17 @@ fun AppShell(container: AppContainer, pendingIntent: Intent?, onIntentHandled: (
     }
 
     val chords = remember(container, navigator) {
-        listOf<Pair<Chord, () -> Unit>>(
-            Chord(Key.Z, ctrl = true) to { container.undo.undo() },
-            Chord(Key.Z, ctrl = true, shift = true) to { container.undo.redo() },
-            Chord(Key.Y, ctrl = true) to { container.undo.redo() },
-            Chord(Key.K, ctrl = true) to { paletteOpen = true },
-            Chord(Key.P, ctrl = true, shift = true) to { paletteOpen = true },
-            Chord(Key.N, ctrl = true) to { container.quickAdd.open(QuickAddRequest(listId = container.quickAdd.contextListId.value)) },
-            Chord(Key.F, ctrl = true) to { navigator.openTab(Tab.SEARCH) },
-            Chord(Key.One, ctrl = true) to { navigator.openTab(Tab.TODAY) },
-            Chord(Key.Zero, ctrl = true) to { navigator.openList(null) },
-            Chord(Key.Eight, ctrl = true) to { navigator.openTab(Tab.FOCUS) },
-            Chord(Key.Nine, ctrl = true) to { navigator.openTab(Tab.REVIEW) },
-            Chord(Key.Comma, ctrl = true) to { navigator.openSettings() },
+        listOf<Pair<KeyCommand, () -> Unit>>(
+            KeyCommand.WINDOW_UNDO to { container.undo.undo() },
+            KeyCommand.WINDOW_REDO to { container.undo.redo() },
+            KeyCommand.GO_COMMAND_PALETTE to { paletteOpen = true },
+            KeyCommand.TASK_NEW to { container.quickAdd.open(QuickAddRequest(listId = container.quickAdd.contextListId.value)) },
+            KeyCommand.GO_SEARCH to { navigator.openTab(Tab.SEARCH) },
+            KeyCommand.GO_TODAY to { navigator.openTab(Tab.TODAY) },
+            KeyCommand.GO_EVERYTHING to { navigator.openList(null) },
+            KeyCommand.GO_FOCUS to { navigator.openTab(Tab.FOCUS) },
+            KeyCommand.GO_TIMELINE to { navigator.openTab(Tab.REVIEW) },
+            KeyCommand.WINDOW_SETTINGS to { navigator.openSettings() },
         )
     }
 
@@ -241,7 +237,7 @@ fun AppShell(container: AppContainer, pendingIntent: Intent?, onIntentHandled: (
             .background(TaktTheme.colors.paper)
             .onPreviewKeyEvent { event ->
                 if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
-                val match = chords.firstOrNull { it.first.matches(event) } ?: return@onPreviewKeyEvent false
+                val match = chords.firstOrNull { it.first.matchesShortcut(event) } ?: return@onPreviewKeyEvent false
                 match.second()
                 true
             },

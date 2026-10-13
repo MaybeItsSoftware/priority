@@ -27,7 +27,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
@@ -36,7 +35,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import uk.co.maybeitsadam.takt.app.CelebrationStyle
-import uk.co.maybeitsadam.takt.ui.commands.Chord
+import uk.co.maybeitsadam.takt.ui.commands.KeyCommand
 import uk.co.maybeitsadam.takt.ui.components.Hairline
 import uk.co.maybeitsadam.takt.ui.components.MonoText
 import uk.co.maybeitsadam.takt.ui.components.VerticalHairline
@@ -75,11 +74,12 @@ internal fun MatrixPane(vm: ListViewModel, actions: TaskActions, modifier: Modif
             .onKeyEvent { event ->
                 if (event.type != KeyEventType.KeyDown) return@onKeyEvent false
                 val row = ordered.firstOrNull { it.id == selected }
-                val placement = listOf(Key.One, Key.Two, Key.Three, Key.Four).indexOfFirst { Chord(it, alt = true).matches(event) }
+                // The catalogue lists ⌥1…⌥4 in quadrant order, so the chord's position is the quadrant.
+                val placement = KeyCommand.PLAN_MATRIX_PLACE.chordIndex(event)
                 when {
                     placement >= 0 -> row?.let { vm.place(it.id, MatrixCell.entries[placement]) }
-                    Chord(Key.J).matches(event) || Chord(Key.DirectionDown).matches(event) -> vm.selectAdjacent(ordered, 1)
-                    Chord(Key.K).matches(event) || Chord(Key.DirectionUp).matches(event) -> vm.selectAdjacent(ordered, -1)
+                    KeyCommand.PLAN_SELECT_NEXT.matches(event) -> vm.selectAdjacent(ordered, 1)
+                    KeyCommand.PLAN_SELECT_PREVIOUS.matches(event) -> vm.selectAdjacent(ordered, -1)
                     else -> return@onKeyEvent actions.handleKey(event, row)
                 }
                 true

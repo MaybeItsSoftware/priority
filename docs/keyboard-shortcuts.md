@@ -3,8 +3,10 @@
 **The list of keys lives in the app, not here.** Press `Cmd+Shift+P` (or `Cmd+K`) for the command
 palette, which shows every command the workspace has and the key that runs it,
 or `Cmd+/` for the same information grouped as a reference sheet. Both are
-rendered from `WorkspaceCommandCatalog` (`Sources/TaktCore/`), which is the
-single place a workspace key is written down.
+rendered from `WorkspaceCommandCatalog` (`Sources/TaktCore/`), which reads
+its entries from the Rust core's `core/src/keymap/catalogue.rs`: the single
+place a workspace key is written down, which the iPhone's hardware keyboard
+and Android's palette and chords read too.
 
 This file used to carry a table of its own. It is gone deliberately. There were
 four copies of these facts — this table, the README's, a seventy-row literal in

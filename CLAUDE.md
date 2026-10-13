@@ -33,7 +33,7 @@ cargo fmt --manifest-path cli/Cargo.toml --check
 ./scripts/install_cli.sh            # release build + a `takt` symlink onto PATH
 ```
 
-`README.md` is authoritative for keybindings and command palette syntax — consult it when editing `Sources/TaktCore/WorkspaceCommandCatalog+Entries.swift`, `Sources/TaktCore/WorkspaceKeyBindings.swift` or `CommandEngine.swift` so behaviour stays in sync.
+`README.md` is authoritative for keybindings and command palette syntax — consult it when editing `core/src/keymap/catalogue.rs` (the command catalogue, which the Mac, the iPhone and Android all read; a new command is an entry there plus a `WorkspaceCommandID` case and its `run` arm), `Sources/TaktCore/WorkspaceKeyBindings.swift` or `CommandEngine.swift` so behaviour stays in sync.
 
 ## Architectural Layout (Two Build Systems, One Source Tree)
 

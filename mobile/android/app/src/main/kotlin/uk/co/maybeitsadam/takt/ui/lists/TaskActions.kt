@@ -13,13 +13,11 @@ import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Stable
-import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEvent
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.type
 import uk.co.maybeitsadam.takt.app.AppContainer
 import uk.co.maybeitsadam.takt.core.TaskStatus
-import uk.co.maybeitsadam.takt.ui.commands.Chord
 import uk.co.maybeitsadam.takt.ui.commands.KeyCommand
 import uk.co.maybeitsadam.takt.ui.commands.PaletteCommand
 import uk.co.maybeitsadam.takt.ui.theme.PIcons
@@ -95,30 +93,30 @@ class TaskActions(
         if (event.type != KeyEventType.KeyDown || row == null) return false
         val id = row.id
         val action: (() -> Unit)? = when {
-            Chord(Key.Enter).matches(event) || Chord(Key.NumPadEnter).matches(event) -> { { openInspector(id) } }
-            Chord(Key.I).matches(event) -> { { openInspector(id) } }
-            Chord(Key.Spacebar).matches(event) || Chord(Key.X).matches(event) -> { { toggleComplete(id) } }
-            Chord(Key.Spacebar, shift = true).matches(event) -> { { toggleInvalidate(id) } }
-            Chord(Key.Tab).matches(event) -> { { indent(id) } }
-            Chord(Key.Tab, shift = true).matches(event) -> { { outdent(id) } }
-            Chord(Key.DirectionUp, alt = true).matches(event) -> { { moveUp(id) } }
-            Chord(Key.DirectionDown, alt = true).matches(event) -> { { moveDown(id) } }
-            Chord(Key.Z).matches(event) -> { { toggleFold(id) } }
-            Chord(Key.Delete).matches(event) || Chord(Key.Backspace).matches(event) -> { { askDelete(row) } }
-            Chord(Key.F2).matches(event) -> { { askRename(row) } }
-            Chord(Key.F).matches(event) -> { { startFocus(id) } }
-            Chord(Key.T, alt = true).matches(event) -> { { togglePlannedToday(id) } }
-            Chord(Key.T, ctrl = true).matches(event) -> { { dueToday(id) } }
-            Chord(Key.T, ctrl = true, shift = true).matches(event) -> { { dueTomorrow(id) } }
-            Chord(Key.D, ctrl = true, shift = true).matches(event) -> { { toggleDaily(id) } }
-            Chord(Key.H, ctrl = true, shift = true).matches(event) -> { { openHabit(id) } }
-            Chord(Key.L, ctrl = true, shift = true).matches(event) -> { { toggleList(id) } }
-            Chord(Key.M, ctrl = true, shift = true).matches(event) -> { { askMove(row) } }
-            Chord(Key.Zero).matches(event) -> { { setPriority(id, null) } }
-            Chord(Key.One).matches(event) -> { { setPriority(id, 1) } }
-            Chord(Key.Two).matches(event) -> { { setPriority(id, 2) } }
-            Chord(Key.Three).matches(event) -> { { setPriority(id, 3) } }
-            Chord(Key.Four).matches(event) -> { { setPriority(id, 4) } }
+            KeyCommand.PLAN_ENTER_TASK.matches(event) -> { { openInspector(id) } }
+            KeyCommand.TASK_TOGGLE_INSPECTOR.matches(event) -> { { openInspector(id) } }
+            KeyCommand.TASK_COMPLETE.matches(event) -> { { toggleComplete(id) } }
+            KeyCommand.TASK_INVALIDATE.matches(event) -> { { toggleInvalidate(id) } }
+            KeyCommand.TASK_INDENT.matches(event) -> { { indent(id) } }
+            KeyCommand.TASK_OUTDENT.matches(event) -> { { outdent(id) } }
+            KeyCommand.TASK_MOVE_UP.matches(event) -> { { moveUp(id) } }
+            KeyCommand.TASK_MOVE_DOWN.matches(event) -> { { moveDown(id) } }
+            KeyCommand.PLAN_TOGGLE_FOLD.matches(event) -> { { toggleFold(id) } }
+            KeyCommand.TASK_DELETE.matches(event) -> { { askDelete(row) } }
+            KeyCommand.TASK_RENAME.matches(event) -> { { askRename(row) } }
+            KeyCommand.TASK_START_FOCUS.matches(event) -> { { startFocus(id) } }
+            KeyCommand.TASK_TOGGLE_PLANNED_TODAY.matches(event) -> { { togglePlannedToday(id) } }
+            KeyCommand.TASK_DUE_TODAY.matches(event) -> { { dueToday(id) } }
+            KeyCommand.TASK_DUE_TOMORROW.matches(event) -> { { dueTomorrow(id) } }
+            KeyCommand.TASK_TOGGLE_DAILY.matches(event) -> { { toggleDaily(id) } }
+            KeyCommand.TASK_HABIT.matches(event) -> { { openHabit(id) } }
+            KeyCommand.TASK_CONVERT_TO_LIST.matches(event) -> { { toggleList(id) } }
+            KeyCommand.TASK_MOVE.matches(event) -> { { askMove(row) } }
+            KeyCommand.TASK_CLEAR_PRIORITY.matches(event) -> { { setPriority(id, null) } }
+            KeyCommand.TASK_SET_PRIORITY.chordIndex(event) >= 0 -> {
+                val priority = KeyCommand.TASK_SET_PRIORITY.chordIndex(event) + 1
+                { setPriority(id, priority) }
+            }
             else -> null
         }
         action?.invoke()

@@ -92,8 +92,10 @@ Last checked against `main` on 6 October 2026.
 
 ## Keyboard-only
 
-These are not on a phone. A hardware keyboard on Android gets the chords
-in `KeyCatalog` and the palette.
+These are not on a phone. A hardware keyboard on Android gets the Mac
+catalogue's chords for the commands it runs (the core's
+`core/src/keymap/catalogue.rs`, read by `KeyCatalog`, ⌘ as Ctrl and ⌥ as
+Alt) and the palette.
 
 | Mac feature | Android |
 | --- | --- |

@@ -1,4 +1,5 @@
 import Foundation
+import TaktRustCore
 
 /// Something wrong with a keymap file, said in a sentence someone editing it
 /// can act on.
@@ -87,269 +88,74 @@ public struct WorkspaceKeymap: Sendable, Equatable {
 
   // MARK: - Reading the file
 
-  /// Reads a keymap file. Never throws: what cannot be read is reported and
-  /// skipped, and an unreadable file is an empty keymap plus one issue.
+  /// Reads a keymap file. Every rule (the blocks, contexts, key spellings,
+  /// command ids, unbinds before binds) is the core's `keymap_parse`; this
+  /// converts its answer. Run once per load of the file.
   public static func parse(_ data: Data) -> (keymap: WorkspaceKeymap, issues: [WorkspaceKeymapIssue]) {
-    // Not UTF-8 is not empty: let the JSON reader say what is wrong with it.
-    let trimmed = (String(bytes: data, encoding: .utf8) ?? "?")
-      .trimmingCharacters(in: .whitespacesAndNewlines)
-    if trimmed.isEmpty { return (.empty, []) }
-
-    let json: Any
-    do {
-      json = try JSONSerialization.jsonObject(with: data, options: [.fragmentsAllowed])
-    } catch {
-      return (.empty, [.init(kind: .unreadableFile, message: "keymap.json is not valid JSON: \(Self.reason(error))")])
+    // Not UTF-8 is not empty: hand the core something it will refuse to read.
+    let text = String(data: data, encoding: .utf8) ?? "\u{FFFD}"
+    let parsed = keymapParse(text: text)
+    let bindings = parsed.bindings.compactMap { binding -> Binding? in
+      let command = binding.command.flatMap(WorkspaceCommandID.init(rawValue:))
+      // The core knows every id in its catalogue; one this build's enum lacks
+      // could not run, so it is dropped as the core would drop an unknown one.
+      if binding.command != nil, command == nil { return nil }
+      return Binding(
+        context: binding.context.map(WorkspaceCommandSurface.init(core:)), key: binding.key, command: command)
     }
-    guard let blocks = json as? [Any] else {
-      return (.empty, [
-        .init(
-          kind: .unreadableFile,
-          message: "keymap.json should be an array of blocks, like [{\"bindings\": {…}}]")
-      ])
-    }
-
-    var issues: [WorkspaceKeymapIssue] = []
-    var bindings: [Binding] = []
-    for (offset, element) in blocks.enumerated() {
-      let label = "Block \(offset + 1)"
-      guard let block = element as? [String: Any] else {
-        issues.append(.init(kind: .malformedBlock, message: "\(label) is not an object; skipped"))
-        continue
-      }
-      var context: WorkspaceCommandSurface?
-      if let rawContext = block["context"], !(rawContext is NSNull) {
-        guard let name = rawContext as? String, let surface = surface(named: name) else {
-          issues.append(
-            .init(
-              kind: .unknownContext,
-              message: "\(label): context \"\(rawContext)\" is not a surface — use one of \(surfaceNames); block skipped"))
-          continue
-        }
-        context = surface == .anywhere ? nil : surface
-      }
-      guard let entries = block["bindings"] as? [String: Any] else {
-        issues.append(.init(kind: .malformedBlock, message: "\(label) has no \"bindings\" object; skipped"))
-        continue
-      }
-
-      var unbinds: [Binding] = []
-      var binds: [Binding] = []
-      for rawKey in entries.keys.sorted() {
-        guard let key = normalizedKey(rawKey, issues: &issues, label: label) else { continue }
-        let value = entries[rawKey]
-        if value is NSNull {
-          unbinds.append(Binding(context: context, key: key, command: nil))
-        } else if let name = value as? String, let id = WorkspaceCommandID(rawValue: name) {
-          binds.append(Binding(context: context, key: key, command: id))
-        } else {
-          issues.append(
-            .init(
-              kind: .unknownCommand,
-              message: "\(label): \"\(rawKey)\" is bound to \(describe(value)), which is not a command id; skipped"))
-        }
-      }
-      bindings += unbinds + binds
-    }
-    return (WorkspaceKeymap(bindings: bindings), issues)
+    return (WorkspaceKeymap(bindings: bindings), parsed.issues.map(WorkspaceKeymapIssue.init(core:)))
   }
 
   // MARK: - Laying it over the catalogue
 
-  /// The catalogue with this keymap applied, plus what could not be applied.
+  /// The bindings laid over `defaults`: the core's `keymap_resolve`, made
+  /// into the Mac's lookup table. Run once per load, never per key press.
   public func resolve(
     over defaults: [WorkspaceCommand] = WorkspaceCommandCatalog.defaults
   ) -> (bindings: WorkspaceKeyBindings, issues: [WorkspaceKeymapIssue]) {
-    var keys = defaults.map(\.keys)
-    var surfaceKeys = defaults.map(\.surfaceKeys)
-    var unbound: [WorkspaceCommandSurface: Set<String>] = [:]
-    var issues: [WorkspaceKeymapIssue] = []
-    let index = Dictionary(defaults.enumerated().map { ($0.element.id, $0.offset) }, uniquingKeysWith: { a, _ in a })
-    /// Who the file itself has given a key on a surface, to name a conflict.
-    var given: [String: WorkspaceCommandID] = [:]
-
-    /// Takes `key` from every row that claims it as `scope`'s own.
-    func release(_ key: String, on scope: WorkspaceCommandSurface) {
-      for row in defaults.indices {
-        if defaults[row].surface == scope { keys[row].removeAll { $0 == key } }
-        surfaceKeys[row][scope]?.removeAll { $0 == key }
-        if surfaceKeys[row][scope]?.isEmpty == true { surfaceKeys[row][scope] = nil }
-      }
+    let resolved = keymapResolve(
+      bindings: bindings.map {
+        KeymapBinding(context: $0.context?.core, key: $0.key, command: $0.command?.rawValue)
+      },
+      defaults: defaults.map(\.core))
+    let commands = zip(defaults, resolved.commands).map { command, entry in
+      command.rebound(
+        keys: entry.keys,
+        surfaceKeys: Dictionary(
+          entry.surfaceKeys.map { (WorkspaceCommandSurface(core: $0.surface), $0.keys) },
+          uniquingKeysWith: { first, _ in first }))
     }
-
-    for binding in bindings {
-      guard let id = binding.command else {
-        if let context = binding.context {
-          release(binding.key, on: context)
-          unbound[context, default: []].insert(binding.key)
-        } else {
-          for row in defaults.indices {
-            keys[row].removeAll { $0 == binding.key }
-            for surface in surfaceKeys[row].keys {
-              surfaceKeys[row][surface]?.removeAll { $0 == binding.key }
-              if surfaceKeys[row][surface]?.isEmpty == true { surfaceKeys[row][surface] = nil }
-            }
-          }
-        }
-        continue
-      }
-      guard let row = index[id] else { continue }
-      let command = defaults[row]
-      let placement = binding.context.map { " on \($0.rawValue)" } ?? ""
-
-      if Self.readsItsKey.contains(id) {
-        issues.append(
-          .init(
-            kind: .notRebindable,
-            message: "\(binding.key)\(placement): \(id.rawValue) acts on which key ran it, so it cannot be rebound; skipped"))
-        continue
-      }
-      if let context = binding.context, command.surface != .anywhere, command.surface != context {
-        issues.append(
-          .init(
-            kind: .wrongSurface,
-            message: "\(binding.key) on \(context.rawValue): \(id.rawValue) only runs on \(command.surface.rawValue); skipped"))
-        continue
-      }
-
-      let scope = binding.context ?? command.surface
-      let slot = "\(scope.rawValue)/\(binding.key)"
-      if let earlier = given[slot], earlier != id {
-        issues.append(
-          .init(
-            kind: .conflict,
-            message: "\(binding.key) on \(scope.rawValue) is bound to both \(earlier.rawValue) and \(id.rawValue); \(id.rawValue) wins"))
-      }
-      given[slot] = id
-
-      release(binding.key, on: scope)
-      if binding.context == nil || binding.context == command.surface {
-        keys[row].append(binding.key)
-      } else if let context = binding.context {
-        surfaceKeys[row][context, default: []].append(binding.key)
-      }
-    }
-
-    let commands = defaults.indices.map { row in
-      defaults[row].rebound(keys: keys[row], surfaceKeys: surfaceKeys[row])
-    }
-    return (WorkspaceKeyBindings(commands: commands, unbound: unbound), issues)
+    let unbound = Dictionary(
+      resolved.unbound.map { (WorkspaceCommandSurface(core: $0.surface), Set($0.keys)) },
+      uniquingKeysWith: { first, _ in first })
+    return (
+      WorkspaceKeyBindings(commands: commands, unbound: unbound),
+      resolved.issues.map(WorkspaceKeymapIssue.init(core:))
+    )
   }
 
-  /// Commands whose handler reads the key that ran it — which digit, which
-  /// arrow — and so do nothing useful from any other key. Their keys can be
-  /// unbound, but nothing can be bound to them.
-  public static let readsItsKey: Set<WorkspaceCommandID> = [
-    .goCycleRegion, .planMatrixPlace, .listNewTaskDestination,
-    .motionSelectEnds, .motionSelectPage, .motionSidebarSelect, .motionBoardColumn,
-    .motionSetPriority, .motionDoneSelect, .motionTimelineSelect, .motionConditionsSelect,
-  ]
+  /// Commands that act on which key ran them, so another key cannot stand in.
+  public static let readsItsKey: Set<WorkspaceCommandID> = Set(
+    keymapReadsItsKey().compactMap(WorkspaceCommandID.init(rawValue:)))
 
   // MARK: - Spelling a key
 
-  /// A key as the user wrote it, in the catalogue's spelling, or `nil` with an
-  /// issue when no key press can produce it.
-  ///
-  /// Accepts `+` or Zed's `-` between parts, the usual aliases (`command`,
-  /// `alt`, `return`, `esc`, `backspace`) and modifiers in any order.
+  /// `raw` in the catalogue's spelling: modifiers in the order `cmd`, `ctrl`,
+  /// `option`, `shift`, then the key. The core's `keymap_normalized_key`.
   public static func normalizedKey(_ raw: String) -> Result<String, WorkspaceKeymapIssue> {
-    var issues: [WorkspaceKeymapIssue] = []
-    if let key = normalizedKey(raw, issues: &issues, label: nil) { return .success(key) }
-    return .failure(issues.first ?? .init(kind: .malformedKey, message: "\"\(raw)\" is not a key"))
+    do {
+      return .success(try keymapNormalizedKey(raw: raw))
+    } catch KeymapKeyError.Malformed(let reason) {
+      return .failure(.init(kind: .malformedKey, message: reason))
+    } catch {
+      return .failure(.init(kind: .malformedKey, message: "\"\(raw)\" is not a key"))
+    }
   }
-
-  private static func normalizedKey(
-    _ raw: String,
-    issues: inout [WorkspaceKeymapIssue],
-    label: String?
-  ) -> String? {
-    let prefix = label.map { "\($0): " } ?? ""
-    func reject(_ why: String) -> String? {
-      issues.append(.init(kind: .malformedKey, message: "\(prefix)\"\(raw)\" \(why); skipped"))
-      return nil
-    }
-
-    let token = raw.trimmingCharacters(in: .whitespaces).lowercased()
-    guard !token.isEmpty else { return reject("is empty") }
-    var parts = split(token)
-    guard let rawBase = parts.popLast(), !rawBase.isEmpty else { return reject("has no key after its modifiers") }
-
-    var modifiers: Set<String> = []
-    for part in parts {
-      guard let modifier = modifierAliases[part] else {
-        return reject("has \"\(part)\" where a modifier should be — use cmd, ctrl, option or shift")
-      }
-      modifiers.insert(modifier)
-    }
-
-    let base = baseAliases[rawBase] ?? rawBase
-    let isNamed = WorkspaceCommandCatalog.keyNames.contains(base)
-    let isCharacter = base.count == 1
-    let isSequence = WorkspaceCommandCatalog.isSequence(base)
-    guard isNamed || isCharacter || isSequence else {
-      return reject("is not a key Takt can recognise")
-    }
-    if isSequence && !modifiers.isEmpty {
-      return reject("puts a modifier on a two-letter sequence, which is typed as two plain letters")
-    }
-    if isCharacter && !isNamed && modifiers == ["shift"] && base.first?.isLetter != true {
-      return reject("holds Shift on a character, which is already in the character — write the character itself, such as \"?\"")
-    }
-
-    let ordered = ["cmd", "ctrl", "option", "shift"].filter(modifiers.contains)
-    return (ordered + [base]).joined(separator: "+")
-  }
-
-  /// `cmd+k`, `cmd-k`, `cmd++`, `-`.
-  private static func split(_ token: String) -> [String] {
-    if token.count == 1 { return [token] }
-    let separator: Character = token.contains("+") ? "+" : "-"
-    var parts = token.split(separator: separator, omittingEmptySubsequences: false).map(String.init)
-    // A trailing separator is the key itself: `cmd++`, `ctrl--`.
-    if parts.count >= 2, parts.last == "", parts[parts.count - 2] == "" {
-      parts.removeLast(2)
-      parts.append(String(separator))
-    }
-    return parts
-  }
-
-  private static let modifierAliases: [String: String] = [
-    "cmd": "cmd", "command": "cmd", "⌘": "cmd", "super": "cmd",
-    "ctrl": "ctrl", "control": "ctrl", "⌃": "ctrl",
-    "option": "option", "opt": "option", "alt": "option", "⌥": "option",
-    "shift": "shift", "⇧": "shift",
-  ]
-
-  private static let baseAliases: [String: String] = [
-    "return": "enter", "esc": "escape", "backspace": "delete", "del": "delete",
-    "pgup": "pageup", "pgdn": "pagedown", "page_up": "pageup", "page_down": "pagedown",
-    ",": "comma", " ": "space",
-    "↑": "up", "↓": "down", "←": "left", "→": "right",
-  ]
 
   // MARK: - Helpers
 
+  /// The surface a keymap `context` names, ignoring case.
   public static func surface(named name: String) -> WorkspaceCommandSurface? {
-    let wanted = name.trimmingCharacters(in: .whitespaces).lowercased()
-    return WorkspaceCommandSurface.allCases.first { $0.rawValue.lowercased() == wanted }
-  }
-
-  private static var surfaceNames: String {
-    WorkspaceCommandSurface.allCases.map(\.rawValue).joined(separator: ", ")
-  }
-
-  private static func describe(_ value: Any?) -> String {
-    switch value {
-    case let string as String: return "\"\(string)\""
-    case let number as NSNumber: return "\(number)"
-    case is [Any]: return "an array"
-    case is [String: Any]: return "an object"
-    default: return "nothing"
-    }
-  }
-
-  private static func reason(_ error: Error) -> String {
-    let nsError = error as NSError
-    return (nsError.userInfo[NSDebugDescriptionErrorKey] as? String) ?? nsError.localizedDescription
+    keymapSurfaceNamed(name: name).map(WorkspaceCommandSurface.init(core:))
   }
 }

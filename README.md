@@ -150,8 +150,8 @@ arrows to Spaces and Mission Control.
 
 The table above is the short version. The complete one is in the app: `Cmd+K`,
 or a **double-tap of Shift**, opens the palette, and `Cmd+/` — or the keyboard icon in
-the status bar — shows the same commands as a grouped reference. Both are rendered from a single catalogue in
-`Sources/TaktCore/WorkspaceCommandCatalog.swift`, which is also what the
+the status bar — shows the same commands as a grouped reference. Both are rendered from a single catalogue, the Rust core's
+`core/src/keymap/catalogue.rs` read through `WorkspaceCommandCatalog`, which is also what the
 key router dispatches through — so a key, a palette row and a reference row
 cannot disagree about what happens. [`docs/keyboard-shortcuts.md`](docs/keyboard-shortcuts.md)
 covers the behaviour a table cannot: sequence timing, which keys survive a text

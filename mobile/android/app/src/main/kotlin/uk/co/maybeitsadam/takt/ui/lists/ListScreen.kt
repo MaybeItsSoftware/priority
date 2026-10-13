@@ -25,7 +25,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
@@ -34,7 +33,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.collections.immutable.toImmutableList
 import uk.co.maybeitsadam.takt.core.TaskListRole
-import uk.co.maybeitsadam.takt.ui.commands.Chord
 import uk.co.maybeitsadam.takt.ui.commands.KeyCommand
 import uk.co.maybeitsadam.takt.ui.commands.RegisterCommands
 import uk.co.maybeitsadam.takt.ui.components.IconAction
@@ -116,11 +114,11 @@ internal fun ListContent(route: ListRoute, showBack: Boolean, onClose: () -> Uni
             .onPreviewKeyEvent { event ->
                 if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
                 when {
-                    Chord(Key.Two, ctrl = true).matches(event) -> vm.setViewMode(ListViewMode.BOARD)
-                    Chord(Key.Three, ctrl = true).matches(event) -> vm.setViewMode(ListViewMode.OUTLINE)
-                    Chord(Key.Four, ctrl = true).matches(event) -> vm.setViewMode(ListViewMode.MATRIX)
-                    Chord(Key.R, ctrl = true).matches(event) && canEditList -> dialog = ListDialog.RenameList
-                    Chord(Key.X, ctrl = true, shift = true).matches(event) && canEditList -> vm.toggleCompleted()
+                    KeyCommand.GO_BOARD.matchesShortcut(event) -> vm.setViewMode(ListViewMode.BOARD)
+                    KeyCommand.GO_OUTLINE.matchesShortcut(event) -> vm.setViewMode(ListViewMode.OUTLINE)
+                    KeyCommand.GO_MATRIX.matchesShortcut(event) -> vm.setViewMode(ListViewMode.MATRIX)
+                    KeyCommand.LIST_RENAME.matchesShortcut(event) && canEditList -> dialog = ListDialog.RenameList
+                    KeyCommand.LIST_COMPLETE.matchesShortcut(event) && canEditList -> vm.toggleCompleted()
                     else -> return@onPreviewKeyEvent false
                 }
                 true

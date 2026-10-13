@@ -829,6 +829,20 @@ internal object IntegrityCheckingUniffiLib {
     ): Int
     external fun uniffi_takt_core_checksum_func_google_tasks_plan(
     ): Int
+    external fun uniffi_takt_core_checksum_func_keyboard_chord(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_keymap_normalized_key(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_keymap_parse(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_keymap_reads_its_key(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_keymap_resolve(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_keymap_surface_named(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_workspace_command_catalog(
+    ): Int
     external fun uniffi_takt_core_checksum_func_task_planning_decode(
     ): Int
     external fun uniffi_takt_core_checksum_func_task_planning_encode(
@@ -2001,6 +2015,20 @@ internal object UniffiLib {
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_func_google_tasks_plan(`localLists`: RustBuffer.ByValue,`localTasks`: RustBuffer.ByValue,`remoteLists`: RustBuffer.ByValue,`remoteTasks`: RustBuffer.ByValue,`ledgerTasks`: RustBuffer.ByValue,`ledgerLists`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_keyboard_chord(`key`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_keymap_normalized_key(`raw`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_keymap_parse(`text`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_keymap_reads_its_key(uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_keymap_resolve(`bindings`: RustBuffer.ByValue,`defaults`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_keymap_surface_named(`name`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_workspace_command_catalog(uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_func_task_planning_decode(`json`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_func_task_planning_encode(`planning`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
@@ -2543,6 +2571,27 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_func_google_tasks_plan() and 0xFFFF) != 64663) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_keyboard_chord() and 0xFFFF) != 53307) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_keymap_normalized_key() and 0xFFFF) != 45855) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_keymap_parse() and 0xFFFF) != 50225) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_keymap_reads_its_key() and 0xFFFF) != 30151) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_keymap_resolve() and 0xFFFF) != 22009) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_keymap_surface_named() and 0xFFFF) != 19260) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_workspace_command_catalog() and 0xFFFF) != 5765) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_func_task_planning_decode() and 0xFFFF) != 24542) {
@@ -10559,6 +10608,88 @@ public object FfiConverterTypeCliCredentials: FfiConverterRustBuffer<CliCredenti
 
 
 /**
+ * One row of the catalogue.
+ */
+data class CommandEntry (
+    var `id`: kotlin.String
+    , 
+    var `title`: kotlin.String
+    , 
+    var `group`: kotlin.String
+    , 
+    /**
+     * The keys it answers to on its own surface (everywhere, for `Anywhere`).
+     */
+    var `keys`: List<kotlin.String>
+    , 
+    /**
+     * Keys it answers to on one other surface as though it were that
+     * surface's own row, in surface order.
+     */
+    var `surfaceKeys`: List<SurfaceKeys>
+    , 
+    var `surface`: CommandSurface
+    , 
+    /**
+     * A motion moves the cursor from where it is, so a palette lists it but
+     * cannot run it.
+     */
+    var `motion`: kotlin.Boolean
+    , 
+    var `note`: kotlin.String?
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeCommandEntry: FfiConverterRustBuffer<CommandEntry> {
+    override fun read(buf: ByteBuffer): CommandEntry {
+        return CommandEntry(
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterSequenceString.read(buf),
+            FfiConverterSequenceTypeSurfaceKeys.read(buf),
+            FfiConverterTypeCommandSurface.read(buf),
+            FfiConverterBoolean.read(buf),
+            FfiConverterOptionalString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: CommandEntry) = (
+            FfiConverterString.allocationSize(value.`id`) +
+            FfiConverterString.allocationSize(value.`title`) +
+            FfiConverterString.allocationSize(value.`group`) +
+            FfiConverterSequenceString.allocationSize(value.`keys`) +
+            FfiConverterSequenceTypeSurfaceKeys.allocationSize(value.`surfaceKeys`) +
+            FfiConverterTypeCommandSurface.allocationSize(value.`surface`) +
+            FfiConverterBoolean.allocationSize(value.`motion`) +
+            FfiConverterOptionalString.allocationSize(value.`note`)
+    )
+
+    override fun write(value: CommandEntry, buf: ByteBuffer) {
+            FfiConverterString.write(value.`id`, buf)
+            FfiConverterString.write(value.`title`, buf)
+            FfiConverterString.write(value.`group`, buf)
+            FfiConverterSequenceString.write(value.`keys`, buf)
+            FfiConverterSequenceTypeSurfaceKeys.write(value.`surfaceKeys`, buf)
+            FfiConverterTypeCommandSurface.write(value.`surface`, buf)
+            FfiConverterBoolean.write(value.`motion`, buf)
+            FfiConverterOptionalString.write(value.`note`, buf)
+    }
+}
+
+
+
+/**
  * One live commitment.
  */
 data class Commitment (
@@ -15312,6 +15443,250 @@ public object FfiConverterTypeIncomingRow: FfiConverterRustBuffer<IncomingRow> {
 
 
 /**
+ * A key in the catalogue's spelling, taken apart for a toolkit's own key
+ * type: its modifiers and the key itself (a character, or one of
+ * [`KEY_NAMES`]).
+ */
+data class KeyboardChord (
+    var `cmd`: kotlin.Boolean
+    , 
+    var `ctrl`: kotlin.Boolean
+    , 
+    var `option`: kotlin.Boolean
+    , 
+    var `shift`: kotlin.Boolean
+    , 
+    var `key`: kotlin.String
+    , 
+    /**
+     * No modifier at all on a key that types or edits text (a character,
+     * enter, tab, delete): a text field keeps it, so a hardware keyboard
+     * shortcut on a phone must not claim it. Bare arrows and space are fine.
+     */
+    var `belongsToTyping`: kotlin.Boolean
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeKeyboardChord: FfiConverterRustBuffer<KeyboardChord> {
+    override fun read(buf: ByteBuffer): KeyboardChord {
+        return KeyboardChord(
+            FfiConverterBoolean.read(buf),
+            FfiConverterBoolean.read(buf),
+            FfiConverterBoolean.read(buf),
+            FfiConverterBoolean.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterBoolean.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: KeyboardChord) = (
+            FfiConverterBoolean.allocationSize(value.`cmd`) +
+            FfiConverterBoolean.allocationSize(value.`ctrl`) +
+            FfiConverterBoolean.allocationSize(value.`option`) +
+            FfiConverterBoolean.allocationSize(value.`shift`) +
+            FfiConverterString.allocationSize(value.`key`) +
+            FfiConverterBoolean.allocationSize(value.`belongsToTyping`)
+    )
+
+    override fun write(value: KeyboardChord, buf: ByteBuffer) {
+            FfiConverterBoolean.write(value.`cmd`, buf)
+            FfiConverterBoolean.write(value.`ctrl`, buf)
+            FfiConverterBoolean.write(value.`option`, buf)
+            FfiConverterBoolean.write(value.`shift`, buf)
+            FfiConverterString.write(value.`key`, buf)
+            FfiConverterBoolean.write(value.`belongsToTyping`, buf)
+    }
+}
+
+
+
+/**
+ * One binding a keymap file asks for. `command` is `None` to unbind.
+ */
+data class KeymapBinding (
+    var `context`: CommandSurface?
+    , 
+    var `key`: kotlin.String
+    , 
+    var `command`: kotlin.String?
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeKeymapBinding: FfiConverterRustBuffer<KeymapBinding> {
+    override fun read(buf: ByteBuffer): KeymapBinding {
+        return KeymapBinding(
+            FfiConverterOptionalTypeCommandSurface.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterOptionalString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: KeymapBinding) = (
+            FfiConverterOptionalTypeCommandSurface.allocationSize(value.`context`) +
+            FfiConverterString.allocationSize(value.`key`) +
+            FfiConverterOptionalString.allocationSize(value.`command`)
+    )
+
+    override fun write(value: KeymapBinding, buf: ByteBuffer) {
+            FfiConverterOptionalTypeCommandSurface.write(value.`context`, buf)
+            FfiConverterString.write(value.`key`, buf)
+            FfiConverterOptionalString.write(value.`command`, buf)
+    }
+}
+
+
+
+/**
+ * An issue, said in a sentence someone editing the file can act on.
+ */
+data class KeymapIssue (
+    var `kind`: KeymapIssueKind
+    , 
+    var `message`: kotlin.String
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeKeymapIssue: FfiConverterRustBuffer<KeymapIssue> {
+    override fun read(buf: ByteBuffer): KeymapIssue {
+        return KeymapIssue(
+            FfiConverterTypeKeymapIssueKind.read(buf),
+            FfiConverterString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: KeymapIssue) = (
+            FfiConverterTypeKeymapIssueKind.allocationSize(value.`kind`) +
+            FfiConverterString.allocationSize(value.`message`)
+    )
+
+    override fun write(value: KeymapIssue, buf: ByteBuffer) {
+            FfiConverterTypeKeymapIssueKind.write(value.`kind`, buf)
+            FfiConverterString.write(value.`message`, buf)
+    }
+}
+
+
+
+data class KeymapParse (
+    var `bindings`: List<KeymapBinding>
+    , 
+    var `issues`: List<KeymapIssue>
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeKeymapParse: FfiConverterRustBuffer<KeymapParse> {
+    override fun read(buf: ByteBuffer): KeymapParse {
+        return KeymapParse(
+            FfiConverterSequenceTypeKeymapBinding.read(buf),
+            FfiConverterSequenceTypeKeymapIssue.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: KeymapParse) = (
+            FfiConverterSequenceTypeKeymapBinding.allocationSize(value.`bindings`) +
+            FfiConverterSequenceTypeKeymapIssue.allocationSize(value.`issues`)
+    )
+
+    override fun write(value: KeymapParse, buf: ByteBuffer) {
+            FfiConverterSequenceTypeKeymapBinding.write(value.`bindings`, buf)
+            FfiConverterSequenceTypeKeymapIssue.write(value.`issues`, buf)
+    }
+}
+
+
+
+data class KeymapResolution (
+    /**
+     * The commands passed, in their order, with the keys in force.
+     */
+    var `commands`: List<CommandEntry>
+    , 
+    /**
+     * Keys taken away from a surface by a `null` in a block naming it: a
+     * surface's own rows still answer, but the key is no longer inherited
+     * from `Anywhere`.
+     */
+    var `unbound`: List<SurfaceKeys>
+    , 
+    var `issues`: List<KeymapIssue>
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeKeymapResolution: FfiConverterRustBuffer<KeymapResolution> {
+    override fun read(buf: ByteBuffer): KeymapResolution {
+        return KeymapResolution(
+            FfiConverterSequenceTypeCommandEntry.read(buf),
+            FfiConverterSequenceTypeSurfaceKeys.read(buf),
+            FfiConverterSequenceTypeKeymapIssue.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: KeymapResolution) = (
+            FfiConverterSequenceTypeCommandEntry.allocationSize(value.`commands`) +
+            FfiConverterSequenceTypeSurfaceKeys.allocationSize(value.`unbound`) +
+            FfiConverterSequenceTypeKeymapIssue.allocationSize(value.`issues`)
+    )
+
+    override fun write(value: KeymapResolution, buf: ByteBuffer) {
+            FfiConverterSequenceTypeCommandEntry.write(value.`commands`, buf)
+            FfiConverterSequenceTypeSurfaceKeys.write(value.`unbound`, buf)
+            FfiConverterSequenceTypeKeymapIssue.write(value.`issues`, buf)
+    }
+}
+
+
+
+/**
  * A daily from before the workspace kept them, as the old plugin stored it.
  */
 data class LegacyDailySeed (
@@ -17590,6 +17965,47 @@ public object FfiConverterTypeSidebarOutlineRow: FfiConverterRustBuffer<SidebarO
 
 
 /**
+ * Keys a command answers to on one surface only.
+ */
+data class SurfaceKeys (
+    var `surface`: CommandSurface
+    , 
+    var `keys`: List<kotlin.String>
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeSurfaceKeys: FfiConverterRustBuffer<SurfaceKeys> {
+    override fun read(buf: ByteBuffer): SurfaceKeys {
+        return SurfaceKeys(
+            FfiConverterTypeCommandSurface.read(buf),
+            FfiConverterSequenceString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: SurfaceKeys) = (
+            FfiConverterTypeCommandSurface.allocationSize(value.`surface`) +
+            FfiConverterSequenceString.allocationSize(value.`keys`)
+    )
+
+    override fun write(value: SurfaceKeys, buf: ByteBuffer) {
+            FfiConverterTypeCommandSurface.write(value.`surface`, buf)
+            FfiConverterSequenceString.write(value.`keys`, buf)
+    }
+}
+
+
+
+/**
  * `GET /v1/account`: who this device is signed in as, and every device on
  * the account.
  */
@@ -19444,6 +19860,52 @@ public object FfiConverterTypeClientConfigError : FfiConverterRustBuffer<ClientC
 
 
 /**
+ * Where a command applies. A surface is what is in the main pane, except
+ * `Sidebar` and `Inspector`, whose keys belong to a region.
+ */
+
+enum class CommandSurface {
+    
+    ANYWHERE,
+    TODAY,
+    BOARD,
+    OUTLINE,
+    MATRIX,
+    SIDEBAR,
+    INSPECTOR,
+    TIMELINE,
+    DONE,
+    CONDITIONS;
+
+    
+
+
+    companion object
+}
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeCommandSurface: FfiConverterRustBuffer<CommandSurface> {
+    override fun read(buf: ByteBuffer) = try {
+        CommandSurface.values()[buf.getInt() - 1]
+    } catch (e: IndexOutOfBoundsException) {
+        throw RuntimeException("invalid enum value, something is very wrong!!", e)
+    }
+
+    override fun allocationSize(value: CommandSurface) = 4UL
+
+    override fun write(value: CommandSurface, buf: ByteBuffer) {
+        buf.putInt(value.ordinal + 1)
+    }
+}
+
+
+
+
+
+/**
  * How far back a day is from today, as a relation. `CompletedWorkDayKind`.
  */
 
@@ -21257,6 +21719,135 @@ public object FfiConverterTypeGoogleTasksOperation : FfiConverterRustBuffer<Goog
 }
 
 
+
+
+
+/**
+ * What went wrong with part of a keymap file.
+ */
+
+enum class KeymapIssueKind {
+    
+    /**
+     * Not JSON, or not an array of blocks. Nothing in the file applies.
+     */
+    UNREADABLE_FILE,
+    /**
+     * A block that is not an object with a `bindings` object.
+     */
+    MALFORMED_BLOCK,
+    /**
+     * A `context` that names no surface.
+     */
+    UNKNOWN_CONTEXT,
+    /**
+     * A command id the catalogue does not have.
+     */
+    UNKNOWN_COMMAND,
+    /**
+     * A key no key press can be spelled as.
+     */
+    MALFORMED_KEY,
+    /**
+     * A command that reads which key ran it.
+     */
+    NOT_REBINDABLE,
+    /**
+     * A command that belongs to one surface, bound in another's context.
+     */
+    WRONG_SURFACE,
+    /**
+     * One key bound to two commands on one surface. The later wins.
+     */
+    CONFLICT;
+
+    
+
+
+    companion object
+}
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeKeymapIssueKind: FfiConverterRustBuffer<KeymapIssueKind> {
+    override fun read(buf: ByteBuffer) = try {
+        KeymapIssueKind.values()[buf.getInt() - 1]
+    } catch (e: IndexOutOfBoundsException) {
+        throw RuntimeException("invalid enum value, something is very wrong!!", e)
+    }
+
+    override fun allocationSize(value: KeymapIssueKind) = 4UL
+
+    override fun write(value: KeymapIssueKind, buf: ByteBuffer) {
+        buf.putInt(value.ordinal + 1)
+    }
+}
+
+
+
+
+
+
+
+sealed class KeymapKeyException: kotlin.Exception() {
+    
+    class Malformed(
+        
+        val `reason`: kotlin.String
+        ) : KeymapKeyException() {
+        override val message
+            get() = "reason=${ `reason` }"
+    }
+    
+
+    
+
+
+    companion object ErrorHandler : UniffiRustCallStatusErrorHandler<KeymapKeyException> {
+        override fun lift(error_buf: RustBuffer.ByValue): KeymapKeyException = FfiConverterTypeKeymapKeyError.lift(error_buf)
+    }
+
+    
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeKeymapKeyError : FfiConverterRustBuffer<KeymapKeyException> {
+    override fun read(buf: ByteBuffer): KeymapKeyException {
+        
+
+        return when(buf.getInt()) {
+            1 -> KeymapKeyException.Malformed(
+                FfiConverterString.read(buf),
+                )
+            else -> throw RuntimeException("invalid error enum value, something is very wrong!!")
+        }
+    }
+
+    override fun allocationSize(value: KeymapKeyException): ULong {
+        return when(value) {
+            is KeymapKeyException.Malformed -> (
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                4UL
+                + FfiConverterString.allocationSize(value.`reason`)
+            )
+        }
+    }
+
+    override fun write(value: KeymapKeyException, buf: ByteBuffer) {
+        when(value) {
+            is KeymapKeyException.Malformed -> {
+                buf.putInt(1)
+                FfiConverterString.write(value.`reason`, buf)
+                Unit
+            }
+        }.let { /* this makes the `when` an expression, which ensures it is exhaustive */ }
+    }
+
+}
 
 
 
@@ -24219,6 +24810,38 @@ public object FfiConverterOptionalTypeImportOutcome: FfiConverterRustBuffer<Impo
 /**
  * @suppress
  */
+public object FfiConverterOptionalTypeKeyboardChord: FfiConverterRustBuffer<KeyboardChord?> {
+    override fun read(buf: ByteBuffer): KeyboardChord? {
+        if (buf.get().toInt() == 0) {
+            return null
+        }
+        return FfiConverterTypeKeyboardChord.read(buf)
+    }
+
+    override fun allocationSize(value: KeyboardChord?): ULong {
+        if (value == null) {
+            return 1UL
+        } else {
+            return 1UL + FfiConverterTypeKeyboardChord.allocationSize(value)
+        }
+    }
+
+    override fun write(value: KeyboardChord?, buf: ByteBuffer) {
+        if (value == null) {
+            buf.put(0)
+        } else {
+            buf.put(1)
+            FfiConverterTypeKeyboardChord.write(value, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
 public object FfiConverterOptionalTypeListRow: FfiConverterRustBuffer<ListRow?> {
     override fun read(buf: ByteBuffer): ListRow? {
         if (buf.get().toInt() == 0) {
@@ -24465,6 +25088,38 @@ public object FfiConverterOptionalTypeTaskRow: FfiConverterRustBuffer<TaskRow?> 
         } else {
             buf.put(1)
             FfiConverterTypeTaskRow.write(value, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterOptionalTypeCommandSurface: FfiConverterRustBuffer<CommandSurface?> {
+    override fun read(buf: ByteBuffer): CommandSurface? {
+        if (buf.get().toInt() == 0) {
+            return null
+        }
+        return FfiConverterTypeCommandSurface.read(buf)
+    }
+
+    override fun allocationSize(value: CommandSurface?): ULong {
+        if (value == null) {
+            return 1UL
+        } else {
+            return 1UL + FfiConverterTypeCommandSurface.allocationSize(value)
+        }
+    }
+
+    override fun write(value: CommandSurface?, buf: ByteBuffer) {
+        if (value == null) {
+            buf.put(0)
+        } else {
+            buf.put(1)
+            FfiConverterTypeCommandSurface.write(value, buf)
         }
     }
 }
@@ -25321,6 +25976,34 @@ public object FfiConverterSequenceTypeCheckvistTaskRow: FfiConverterRustBuffer<L
         buf.putInt(value.size)
         value.iterator().forEach {
             FfiConverterTypeCheckvistTaskRow.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceTypeCommandEntry: FfiConverterRustBuffer<List<CommandEntry>> {
+    override fun read(buf: ByteBuffer): List<CommandEntry> {
+        val len = buf.getInt()
+        return List<CommandEntry>(len) {
+            FfiConverterTypeCommandEntry.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<CommandEntry>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeCommandEntry.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<CommandEntry>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeCommandEntry.write(it, buf)
         }
     }
 }
@@ -26339,6 +27022,62 @@ public object FfiConverterSequenceTypeIncomingRow: FfiConverterRustBuffer<List<I
 /**
  * @suppress
  */
+public object FfiConverterSequenceTypeKeymapBinding: FfiConverterRustBuffer<List<KeymapBinding>> {
+    override fun read(buf: ByteBuffer): List<KeymapBinding> {
+        val len = buf.getInt()
+        return List<KeymapBinding>(len) {
+            FfiConverterTypeKeymapBinding.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<KeymapBinding>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeKeymapBinding.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<KeymapBinding>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeKeymapBinding.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceTypeKeymapIssue: FfiConverterRustBuffer<List<KeymapIssue>> {
+    override fun read(buf: ByteBuffer): List<KeymapIssue> {
+        val len = buf.getInt()
+        return List<KeymapIssue>(len) {
+            FfiConverterTypeKeymapIssue.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<KeymapIssue>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeKeymapIssue.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<KeymapIssue>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeKeymapIssue.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
 public object FfiConverterSequenceTypeLegacyDailySeed: FfiConverterRustBuffer<List<LegacyDailySeed>> {
     override fun read(buf: ByteBuffer): List<LegacyDailySeed> {
         val len = buf.getInt()
@@ -26917,6 +27656,34 @@ public object FfiConverterSequenceTypeSidebarOutlineRow: FfiConverterRustBuffer<
         buf.putInt(value.size)
         value.iterator().forEach {
             FfiConverterTypeSidebarOutlineRow.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceTypeSurfaceKeys: FfiConverterRustBuffer<List<SurfaceKeys>> {
+    override fun read(buf: ByteBuffer): List<SurfaceKeys> {
+        val len = buf.getInt()
+        return List<SurfaceKeys>(len) {
+            FfiConverterTypeSurfaceKeys.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<SurfaceKeys>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeSurfaceKeys.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<SurfaceKeys>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeSurfaceKeys.write(it, buf)
         }
     }
 }
@@ -28835,6 +29602,111 @@ public object FfiConverterMapStringTypeSyncValue: FfiConverterRustBuffer<Map<kot
         FfiConverterSequenceTypeGoogleTasksRemoteTask.lower(`remoteTasks`),
         FfiConverterSequenceTypeGoogleTasksLedgerEntry.lower(`ledgerTasks`),
         FfiConverterSequenceTypeGoogleTasksListMapping.lower(`ledgerLists`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * `cmd+shift+z` taken apart; `None` for a two-letter sequence, which no
+         * single key press is, or for a spelling that is not the catalogue's.
+         */ fun `keyboardChord`(`key`: kotlin.String): KeyboardChord? {
+            return FfiConverterOptionalTypeKeyboardChord.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_keyboard_chord(
+    
+        
+        FfiConverterString.lower(`key`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * `raw` in the catalogue's spelling, or why it cannot be a key.
+         */
+    @Throws(KeymapKeyException::class) fun `keymapNormalizedKey`(`raw`: kotlin.String): kotlin.String {
+            return FfiConverterString.lift(
+    uniffiRustCallWithError(KeymapKeyException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_keymap_normalized_key(
+    
+        
+        FfiConverterString.lower(`raw`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * Reads a keymap file. An empty file is no bindings. Within a block, the
+         * unbinds come before the binds, each in key order, so unbinding and
+         * rebinding one key in a block does not depend on the order written.
+         */ fun `keymapParse`(`text`: kotlin.String): KeymapParse {
+            return FfiConverterTypeKeymapParse.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_keymap_parse(
+    
+        
+        FfiConverterString.lower(`text`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * The command ids that cannot be rebound; see [`READS_ITS_KEY`].
+         */ fun `keymapReadsItsKey`(): List<kotlin.String> {
+            return FfiConverterSequenceString.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_keymap_reads_its_key(
+    
+        _status)
+}
+    )
+    }
+    
+
+        /**
+         * Lays `bindings` over `defaults` (the catalogue, normally). A binding
+         * without a context adds the key on the command's own surface; one with a
+         * context adds it there, as one of that surface's own keys. Either takes the
+         * key from whatever held it on that surface. `null` without a context
+         * unbinds the key everywhere; with one, on that surface only.
+         */ fun `keymapResolve`(`bindings`: List<KeymapBinding>, `defaults`: List<CommandEntry>): KeymapResolution {
+            return FfiConverterTypeKeymapResolution.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_keymap_resolve(
+    
+        
+        FfiConverterSequenceTypeKeymapBinding.lower(`bindings`),
+        FfiConverterSequenceTypeCommandEntry.lower(`defaults`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * The surface a keymap `context` names, ignoring case and outer spaces.
+         */ fun `keymapSurfaceNamed`(`name`: kotlin.String): CommandSurface? {
+            return FfiConverterOptionalTypeCommandSurface.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_keymap_surface_named(
+    
+        
+        FfiConverterString.lower(`name`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * Every command, in catalogue order, with its shipped keys.
+         */ fun `workspaceCommandCatalog`(): List<CommandEntry> {
+            return FfiConverterSequenceTypeCommandEntry.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_workspace_command_catalog(
+    
+        _status)
 }
     )
     }

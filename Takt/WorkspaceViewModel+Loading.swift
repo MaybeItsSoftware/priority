@@ -261,7 +261,6 @@ extension WorkspaceViewModel {
     try store.visibleRootParentTaskID(for: list)
   }
 
-
 }
 
 /// What a board's columns were read for. See `readBoardColumns(store:)`.

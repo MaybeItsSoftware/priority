@@ -12,6 +12,13 @@ final class WorkspaceCommandCatalogTests: XCTestCase {
     XCTAssertEqual(WorkspaceCommandCatalog.all.count, WorkspaceCommandID.allCases.count)
   }
 
+  /// The entries are the core's (`core/src/keymap/catalogue.rs`); one with no
+  /// `WorkspaceCommandID` case could never run on the Mac.
+  func testEveryCoreEntryHasACommandID() {
+    let unknown = WorkspaceCommandCatalog.coreEntries.map(\.id).filter { WorkspaceCommandID(rawValue: $0) == nil }
+    XCTAssertTrue(unknown.isEmpty, "core entries with no WorkspaceCommandID case: \(unknown)")
+  }
+
   func testNoCommandIsListedTwice() {
     var seen: Set<WorkspaceCommandID> = []
     for command in WorkspaceCommandCatalog.all {

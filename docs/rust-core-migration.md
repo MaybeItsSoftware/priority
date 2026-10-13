@@ -577,13 +577,13 @@ covered the old copies pass against it.
     | Habit form, recurrence presets, requirement groups, blocker picker | Kotlin `HabitFormLogic`, `InspectorLogic`; Mac overlays | Mac + Kotlin | native: per-tap form state over values the core validates on save |
     | Undo history travel (`undoCount/redoCount`) | iOS `UndoHistory`, Kotlin `UndoCenter` | both | native: counts over the core's history rows, one subtraction |
     | Widget precedence (`NextUpSummary`, `WidgetSnapshotBuilder`) | iOS, Kotlin | both | native: picks the head of the core's next-up answer |
-    | Keyboard chord parsing | iOS `KeyboardCommands.parse`, Kotlin `KeyCatalog.Chord` | both | move with the keymap (below) if the phones take the keymap file; until then native, as each maps to its own toolkit's key type |
+    | Keyboard chord parsing | iOS `KeyboardCommands.parse`, Kotlin `KeyCatalog.Chord` | both | **done 2026-10-13**: `keyboard_chord` in `keymap.rs`, read by the iPhone through `WorkspaceKeyChord` and by Android's `KeyCatalog`; see "The keymap and the catalogue" below |
 
     **Mac only**
 
     | Item | Current home | Plan |
     |---|---|---|
-    | `WorkspaceKeymap` parse and resolve, `WorkspaceKeyBindings` | `TaktCore` | native, judged after looking: the file format is not separable from the Mac's command catalogue (`WorkspaceCommandCatalog+Entries`, its ids, surfaces and default keys), which step 9 kept native; moving the parser alone would cross the whole catalogue on every load for a format no other platform reads. It moves with the catalogue, if Android's hand-copied `KeyCatalog.kt` is ever replaced by it |
+    | `WorkspaceKeymap` parse and resolve, `WorkspaceKeyBindings` | `TaktCore` | **done 2026-10-13** (decided 2026-10-12, with the catalogue): `keymap_parse` and `keymap_resolve` in `keymap.rs`; `WorkspaceKeyBindings`, the lookup table the router reads per key press, stays Swift and is built from the core's answer once per load |
     | `VimFind`, `CursorStepping` | `TaktCore` | move: pure list maths, one call per key press — **done 2026-10-12** ("The Mac's cursor rules") |
     | `DesktopShortcutSequence`, `DoubleTapModifier` | `TaktCore` | native: timers over `NSEvent` timing |
     | `WorkspaceCommandQuery` (palette ranking) | `TaktCore` | native: ranks the Mac's own catalogue every keystroke (step 9) |
@@ -737,6 +737,48 @@ covered the old copies pass against it.
     looks past deeper rows to the nearest sibling, so a drop with deeper rows
     on both sides joins their parent, where it was refused or kept at its own
     level.
+
+    **The keymap and the catalogue (done 2026-10-13).** Decided 2026-10-12:
+    the command catalogue moves into the core and Android reads it.
+    `core/src/keymap/catalogue.rs` holds every entry the Mac's
+    `WorkspaceCommandCatalog+Entries.swift` held (id, title, group, keys,
+    per-surface keys, surface, motion, note), converted mechanically with
+    their comments and checked field for field against a dump of the Swift
+    catalogue before it went; `keymap.rs` holds the keymap file's reading
+    (`keymap_parse`), laying it over the catalogue (`keymap_resolve`), a key's
+    spelling (`keymap_normalized_key`), the commands that read their own key,
+    and taking a key apart for a toolkit (`keyboard_chord`). The Mac reads the
+    catalogue once at launch into `WorkspaceCommandCatalog.defaults` and
+    resolves a keymap once per load of `keymap.json`; the router still reads
+    `WorkspaceKeyBindings`, a Swift dictionary built from that answer, so no
+    key press crosses into the core. `WorkspaceKeymap` and the catalogue keep
+    their signatures, and `WorkspaceKeymapTests` and
+    `WorkspaceCommandCatalogTests` run unchanged as the oracle; a new test
+    holds every core entry to a `WorkspaceCommandID` case. The iPhone's
+    `KeyboardCommands.parse` takes keys apart through `WorkspaceKeyChord`.
+    Android's hand-copied `KeyCatalog.kt` is now ids only: titles, groups and
+    keys come from the core, and its key handling (the shell, a list screen,
+    a selected row, the matrix) matches the catalogue's chords, built once,
+    instead of chords written out by hand. Surfaces map as screens: the shell
+    takes `anywhere` commands with a modifier, a list screen the view
+    switches and list commands, a selected row the task commands, which may
+    be bare keys. Translation: ⌘ is Ctrl (or Meta), ⌥ is Alt; a Mac key held
+    on Control has no translation (Ctrl is already ⌘) and neither has a
+    sequence. Where that leaves a command with no key, or Android has a
+    convention of its own, `KeyCatalog.androidKeys` adds one (`z` fold, `f`
+    focus, Alt+T plan for today, Enter open, Ctrl+R rename list, Ctrl+Y
+    redo), and four commands the catalogue has no entry for (select next and
+    previous, the undo history, settings) keep an Android title. What changed
+    on Android, because the Mac's keys are now its keys: Today is Ctrl+T (was
+    Ctrl+1), Board, Outline and Matrix are Ctrl+1, 2, 3 (were Ctrl+2, 3, 4),
+    due today is Ctrl+Alt+T (was Ctrl+T), Everything also answers Ctrl+E,
+    search Ctrl+Shift+F, delete Ctrl+Delete, indent and outdent also
+    Alt+Right and Alt+Left,
+    and a palette row's titles are the Mac's ("Show as a board"). The core's
+    keymap reading differs from Foundation's in one way a person could see:
+    the sentence for a file that is not JSON quotes `serde_json`'s reason.
+    Measured: reading the catalogue is one call of 161 entries at launch;
+    nothing per key press changed.
 
     **The Checkvist stack, deleted (done 2026-10-13).** Decided 2026-10-12:
     the Checkvist-era task stack is deleted rather than ported, because
