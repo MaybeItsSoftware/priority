@@ -3,22 +3,24 @@ import Observation
 import TaktCore
 import os
 
-/// One agent thread: the user's own Claude Code, headless, with Priority's MCP
-/// server as its only tool — and a person between it and every write.
+/// One agent thread: the user's own Claude Code, headless, with Takt's MCP
+/// server as its only tool.
 ///
 /// The process is `claude -p` in stream-json mode (see `AgentInvocation` for
 /// the exact command line and why each flag is there). It stays up for the
 /// thread, so a follow-up is one more line on its stdin, and it goes when the
 /// thread does: Stop and New thread both end it.
 ///
-/// **The invariant: nothing writes without a click.** The read-only tools are
-/// pre-allowed on the command line; every other call stops inside the CLI on
-/// a `can_use_tool` control request that only `approve(_:)` answers yes to,
-/// and only from a button. There is no timer that answers, no "always allow",
-/// and no path that approves on the user's behalf. A request left alone just
-/// waits. Stopping the thread, starting a new one, quitting the app or the
-/// process dying all withdraw it — the CLI that asked is gone, so the call it
-/// asked about can never run.
+/// **Changes apply at once and each can be taken back.** The reads and the
+/// writes are pre-allowed on the command line, and every write shows as a
+/// card saying what it changed, with an Undo that reverts exactly that step
+/// (`WorkspaceViewModel.undoAgentChange`). With "Ask before changing tasks"
+/// on (Settings ▸ Agent, read when a thread starts) the writes are not
+/// pre-allowed: each stops inside the CLI on a `can_use_tool` control request
+/// that only `approve(_:)` answers yes to, from a button. A tool in neither
+/// list asks either way. A request left alone just waits; stopping the
+/// thread, starting a new one, quitting the app or the process dying all
+/// withdraw it — the CLI that asked is gone, so the call can never run.
 @MainActor
 @Observable final class WorkspaceAgentSession {
   private static let log = Logger(subsystem: "uk.co.maybeitssoftware.takt", category: "WorkspaceAgentSession")
@@ -26,6 +28,9 @@ import os
   enum ApprovalState: Equatable {
     case pending
     case approved
+    /// Pre-allowed: it ran without asking, and the card is there to say what
+    /// it did and to take it back.
+    case automatic
     case denied
     /// The thread ended before anyone answered, so the change never ran.
     case withdrawn
@@ -45,6 +50,11 @@ import os
     /// for: once approved, the task holds the new values. See
     /// `WorkspaceViewModel.agentCurrentValues`.
     var before: [String: String] = [:]
+    /// The undo step the change made, from its result; nil until it has run,
+    /// and for a change the journal does not cover.
+    var undoStep: String?
+    /// Taken back from the card. The labels are every step that went with it.
+    var undoneLabels: [String]?
   }
 
   enum Entry: Equatable {
@@ -70,6 +80,20 @@ import os
 
   /// Reads what a write would replace, for its card. Set by the workspace.
   @ObservationIgnored var currentValues: ((String, JSONValue) -> [String: String])?
+
+  /// Whether this thread's writes wait for Approve: the setting as it was
+  /// when the process started.
+  private(set) var asksBeforeChanges = false
+
+  /// What the user took back from cards since the last message, to tell the
+  /// assistant with the next one.
+  @ObservationIgnored private var undoneSinceLastMessage: [String] = []
+
+  /// "Ask before changing tasks" (Settings ▸ Agent). Off by default. Read
+  /// when a thread starts, so it applies from the next one.
+  var asksBeforeChangesSetting = UserDefaults.standard.bool(forKey: AgentToolPolicy.asksBeforeChangesKey) {
+    didSet { UserDefaults.standard.set(asksBeforeChangesSetting, forKey: AgentToolPolicy.asksBeforeChangesKey) }
+  }
 
   /// A path to `claude` set by hand, tried before the usual install locations.
   var userExecutablePath = UserDefaults.standard.string(forKey: AgentCLILocator.userPathDefaultsKey) ?? "" {
@@ -122,7 +146,9 @@ import os
       guard start() else { return }
     }
     items.append(Item(entry: .user(trimmed)))
-    let message = (ledger.changes(blocks) + [context, trimmed].compactMap { $0 }).joined(separator: "\n\n")
+    let undone = AgentSystemPrompt.undone(undoneSinceLastMessage)
+    undoneSinceLastMessage = []
+    let message = (ledger.changes(blocks) + [undone, context, trimmed].compactMap { $0 }).joined(separator: "\n\n")
     if write(AgentStreamEncoder.userMessage(message)) { isWorking = true }
   }
 
@@ -144,6 +170,26 @@ import os
       // Denied whether or not the line got through: if the process is gone,
       // the call it asked about is gone with it.
       return .denied
+    }
+  }
+
+  /// Records that a change was taken back (or, with nil, put back) from its
+  /// card. The labels go to the assistant with the next message.
+  func markUndone(_ itemID: UUID, labels: [String]?) {
+    guard let index = items.firstIndex(where: { $0.id == itemID }),
+      case .write(var approval) = items[index].entry
+    else { return }
+    approval.undoneLabels = labels
+    items[index].entry = .write(approval)
+    if let labels { undoneSinceLastMessage += labels } else { undoneSinceLastMessage = [] }
+  }
+
+  /// The newest card that can be taken back or put back, for Tab from the
+  /// message field.
+  var latestUndoableChange: Item? {
+    items.last { item in
+      if case .write(let approval) = item.entry { return approval.undoStep != nil }
+      return false
     }
   }
 
@@ -208,8 +254,10 @@ import os
 
     let process = Process()
     process.executableURL = URL(fileURLWithPath: executable)
+    let asks = asksBeforeChangesSetting
     process.arguments = AgentInvocation.arguments(
-      helperPath: helper, systemPrompt: AgentSystemPrompt.text(today: .now))
+      helperPath: helper, systemPrompt: AgentSystemPrompt.text(today: .now, asksBeforeChanges: asks),
+      asksBeforeChanges: asks)
     process.currentDirectoryURL = Self.workingDirectory()
     process.environment = Self.environment()
 
@@ -261,6 +309,8 @@ import os
     self.process = process
     input = stdin.fileHandleForWriting
     ledger = AgentContextLedger()
+    asksBeforeChanges = asks
+    undoneSinceLastMessage = []
     stoppedOnPurpose = false
     return true
   }
@@ -370,12 +420,20 @@ import os
       items.append(Item(entry: .assistant(text)))
 
     case .toolUse(let use):
-      // Reads get a line of their own. A write's card is drawn by its
-      // permission request, which follows.
-      guard AgentToolPolicy.isReadOnly(use.name) else { return }
-      let item = Item(entry: .read(use, failed: nil))
-      toolItems[use.id] = item.id
-      items.append(item)
+      // Reads get a line of their own. A pre-allowed write gets its card now,
+      // with what it is about to replace read before it runs. Any other
+      // write's card is drawn by its permission request, which follows.
+      if AgentToolPolicy.isReadOnly(use.name) {
+        let item = Item(entry: .read(use, failed: nil))
+        toolItems[use.id] = item.id
+        items.append(item)
+      } else if AgentToolPolicy.isPreAllowed(use.name, asksBeforeChanges: asksBeforeChanges) {
+        let request = AgentPermissionRequest(requestID: "", toolName: use.name, input: use.input, toolUseID: use.id)
+        let before = currentValues?(use.name, use.input) ?? [:]
+        let item = Item(entry: .write(Approval(request: request, state: .automatic, outcome: nil, before: before)))
+        toolItems[use.id] = item.id
+        items.append(item)
+      }
 
     case .toolResult(let toolUseID, let isError, let text):
       guard let itemID = toolItems[toolUseID], let index = items.firstIndex(where: { $0.id == itemID }) else {
@@ -384,8 +442,9 @@ import os
       switch items[index].entry {
       case .read(let use, _):
         items[index].entry = .read(use, failed: isError)
-      case .write(var approval) where approval.state == .approved:
+      case .write(var approval) where approval.state == .approved || approval.state == .automatic:
         approval.outcome = isError ? .failed(text) : .applied
+        if !isError { approval.undoStep = AgentToolResult.undoStep(fromText: text) }
         items[index].entry = .write(approval)
       default:
         break
@@ -399,6 +458,16 @@ import os
             requestID: request.requestID, message: "Only Takt's own tools are available here."))
         items.append(Item(entry: .notice("Refused \(request.toolName): not one of Takt's tools.", isError: true)))
       case .askUser:
+        // A write already drawn as pre-allowed that asks anyway waits on its
+        // own card rather than gaining a second one.
+        if let toolUseID = request.toolUseID, let itemID = toolItems[toolUseID],
+          let index = items.firstIndex(where: { $0.id == itemID }),
+          case .write(var approval) = items[index].entry, approval.state == .automatic
+        {
+          approval = Approval(request: request, state: .pending, outcome: nil, before: approval.before)
+          items[index].entry = .write(approval)
+          return
+        }
         let before = currentValues?(request.toolName, request.input) ?? [:]
         let item = Item(entry: .write(Approval(request: request, state: .pending, outcome: nil, before: before)))
         if let toolUseID = request.toolUseID { toolItems[toolUseID] = item.id }

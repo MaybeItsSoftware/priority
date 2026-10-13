@@ -287,6 +287,9 @@ enum WorkspaceSidebarItem: Identifiable {
   /// rather than queried each time the menu is drawn.
   var undoLabel: String?
   var redoLabel: String?
+  /// Moves every time the history labels are refreshed: after each write,
+  /// undo and reload. See `refreshHistoryLabels()`.
+  var historyVersion = 0
   var listTaskCounts: [String: Int] = [:]
   var boardCrossColumnTasks: [WorkspaceTask] = []
   var boardDescendants: [String: [TaskOutlineItem]] = [:]

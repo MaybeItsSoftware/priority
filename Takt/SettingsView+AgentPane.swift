@@ -21,6 +21,21 @@ extension SettingsView {
           + "and follow these, the narrowest last, so they win where they disagree.")
     }
 
+    let agent = workspace.agent
+    Section {
+      Toggle(
+        "Ask before changing tasks",
+        isOn: Binding(get: { agent.asksBeforeChangesSetting }, set: { agent.asksBeforeChangesSetting = $0 }))
+    } header: {
+      Text("Changes")
+    } footer: {
+      Text(
+        agent.asksBeforeChangesSetting
+          ? "Each change the agent wants to make waits for Approve. Takes effect from the next thread."
+          : "The agent's changes apply straight away, each shown in the panel with an Undo. "
+            + "Takes effect from the next thread.")
+    }
+
     let written = agentWrittenScopes
     if !written.isEmpty {
       Section {

@@ -12,20 +12,27 @@ final class AgentToolPolicyTests: XCTestCase {
     XCTAssertTrue(read.isDisjoint(with: write))
     XCTAssertEqual(read.count + write.count, 47)
     XCTAssertTrue(read.contains("agent_instructions_get"))
-    XCTAssertTrue(write.contains("agent_instructions_set"), "saving instructions asks")
+    XCTAssertTrue(write.contains("agent_instructions_set"), "saving instructions is a change")
   }
 
-  func testNothingThatWritesIsPreAllowed() {
+  func testWritesArePreAllowedUnlessTheUserAsksFirst() {
     for tool in AgentToolPolicy.writeTools {
-      XCTAssertFalse(AgentToolPolicy.isReadOnly(AgentToolPolicy.qualifiedName(tool)), tool)
+      let qualified = AgentToolPolicy.qualifiedName(tool)
+      XCTAssertFalse(AgentToolPolicy.isReadOnly(qualified), tool)
+      XCTAssertTrue(AgentToolPolicy.isPreAllowed(qualified, asksBeforeChanges: false), tool)
+      XCTAssertFalse(AgentToolPolicy.isPreAllowed(qualified, asksBeforeChanges: true), tool)
     }
     XCTAssertTrue(AgentToolPolicy.isReadOnly("mcp__takt__workspace_tasks"))
-    // Another server's tool of the same name is not ours to allow.
+    XCTAssertTrue(AgentToolPolicy.isPreAllowed("mcp__takt__workspace_tasks", asksBeforeChanges: true))
+    // Another server's tool of the same name is not ours to allow, and a tool
+    // nobody classified yet asks either way.
     XCTAssertFalse(AgentToolPolicy.isReadOnly("mcp__other__workspace_tasks"))
+    XCTAssertFalse(AgentToolPolicy.isPreAllowed("mcp__other__workspace_task_add", asksBeforeChanges: false))
+    XCTAssertFalse(AgentToolPolicy.isPreAllowed("mcp__takt__brand_new_tool", asksBeforeChanges: false))
     XCTAssertFalse(AgentToolPolicy.isReadOnly("workspace_tasks"))
   }
 
-  func testPermissionRequestsAskOrRefuseButNeverAllow() {
+  func testAPermissionRequestAsksOrIsRefused() {
     XCTAssertEqual(
       AgentToolPolicy.decision(forPermissionRequestOn: "mcp__takt__workspace_task_delete"), .askUser)
     XCTAssertEqual(AgentToolPolicy.decision(forPermissionRequestOn: "mcp__takt__task_search"), .askUser)
@@ -34,7 +41,7 @@ final class AgentToolPolicyTests: XCTestCase {
     XCTAssertEqual(AgentToolPolicy.decision(forPermissionRequestOn: "mcp__takt__"), .refuse)
   }
 
-  func testInvocationLoadsOnlyPriorityAndOnlyPreAllowsReads() throws {
+  func testInvocationLoadsOnlyTaktAndPreAllowsItsClassifiedTools() throws {
     let arguments = AgentInvocation.arguments(
       helperPath: "/Applications/Takt.app/Contents/Helpers/takt", systemPrompt: "Hi")
     func value(after flag: String) -> String? {
@@ -53,7 +60,16 @@ final class AgentToolPolicyTests: XCTestCase {
     XCTAssertFalse(arguments.contains("--dangerously-skip-permissions"))
 
     let allowed = try XCTUnwrap(value(after: "--allowedTools")).split(separator: ",").map(String.init)
-    XCTAssertEqual(Set(allowed), Set(AgentToolPolicy.readOnlyTools.map(AgentToolPolicy.qualifiedName)))
+    XCTAssertEqual(
+      Set(allowed),
+      Set((AgentToolPolicy.readOnlyTools + AgentToolPolicy.writeTools).map(AgentToolPolicy.qualifiedName)))
+
+    // Asking first, only the reads are pre-allowed and the writes ask.
+    let asking = AgentInvocation.arguments(helperPath: "/p", systemPrompt: "", asksBeforeChanges: true)
+    let asked = try XCTUnwrap(asking.firstIndex(of: "--allowedTools").map { asking[$0 + 1] })
+    XCTAssertEqual(
+      Set(asked.split(separator: ",").map(String.init)),
+      Set(AgentToolPolicy.readOnlyTools.map(AgentToolPolicy.qualifiedName)))
 
     let config = try XCTUnwrap(JSONValue.parse(try XCTUnwrap(value(after: "--mcp-config"))))
     let servers = try XCTUnwrap(config["mcpServers"]?.objectValue)
@@ -83,12 +99,33 @@ final class AgentToolPolicyTests: XCTestCase {
     XCTAssertNil(AgentCLILocator.resolve(candidates: candidates, isExecutable: { _ in false }))
   }
 
-  func testSystemPromptCarriesTheDateAndTheApprovalRule() {
+  func testSystemPromptCarriesTheDateAndTheRuleForChanges() {
     let date = ISO8601DateFormatter().date(from: "2026-09-28T09:00:00Z")!
     let text = AgentSystemPrompt.text(today: date, timeZone: TimeZone(identifier: "Europe/London")!)
     XCTAssertTrue(text.contains("2026-09-28"))
     XCTAssertTrue(text.contains("Monday 28 September 2026"))
-    XCTAssertTrue(text.contains("only runs if they approve it"))
+    XCTAssertTrue(text.contains("apply straight away"))
+    XCTAssertTrue(text.contains("If they undo one, do not make it again"))
+    let asking = AgentSystemPrompt.text(today: date, asksBeforeChanges: true)
+    XCTAssertTrue(asking.contains("only runs if they approve it"))
+    XCTAssertFalse(asking.contains("apply straight away"))
+  }
+
+  func testTheAssistantIsToldWhatWasUndone() {
+    XCTAssertNil(AgentSystemPrompt.undone([]))
+    XCTAssertEqual(
+      AgentSystemPrompt.undone(["MCP: New Task"]), "[The user undid this change of yours: \"MCP: New Task\".]")
+    XCTAssertEqual(
+      AgentSystemPrompt.undone(["MCP: Rename", "MCP: New Task"]),
+      "[The user undid these changes of yours: \"MCP: Rename\", \"MCP: New Task\".]")
+  }
+
+  func testAWriteResultNamesItsUndoStep() {
+    let text = "Task added\n\n{\n  \"id\": \"T1\",\n  \"undo_step\": \"G-1\"\n}"
+    XCTAssertEqual(AgentToolResult.undoStep(fromText: text), "G-1")
+    XCTAssertNil(AgentToolResult.undoStep(fromText: "Workspace\n\n{\"lists\": []}"))
+    XCTAssertNil(AgentToolResult.undoStep(fromText: "not json at all"))
+    XCTAssertNil(AgentToolResult.undoStep(fromText: "Title\n\n[1, 2]"))
   }
 
   func testSystemPromptTellsTheAgentToKeepTheStandingInstructions() {

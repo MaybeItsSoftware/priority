@@ -273,3 +273,17 @@ public enum AgentStreamEncoder {
     value.jsonString() + "\n"
   }
 }
+
+/// What a Takt tool's result says, beyond the words the assistant reads.
+public enum AgentToolResult {
+
+  /// The undo step a workspace write made, from its result: a title line, a
+  /// blank line, then the payload as JSON, whose `undo_step` is the journal
+  /// group (`cli/src/tools.rs`). Nil for a read, a write that changed
+  /// nothing, and the writes the journal does not cover (Checkvist, dailies).
+  public static func undoStep(fromText text: String) -> String? {
+    guard let blank = text.range(of: "\n\n") else { return nil }
+    let step = JSONValue.parse(String(text[blank.upperBound...]))?.objectValue?["undo_step"]?.stringValue
+    return step.flatMap { $0.isEmpty ? nil : $0 }
+  }
+}

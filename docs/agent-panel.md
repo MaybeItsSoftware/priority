@@ -6,24 +6,32 @@ out like Zed's agent panel. The assistant is the user's own **Claude Code**,
 run headless, the way Zed runs its external agents: no API key, no account of
 Takt's own, just the `claude` login already on the machine.
 
-The rule it is built around is the one chosen when it was added:
+The rule it is built around:
 
-> The assistant may **read** freely. Every **write** — adding, editing,
-> completing, moving or deleting anything — is shown to the user and runs only
-> after they approve it with a click. Nothing runs unattended, and there are no
-> shell or file tools at all.
+> The assistant may **read** freely. Its **writes** — adding, editing,
+> completing, moving or deleting anything — apply straight away, and each is
+> shown to the user as a card saying what changed, with an **Undo** that takes
+> back exactly that change. There are no shell or file tools at all.
+
+That replaced the rule the panel was first built on, that every write waits
+for the user's click, at the user's own decision (2026-10-13). The old rule
+is still there for anyone who wants it: **Settings ▸ Agent ▸ Ask before
+changing tasks** (off by default; `UserDefaults` key
+`agentAsksBeforeChangesV1`) makes every write wait for Approve again. The
+setting is read when a thread's process starts, so it applies from the next
+thread.
 
 ## Where the pieces live
 
 | File | What it is |
 |---|---|
 | `Sources/TaktCore/AgentStreamProtocol.swift` | The stream-json wire format: lines in to `AgentStreamEvent`s, and the user messages and `control_response`s out |
-| `Sources/TaktCore/AgentToolPolicy.swift` | Which tools are read-only, the exact `claude` invocation, where `claude` is looked for, the system prompt |
-| `Sources/TaktCore/AgentToolSummary.swift` | A tool call in words, for the approval card and the read lines |
+| `Sources/TaktCore/AgentToolPolicy.swift` | Which tools are pre-allowed, the exact `claude` invocation, where `claude` is looked for, the system prompt |
+| `Sources/TaktCore/AgentToolSummary.swift` | A tool call in words, for the change card and the read lines |
 | `Sources/TaktCore/AgentContext.swift` | The standing instructions' block and folder chain, and the ledger that sends a block only when it changed |
 | `Takt/WorkspaceAgentInstructions.swift` | The app's view of the standing instructions (kept in the workspace, `core/src/agent_instructions.rs`), and the field they are written in |
-| `Takt/WorkspaceAgentSession.swift` | The process: launch, the line reader, approvals, stop, new thread |
-| `Takt/WorkspaceAgentPane.swift` | The transcript, the approval card, the setup state |
+| `Takt/WorkspaceAgentSession.swift` | The process: launch, the line reader, change cards and approvals, stop, new thread |
+| `Takt/WorkspaceAgentPane.swift` | The transcript, the change card with its Undo, the setup state |
 | `Takt/WorkspaceAgentInputField.swift` | The message field (an `NSTextView`: Return sends, Shift+Return is a new line) |
 | `Takt/WorkspaceLeftDock.swift` | The dock's tab bar: Lists and Agent |
 
@@ -72,7 +80,7 @@ claude -p
   --mcp-config '{"mcpServers":{"takt":{"args":["--mcp-server"],"command":"<helper>","type":"stdio"}}}'
   --strict-mcp-config
   --tools ""
-  --allowedTools mcp__takt__task_lists,mcp__takt__task_fetch,…   (the read-only set below)
+  --allowedTools mcp__takt__task_lists,mcp__takt__task_fetch,…   (reads and writes; reads only when asking first)
   --permission-mode manual
   --permission-prompt-tool stdio
   --setting-sources ""
@@ -89,11 +97,15 @@ Each flag is there for the rule:
   the user's other MCP servers are not there.
 - **`--setting-sources ""`** skips the user's, project's and local settings
   files. A permission rule, hook or plugin written for coding sessions cannot
-  pre-approve a write here. (The user's `CLAUDE.md` is not loaded either.)
-- **`--permission-mode manual`** is the mode that asks. `auto` would let a
-  classifier answer and `acceptEdits`/`bypassPermissions` would not ask at all.
-- **`--allowedTools`** pre-allows exactly the read-only tools. Everything else
-  falls through to the permission prompt.
+  allow anything here, or run. (The user's `CLAUDE.md` is not loaded either.)
+- **`--permission-mode manual`** is the mode that asks for whatever is not
+  pre-allowed. `auto` would let a classifier answer and
+  `acceptEdits`/`bypassPermissions` would not ask at all.
+- **`--allowedTools`** pre-allows Takt's classified tools: the reads and the
+  writes, or only the reads with "Ask before changing tasks" on
+  (`AgentToolPolicy.preAllowedTools`). A tool in neither list — one added to
+  the CLI and not yet classified — falls through to the permission prompt
+  either way.
 - **`--permission-prompt-tool stdio`** sends that prompt to the app, on the
   same stdout stream, as a control request (below).
 - **`--no-session-persistence`**: a thread lives as long as its process, and
@@ -153,11 +165,12 @@ poll as any other external write.
 
 The system prompt tells the assistant to keep them: when the user states a
 durable preference, fact or convention about a list, a folder or how they
-work, offer to save it to the narrowest scope that fits; read the scope first
+work, save it to the narrowest scope that fits, as a change the user sees
+and can undo (or approve first, with asking on); read the scope first
 and merge rather than pile up duplicates; never save a one-off request. The
-approval card for `agent_instructions_set` shows the scope's whole text
+change card for `agent_instructions_set` shows the scope's whole text
 before, struck through, over its whole text after — an append shows the text
-it would make, and clearing shows "None".
+it would make, and clearing shows "None" — with Undo like any other change.
 
 A message starts with the instructions that apply where the user is
 (`WorkspaceViewModel.agentInstructionScopes`), as one block: the account's,
@@ -189,7 +202,8 @@ whole tool table (47 tools):
 `workspace_tasks`, `workspace_task_dependencies`, `workspace_filter_lists`,
 `workspace_filter_list_tasks`, `workspace_board_columns`, `agent_instructions_get`
 
-**Writes, asked every time** — the other 32:
+**Writes** — the other 32. Pre-allowed, each shown as a change card with an
+Undo; with "Ask before changing tasks" on, each waits for Approve:
 
 `task_add`, `task_update`, `task_note_add`, `task_move`, `task_reparent`,
 `project_move`, `task_complete`, `task_reopen`, `task_invalidate`,
@@ -204,15 +218,64 @@ whole tool table (47 tools):
 
 The CLI's `every_declared_tool_is_classified_as_a_read_or_a_write` test holds
 the two lists to the table exactly, so a tool added to the CLI fails `cargo
-test` until it is classified there. The panel still treats anything missing
-from the read list as a write, the safe default.
+test` until it is classified there. A tool missing from both lists is not
+pre-allowed at all, so it asks even when changes do not.
 A permission request for anything that is not a Takt tool is refused
 outright rather than put to the user.
 
-## The approval flow
+## Change cards and Undo
 
-When the assistant calls a write tool, Claude Code does not run it. It writes
-a control request to stdout and waits:
+A write the command line pre-allowed runs as soon as the assistant calls it.
+The panel draws its card from the `tool_use` in the assistant's message,
+which arrives before the tool runs: the action in words ("Add a task"), each
+argument labelled, with ids resolved to list and task names, and the raw input
+behind a disclosure. A change to a workspace task (`workspace_task_update`,
+`workspace_task_move`) shows what each field held struck through above what
+it holds now — the title, notes, status, list or parent — read from the
+workspace as the app last loaded it, which the CLI's write reaches only on the
+next poll. An `agent_instructions_set` shows the scope's whole text before and
+after. The card then follows the tool's result: running, done, or failed with
+the tool's message.
+
+Every workspace write the CLI makes is one undo step in the journal, and its
+result names it: the payload carries `undo_step`, the step's journal group
+(`cli/src/tools.rs`, `AgentToolResult.undoStep`). With it, a done card has an
+**Undo** that takes back exactly that step:
+
+- The core replays the step backwards inside a savepoint and checks that every
+  row a later standing step touched is still as that step left it
+  (`core/src/journal/steps.rs`, `CoreWorkspace::step_undo_plan`). If so, the
+  step goes back alone and the later ones stay — the menu's Undo is unchanged
+  and still takes back the newest step.
+- If a later step built on it — an edit to the task it added — the step can
+  only go back together with the later steps that touched its rows, newest
+  first, and the button says so before it is pressed: **Undo with 1 later
+  change** (the help names them). When even that would leave something
+  inconsistent — a subtask added under the task it created would go with it by
+  cascade — the button offers to take back every later step, which is what
+  pressing Edit ▸ Undo that many times would do.
+- Once undone the card says **Undone**, with **Redo** when putting it back
+  would not disturb a later step. A newer change drops the redo, as it drops
+  the menu's; a step trimmed off the journal's hundred, or dropped that way,
+  leaves the card saying it is no longer in the undo history.
+- The plan is asked again whenever the journal moves
+  (`WorkspaceViewModel.historyVersion`), so a step undone from Edit ▸ Undo
+  shows as Undone on its card too.
+- The next message tells the assistant which of its changes were undone
+  (`AgentSystemPrompt.undone`), and the system prompt tells it not to make an
+  undone change again.
+
+Keys, in keeping with the panel's own: **Tab** from the message field moves to
+the newest card that can be undone (or the pending card, when there is one),
+**Return** there presses its button — Undo, or Redo once undone — and **Esc**
+goes back to the field. The writes the journal does not cover (the Checkvist
+`task_*` tools and the dailies) say done and have no Undo.
+
+## Asking first
+
+With "Ask before changing tasks" on, the writes are not pre-allowed. When the
+assistant calls one, Claude Code does not run it. It writes a control request
+to stdout and waits:
 
 ```json
 {"type":"control_request","request_id":"8f11…","request":{"subtype":"can_use_tool",
@@ -220,14 +283,9 @@ a control request to stdout and waits:
  "tool_use_id":"toolu_01…", …}}
 ```
 
-The panel shows it as a card: the action in words ("Add a task"), each
-argument labelled, with ids resolved to list and task names, and the raw input
-behind a disclosure. A change to a workspace task (`workspace_task_update`,
-`workspace_task_move`) shows what each field holds now struck through above
-what it would become — the title, notes, status, list or parent — read from
-the workspace when the request arrives, since once approved the task holds
-the new values. A delete's Approve is in the danger hue. The card waits
-for one of two answers, written to the CLI's stdin:
+The panel shows it as the same card, saying what the change would do, with the
+before values read when the request arrives. A delete's Approve is in the
+danger hue. The card waits for one of two answers, written to the CLI's stdin:
 
 ```json
 {"type":"control_response","response":{"subtype":"success","request_id":"8f11…",
@@ -239,8 +297,7 @@ for one of two answers, written to the CLI's stdin:
 
 - **Approve** is the button, or Return while the card itself holds the
   keyboard (Tab from the message field moves to it). `updatedInput` is exactly
-  the input the card showed. There is no timer, no default answer and no
-  "always allow"; each write is its own question.
+  the input the card showed. There is no timer and no default answer.
 - **Deny** is the button or Esc on the card. The tool never runs and the
   assistant is told not to retry.
 - **No answer** means nothing happens. Hiding the panel does not answer; the
@@ -254,9 +311,9 @@ for one of two answers, written to the CLI's stdin:
   typed in the field and Return on a card reach the panel rather than the task
   list behind it.
 
-Once approved, the card follows the tool's result: running, done, or failed
-with the tool's message. Done says where to take it back: the change is an
-"MCP: …" step in Edit ▸ Undo.
+Once approved, the card follows the tool's result like any other, Undo
+included. A permission request for anything that is not a Takt tool is refused
+outright rather than put to the user, in either mode.
 
 Verified on this machine (Claude Code 2.1.283) against a throwaway database
 (`PRIORITY_MCP_DB_PATH` and friends pointed at `/tmp`, no Checkvist
@@ -269,7 +326,8 @@ to allow added the task.
 ## After a turn
 
 The CLI writes to the workspace database directly, under the app's undo
-journal, so each approved change is an "MCP: …" step in the Undo menu. The app
+journal, so each change is an "MCP: …" step in the Undo menu as well as on
+its card. The app
 picks the rows up through its `PRAGMA data_version` poll
 (`WorkspaceViewModel+ExternalWrites.swift`), and the panel nudges that poll at
 the end of each turn so a change is on screen when the assistant says it is

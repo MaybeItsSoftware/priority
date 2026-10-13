@@ -144,6 +144,9 @@ extension WorkspaceViewModel {
     let redo = store.flatMap { try? $0.redoableLabel() }
     if undoLabel != undo { undoLabel = undo }
     if redoLabel != redo { redoLabel = redo }
+    // The journal may have moved even where the labels read the same, and
+    // the agent panel's change cards ask it what Undo would do.
+    historyVersion &+= 1
   }
 
   /// Everything a surface on screen names by id, so resolving one in a view

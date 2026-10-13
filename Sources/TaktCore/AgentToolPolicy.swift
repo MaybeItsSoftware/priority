@@ -3,18 +3,18 @@ import TaktRustCore
 
 /// What the agent panel's assistant may do on its own, and what it has to ask.
 ///
-/// The rule is the one the user chose: **read freely, write only with a
-/// click.** The assistant gets exactly one MCP server, Takt's own (the
-/// bundled `takt` CLI), and no built-in tools at all — no shell, no files,
-/// no web. Of that server's tools, the ones that only read are pre-allowed on
-/// the command line; everything else is left to Claude Code's permission
-/// check, which with `--permission-prompt-tool stdio` asks the app, which asks
-/// the user. See `docs/agent-panel.md`.
+/// The assistant gets exactly one MCP server, Takt's own (the bundled `takt`
+/// CLI), and no built-in tools at all — no shell, no files, no web. Of that
+/// server's tools, the ones that only read are always pre-allowed on the
+/// command line. The writes are pre-allowed too unless the user has turned on
+/// "Ask before changing tasks" (Settings ▸ Agent, `asksBeforeChangesKey`, off
+/// by default): then they are left to Claude Code's permission check, which
+/// with `--permission-prompt-tool stdio` asks the app, which asks the user.
+/// Either way each write is shown as a card, and one that made an undo step
+/// can be taken back from it. See `docs/agent-panel.md`.
 ///
-/// The read-only list is an allow-list rather than a deny-list on purpose. A
-/// tool added to `cli/src/tools.rs` tomorrow is a write until someone puts it
-/// here, so forgetting to classify one costs a click rather than a change
-/// nobody saw.
+/// Both lists are allow-lists. A tool added to `cli/src/tools.rs` tomorrow is
+/// in neither until it is classified, so it asks even when changes do not.
 public enum AgentToolPolicy {
 
   /// The MCP server's name in `--mcp-config`, and so the middle of every
@@ -27,10 +27,24 @@ public enum AgentToolPolicy {
   /// table, so a new tool cannot go unclassified.
   public static let readOnlyTools: [String] = agentReadOnlyTools()
 
-  /// The tools that write, for the docs and the tests: every one of them goes
-  /// through the approval card. Not consulted to decide anything — anything
-  /// not in `readOnlyTools` asks, listed here or not.
+  /// The tools that write. Pre-allowed unless the user asks to approve
+  /// changes; a tool in neither list always asks.
   public static let writeTools: [String] = agentWriteTools()
+
+  /// `UserDefaults`: whether every write waits for Approve. Off by default:
+  /// changes apply at once and each card has an Undo.
+  public static let asksBeforeChangesKey = "agentAsksBeforeChangesV1"
+
+  /// The tools a thread may call without asking.
+  public static func preAllowedTools(asksBeforeChanges: Bool) -> [String] {
+    asksBeforeChanges ? readOnlyTools : readOnlyTools + writeTools
+  }
+
+  /// A write that runs without asking in a thread started with
+  /// `asksBeforeChanges`.
+  public static func isPreAllowed(_ qualified: String, asksBeforeChanges: Bool) -> Bool {
+    priorityToolName(qualified).map(preAllowedTools(asksBeforeChanges: asksBeforeChanges).contains) ?? false
+  }
 
   public static func qualifiedName(_ tool: String) -> String { toolPrefix + tool }
 
@@ -46,7 +60,9 @@ public enum AgentToolPolicy {
     priorityToolName(qualified).map(readOnlyTools.contains) ?? false
   }
 
-  /// What the panel does with a permission request for `qualified`.
+  /// What the panel does with a permission request for `qualified`: one for
+  /// a write when the user asks before changes, or for a tool not yet
+  /// classified either way.
   public enum Decision: Equatable, Sendable {
     /// Show the approval card and wait for a click.
     case askUser
@@ -57,8 +73,8 @@ public enum AgentToolPolicy {
     case refuse
   }
 
-  /// Never `allow`: there is no case for it. A read-only tool is allowed by
-  /// the command line and never reaches here; if one somehow does, it asks.
+  /// Never `allow`: whatever is allowed is allowed by the command line, and
+  /// anything that reaches here asks.
   public static func decision(forPermissionRequestOn qualified: String) -> Decision {
     priorityToolName(qualified) == nil ? .refuse : .askUser
   }
@@ -92,15 +108,18 @@ public enum AgentInvocation {
   /// - `--setting-sources ""` skips the user's, project's and local settings,
   ///   so no hook, plugin or permission rule written for their coding sessions
   ///   can run here or pre-approve a write.
-  /// - `--permission-mode manual` is the mode that asks; `auto` and
-  ///   `acceptEdits` would let a classifier or a rule answer instead.
+  /// - `--allowedTools` is the reads, and the writes unless
+  ///   `asksBeforeChanges`; `AgentToolPolicy.preAllowedTools`.
+  /// - `--permission-mode manual` is the mode that asks for anything else;
+  ///   `auto` and `acceptEdits` would let a classifier or a rule answer.
   /// - `--permission-prompt-tool stdio` routes each question to the app.
   /// - `--no-session-persistence`: a thread lives as long as its process;
   ///   nothing is written to `~/.claude/projects`.
   public static func arguments(
     helperPath: String,
     systemPrompt: String,
-    model: String? = nil
+    model: String? = nil,
+    asksBeforeChanges: Bool = false
   ) -> [String] {
     var arguments = [
       "-p",
@@ -111,7 +130,8 @@ public enum AgentInvocation {
       "--strict-mcp-config",
       "--tools", "",
       "--allowedTools",
-      AgentToolPolicy.readOnlyTools.map(AgentToolPolicy.qualifiedName).joined(separator: ","),
+      AgentToolPolicy.preAllowedTools(asksBeforeChanges: asksBeforeChanges)
+        .map(AgentToolPolicy.qualifiedName).joined(separator: ","),
       "--permission-mode", "manual",
       "--permission-prompt-tool", "stdio",
       "--setting-sources", "",
@@ -159,7 +179,7 @@ public enum AgentSystemPrompt {
 
   /// The system prompt for a thread. Replaces Claude Code's own, which is
   /// about writing software with tools this process does not have.
-  public static func text(today: Date, timeZone: TimeZone = .current) -> String {
+  public static func text(today: Date, timeZone: TimeZone = .current, asksBeforeChanges: Bool = false) -> String {
     let formatter = DateFormatter()
     formatter.locale = Locale(identifier: "en_GB")
     formatter.timeZone = timeZone
@@ -178,19 +198,16 @@ public enum AgentSystemPrompt {
       truth; ids there are uppercase UUIDs. The task_* tools reach Checkvist, an optional \
       integration the user may not have set up. Use the read tools freely to answer questions.
 
-      Every change — adding, editing, completing, moving or deleting anything — is shown to the \
-      user as a card and only runs if they approve it. So before calling a tool that writes, say \
-      in one sentence what you are about to change, then call it with exactly that change. Make \
-      one change per call, so each can be approved or declined on its own. If a change is \
-      declined, do not retry it; ask what they would like instead.
+      \(asksBeforeChanges ? approvalRule : undoRule)
 
       A message may begin with bracketed notes from the app rather than the user: what is on \
       screen, and the user's standing instructions for their account, a folder or a list. \
       Instructions are sent again only when they change; the latest replace any before them.
 
-      You keep those standing instructions, with the user's say-so. When the user states a \
-      durable preference, fact or convention — about a list, a folder, or how they work — offer \
-      to save it with agent_instructions_set, in the narrowest scope that fits: a list's for \
+      You keep those standing instructions. When the user states a durable preference, fact or \
+      convention — about a list, a folder, or how they work — save it with \
+      agent_instructions_set, as a change they see like any other, in the narrowest scope that \
+      fits: a list's for \
       that list alone, a folder's for every list in it, the account's only for how they work \
       everywhere. Keep them short and current: read the scope with agent_instructions_get \
       first, then edit or merge into what is there rather than piling up duplicates, and drop \
@@ -199,6 +216,34 @@ public enum AgentSystemPrompt {
 
       Reply in short, plain Markdown. Refer to tasks and lists by their titles, not their ids.
       """
+  }
+
+  /// The rule for writes when each one waits for Approve.
+  static let approvalRule = """
+    Every change — adding, editing, completing, moving or deleting anything — is shown to the \
+    user as a card and only runs if they approve it. So before calling a tool that writes, say \
+    in one sentence what you are about to change, then call it with exactly that change. Make \
+    one change per call, so each can be approved or declined on its own. If a change is \
+    declined, do not retry it; ask what they would like instead.
+    """
+
+  /// The rule for writes when they apply at once.
+  static let undoRule = """
+    Your changes — adding, editing, completing, moving or deleting anything — apply straight \
+    away, and each is shown to the user as a card with an Undo button. So before calling a \
+    tool that writes, say in one sentence what you are about to change, then call it with \
+    exactly that change. Make one change per call, so each can be undone on its own, and only \
+    make the changes the user asked for or agreed to. If they undo one, do not make it again; \
+    ask what they would like instead.
+    """
+
+  /// Ahead of the next message when the user has taken back changes from
+  /// their cards since the last one, so the assistant does not assume they
+  /// still stand.
+  public static func undone(_ labels: [String]) -> String? {
+    guard !labels.isEmpty else { return nil }
+    let named = labels.map { "\"\($0)\"" }.joined(separator: ", ")
+    return "[The user undid \(labels.count == 1 ? "this change" : "these changes") of yours: \(named).]"
   }
 
   /// A line prefixed to each message, saying what the user is looking at, so

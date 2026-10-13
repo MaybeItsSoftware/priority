@@ -8,11 +8,13 @@ import SwiftUI
 ///
 /// Zed's agent panel is the model — a transcript that reads top to bottom, the
 /// assistant's tool calls as quiet one-line entries in it, and a message field
-/// pinned to the foot. What is Priority's own is the approval card: every
-/// change the assistant wants to make stops in the transcript as a card that
-/// says what it will do, and runs only when Approve is clicked (or Return is
-/// pressed with the card holding the keyboard). Nothing approves itself. See
-/// `WorkspaceAgentSession` and `docs/agent-panel.md`.
+/// pinned to the foot. What is Takt's own is the change card: every change
+/// the assistant makes shows in the transcript as a card saying what it
+/// changed, before and after, with an Undo that takes back exactly that step.
+/// With "Ask before changing tasks" on, the card comes first and the change
+/// runs only when Approve is clicked (or Return is pressed with the card
+/// holding the keyboard). See `WorkspaceAgentSession` and
+/// `docs/agent-panel.md`.
 struct WorkspaceAgentPane: View {
   @Environment(WorkspaceViewModel.self) private var model
   @Environment(\.theme) private var theme
@@ -47,7 +49,9 @@ struct WorkspaceAgentPane: View {
   private var emptyState: some View {
     WorkspaceEmptyMessage(
       "Ask about your tasks…",
-      detail: "It can read your lists freely. Every change it wants to make is shown here first, and runs only if you approve it."
+      detail: agent.asksBeforeChanges
+        ? "It can read your lists freely. Every change it wants to make is shown here first, and runs only if you approve it."
+        : "It can read and change your lists. Every change it makes is shown here, with an Undo."
     ) {
       HStack(spacing: theme.space.xs) {
         KeyCap(WorkspaceCommandHelpText.firstKey(for: .windowToggleAgentPanel))
@@ -122,7 +126,10 @@ struct WorkspaceAgentPane: View {
       WorkspaceAgentApprovalCard(
         itemID: item.id, approval: approval, focusedCard: $focusedCard,
         approve: { model.agent.approve(item.id); model.focusAgentInput() },
-        deny: { model.agent.deny(item.id); model.focusAgentInput() })
+        deny: { model.agent.deny(item.id); model.focusAgentInput() },
+        undo: { model.undoAgentChange(item.id) },
+        redo: { model.redoAgentChange(item.id) },
+        leave: { model.focusAgentInput() })
     case .notice(let text, let isError):
       // Markdown, so a fix's `claude` reads as something to type.
       Text(Self.markdown(text))
@@ -206,6 +213,7 @@ struct WorkspaceAgentPane: View {
 
   private var hint: String {
     if agent.pendingApproval != nil { return "tab to the card · return approves · esc denies" }
+    if agent.latestUndoableChange != nil { return "return sends · tab to the last change · esc back to tasks" }
     return "return sends · shift-return new line · esc back to tasks"
   }
 
@@ -219,9 +227,11 @@ struct WorkspaceAgentPane: View {
     model.sendAgentMessage(text)
   }
 
+  /// Tab from the field: the card waiting for an answer, or else the newest
+  /// change that can be taken back, where Return undoes it.
   private func focusPendingCard() -> Bool {
-    guard let pending = agent.pendingApproval else { return false }
-    focusedCard = pending.id
+    guard let card = agent.pendingApproval ?? agent.latestUndoableChange else { return false }
+    focusedCard = card.id
     return true
   }
 
@@ -241,12 +251,16 @@ struct WorkspaceAgentPane: View {
   }
 }
 
-/// A change the assistant wants to make, stopped until someone answers.
+/// A change the assistant made, or wants to make.
 ///
-/// It says what will happen in the app's words — "Add a task", the title, the
-/// list by name — with the raw input behind a disclosure for anyone who wants
-/// to check it. Approve is a button, and Return only while the card itself
-/// holds the keyboard; there is no timer, no default and no "always".
+/// It says what happens in the app's words — "Add a task", the title, the
+/// list by name, what a field held struck through over what it holds now —
+/// with the raw input behind a disclosure for anyone who wants to check it.
+/// Once the change has run and made an undo step, Undo takes back exactly
+/// that step, or says on the button which later changes have to go with it;
+/// once undone, Redo puts it back. Asked for first (the setting), Approve
+/// and Deny answer it; Return does what the card's button does while the
+/// card itself holds the keyboard, and there is no timer and no default.
 struct WorkspaceAgentApprovalCard: View {
   @Environment(WorkspaceViewModel.self) private var model
   @Environment(\.theme) private var theme
@@ -255,10 +269,22 @@ struct WorkspaceAgentApprovalCard: View {
   var focusedCard: FocusState<UUID?>.Binding
   let approve: () -> Void
   let deny: () -> Void
+  let undo: () -> Void
+  let redo: () -> Void
+  /// Back to the message field.
+  let leave: () -> Void
   @State private var showsInput = false
+  /// What Undo would do, asked of the journal whenever it moves.
+  @State private var plan: WorkspaceStepUndoPlan?
 
   private var isPending: Bool { approval.state == .pending }
   private var isFocused: Bool { focusedCard.wrappedValue == itemID }
+  private var hasRun: Bool { approval.outcome == .applied }
+  /// Undo or Redo is there to press.
+  private var canTakeBack: Bool {
+    guard hasRun, approval.undoStep != nil, let plan, plan.isAvailable else { return false }
+    return !plan.isUndone || plan.canRedo
+  }
 
   var body: some View {
     let summary = AgentToolSummary.describe(
@@ -266,7 +292,7 @@ struct WorkspaceAgentApprovalCard: View {
       current: { approval.before[$0] })
     return VStack(alignment: .leading, spacing: theme.space.sm) {
       HStack(alignment: .firstTextBaseline, spacing: theme.space.xs) {
-        MicroLabel(isPending ? "Wants to" : "Asked to")
+        MicroLabel(isPending ? "Wants to" : approval.state == .automatic ? "Changed" : "Asked to")
         Text(summary.title)
           .font(theme.bodyFont())
           .foregroundStyle(summary.isDestructive ? theme.danger : theme.ink)
@@ -317,18 +343,26 @@ struct WorkspaceAgentApprovalCard: View {
     .overlay(
       Rectangle()
         .strokeBorder(borderColor, lineWidth: isFocused ? theme.focusRingWidth : theme.hairline))
-    .focusable(isPending)
+    .focusable(isPending || canTakeBack)
     .focused(focusedCard, equals: itemID)
     .focusEffectDisabled()
     .onKeyPress(.return) {
-      guard isPending else { return .ignored }
-      approve()
+      if isPending {
+        approve()
+      } else if canTakeBack, let plan {
+        if plan.isUndone { redo() } else { undo() }
+      } else {
+        return .ignored
+      }
       return .handled
     }
     .onKeyPress(.escape) {
-      guard isPending else { return .ignored }
-      deny()
+      if isPending { deny() } else { leave() }
       return .handled
+    }
+    .task(id: "\(approval.undoStep ?? "")·\(model.historyVersion)") {
+      guard let step = approval.undoStep else { return }
+      plan = model.agentUndoPlan(for: step)
     }
   }
 
@@ -336,10 +370,11 @@ struct WorkspaceAgentApprovalCard: View {
     if isFocused { return theme.focusRing }
     switch approval.state {
     case .pending: return theme.warning.opacity(Theme.statusBorderOpacity)
-    case .approved:
+    case .approved, .automatic:
       switch approval.outcome {
       case nil: return theme.border
-      case .applied: return theme.success.opacity(Theme.statusBorderOpacity)
+      case .applied:
+        return plan?.isUndone == true ? theme.border : theme.success.opacity(Theme.statusBorderOpacity)
       case .failed: return theme.danger.opacity(Theme.statusBorderOpacity)
       }
     case .denied, .withdrawn: return theme.border
@@ -369,17 +404,70 @@ struct WorkspaceAgentApprovalCard: View {
             .lineLimit(1)
         }
       }
-    case .approved:
+    case .approved, .automatic:
+      let prefix = approval.state == .approved ? "Approved · " : ""
       switch approval.outcome {
-      case nil: status("Approved · running…", theme.muted)
-      case .applied: status("Approved · done · an \"MCP: …\" step in Edit ▸ Undo", theme.success)
-      case .failed(let message): status("Approved · failed: \(message)", theme.danger)
+      case nil: status("\(prefix)running…", theme.muted)
+      case .applied: undoRow(prefix: prefix)
+      case .failed(let message): status("\(prefix)failed: \(message)", theme.danger)
       }
     case .denied:
       status("Denied · nothing changed", theme.muted)
     case .withdrawn:
       status("Not answered before the thread ended · nothing changed", theme.muted)
     }
+  }
+
+  /// Done, and the way back: Undo, or Undone and Redo.
+  @ViewBuilder
+  private func undoRow(prefix: String) -> some View {
+    if approval.undoStep == nil {
+      status("\(prefix)done", theme.success)
+    } else if let plan, plan.isAvailable {
+      HStack(spacing: theme.space.sm) {
+        if plan.isUndone {
+          status("Undone", theme.muted)
+          if plan.canRedo {
+            Button("Redo", action: redo)
+              .buttonStyle(WorkspaceAgentCardButtonStyle(tint: nil))
+              .help("Put this change back · ↩, with the card focused (⇥ from the message field)")
+          }
+        } else {
+          status("\(prefix)done", theme.success)
+          Button(Self.undoTitle(plan), action: undo)
+            .buttonStyle(WorkspaceAgentCardButtonStyle(tint: nil))
+            .help(Self.undoHelp(plan))
+        }
+        Spacer(minLength: 0)
+        if isFocused {
+          Text(plan.isUndone ? "return redoes" : "return undoes")
+            .font(theme.monoCaptionFont)
+            .foregroundStyle(theme.dim)
+            .lineLimit(1)
+        }
+      }
+    } else if plan != nil {
+      status("\(prefix)done · no longer in the undo history", theme.success)
+    } else {
+      status("\(prefix)done", theme.success)
+    }
+  }
+
+  /// "Undo", or "Undo with 2 later changes" when this step can only go back
+  /// together with the steps that built on it.
+  static func undoTitle(_ plan: WorkspaceStepUndoPlan) -> String {
+    switch plan.laterSteps.count {
+    case 0: "Undo"
+    case 1: "Undo with 1 later change"
+    case let count: "Undo with \(count) later changes"
+    }
+  }
+
+  static func undoHelp(_ plan: WorkspaceStepUndoPlan) -> String {
+    let keys = "↩, with the card focused (⇥ from the message field)"
+    guard !plan.laterSteps.isEmpty else { return "Take back exactly this change · \(keys)" }
+    let later = plan.laterSteps.map(\.label).joined(separator: ", ")
+    return "A later change built on this one, so they go back together: \(later) · \(keys)"
   }
 
   private func status(_ text: String, _ color: Color) -> some View {

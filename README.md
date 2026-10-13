@@ -114,7 +114,7 @@ something you already have to know.
 | `Cmd+F` / `Cmd+Shift+F` | Search |
 | `Cmd+P` / `gl` | Go to a list — opened empty, it lists the ones you were in most recently first. Every list and nested list, matched by the letters you type (`wsr` finds "Write the spring report"), with its folder beside it. Clicking the list's name at the top of the pane opens it too |
 | `Cmd+Ctrl+I` / `Cmd+Ctrl+D` | The right dock on its Inspector / Done tab, or put it away |
-| `Cmd+Shift+A` | The left dock's Agent tab — Claude Code, asking before every change |
+| `Cmd+Shift+A` | The left dock's Agent tab — Claude Code, each change it makes shown with an Undo |
 | `Cmd+J` | The bottom dock: a graph of tasks done and added per day (Zed's bottom dock) |
 | `Cmd+R`, `r` or `Cmd+Alt+B` / `Cmd+Alt+Y` | The right dock, on the tab it was on and with the keyboard in it, or put it away / close all docks (Zed's) |
 | `Cmd+Shift+{` / `Cmd+Shift+}`, or `[` / `]` | In the right dock, its previous / next tab — Inspector, Done, Timeline, Conditions — with the keyboard brought along (Zed's previous / next tab; on a task pane the same chords change list). `Ctrl+Tab` leaves it for the next region |
@@ -759,19 +759,25 @@ the bottom.
     tools — no shell, no files, no web, and no API key (it uses your Claude
     Code login). It **reads freely** — the lists, tasks, dailies, the day log
     and the focus timer — and each read shows as one muted line in the
-    transcript. **Every change** — adding, editing, completing, moving or
-    deleting anything — stops as a card saying what it will do (the tool, the
-    title, the list by name) with **Approve** and **Deny**; nothing runs until
-    you click Approve, or press Return with the card holding the keyboard
-    (Tab from the field reaches it; Esc denies). A change to a task shows
-    what it holds now struck through above what it would become. Each message
-    also tells it the tasks on screen with their ids (the first 30), so "these"
-    and "the top three" work. Stopping the thread, starting
-    a new one, or the process dying withdraws an unanswered card, and the
-    change never happens. Return sends, Shift+Return is a new line, Esc hands
-    the keyboard back to the tasks; the glyphs on the tab bar start a new
-    thread and stop the current one. Approved changes are ordinary "MCP: …"
-    steps in the Undo menu. If Claude Code is not installed where Takt
+    transcript. Its **changes apply straight away** — adding, editing,
+    completing, moving or deleting anything — and each shows as a card saying
+    what it changed (the tool, the title, the list by name, and what a field
+    held struck through above what it holds now) with an **Undo** that takes
+    back exactly that change, leaving later ones alone; when a later change
+    built on it, the button says it will take those back too ("Undo with 1
+    later change"). Once undone the card says so, with **Redo**. Tab from the
+    field reaches the newest such card, Return presses its button and Esc
+    returns to the field; the assistant is told what you undid. To approve
+    each change before it runs instead, turn on **Ask before changing tasks**
+    in Settings ▸ Agent (off by default; from the next thread): then every
+    change stops as a card with **Approve** and **Deny**, Return approves with
+    the card holding the keyboard and Esc denies, and stopping the thread
+    withdraws an unanswered card. Each message also tells it the tasks on
+    screen with their ids (the first 30), so "these" and "the top three"
+    work. Return sends, Shift+Return is a new line, Esc hands the keyboard
+    back to the tasks; the glyphs on the tab bar start a new thread and stop
+    the current one. Every change is also an ordinary "MCP: …" step in the
+    Undo menu. If Claude Code is not installed where Takt
     looks (`~/.local/bin`, `~/.claude/local`, Homebrew, `/usr/local/bin`), the
     panel says so and takes a path; if it is not signed in, too old or out of
     usage, the error says what to run. **Standing instructions** can be written
@@ -781,8 +787,8 @@ the bottom.
     message in the thread. The line above the field names the ones in effect
     where you are, and clicking one opens it to edit. The agent keeps them
     too: tell it something lasting ("in this list, titles start with a
-    verb") and it offers to save it to the narrowest scope that fits, as a
-    change like any other, showing the instructions before and after. They
+    verb") and it saves it to the narrowest scope that fits, as a change like
+    any other, showing the instructions before and after. They
     live in the workspace, so they sync, and `takt ws instructions` reads them
     from a terminal. See
     [`docs/agent-panel.md`](docs/agent-panel.md).

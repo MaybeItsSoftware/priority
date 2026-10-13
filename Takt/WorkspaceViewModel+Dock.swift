@@ -369,8 +369,9 @@ extension WorkspaceViewModel {
   func agentCurrentValues(tool: String, input: JSONValue) -> [String: String] {
     let bare = AgentToolPolicy.priorityToolName(tool)
     if bare == "agent_instructions_set" {
-      // Read from the workspace rather than the field, which may be ahead.
-      agentInstructions.reload()
+      // The rows as last loaded, not read again: with changes applied
+      // without asking, the tool may already have run by the time this is
+      // asked, and the workspace would say "after".
       let id = input.objectValue?["id"]?.stringValue ?? ""
       let text: String =
         switch input.objectValue?["scope"]?.stringValue {
@@ -395,6 +396,45 @@ extension WorkspaceViewModel {
     ]
     values["list_id"] = (lists + archivedLists).first { $0.id == task.listId }?.name
     return values
+  }
+
+  /// What Undo on an agent card's change would do, or nil when the card has
+  /// no step or the workspace cannot say.
+  func agentUndoPlan(for step: String) -> WorkspaceStepUndoPlan? {
+    try? store?.stepUndoPlan(step)
+  }
+
+  /// Takes back exactly the change an agent card shows — its "MCP: …" undo
+  /// step — and, only when a later step built on it, those later steps too.
+  /// The assistant is told with the next message.
+  func undoAgentChange(_ itemID: UUID) {
+    guard let store, let step = agentUndoStep(itemID) else { return }
+    taskEditor.flush()
+    var labels: [String] = []
+    perform {
+      labels = try store.undoStep(step)
+      try load()
+    }
+    if !labels.isEmpty { agent.markUndone(itemID, labels: labels) }
+  }
+
+  /// Puts back a change taken back from its card.
+  func redoAgentChange(_ itemID: UUID) {
+    guard let store, let step = agentUndoStep(itemID) else { return }
+    taskEditor.flush()
+    var redone = false
+    perform {
+      redone = try store.redoStep(step)
+      try load()
+    }
+    if redone { agent.markUndone(itemID, labels: nil) }
+  }
+
+  private func agentUndoStep(_ itemID: UUID) -> String? {
+    guard let item = agent.items.first(where: { $0.id == itemID }),
+      case .write(let approval) = item.entry
+    else { return nil }
+    return approval.undoStep
   }
 
   /// After a turn, look for its writes now rather than on the next poll.
