@@ -48,7 +48,8 @@ public struct AgentToolSummary: Equatable, Sendable {
     current: (String) -> String? = { _ in nil }
   ) -> AgentToolSummary {
     let tool = AgentToolPolicy.priorityToolName(qualified) ?? qualified
-    let object = input.objectValue ?? [:]
+    var object = input.objectValue ?? [:]
+    if tool == "agent_instructions_set" { object = instructionsAsTheyWouldBe(object, current: current) }
     let fields = orderedKeys(object).compactMap { key -> Field? in
       guard let value = object[key], let text = display(value, key: key, name: name) else {
         return nil
@@ -62,6 +63,24 @@ public struct AgentToolSummary: Equatable, Sendable {
       isDestructive: destructiveTools.contains(tool))
   }
 
+  /// An instructions edit shows the scope's whole text after it beside the
+  /// whole text before (`current("text")`, nil when it has none): an append
+  /// becomes the text it would make, and blank text, which clears the scope,
+  /// reads "None" rather than vanishing from the card.
+  private static func instructionsAsTheyWouldBe(
+    _ object: [String: JSONValue], current: (String) -> String?
+  ) -> [String: JSONValue] {
+    var object = object
+    let added = (object["text"]?.stringValue ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+    let before = current("text") ?? ""
+    if object["mode"]?.stringValue == "append", !before.isEmpty {
+      object["text"] = .string(added.isEmpty ? before : before + "\n\n" + added)
+    } else {
+      object["text"] = added.isEmpty ? .null : .string(added)
+    }
+    return object
+  }
+
   /// One muted line for a read: `task_search · milk`. The tool's own name,
   /// because it is a log line rather than a question, and the argument that
   /// says what was looked at.
@@ -72,7 +91,7 @@ public struct AgentToolSummary: Equatable, Sendable {
   ) -> String {
     let tool = AgentToolPolicy.priorityToolName(qualified) ?? qualified
     let object = input.objectValue ?? [:]
-    for key in ["query", "content", "tag", "list_id", "parent_task_id", "task_id", "days"] {
+    for key in ["query", "content", "tag", "list_id", "parent_task_id", "task_id", "days", "id", "scope"] {
       if let value = object[key], let detail = display(value, key: key, name: name) {
         return "\(tool) · \(detail)"
       }
@@ -106,6 +125,7 @@ public struct AgentToolSummary: Equatable, Sendable {
     "daily_add": "Create a daily",
     "daily_update": "Change a daily",
     "daily_tick": "Tick a daily",
+    "agent_instructions_set": "Save standing instructions for the agent",
   ]
 
   private static let destructiveTools: Set<String> = ["workspace_task_delete", "task_delete"]
@@ -115,10 +135,10 @@ public struct AgentToolSummary: Equatable, Sendable {
 
   /// Keys in the order a person reads them: what, then where, then details.
   private static let keyOrder = [
-    "task_id", "daily_id", "title", "content", "name", "status", "done", "list_id",
+    "task_id", "daily_id", "scope", "id", "title", "content", "name", "status", "done", "list_id",
     "source_list_id", "target_list_id", "parent_task_id", "folder_id", "parent_folder_id",
     "location", "position", "at_top", "kind", "pinned", "kanban_column", "due", "tags",
-    "notes", "note", "external_links", "items",
+    "notes", "note", "external_links", "items", "text", "mode",
   ]
 
   private static let labels: [String: String] = [
@@ -128,13 +148,14 @@ public struct AgentToolSummary: Equatable, Sendable {
     "folder_id": "Folder", "parent_folder_id": "Inside", "location": "Where",
     "position": "Position", "at_top": "At the top", "kind": "Kind", "pinned": "Pinned",
     "kanban_column": "Column", "due": "Due", "tags": "Tags", "notes": "Notes", "note": "Note",
-    "external_links": "Links", "items": "Items",
+    "external_links": "Links", "items": "Items", "scope": "Scope", "id": "For",
+    "text": "Instructions", "mode": "Mode",
   ]
 
   /// Keys whose value is an id the app can put a name to.
   private static let idKeys: Set<String> = [
     "task_id", "list_id", "parent_task_id", "folder_id", "parent_folder_id", "source_list_id",
-    "target_list_id",
+    "target_list_id", "id",
   ]
 
   private static func orderedKeys(_ object: [String: JSONValue]) -> [String] {

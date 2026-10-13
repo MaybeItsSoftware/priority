@@ -91,6 +91,14 @@ final class AgentToolPolicyTests: XCTestCase {
     XCTAssertTrue(text.contains("only runs if they approve it"))
   }
 
+  func testSystemPromptTellsTheAgentToKeepTheStandingInstructions() {
+    let text = AgentSystemPrompt.text(today: Date())
+    XCTAssertTrue(text.contains("agent_instructions_set"))
+    XCTAssertTrue(text.contains("narrowest scope"))
+    XCTAssertTrue(text.contains("rather than piling up duplicates"))
+    XCTAssertTrue(text.contains("Never save a one-off request"))
+  }
+
   func testContextNamesWhatIsOnScreen() {
     XCTAssertNil(AgentSystemPrompt.context(listName: nil, listID: nil, taskTitle: nil, taskID: nil))
     XCTAssertEqual(
@@ -152,5 +160,35 @@ final class AgentToolPolicyTests: XCTestCase {
       "workspace_tasks · Groceries")
     XCTAssertEqual(
       AgentToolSummary.readLine(tool: "mcp__takt__workspace_tree", input: .object([:])), "workspace_tree")
+  }
+
+  func testAnInstructionsEditShowsTheWholeTextBeforeAndAfter() {
+    let replace = AgentToolSummary.describe(
+      tool: "mcp__takt__agent_instructions_set",
+      input: .object(["scope": .string("list"), "id": .string("L1"), "text": .string("Verbs first.")]),
+      name: { $0 == "L1" ? "Groceries" : nil },
+      current: { $0 == "text" ? "Keep it short." : nil })
+    XCTAssertEqual(replace.title, "Save standing instructions for the agent")
+    XCTAssertEqual(
+      replace.fields,
+      [
+        .init(label: "Scope", value: "list"),
+        .init(label: "For", value: "Groceries"),
+        .init(label: "Instructions", value: "Verbs first.", previous: "Keep it short."),
+      ])
+
+    let append = AgentToolSummary.describe(
+      tool: "mcp__takt__agent_instructions_set",
+      input: .object(["scope": .string("account"), "text": .string("Weekdays only."), "mode": .string("append")]),
+      current: { $0 == "text" ? "Keep it short." : nil })
+    XCTAssertEqual(append.fields.first { $0.label == "Instructions" }?.value, "Keep it short.\n\nWeekdays only.")
+    XCTAssertEqual(append.fields.first { $0.label == "Instructions" }?.previous, "Keep it short.")
+
+    let clear = AgentToolSummary.describe(
+      tool: "mcp__takt__agent_instructions_set",
+      input: .object(["scope": .string("account"), "text": .string("  ")]),
+      current: { $0 == "text" ? "Keep it short." : nil })
+    XCTAssertEqual(
+      clear.fields.first { $0.label == "Instructions" }, .init(label: "Instructions", value: "None", previous: "Keep it short."))
   }
 }

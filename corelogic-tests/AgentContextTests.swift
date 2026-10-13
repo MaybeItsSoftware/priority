@@ -87,4 +87,24 @@ final class AgentContextTests: XCTestCase {
     XCTAssertEqual(
       ledger.changes([AgentContextBlock(key: "a", text: "1"), AgentContextBlock(key: "b", text: "3")]), ["3"])
   }
+
+  /// After the agent saves a list's instructions, the next message carries
+  /// the block again with them in it: the ledger compares the text, and the
+  /// text is read back from the workspace.
+  func testAnInstructionTheAgentSavedIsSentWithTheNextMessage() throws {
+    var ledger = AgentContextLedger()
+    func block(_ listText: String) -> [AgentContextBlock] {
+      let scopes = [
+        AgentInstructionScope(kind: .account, id: nil, name: "Account", text: "Verbs first."),
+        AgentInstructionScope(kind: .list, id: "L1", name: "Groceries", text: listText),
+      ]
+      return [AgentContextBlock(
+        key: "instructions", text: AgentStandingInstructions.block(scopes), cleared: AgentStandingInstructions.cleared)]
+    }
+    XCTAssertEqual(ledger.changes(block("")).count, 1)
+    XCTAssertTrue(ledger.changes(block("")).isEmpty)
+    let after = try XCTUnwrap(ledger.changes(block("Oat milk, never cow's.")).first)
+    XCTAssertTrue(after.contains("List \"Groceries\":\nOat milk, never cow's."))
+    XCTAssertTrue(ledger.changes(block("Oat milk, never cow's.")).isEmpty)
+  }
 }

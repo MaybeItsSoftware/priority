@@ -188,6 +188,15 @@ public enum AgentSystemPrompt {
       screen, and the user's standing instructions for their account, a folder or a list. \
       Instructions are sent again only when they change; the latest replace any before them.
 
+      You keep those standing instructions, with the user's say-so. When the user states a \
+      durable preference, fact or convention — about a list, a folder, or how they work — offer \
+      to save it with agent_instructions_set, in the narrowest scope that fits: a list's for \
+      that list alone, a folder's for every list in it, the account's only for how they work \
+      everywhere. Keep them short and current: read the scope with agent_instructions_get \
+      first, then edit or merge into what is there rather than piling up duplicates, and drop \
+      what the new instruction replaces. Never save a one-off request — what to do with this \
+      task, today, this once — as a standing instruction.
+
       Reply in short, plain Markdown. Refer to tasks and lists by their titles, not their ids.
       """
   }

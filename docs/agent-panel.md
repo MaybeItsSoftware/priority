@@ -21,7 +21,7 @@ The rule it is built around is the one chosen when it was added:
 | `Sources/TaktCore/AgentToolPolicy.swift` | Which tools are read-only, the exact `claude` invocation, where `claude` is looked for, the system prompt |
 | `Sources/TaktCore/AgentToolSummary.swift` | A tool call in words, for the approval card and the read lines |
 | `Sources/TaktCore/AgentContext.swift` | The standing instructions' block and folder chain, and the ledger that sends a block only when it changed |
-| `Takt/WorkspaceAgentInstructions.swift` | Where the standing instructions are kept, and the field they are written in |
+| `Takt/WorkspaceAgentInstructions.swift` | The app's view of the standing instructions (kept in the workspace, `core/src/agent_instructions.rs`), and the field they are written in |
 | `Takt/WorkspaceAgentSession.swift` | The process: launch, the line reader, approvals, stop, new thread |
 | `Takt/WorkspaceAgentPane.swift` | The transcript, the approval card, the setup state |
 | `Takt/WorkspaceAgentInputField.swift` | The message field (an `NSTextView`: Return sends, Shift+Return is a new line) |
@@ -122,11 +122,42 @@ list is sent only when it differs from the last one this process was sent.
 
 The user can write instructions for the assistant at three scopes: the whole
 account (Settings ▸ Agent), a folder, and a list (each in its settings sheet,
-`oo` on the list or the sidebar's context menu). They are kept in this Mac's
-preferences (`WorkspaceAgentInstructions`: `agentInstructionsAccountV1`, and
-`agentInstructionsByFolderV1` / `agentInstructionsByListV1` keyed by id)
-rather than the workspace database, because only the Mac has an agent and a
-Rust core migration would sync text nothing else reads.
+`oo` on the list or the sidebar's context menu). The assistant can keep them
+too, through `agent_instructions_get` and `agent_instructions_set`.
+
+They live in the workspace database, in `agent_instructions`
+(`v25_agent_instructions`), one row per scope keyed `account`,
+`folder:<id>` or `list:<id>`. The reads and writes are the Rust core's
+(`core/src/agent_instructions.rs`), called by the app's store
+(`WorkspaceStore.agentInstructionTexts` and `setAgentInstructions`) and by the
+CLI's two tools alike. Each edit is an "Edit Agent Instructions" undo step —
+"MCP: Edit Agent Instructions" when the assistant made it — and blank text
+clears a scope. The table syncs (see `docs/sync.md`): the tools are the CLI's,
+which runs wherever the workspace does, and the scope-shaped key means two
+devices writing the account's instructions write one row.
+
+Before v25 they were kept in this Mac's preferences
+(`agentInstructionsAccountV1`, and `agentInstructionsByFolderV1` /
+`agentInstructionsByListV1` keyed by id). On first launch the app copies them
+in once (`WorkspaceStore.migrateAgentInstructionPreferences`, flagged by
+`agentInstructionsInWorkspaceV1`), outside the journal and without
+overwriting a scope the workspace already has text for; the preferences are
+left where they were.
+
+`WorkspaceAgentInstructions` is the app's view of the rows. The account field
+saves 0.7 s after the last keystroke (and before a message is sent), so a
+sentence is one undo step; the folder and list fields save with their sheet.
+It reads the rows again on every workspace reload, so an edit the assistant,
+the CLI or another device made arrives through the same `PRAGMA data_version`
+poll as any other external write.
+
+The system prompt tells the assistant to keep them: when the user states a
+durable preference, fact or convention about a list, a folder or how they
+work, offer to save it to the narrowest scope that fits; read the scope first
+and merge rather than pile up duplicates; never save a one-off request. The
+approval card for `agent_instructions_set` shows the scope's whole text
+before, struck through, over its whole text after — an append shows the text
+it would make, and clearing shows "None".
 
 A message starts with the instructions that apply where the user is
 (`WorkspaceViewModel.agentInstructionScopes`), as one block: the account's,
@@ -139,7 +170,8 @@ The system prompt is fixed when the process starts, and the list changes during
 a thread, so the block goes with the message rather than the prompt — and only
 when it differs from the last one this process was sent
 (`AgentContextLedger`). Moving to a list with none sends one line saying the
-earlier ones no longer apply. Stop or New thread starts a fresh process and a
+earlier ones no longer apply. An instruction the assistant has just saved
+changes the block, so the next message carries it again with the new text. Stop or New thread starts a fresh process and a
 fresh ledger, so its first message carries them again.
 
 The line above the message field names the scopes that apply — written ones in
@@ -148,16 +180,16 @@ the muted ink, unwritten ones dim — and each opens where it is written.
 ## Tool policy
 
 Classified in `core/src/agent_tools.rs`, which the CLI's tests hold to its
-whole tool table (42 tools):
+whole tool table (47 tools):
 
 **Read-only, pre-allowed** — shown as one muted line each (`task_search · milk`):
 
 `task_lists`, `task_fetch`, `task_search`, `task_metadata`, `daily_log_fetch`,
 `dailies_list`, `focus_status`, `focus_history`, `workspace_tree`,
 `workspace_tasks`, `workspace_task_dependencies`, `workspace_filter_lists`,
-`workspace_filter_list_tasks`
+`workspace_filter_list_tasks`, `workspace_board_columns`, `agent_instructions_get`
 
-**Writes, asked every time** — the other 29:
+**Writes, asked every time** — the other 32:
 
 `task_add`, `task_update`, `task_note_add`, `task_move`, `task_reparent`,
 `project_move`, `task_complete`, `task_reopen`, `task_invalidate`,
@@ -167,7 +199,8 @@ whole tool table (42 tools):
 `workspace_task_blocker_add`, `workspace_task_blocker_remove`,
 `workspace_filter_list_create`, `workspace_filter_list_update`,
 `workspace_filter_list_delete`, `workspace_folder_create`, `workspace_list_create`, `workspace_list_move`,
-`workspace_list_delete`
+`workspace_list_delete`, `workspace_board_column_set`, `workspace_board_column_delete`,
+`agent_instructions_set`
 
 The CLI's `every_declared_tool_is_classified_as_a_read_or_a_write` test holds
 the two lists to the table exactly, so a tool added to the CLI fails `cargo

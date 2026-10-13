@@ -779,7 +779,12 @@ the bottom.
     its settings, `oo`); a message carries the account's, then each enclosing
     folder's, then the list's, and only when they changed since the last
     message in the thread. The line above the field names the ones in effect
-    where you are, and clicking one opens it to edit. See
+    where you are, and clicking one opens it to edit. The agent keeps them
+    too: tell it something lasting ("in this list, titles start with a
+    verb") and it offers to save it to the narrowest scope that fits, as a
+    change like any other, showing the instructions before and after. They
+    live in the workspace, so they sync, and `takt ws instructions` reads them
+    from a terminal. See
     [`docs/agent-panel.md`](docs/agent-panel.md).
 - **Main pane** — a header band with where you are on the left (the scope, and
   the way back out of an opened task) and a count or a few glyph buttons on the

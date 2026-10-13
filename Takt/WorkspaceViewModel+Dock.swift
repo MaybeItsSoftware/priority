@@ -1,4 +1,5 @@
 import Foundation
+import OSLog
 import TaktCore
 import TaktWorkspace
 
@@ -261,6 +262,9 @@ extension WorkspaceViewModel {
   /// there, and the tasks on screen, go with it whenever they differ from the
   /// last ones the thread was sent.
   func sendAgentMessage(_ text: String) {
+    // An account edit still waiting out its pause goes in first, so the
+    // block and the agent's own reads agree.
+    agentInstructions.saveAccount()
     // Set here rather than at init: no approval can be asked for before a
     // message has been sent.
     agent.currentValues = { [weak self] tool, input in self?.agentCurrentValues(tool: tool, input: input) ?? [:] }
@@ -291,6 +295,22 @@ extension WorkspaceViewModel {
   private var agentContextList: TaskList? {
     guard !isEverythingSelected, selectedFolderID == nil else { return nil }
     return selectedList ?? selectedTask.flatMap { task in lists.first { $0.id == task.listId } }
+  }
+
+  /// Points the standing instructions at the store, after copying in what
+  /// this Mac kept in its preferences before they moved into the workspace.
+  /// A copy that fails is logged and tried again next launch; the
+  /// instructions still work from the workspace meanwhile.
+  func attachAgentInstructions() {
+    guard let store else { return }
+    do {
+      try store.migrateAgentInstructionPreferences(from: .standard)
+    } catch {
+      Logger(subsystem: AppIdentity.bundleIdentifier, category: "WorkspaceAgentInstructions")
+        .error("Copying the agent instructions out of preferences failed: \(error.localizedDescription)")
+    }
+    agentInstructions.store = store
+    agentInstructions.perform = { [weak self] work in self?.perform(mirrors: false, work) }
   }
 
   /// Every scope whose instructions apply where the user is, written or not,
@@ -348,6 +368,19 @@ extension WorkspaceViewModel {
   /// tool, or a task this workspace cannot find.
   func agentCurrentValues(tool: String, input: JSONValue) -> [String: String] {
     let bare = AgentToolPolicy.priorityToolName(tool)
+    if bare == "agent_instructions_set" {
+      // Read from the workspace rather than the field, which may be ahead.
+      agentInstructions.reload()
+      let id = input.objectValue?["id"]?.stringValue ?? ""
+      let text: String =
+        switch input.objectValue?["scope"]?.stringValue {
+        case "account": agentInstructions.texts.account
+        case "folder": agentInstructions.folder(id)
+        case "list": agentInstructions.list(id)
+        default: ""
+        }
+      return text.isEmpty ? [:] : ["text": text]
+    }
     guard bare == "workspace_task_update" || bare == "workspace_task_move",
       let id = input.objectValue?["task_id"]?.stringValue,
       let task = task(withID: id)

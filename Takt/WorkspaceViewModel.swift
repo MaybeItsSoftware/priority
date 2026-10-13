@@ -796,6 +796,7 @@ enum WorkspaceSidebarItem: Identifiable {
       // here rather than restored as the running session. Without this every
       // quit left a paused block behind that nothing ever cleared.
       try self.store?.resolveStaleFocusSession()
+      attachAgentInstructions()
       try load()
       // Ranked here rather than in the background: the first screen is the
       // day, and it should not paint empty and then fill.
@@ -874,6 +875,7 @@ enum WorkspaceSidebarItem: Identifiable {
     archivedLists = try store.lists(in: workspace.id, includingArchived: true).filter(\.isArchived)
     let loadedFilterLists = try store.filterLists(in: workspace.id)
     if filterLists != loadedFilterLists { filterLists = loadedFilterLists }
+    agentInstructions.reload()
     if let selectedFilterListID, !filterLists.contains(where: { $0.id == selectedFilterListID }) {
       // Deleted here, by undo or on another device: Everything is what it
       // was drawn over.
