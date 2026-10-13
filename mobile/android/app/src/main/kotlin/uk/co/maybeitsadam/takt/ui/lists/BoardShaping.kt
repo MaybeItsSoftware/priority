@@ -17,6 +17,9 @@ import uk.co.maybeitsadam.takt.core.WorkspaceBoardTrees
 import uk.co.maybeitsadam.takt.core.WorkspaceKanbanColumn
 import uk.co.maybeitsadam.takt.core.WorkspaceTask
 import uk.co.maybeitsadam.takt.data.workspace.ListScopeData
+import uniffi.takt_core.boardColumnId
+import uniffi.takt_core.boardCrossColumn
+import uniffi.takt_core.matrixArrangement
 
 /** One card on the board: its own row, plus its drawn subtasks. */
 @Immutable
@@ -152,22 +155,22 @@ object BoardShaping {
         for (task in treeTasks) data.decorations[task.id]?.kanbanColumn?.let { filed[task.id] = it }
 
         val fallback = WorkspaceKanbanColumn.blitzitDefaults[0].id
-        val effective = HashMap<String, String>()
-        fun effectiveColumn(task: WorkspaceTask, guard: Int = 0): String {
-            effective[task.id]?.let { return it }
-            val column = filed[task.id]
-                ?: board.parents[task.id]?.takeIf { guard < 512 }?.let { effectiveColumn(it, guard + 1) }
-                ?: fallback
-            effective[task.id] = column
-            return column
-        }
-        val crossColumn = treeTasks.filter { task ->
-            if (hideCompleted && task.status != TaskStatus.OPEN) return@filter false
-            if (task.isList || task.id in cardIds) return@filter false
-            val parent = board.parents[task.id] ?: return@filter false
-            val column = filed[task.id] ?: return@filter false
-            column != effectiveColumn(parent)
-        }
+        // A subtask nobody filed follows its parent's column; one filed
+        // elsewhere is a card of its own there: the core's `board_cross_column`,
+        // shared with the Mac and iPhone. Rows cross as indices and column codes.
+        val codes = HashMap<String, Int>()
+        fun code(column: String): Int = codes.getOrPut(column) { codes.size }
+        val fallbackCode = code(fallback)
+        val rowIndex = HashMap<String, Int>(treeTasks.size * 2)
+        treeTasks.forEachIndexed { index, task -> rowIndex[task.id] = index }
+        val crossColumn = boardCrossColumn(
+            treeTasks.map { task -> board.parents[task.id]?.let { rowIndex[it.id] } ?: -1 },
+            treeTasks.map { task -> filed[task.id]?.let(::code) ?: -1 },
+            treeTasks.map { task ->
+                !(hideCompleted && task.status != TaskStatus.OPEN) && !task.isList && task.id !in cardIds
+            },
+            fallbackCode,
+        ).map { treeTasks[it.toInt()] }
 
         val columns = read.columns.ifEmpty { WorkspaceKanbanColumn.blitzitDefaults }
         val drawnRead = if (read.columns.isEmpty()) read.copy(columns = columns) else read
@@ -213,22 +216,23 @@ object BoardShaping {
      */
     fun matrix(board: BoardShape): MatrixShape {
         val cards = board.columns.flatMap { it.cards }.filter { it.parentTitle == null }
-        val byCell = cards.groupBy { MatrixCell.of(board.positions[it.id]) }
-        // `sortedBy` is stable, so the unranked keep the board's order.
-        fun ranked(cell: MatrixCell) = byCell[cell].orEmpty().sortedBy { board.positions[it.id]?.rank ?: Int.MAX_VALUE }
+        // The core's `matrix_arrangement`, shared with the Mac and iPhone.
+        val arrangement = matrixArrangement(
+            cards.map { board.positions[it.id]?.urgency },
+            cards.map { board.positions[it.id]?.importance },
+            cards.map { board.positions[it.id]?.rank },
+        )
+        fun pick(indices: List<UInt>) = indices.map { cards[it.toInt()] }.toImmutableList()
+        val order = listOf(MatrixCell.DO_NOW, MatrixCell.SCHEDULE, MatrixCell.DELEGATE, MatrixCell.ELIMINATE)
+        val byCell = order.zip(arrangement.quadrants).associate { (cell, indices) -> cell to pick(indices) }
         return MatrixShape(
-            unplaced = byCell[null].orEmpty().toImmutableList(),
-            quadrants = MatrixCell.entries.map { MatrixQuadrantModel(it, ranked(it).toImmutableList()) }.toImmutableList(),
+            unplaced = pick(arrangement.unplaced),
+            quadrants = MatrixCell.entries.map { MatrixQuadrantModel(it, byCell[it] ?: persistentListOf()) }.toImmutableList(),
             isLoaded = board.isLoaded,
         )
     }
 
-    /** A column id from a title, unique among [columns]: `waiting-on`, `waiting-on-2`. */
-    fun uniqueColumnId(title: String, columns: List<WorkspaceKanbanColumn>): String {
-        val base = title.lowercase().replace(Regex("[^a-z0-9]+"), "-").trim('-').ifEmpty { "column" }
-        if (columns.none { it.id == base }) return base
-        var counter = 2
-        while (columns.any { it.id == "$base-$counter" }) counter++
-        return "$base-$counter"
-    }
+    /** A column id from a title, unique among [columns]: the core's `board_column_id`. */
+    fun uniqueColumnId(title: String, columns: List<WorkspaceKanbanColumn>): String =
+        boardColumnId(title, columns.map { it.id })
 }

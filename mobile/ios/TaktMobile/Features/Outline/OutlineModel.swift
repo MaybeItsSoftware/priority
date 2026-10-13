@@ -72,7 +72,7 @@ struct OutlineBase: Sendable, Equatable {
         .map { TaskOutlineItem(task: $0, depth: 0) }
       // What the filter list asks for is what it shows: hiding finished work
       // would empty a list made to show it.
-      hidesCompleted = hidesCompleted && filter.definition.show == .open
+      hidesCompleted = filter.definition.hidesCompleted(whenToggled: hidesCompleted)
     }
     if hidesCompleted { base.items.removeAll { $0.task.status != .open } }
     let columns = try store.boardMetadata(for: base.items.map(\.id)).columns

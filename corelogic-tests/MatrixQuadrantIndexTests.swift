@@ -42,6 +42,18 @@ final class MatrixQuadrantIndexTests: XCTestCase {
     XCTAssertEqual(index.items(urgency: 1, importance: 1).map(\.id), [4, 2, 5, 0, 1, 3])
   }
 
+  /// The phones' inspectors write -5 and 5; the boards write 0 and 1. Both
+  /// land in the same quadrant, where (5, 5) used to sit in a cell the
+  /// matrix never drew.
+  func testAnAxisCountsWhenItIsAboveZero() {
+    let placed = [Item(id: 7, urgency: 5, importance: 5), Item(id: 8, urgency: -5, importance: 5)]
+    let index = MatrixQuadrantIndex(placed) { ($0.urgency, $0.importance) }
+    XCTAssertEqual(index.items(urgency: 1, importance: 1).map(\.id), [7])
+    XCTAssertEqual(index.items(urgency: 0, importance: 1).map(\.id), [8])
+    XCTAssertEqual(MatrixQuadrantCell.of(urgency: -5, importance: -5), MatrixQuadrantCell(urgency: 0, importance: 0))
+    XCTAssertNil(MatrixQuadrantCell.of(urgency: nil, importance: 1))
+  }
+
   func testTheDrawnOrderIsUnplacedThenTheQuadrantsInReadingOrder() {
     let index = MatrixQuadrantIndex(items) { ($0.urgency, $0.importance) }
     // Unplaced 1 and 4; do now 0 and 3; schedule 2; delegate none; eliminate 5.

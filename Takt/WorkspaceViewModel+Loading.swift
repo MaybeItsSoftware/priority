@@ -261,12 +261,6 @@ extension WorkspaceViewModel {
     try store.visibleRootParentTaskID(for: list)
   }
 
-  func uniqueColumnID(base: String, in columns: [WorkspaceKanbanColumn]) -> String {
-    guard columns.contains(where: { $0.id == base }) else { return base }
-    var counter = 2
-    while columns.contains(where: { $0.id == "\(base)-\(counter)" }) { counter += 1 }
-    return "\(base)-\(counter)"
-  }
 
 }
 

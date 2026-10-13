@@ -13047,6 +13047,77 @@ public func FfiConverterTypeLoggedWork_lower(_ value: LoggedWork) -> RustBuffer 
 
 
 /**
+ * The matrix's cards sorted into its quadrants, as row indices.
+ */
+public struct MatrixArrangement: Equatable, Hashable {
+    /**
+     * Cards missing either coordinate, in the order given.
+     */
+    public var unplaced: [UInt32]
+    /**
+     * The four quadrants in reading order: do now, schedule, delegate,
+     * eliminate.
+     */
+    public var quadrants: [[UInt32]]
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(
+        /**
+         * Cards missing either coordinate, in the order given.
+         */unplaced: [UInt32], 
+        /**
+         * The four quadrants in reading order: do now, schedule, delegate,
+         * eliminate.
+         */quadrants: [[UInt32]]) {
+        self.unplaced = unplaced
+        self.quadrants = quadrants
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension MatrixArrangement: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeMatrixArrangement: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> MatrixArrangement {
+        return
+            try MatrixArrangement(
+                unplaced: FfiConverterSequenceUInt32.read(from: &buf), 
+                quadrants: FfiConverterSequenceSequenceUInt32.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: MatrixArrangement, into buf: inout [UInt8]) {
+        FfiConverterSequenceUInt32.write(value.unplaced, into: &buf)
+        FfiConverterSequenceSequenceUInt32.write(value.quadrants, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeMatrixArrangement_lift(_ buf: RustBuffer) throws -> MatrixArrangement {
+    return try FfiConverterTypeMatrixArrangement.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeMatrixArrangement_lower(_ value: MatrixArrangement) -> RustBuffer {
+    return FfiConverterTypeMatrixArrangement.lower(value)
+}
+
+
+/**
  * A known MCP client and everything needed to add Takt to it.
  */
 public struct McpClientDescriptor: Equatable, Hashable {
@@ -20379,6 +20450,30 @@ fileprivate struct FfiConverterOptionUInt32: FfiConverterRustBuffer {
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterOptionInt32: FfiConverterRustBuffer {
+    typealias SwiftType = Int32?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterInt32.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterInt32.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterOptionInt64: FfiConverterRustBuffer {
     typealias SwiftType = Int64?
 
@@ -21668,6 +21763,31 @@ fileprivate struct FfiConverterSequenceUInt32: FfiConverterRustBuffer {
         seq.reserveCapacity(Int(len))
         for _ in 0 ..< len {
             seq.append(try FfiConverterUInt32.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterSequenceInt32: FfiConverterRustBuffer {
+    typealias SwiftType = [Int32]
+
+    public static func write(_ value: [Int32], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterInt32.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [Int32] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [Int32]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterInt32.read(from: &buf))
         }
         return seq
     }
@@ -23876,6 +23996,56 @@ fileprivate struct FfiConverterSequenceTypeUnavailable: FfiConverterRustBuffer {
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterSequenceOptionInt32: FfiConverterRustBuffer {
+    typealias SwiftType = [Int32?]
+
+    public static func write(_ value: [Int32?], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterOptionInt32.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [Int32?] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [Int32?]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterOptionInt32.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterSequenceSequenceUInt32: FfiConverterRustBuffer {
+    typealias SwiftType = [[UInt32]]
+
+    public static func write(_ value: [[UInt32]], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterSequenceUInt32.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [[UInt32]] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [[UInt32]]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterSequenceUInt32.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterSequenceSequenceString: FfiConverterRustBuffer {
     typealias SwiftType = [[String]]
 
@@ -24153,6 +24323,73 @@ public func parseBoardColumns(json: String) -> [BoardColumn]  {
         uniffiCallStatus in
     uniffi_takt_core_fn_func_parse_board_columns(
         FfiConverterString.lower(json),uniffiCallStatus
+    )
+})
+}
+/**
+ * The id a new column takes from its title, unique among `taken`: lowercase,
+ * every run of anything but `a-z` and `0-9` a dash, dashes trimmed, `column`
+ * when nothing is left, then `-2`, `-3`… until unused.
+ */
+public func boardColumnId(title: String, taken: [String]) -> String  {
+    return try!  FfiConverterString.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_board_column_id(
+        FfiConverterString.lower(title),
+        FfiConverterSequenceString.lower(taken),uniffiCallStatus
+    )
+})
+}
+/**
+ * Which rows are subtasks filed in another column than their parent's card,
+ * so that the board draws them as cards of their own there.
+ *
+ * The rows are the board's tree in drawing order. `parents[i]` is the index
+ * of row `i`'s parent among them, or -1; `filed[i]` the column row `i` is
+ * filed in, as a code the caller assigned (-1 unfiled); `eligible[i]`
+ * whether the row may stand on its own at all (not a card already, not a
+ * list, not hidden). A row's column is the one it is filed in, else its
+ * parent's, else `fallback` (the first stock column). A row is cross-column
+ * when it is eligible, has a parent and is filed in a column other than its
+ * parent's. The answer is row indices, ascending.
+ */
+public func boardCrossColumn(parents: [Int32], filed: [Int32], eligible: [Bool], fallback: Int32) -> [UInt32]  {
+    return try!  FfiConverterSequenceUInt32.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_board_cross_column(
+        FfiConverterSequenceInt32.lower(parents),
+        FfiConverterSequenceInt32.lower(filed),
+        FfiConverterSequenceBool.lower(eligible),
+        FfiConverterInt32.lower(fallback),uniffiCallStatus
+    )
+})
+}
+/**
+ * Sorts cards into the matrix: within a quadrant the ones dropped at a point
+ * come first by `rank`, lowest first, then the rest in the order given.
+ */
+public func matrixArrangement(urgency: [Int32?], importance: [Int32?], rank: [Int32?]) -> MatrixArrangement  {
+    return try!  FfiConverterTypeMatrixArrangement_lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_matrix_arrangement(
+        FfiConverterSequenceOptionInt32.lower(urgency),
+        FfiConverterSequenceOptionInt32.lower(importance),
+        FfiConverterSequenceOptionInt32.lower(rank),uniffiCallStatus
+    )
+})
+}
+/**
+ * Which quadrant a position falls in, in reading order (0 do now, 1
+ * schedule, 2 delegate, 3 eliminate); none while either axis is unset. An
+ * axis counts when it is above zero, so the boards' 0 and 1 and the
+ * inspectors' -5 and 5 land in the same quadrant.
+ */
+public func matrixQuadrant(urgency: Int32?, importance: Int32?) -> UInt32?  {
+    return try!  FfiConverterOptionUInt32.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_matrix_quadrant(
+        FfiConverterOptionInt32.lower(urgency),
+        FfiConverterOptionInt32.lower(importance),uniffiCallStatus
     )
 })
 }
@@ -26274,6 +26511,18 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_func_parse_board_columns() != 22220) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_board_column_id() != 6812) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_board_cross_column() != 35808) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_matrix_arrangement() != 51299) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_matrix_quadrant() != 24221) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_func_capture_date_time() != 17198) {

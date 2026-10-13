@@ -49,10 +49,7 @@ extension WorkspaceViewModel {
     pendingColumnInsertion = nil
     guard !title.isEmpty, store != nil else { return }
     var columns = editableBoardColumns
-    let baseID = title.lowercased()
-      .replacingOccurrences(of: "[^a-z0-9]+", with: "-", options: .regularExpression)
-      .trimmingCharacters(in: CharacterSet(charactersIn: "-"))
-    let id = uniqueColumnID(base: baseID.isEmpty ? "column" : baseID, in: columns)
+    let id = WorkspaceKanbanColumn.newID(title: title, among: columns)
     let column = WorkspaceKanbanColumn(id: id, title: title)
     if let insertion, let index = columns.firstIndex(where: { $0.id == insertion.anchorID }) {
       columns.insert(column, at: insertion.after ? index + 1 : index)

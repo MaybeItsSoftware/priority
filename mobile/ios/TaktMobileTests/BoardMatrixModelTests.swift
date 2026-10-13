@@ -111,7 +111,7 @@ final class BoardMatrixModelTests: XCTestCase {
     var board = await board()
     let column = try XCTUnwrap(board.addColumn(named: "Blocked!", model: model))
     XCTAssertEqual(column.id, "blocked")
-    XCTAssertEqual(BoardModel.uniqueColumnID(base: "blocked", in: board.columns), "blocked-2")
+    XCTAssertEqual(WorkspaceKanbanColumn.newID(title: "Blocked", among: board.columns), "blocked-2")
     board.renameColumn("blocked", to: "Stuck", model: model)
     board.move(task.id, toColumn: "blocked", model: model)
     board = await self.board()

@@ -51,15 +51,6 @@ internal fun actionableTasks(db: Db, workspaceId: String, limitedTo: List<String
     return scoped.flatMap { list -> trees[list.id]?.actionableTasks(list.visibleRootTaskId) ?: emptyList() }
 }
 
-internal fun upsertKanbanColumn(db: Db, taskId: String, column: String?, now: Instant) {
-    db.execute(
-        "INSERT INTO task_metadata(taskId, tagsJSON, externalLinksJSON, kanbanColumn, updatedAt) " +
-            "VALUES (?, '[]', '[]', ?, ?) ON CONFLICT(taskId) DO UPDATE SET " +
-            "kanbanColumn = excluded.kanbanColumn, updatedAt = excluded.updatedAt",
-        taskId, column, now,
-    )
-}
-
 /** Closed or archived containers suppress their descendants without altering their status. */
 internal fun validateActionableTask(db: Db, id: String) {
     val task = db.task(id) ?: fail(WorkspaceStoreError.MISSING_TASK)

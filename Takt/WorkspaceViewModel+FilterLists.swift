@@ -35,7 +35,7 @@ extension WorkspaceViewModel {
   /// the list it was made to show.
   var scopeHidesCompletedTasks: Bool {
     guard let filter = selectedFilterList else { return hidesCompletedTasks }
-    return hidesCompletedTasks && filter.definition.show == .open
+    return filter.definition.hidesCompleted(whenToggled: hidesCompletedTasks)
   }
 
   /// Puts a filter list in scope and draws it. The mode follows

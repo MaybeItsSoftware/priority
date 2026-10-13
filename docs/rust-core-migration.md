@@ -559,15 +559,15 @@ covered the old copies pass against it.
 
     | Item | Current home(s) | Both? | Plan |
     |---|---|---|---|
-    | Checkvist requests and answers (login, lists, tasks, create, update, move, reparent, notes, actions, delete; token, lossy task and note reading, depth-first order) | Mac `NativeCheckvistSyncPlugin`, `CheckvistSession`, `CheckvistTaskRepository`, `CheckvistModels`; CLI `checkvist.rs` | Mac + CLI | move: `core/src/checkvist.rs`, sans-IO like the sync wire |
-    | Checkvist import seeds (dedupe, order, `checkvist:<list>:` ids, status, notes) | Mac `WorkspaceViewModel+Import` (three copies) | Mac ×3 | move: `checkvist_import_seeds` |
-    | `DayBoundary` | Kotlin `DayBoundary.kt` (hand port); Swift already wraps the core | Kotlin + core | move: Kotlin wraps the core's `day_boundary_*` |
-    | `BlockedSection` labels | `TaktCore/BlockedSection`, iOS `BlockedSections`, Kotlin `BlockedSection.kt` | all three | move |
-    | `DayArrangement` (reordering planned day rows) | `TaktCore/DayArrangement`, Kotlin `DayModel.kt` | Swift + Kotlin | move |
-    | `DayForecast` (remaining estimate, finish time) | `TaktCore/DayForecast`, Kotlin `DayModel.kt` | Swift + Kotlin | move |
-    | `FocusDeferral` (in an hour, this afternoon, tomorrow, next week) | iOS `FocusModel`, Kotlin `FocusModel.kt` | iOS + Kotlin | move |
-    | `FocusContextSelection` (condition toggle, restore) | `TaktCore`, iOS `FocusModel`, Kotlin `FocusViewModel` | all three | move |
-    | Task editor: estimate parsing, three-way reconcile, save validation | `TaktWorkspace/TaskEditorDraft`, Kotlin `TaskEditorDraft.kt`, `InspectorLogic.InspectorValidation` | Swift + Kotlin | move |
+    | Checkvist requests and answers (login, lists, tasks, create, update, move, reparent, notes, actions, delete; token, lossy task and note reading, depth-first order) | Mac `NativeCheckvistSyncPlugin`, `CheckvistSession`, `CheckvistTaskRepository`, `CheckvistModels`; CLI `checkvist.rs` | Mac + CLI | move: `core/src/checkvist.rs`, sans-IO like the sync wire — **done 2026-10-12** ("The Checkvist client" below) |
+    | Checkvist import seeds (dedupe, order, `checkvist:<list>:` ids, status, notes) | Mac `WorkspaceViewModel+Import` (three copies) | Mac ×3 | move: `checkvist_import_seeds` — **done 2026-10-12** ("The Checkvist client") |
+    | `DayBoundary` | Kotlin `DayBoundary.kt` (hand port); Swift already wraps the core | Kotlin + core | move: Kotlin wraps the core's `day_boundary_*` — **done 2026-10-12** ("The screens' small rules") |
+    | `BlockedSection` labels | `TaktCore/BlockedSection`, iOS `BlockedSections`, Kotlin `BlockedSection.kt` | all three | move — **done 2026-10-12** ("The screens' small rules") |
+    | `DayArrangement` (reordering planned day rows) | `TaktCore/DayArrangement`, Kotlin `DayModel.kt` | Swift + Kotlin | move — **done 2026-10-12** ("The screens' small rules") |
+    | `DayForecast` (remaining estimate, finish time) | `TaktCore/DayForecast`, Kotlin `DayModel.kt` | Swift + Kotlin | move — **done 2026-10-12** ("The screens' small rules") |
+    | `FocusDeferral` (in an hour, this afternoon, tomorrow, next week) | iOS `FocusModel`, Kotlin `FocusModel.kt` | iOS + Kotlin | move — **done 2026-10-12** ("The screens' small rules") |
+    | `FocusContextSelection` (condition toggle, restore) | `TaktCore`, iOS `FocusModel`, Kotlin `FocusViewModel` | all three | move — **done 2026-10-12** ("The screens' small rules") |
+    | Task editor: estimate parsing, three-way reconcile, save validation | `TaktWorkspace/TaskEditorDraft`, Kotlin `TaskEditorDraft.kt`, `InspectorLogic.InspectorValidation` | Swift + Kotlin | move — **done 2026-10-12** ("The task editor's draft") |
     | Outline drop planning (sibling-only reorder, no-op detection) | iOS `OutlineDropPlanner`, Kotlin `OutlineShaping.planDrop` | iOS + Kotlin | **done 2026-10-13**: decided 2026-10-12 for the iPhone's rule; `outline_drop_plan` in `shaping.rs`, see "The outline drop" below |
     | Kotlin outline walk and sidebar index fallbacks (`WorkspaceListTree.outline`, `WorkspaceSidebarIndex.build`, `ListsTreeShaping.openCounts`) | Kotlin, beside the core's `outline`, `sidebar_index_with_open_counts` | Kotlin + core | native as test oracles, as `WorkspaceListTree` is on the Mac (step 9) |
     | `TaskOutlineFolding`, `MatrixGeometry`, `RootDueBucket` | Swift, Kotlin | both | native: per-point maths and fold state held only in UI memory (step 9) |
@@ -584,7 +584,7 @@ covered the old copies pass against it.
     | Item | Current home | Plan |
     |---|---|---|
     | `WorkspaceKeymap` parse and resolve, `WorkspaceKeyBindings` | `TaktCore` | native, judged after looking: the file format is not separable from the Mac's command catalogue (`WorkspaceCommandCatalog+Entries`, its ids, surfaces and default keys), which step 9 kept native; moving the parser alone would cross the whole catalogue on every load for a format no other platform reads. It moves with the catalogue, if Android's hand-copied `KeyCatalog.kt` is ever replaced by it |
-    | `VimFind`, `CursorStepping` | `TaktCore` | move: pure list maths, one call per key press |
+    | `VimFind`, `CursorStepping` | `TaktCore` | move: pure list maths, one call per key press — **done 2026-10-12** ("The Mac's cursor rules") |
     | `DesktopShortcutSequence`, `DoubleTapModifier` | `TaktCore` | native: timers over `NSEvent` timing |
     | `WorkspaceCommandQuery` (palette ranking) | `TaktCore` | native: ranks the Mac's own catalogue every keystroke (step 9) |
     | `TaskDraftAnchor`, `DailyTitleEdit` | `TaktCore` | native: per-refresh UI state over rows on screen |
@@ -597,12 +597,12 @@ covered the old copies pass against it.
 
     | Item | Current home | Plan |
     |---|---|---|
-    | Dead raw-SQL helpers (`moveSubtree`, `upsertKanbanColumn`, `normalizedVisibleRootName`, `taskDescendantIDs`, `persistTaskOrder`, `encodeStringArray`) | `data/workspace/StoreSupport.kt`, `Queries.kt` | delete: no callers; the core does each |
+    | Dead raw-SQL helpers (`moveSubtree`, `upsertKanbanColumn`, `normalizedVisibleRootName`, `taskDescendantIDs`, `persistTaskOrder`, `encodeStringArray`) | `data/workspace/StoreSupport.kt`, `Queries.kt` | delete: no callers; the core does each — **done** (2026-10-12, and `upsertKanbanColumn` 2026-10-13) |
     | `SqlDates`, change tracking triggers, observers | `data/db` | native: the androidx driver's own observation |
     | `ChartScale`, `DateFieldMath` | `app/ui/review`, `app/ui/inspector` | native: axis and calendar-grid geometry drawn per frame |
     | `SearchMatching` (highlight ranges) | `app/ui/search` | native: per-row presentation of the core's search answer |
     | View-model orchestration (`ListViewModel`, `TodayViewModel`, `FocusViewModel`, `FocusActions`, `TaskInspectorViewModel`, `UndoCenter`, `ForegroundEngines`, `SyncController`, `TaskCommands`) | `app/` | native: lifecycle and coroutines over repository calls that are already the core's |
-    | Board and matrix shaping, filter lists | `BoardShaping.kt`, `FilterList*` | later pass (excluded above) |
+    | Board and matrix shaping, filter lists | `BoardShaping.kt`, `FilterList*` | **partly done 2026-10-13**, see "The board pass" below |
 
     **The Checkvist client (done 2026-10-12).** `core/src/checkvist.rs` is
     both halves of the conversation, without the network, as the sync wire
@@ -673,6 +673,47 @@ covered the old copies pass against it.
     canonical decomposition, where Foundation folded them) are in
     `shaping.rs`; `CursorStepping` and `VimFind` wrap them, one call per
     key press, and their suites run unchanged.
+
+    **The board pass (done 2026-10-13, in part).** The board, matrix and
+    filter-list logic step 10 left out was audited across the Mac, the
+    iPhone and Android. Moved, in `core/src/board_rules.rs`:
+    `board_cross_column`, the rule that a subtask nobody filed follows its
+    parent's column and one filed elsewhere is a card of its own there
+    (Swift's `WorkspaceScopeShaping.board`, which the Mac and the iPhone
+    share, and Android's `BoardShaping.shape` call it; rows cross as parent
+    indices and column codes, and the call is skipped when no subtask is
+    filed at all); `matrix_arrangement` and `matrix_quadrant`, the matrix's
+    sort into quadrants with ranked cards first (`MatrixQuadrantIndex` wraps
+    it for the Mac and now the iPhone, which sorted per render and now sorts
+    once a load; Android's `BoardShaping.matrix` calls it); and
+    `board_column_id`, a new column's id from its title
+    (`WorkspaceKanbanColumn.newID` on the Mac and iPhone,
+    `BoardShaping.uniqueColumnId` on Android). The filter-list rule that a
+    list asking for finished work shows it whatever the toggle says is one
+    Swift place, `WorkspaceFilterDefinition.hidesCompleted(whenToggled:)`, for
+    the Mac's pane and the iPhone's board and outline (Android has no such
+    toggle). `upsertKanbanColumn` is deleted. One answer changed: a matrix
+    axis counts when it is above zero, where the Mac and the iPhone matched
+    exactly 0 or 1. The phones' inspector pickers write -5 and 5, so a task
+    placed there sat in no quadrant on the Mac (not even unplaced) and was
+    unplaced on the iPhone, while Android, which already read signs, put it
+    in its quadrant; now all three do. Measured on the 7,000-task benchmark
+    (`WorkspaceSwitchingBenchmarks`, release): shaping Everything's board
+    10.7 ms to 11.1 ms, the matrix index 2.9 ms to 3.3 ms; both run once a
+    refresh, off the per-key path. Left as they are, with the reason. Android
+    still walks Everything's trees in Kotlin (`WorkspaceListTree.actionableTasks`
+    and `WorkspaceBoardTrees`) rather than calling `combined_board`: its
+    outline needs every tree anyway (step 9, "The phones' screens"), so
+    moving it is a rework of Android's board read, not a move. The single
+    list's tree walk (`WorkspaceBoardTrees`) stays in Swift and Kotlin for the
+    same reason the Mac's does. Three behaviours differ by platform and are
+    product decisions rather than duplicates: a moved card carries its
+    same-column subtasks on the Mac only; deleting a column that is drawn
+    only because cards are filed in it refiles them to a different fallback
+    on each platform; and the phones' inspectors read different column sets
+    (Android the layout, the iPhone the drawn columns). The board keys and
+    the stock columns' fallback id are spelled on each platform; the core
+    exports `board_stock_columns` but no key builder.
 
     **The outline drop (done 2026-10-13).** Decided 2026-10-12: the iPhone's
     rule is the rule for both phones. `outline_drop_plan` in `shaping.rs`

@@ -77,8 +77,8 @@ struct BoardSnapshot: Equatable, Sendable {
     case .filter(let filterID):
       // A filter list that asks for finished work shows it whatever the
       // toggle says, as on the Mac.
-      let show = try store.filterList(id: filterID)?.definition.show
-      let hides = hidesCompleted && (show ?? .open) == .open
+      let hides = try store.filterList(id: filterID)?.definition.hidesCompleted(whenToggled: hidesCompleted)
+        ?? hidesCompleted
       options.hidesCompletedTasks = hides
       listIDs = open
       read = try store.scopeRead(.filter(filterID, open), hidingCompletedBefore: hides ? now : nil)
@@ -265,11 +265,8 @@ final class BoardModel {
   func addColumn(named name: String, model: WorkspaceModel) -> WorkspaceKanbanColumn? {
     let title = name.trimmingCharacters(in: .whitespacesAndNewlines)
     guard !title.isEmpty else { return nil }
-    let base = title.lowercased()
-      .replacingOccurrences(of: "[^a-z0-9]+", with: "-", options: .regularExpression)
-      .trimmingCharacters(in: CharacterSet(charactersIn: "-"))
     let column = WorkspaceKanbanColumn(
-      id: Self.uniqueColumnID(base: base.isEmpty ? "column" : base, in: editableColumns), title: title)
+      id: WorkspaceKanbanColumn.newID(title: title, among: editableColumns), title: title)
     let updated = editableColumns + [column]
     guard model.perform({ try $0.setKanbanBoardColumns(updated, for: scope.boardKey, label: "Add Board Column") })
     else { return nil }
@@ -336,13 +333,6 @@ final class BoardModel {
       drawn.swapAt(index, destination)
       snapshot.columns = drawn
     }
-  }
-
-  static func uniqueColumnID(base: String, in columns: [WorkspaceKanbanColumn]) -> String {
-    guard columns.contains(where: { $0.id == base }) else { return base }
-    var counter = 2
-    while columns.contains(where: { $0.id == "\(base)-\(counter)" }) { counter += 1 }
-    return "\(base)-\(counter)"
   }
 
   // MARK: - Adding cards

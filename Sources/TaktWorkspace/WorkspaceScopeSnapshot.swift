@@ -1,5 +1,6 @@
 import Foundation
 import TaktCore
+import TaktRustCore
 
 /// What the desktop's main pane draws from: one list, or several together
 /// (Everything, a folder). See `docs/performance.md`.
@@ -246,22 +247,36 @@ public enum WorkspaceScopeShaping {
     let columnsByTask = allColumns.filter { treeIDs.contains($0.key) }
     // Both reads carry a place for every row, unplaced ones included.
     let positions = allPositions.filter { treeIDs.contains($0.key) }
-    // A subtask nobody filed is in whatever column its parent is in.
-    var effectiveColumns: [String: String] = [:]
-    func effectiveColumn(ofID id: String) -> String {
-      if let known = effectiveColumns[id] { return known }
-      let column = columnsByTask[id]
-        ?? parents[id].map { effectiveColumn(ofID: $0) }
-        ?? WorkspaceKanbanColumn.blitzitDefaults[0].id
-      effectiveColumns[id] = column
-      return column
+    // A subtask nobody filed is in whatever column its parent is in; one
+    // filed elsewhere is a card of its own there. The rule is the core's
+    // (`board_cross_column`), shared with Android: the rows cross as indices
+    // and column codes, once a refresh.
+    var columnCodes: [String: Int32] = [:]
+    func code(_ column: String) -> Int32 {
+      if let known = columnCodes[column] { return known }
+      let next = Int32(columnCodes.count)
+      columnCodes[column] = next
+      return next
     }
-    let crossColumn = treeTasks.filter { task in
-      if completions.hides(task) { return false }
-      guard !task.isList else { return false }
-      guard !cardIDs.contains(task.id), let parent = parents[task.id], let filed = columnsByTask[task.id]
-      else { return false }
-      return filed != effectiveColumn(ofID: parent)
+    let fallback = code(WorkspaceKanbanColumn.blitzitDefaults[0].id)
+    // Cards lead `treeTasks`; only the rows after them can stand alone, and a
+    // card's own parent is outside the board, so it needs no lookup.
+    let eligible = treeTasks.enumerated().map { offset, task in
+      offset >= cards.count && !completions.hides(task) && !task.isList && !cardIDs.contains(task.id)
+    }
+    var crossColumn: [WorkspaceTask] = []
+    if zip(treeTasks, eligible).contains(where: { $1 && columnsByTask[$0.id] != nil }) {
+      var rowIndex: [String: Int32] = [:]
+      rowIndex.reserveCapacity(treeTasks.count)
+      for (offset, task) in treeTasks.enumerated() { rowIndex[task.id] = Int32(offset) }
+      crossColumn = boardCrossColumn(
+        parents: treeTasks.enumerated().map { offset, task in
+          offset < cards.count ? -1 : parents[task.id].flatMap { rowIndex[$0] } ?? -1
+        },
+        filed: treeTasks.map { task in columnsByTask[task.id].map(code) ?? -1 },
+        eligible: eligible,
+        fallback: fallback
+      ).map { treeTasks[Int($0)] }
     }
     let shape = WorkspaceBoardShape(
       parentTaskID: parentTaskID, cards: cards, descendants: descendants, parents: parents, treeTasks: treeTasks,

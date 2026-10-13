@@ -13,6 +13,7 @@ pub mod affine;
 pub mod agent_tools;
 pub mod board;
 pub mod board_columns;
+pub mod board_rules;
 pub mod capture;
 pub mod checkvist;
 pub mod client_config;

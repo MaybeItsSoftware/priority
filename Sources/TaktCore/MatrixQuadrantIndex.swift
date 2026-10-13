@@ -1,3 +1,5 @@
+import TaktRustCore
+
 /// The Eisenhower matrix's tasks, sorted into their quadrants in one pass.
 ///
 /// The matrix used to filter the whole board once for the unplaced tasks and
@@ -24,28 +26,33 @@ public struct MatrixQuadrantIndex<Item: Equatable>: Equatable {
     position: (Item) -> (urgency: Int?, importance: Int?),
     rank: (Item) -> Int? = { _ in nil }
   ) {
-    var ranked: [Cell: [(rank: Int?, index: Int, item: Item)]] = [:]
-    for (index, item) in items.enumerated() {
+    // The sort is the Rust core's (`matrix_arrangement`), shared with
+    // Android: one call per board read, indices back. An axis counts when it
+    // is above zero, so the inspectors' -5 and 5 land with the boards' 0 and 1.
+    var urgencies: [Int32?] = []
+    var importances: [Int32?] = []
+    var ranks: [Int32?] = []
+    urgencies.reserveCapacity(items.count)
+    importances.reserveCapacity(items.count)
+    ranks.reserveCapacity(items.count)
+    for item in items {
       let coordinates = position(item)
-      if let urgency = coordinates.urgency, let importance = coordinates.importance {
-        ranked[Cell(urgency: urgency, importance: importance), default: []]
-          .append((rank(item), index, item))
-      } else {
-        unplaced.append(item)
-      }
+      urgencies.append(coordinates.urgency.map(Self.clamped))
+      importances.append(coordinates.importance.map(Self.clamped))
+      ranks.append(rank(item).map(Self.clamped))
     }
-    for (cell, entries) in ranked {
-      placed[cell] = entries.sorted { lhs, rhs in
-        switch (lhs.rank, rhs.rank) {
-        case let (left?, right?): left == right ? lhs.index < rhs.index : left < right
-        case (.some, nil): true
-        case (nil, .some): false
-        case (nil, nil): lhs.index < rhs.index
-        }
-      }.map(\.item)
+    let arrangement = matrixArrangement(urgency: urgencies, importance: importances, rank: ranks)
+    unplaced = arrangement.unplaced.map { items[Int($0)] }
+    for (cell, indices) in zip(Cell.readingOrder, arrangement.quadrants) where !indices.isEmpty {
+      placed[cell] = indices.map { items[Int($0)] }
     }
   }
 
+  private static func clamped(_ value: Int) -> Int32 {
+    Int32(clamping: value)
+  }
+
+  /// A quadrant's items, by the quadrant's 0-or-1 coordinates.
   public func items(urgency: Int, importance: Int) -> [Item] {
     placed[Cell(urgency: urgency, importance: importance)] ?? []
   }
@@ -111,6 +118,17 @@ public enum MatrixQuadrantOrder {
 
 /// A quadrant of the matrix: urgency and importance, each 0 or 1.
 public struct MatrixQuadrantCell: Hashable, Sendable {
+  /// The quadrant a stored position falls in, by the core's rule
+  /// (`matrix_quadrant`: an axis counts when it is above zero); nil while
+  /// either axis is unset. One call; sort many with `MatrixQuadrantIndex`.
+  public static func of(urgency: Int?, importance: Int?) -> MatrixQuadrantCell? {
+    guard
+      let index = matrixQuadrant(
+        urgency: urgency.map { Int32(clamping: $0) }, importance: importance.map { Int32(clamping: $0) })
+    else { return nil }
+    return readingOrder[Int(index)]
+  }
+
   public let urgency: Int
   public let importance: Int
 

@@ -699,6 +699,14 @@ internal object IntegrityCheckingUniffiLib {
     ): Int
     external fun uniffi_takt_core_checksum_func_parse_board_columns(
     ): Int
+    external fun uniffi_takt_core_checksum_func_board_column_id(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_board_cross_column(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_matrix_arrangement(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_matrix_quadrant(
+    ): Int
     external fun uniffi_takt_core_checksum_func_capture_date_time(
     ): Int
     external fun uniffi_takt_core_checksum_func_capture_detail_labels(
@@ -1863,6 +1871,14 @@ internal object UniffiLib {
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_func_parse_board_columns(`json`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_board_column_id(`title`: RustBuffer.ByValue,`taken`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_board_cross_column(`parents`: RustBuffer.ByValue,`filed`: RustBuffer.ByValue,`eligible`: RustBuffer.ByValue,`fallback`: Int,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_matrix_arrangement(`urgency`: RustBuffer.ByValue,`importance`: RustBuffer.ByValue,`rank`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_matrix_quadrant(`urgency`: RustBuffer.ByValue,`importance`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_func_capture_date_time(`text`: RustBuffer.ByValue,`nowMs`: Long,`zone`: RustBuffer.ByValue,`defaultHour`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_func_capture_detail_labels(`capture`: RustBuffer.ByValue,`nowMs`: Long,`zone`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
@@ -2332,6 +2348,18 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_func_parse_board_columns() and 0xFFFF) != 22220) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_board_column_id() and 0xFFFF) != 6812) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_board_cross_column() and 0xFFFF) != 35808) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_matrix_arrangement() and 0xFFFF) != 51299) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_matrix_quadrant() and 0xFFFF) != 24221) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_func_capture_date_time() and 0xFFFF) != 17198) {
@@ -15702,6 +15730,54 @@ public object FfiConverterTypeLoggedWork: FfiConverterRustBuffer<LoggedWork> {
 
 
 /**
+ * The matrix's cards sorted into its quadrants, as row indices.
+ */
+data class MatrixArrangement (
+    /**
+     * Cards missing either coordinate, in the order given.
+     */
+    var `unplaced`: List<kotlin.UInt>
+    , 
+    /**
+     * The four quadrants in reading order: do now, schedule, delegate,
+     * eliminate.
+     */
+    var `quadrants`: List<List<kotlin.UInt>>
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeMatrixArrangement: FfiConverterRustBuffer<MatrixArrangement> {
+    override fun read(buf: ByteBuffer): MatrixArrangement {
+        return MatrixArrangement(
+            FfiConverterSequenceUInt.read(buf),
+            FfiConverterSequenceSequenceUInt.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: MatrixArrangement) = (
+            FfiConverterSequenceUInt.allocationSize(value.`unplaced`) +
+            FfiConverterSequenceSequenceUInt.allocationSize(value.`quadrants`)
+    )
+
+    override fun write(value: MatrixArrangement, buf: ByteBuffer) {
+            FfiConverterSequenceUInt.write(value.`unplaced`, buf)
+            FfiConverterSequenceSequenceUInt.write(value.`quadrants`, buf)
+    }
+}
+
+
+
+/**
  * A known MCP client and everything needed to add Takt to it.
  */
 data class McpClientDescriptor (
@@ -23023,6 +23099,38 @@ public object FfiConverterOptionalUInt: FfiConverterRustBuffer<kotlin.UInt?> {
 /**
  * @suppress
  */
+public object FfiConverterOptionalInt: FfiConverterRustBuffer<kotlin.Int?> {
+    override fun read(buf: ByteBuffer): kotlin.Int? {
+        if (buf.get().toInt() == 0) {
+            return null
+        }
+        return FfiConverterInt.read(buf)
+    }
+
+    override fun allocationSize(value: kotlin.Int?): ULong {
+        if (value == null) {
+            return 1UL
+        } else {
+            return 1UL + FfiConverterInt.allocationSize(value)
+        }
+    }
+
+    override fun write(value: kotlin.Int?, buf: ByteBuffer) {
+        if (value == null) {
+            buf.put(0)
+        } else {
+            buf.put(1)
+            FfiConverterInt.write(value, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
 public object FfiConverterOptionalLong: FfiConverterRustBuffer<kotlin.Long?> {
     override fun read(buf: ByteBuffer): kotlin.Long? {
         if (buf.get().toInt() == 0) {
@@ -24737,6 +24845,34 @@ public object FfiConverterSequenceUInt: FfiConverterRustBuffer<List<kotlin.UInt>
         buf.putInt(value.size)
         value.iterator().forEach {
             FfiConverterUInt.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceInt: FfiConverterRustBuffer<List<kotlin.Int>> {
+    override fun read(buf: ByteBuffer): List<kotlin.Int> {
+        val len = buf.getInt()
+        return List<kotlin.Int>(len) {
+            FfiConverterInt.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<kotlin.Int>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterInt.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<kotlin.Int>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterInt.write(it, buf)
         }
     }
 }
@@ -27211,6 +27347,62 @@ public object FfiConverterSequenceTypeUnavailable: FfiConverterRustBuffer<List<U
 /**
  * @suppress
  */
+public object FfiConverterSequenceOptionalInt: FfiConverterRustBuffer<List<kotlin.Int?>> {
+    override fun read(buf: ByteBuffer): List<kotlin.Int?> {
+        val len = buf.getInt()
+        return List<kotlin.Int?>(len) {
+            FfiConverterOptionalInt.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<kotlin.Int?>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterOptionalInt.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<kotlin.Int?>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterOptionalInt.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceSequenceUInt: FfiConverterRustBuffer<List<List<kotlin.UInt>>> {
+    override fun read(buf: ByteBuffer): List<List<kotlin.UInt>> {
+        val len = buf.getInt()
+        return List<List<kotlin.UInt>>(len) {
+            FfiConverterSequenceUInt.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<List<kotlin.UInt>>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterSequenceUInt.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<List<kotlin.UInt>>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterSequenceUInt.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
 public object FfiConverterSequenceSequenceString: FfiConverterRustBuffer<List<List<kotlin.String>>> {
     override fun read(buf: ByteBuffer): List<List<kotlin.String>> {
         val len = buf.getInt()
@@ -27574,6 +27766,85 @@ public object FfiConverterMapStringTypeSyncValue: FfiConverterRustBuffer<Map<kot
     
         
         FfiConverterString.lower(`json`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * The id a new column takes from its title, unique among `taken`: lowercase,
+         * every run of anything but `a-z` and `0-9` a dash, dashes trimmed, `column`
+         * when nothing is left, then `-2`, `-3`… until unused.
+         */ fun `boardColumnId`(`title`: kotlin.String, `taken`: List<kotlin.String>): kotlin.String {
+            return FfiConverterString.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_board_column_id(
+    
+        
+        FfiConverterString.lower(`title`),
+        FfiConverterSequenceString.lower(`taken`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * Which rows are subtasks filed in another column than their parent's card,
+         * so that the board draws them as cards of their own there.
+         *
+         * The rows are the board's tree in drawing order. `parents[i]` is the index
+         * of row `i`'s parent among them, or -1; `filed[i]` the column row `i` is
+         * filed in, as a code the caller assigned (-1 unfiled); `eligible[i]`
+         * whether the row may stand on its own at all (not a card already, not a
+         * list, not hidden). A row's column is the one it is filed in, else its
+         * parent's, else `fallback` (the first stock column). A row is cross-column
+         * when it is eligible, has a parent and is filed in a column other than its
+         * parent's. The answer is row indices, ascending.
+         */ fun `boardCrossColumn`(`parents`: List<kotlin.Int>, `filed`: List<kotlin.Int>, `eligible`: List<kotlin.Boolean>, `fallback`: kotlin.Int): List<kotlin.UInt> {
+            return FfiConverterSequenceUInt.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_board_cross_column(
+    
+        
+        FfiConverterSequenceInt.lower(`parents`),
+        FfiConverterSequenceInt.lower(`filed`),
+        FfiConverterSequenceBoolean.lower(`eligible`),
+        FfiConverterInt.lower(`fallback`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * Sorts cards into the matrix: within a quadrant the ones dropped at a point
+         * come first by `rank`, lowest first, then the rest in the order given.
+         */ fun `matrixArrangement`(`urgency`: List<kotlin.Int?>, `importance`: List<kotlin.Int?>, `rank`: List<kotlin.Int?>): MatrixArrangement {
+            return FfiConverterTypeMatrixArrangement.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_matrix_arrangement(
+    
+        
+        FfiConverterSequenceOptionalInt.lower(`urgency`),
+        FfiConverterSequenceOptionalInt.lower(`importance`),
+        FfiConverterSequenceOptionalInt.lower(`rank`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * Which quadrant a position falls in, in reading order (0 do now, 1
+         * schedule, 2 delegate, 3 eliminate); none while either axis is unset. An
+         * axis counts when it is above zero, so the boards' 0 and 1 and the
+         * inspectors' -5 and 5 land in the same quadrant.
+         */ fun `matrixQuadrant`(`urgency`: kotlin.Int?, `importance`: kotlin.Int?): kotlin.UInt? {
+            return FfiConverterOptionalUInt.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_matrix_quadrant(
+    
+        
+        FfiConverterOptionalInt.lower(`urgency`),
+        FfiConverterOptionalInt.lower(`importance`),_status)
 }
     )
     }
