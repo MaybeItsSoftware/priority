@@ -1772,3 +1772,90 @@ fn a_write_names_its_undo_step_and_a_write_that_changes_nothing_does_not() {
     let tree = fixture.call("workspace_tree", json!({}));
     assert!(tree.get("undo_step").is_none());
 }
+
+#[test]
+fn conditions_are_listed_required_and_the_context_set() {
+    let fixture = Fixture::new();
+    fixture
+        .db()
+        .execute_batch(&format!(
+            "INSERT INTO task_conditions (id, workspaceId, name, isLocation, isArchived, createdAt, updatedAt, category, sortOrder) VALUES
+               ('home', '{WORKSPACE}', 'Home', 1, 0, '{EARLIER}', '{EARLIER}', 'Location', 0),
+               ('campus', '{WORKSPACE}', 'Campus', 1, 0, '{EARLIER}', '{EARLIER}', 'Location', 1),
+               ('mat', '{WORKSPACE}', 'Mat', 0, 0, '{EARLIER}', '{EARLIER}', 'Equipment', 2);"
+        ))
+        .unwrap();
+    let task = fixture.add(PROJECTS, "Stretch", None);
+
+    let set = fixture.call(
+        "workspace_task_conditions_set",
+        json!({ "task_id": task, "requires": [["home", "Campus"], "mat"] }),
+    );
+    assert_eq!(set["changed"], json!(true));
+    assert_eq!(set["requires"], json!([["Home", "Campus"], ["Mat"]]));
+    assert_eq!(fixture.journal().last().unwrap().0, "MCP: Edit Conditions");
+    // The task read shows them by name.
+    let tasks = fixture.call("workspace_tasks", json!({ "list_id": PROJECTS }));
+    assert_eq!(
+        tasks["tasks"][0]["requires"],
+        json!([["Home", "Campus"], ["Mat"]])
+    );
+
+    let unknown = fixture
+        .try_call(
+            "workspace_task_conditions_set",
+            json!({ "task_id": task, "requires": ["Library"] }),
+        )
+        .unwrap_err();
+    assert!(
+        unknown.contains("No condition called \"Library\""),
+        "{unknown}"
+    );
+    let created = fixture.call(
+        "workspace_task_conditions_set",
+        json!({ "task_id": task, "requires": ["Library"], "create_missing": true }),
+    );
+    assert_eq!(created["requires"], json!([["Library"]]));
+
+    let read = fixture.call("workspace_conditions", json!({}));
+    assert_eq!(read["sections"][0]["category"], json!("Location"));
+    assert_eq!(read["sections"][0]["one_at_a_time"], json!(true));
+    let library = read["sections"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .flat_map(|section| section["conditions"].as_array().unwrap().clone())
+        .find(|condition| condition["name"] == json!("Library"))
+        .unwrap();
+    assert_eq!(library["open_tasks"], json!(1));
+    assert_eq!(read["context"]["anywhere"], json!(true));
+    let needing = fixture.call("workspace_conditions", json!({ "condition": "library" }));
+    assert_eq!(needing["tasks"][0]["title"], json!("Stretch"));
+
+    // One place at a time; capabilities combine; the stamp comes with it.
+    fixture.call("workspace_context_set", json!({ "on": ["Home", "Mat"] }));
+    let moved = fixture.call(
+        "workspace_context_set",
+        json!({ "on": ["campus"], "available_minutes": 30, "mode": "finish" }),
+    );
+    let names: Vec<&str> = moved["on"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|c| c["name"].as_str().unwrap())
+        .collect();
+    assert_eq!(names, vec!["Campus", "Mat"]);
+    assert_eq!(moved["mode"], json!("finish"));
+    assert!(moved["available_until"].is_string());
+    assert!(moved["set_at"].is_string());
+    assert_eq!(moved["stale"], json!(false));
+    // Saying where you are is not an undo step.
+    assert_eq!(fixture.journal().last().unwrap().0, "MCP: Edit Conditions");
+    let cleared = fixture.call("workspace_context_set", json!({ "clear": true }));
+    assert_eq!(cleared["anywhere"], json!(true));
+    assert!(
+        fixture
+            .try_call("workspace_context_set", json!({ "mode": "rush" }))
+            .is_err()
+    );
+}

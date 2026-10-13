@@ -402,6 +402,22 @@ fn reads_dailies_and_unknown_tools_have_none() {
     assert_eq!(render("task_update", json!({"task_id": 1})), None);
 }
 
+#[test]
+fn conditions_are_cc_and_the_context_its_tab() {
+    assert_eq!(
+        render(
+            "workspace_task_conditions_set",
+            json!({"task_id": TASK, "requires": [["Home", "Campus"]]})
+        )
+        .as_deref(),
+        Some("[cc] then tick what it needs")
+    );
+    assert_eq!(
+        render("workspace_context_set", json!({"on": ["Campus"]})).as_deref(),
+        Some("[cmd+option+8] then Space on each condition that holds")
+    );
+}
+
 /// One plausible call for each write tool, as the assistant makes them.
 fn sample(tool: &str) -> Value {
     match tool {
@@ -427,6 +443,8 @@ fn sample(tool: &str) -> Value {
         "workspace_board_column_set" => json!({"title": "C"}),
         "workspace_board_column_delete" => json!({"column_id": OTHER}),
         "agent_instructions_set" => json!({"scope": "list", "id": OTHER, "text": "x"}),
+        "workspace_task_conditions_set" => json!({"task_id": TASK, "requires": ["Home"]}),
+        "workspace_context_set" => json!({"on": ["Campus"]}),
         "daily_add" => json!({"title": "D"}),
         "daily_update" | "daily_tick" => json!({"daily_id": "d"}),
         _ => json!({"task_id": TASK}),

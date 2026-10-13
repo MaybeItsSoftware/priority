@@ -421,6 +421,47 @@ pub enum WsCommand {
         #[arg(value_name = "BLOCKED_BY_TASK_ID")]
         blocked_by: String,
     },
+    /// Conditions under their categories with how many open tasks need
+    /// each, and what holds now. Name one to list the open tasks needing it.
+    Conditions {
+        #[arg(num_args = 0.., value_name = "NAME_OR_ID")]
+        condition: Vec<String>,
+    },
+    /// Set what a task requires. Each argument is one requirement; join
+    /// alternatives with | ("Home|Campus"). None requires nothing.
+    Require {
+        task_id: String,
+        #[arg(num_args = 0.., value_name = "CONDITION[|CONDITION…]")]
+        requirements: Vec<String>,
+        /// Make a condition for a name nothing has yet.
+        #[arg(long)]
+        create: bool,
+    },
+    /// Say what holds now: turn conditions on (a place replaces the last
+    /// place), off, or clear them, and set the time available.
+    Here {
+        /// Conditions to turn on, by name or id.
+        #[arg(num_args = 0.., value_name = "CONDITION")]
+        conditions: Vec<String>,
+        /// Only these: everything else goes off.
+        #[arg(long)]
+        only: bool,
+        /// Conditions to turn off.
+        #[arg(long, value_name = "CONDITION")]
+        off: Vec<String>,
+        /// Turn every condition off: anywhere.
+        #[arg(long)]
+        clear: bool,
+        /// progress or finish.
+        #[arg(long)]
+        mode: Option<String>,
+        /// Minutes of time available from now; 0 for no limit.
+        #[arg(long = "for", value_name = "MINUTES")]
+        available: Option<i64>,
+        /// Minutes until these stop being trusted; 0 for never.
+        #[arg(long, value_name = "MINUTES")]
+        expires: Option<i64>,
+    },
     /// Delete a task and its subtree.
     Rm { task_id: String },
     /// Filter lists — Today, Everything and your own — with their rules.
@@ -1056,6 +1097,65 @@ fn resolve_workspace(
                 "workspace_task_blocker_remove"
             }
         }
+        WsCommand::Conditions { condition } => {
+            if !condition.is_empty() {
+                arguments.insert("condition".into(), json!(condition.join(" ")));
+            }
+            "workspace_conditions"
+        }
+        WsCommand::Require {
+            task_id,
+            requirements,
+            create,
+        } => {
+            arguments.insert("task_id".into(), json!(task_id));
+            let groups: Vec<Vec<String>> = requirements
+                .iter()
+                .map(|group| {
+                    group
+                        .split('|')
+                        .map(str::trim)
+                        .filter(|name| !name.is_empty())
+                        .map(str::to_string)
+                        .collect()
+                })
+                .filter(|group: &Vec<String>| !group.is_empty())
+                .collect();
+            arguments.insert("requires".into(), json!(groups));
+            if *create {
+                arguments.insert("create_missing".into(), json!(true));
+            }
+            "workspace_task_conditions_set"
+        }
+        WsCommand::Here {
+            conditions,
+            only,
+            off,
+            clear,
+            mode,
+            available,
+            expires,
+        } => {
+            if *only {
+                arguments.insert("set".into(), json!(conditions));
+            } else if !conditions.is_empty() {
+                arguments.insert("on".into(), json!(conditions));
+            }
+            if !off.is_empty() {
+                arguments.insert("off".into(), json!(off));
+            }
+            if *clear {
+                arguments.insert("clear".into(), json!(true));
+            }
+            insert_if_some(arguments, "mode", mode.as_deref());
+            if let Some(minutes) = available {
+                arguments.insert("available_minutes".into(), json!(minutes));
+            }
+            if let Some(minutes) = expires {
+                arguments.insert("expires_in_minutes".into(), json!(minutes));
+            }
+            "workspace_context_set"
+        }
         WsCommand::Rm { task_id } => {
             arguments.insert("task_id".into(), json!(task_id));
             "workspace_task_delete"
@@ -1220,6 +1320,23 @@ pub fn render(tool: &str, outcome: &ToolOutcome, as_json: bool) {
         "workspace_task_dependencies"
         | "workspace_task_blocker_add"
         | "workspace_task_blocker_remove" => render_workspace_dependencies(payload),
+        "workspace_conditions" => render_conditions(payload),
+        "workspace_task_conditions_set" => {
+            let requires = payload["requires"].as_array().cloned().unwrap_or_default();
+            if requires.is_empty() {
+                println!("Requires nothing: offered whatever holds.");
+            }
+            for group in requires {
+                let names: Vec<String> = group
+                    .as_array()
+                    .into_iter()
+                    .flatten()
+                    .map(text_of)
+                    .collect();
+                println!("  needs {}", names.join(" or "));
+            }
+        }
+        "workspace_context_set" => render_context(payload),
         "workspace_filter_lists" => {
             for filter in payload["filter_lists"].as_array().into_iter().flatten() {
                 render_filter_list(filter);
@@ -1721,6 +1838,98 @@ fn render_workspace_task(task: &Value, depth: usize) {
 }
 
 /// The task, then what it waits on and what waits on it, each with its list.
+fn render_conditions(payload: &Value) {
+    if payload.get("sections").is_none() {
+        return render_fallback(payload);
+    }
+    if let Some(tasks) = payload["tasks"].as_array() {
+        if tasks.is_empty() {
+            println!("No open task needs it.");
+        }
+        for task in tasks {
+            println!(
+                "  · {}  [{}]  {}",
+                text_of(&task["title"]),
+                text_of(&task["list_name"]),
+                text_of(&task["id"])
+            );
+        }
+        return;
+    }
+    for section in payload["sections"].as_array().into_iter().flatten() {
+        let rule = if section["one_at_a_time"] == json!(true) {
+            "  (one at a time)"
+        } else {
+            ""
+        };
+        println!("{}{rule}", text_of(&section["category"]));
+        for condition in section["conditions"].as_array().into_iter().flatten() {
+            let count = condition["open_tasks"].as_u64().unwrap_or(0);
+            let archived = if condition["archived"] == json!(true) {
+                "  archived"
+            } else {
+                ""
+            };
+            println!(
+                "  {:<24} {:>3}{archived}  {}",
+                text_of(&condition["name"]),
+                if count > 0 {
+                    count.to_string()
+                } else {
+                    String::new()
+                },
+                text_of(&condition["id"])
+            );
+        }
+    }
+    println!();
+    render_context(&payload["context"]);
+}
+
+fn render_context(context: &Value) {
+    if let Some(note) = context["note"].as_str() {
+        println!("{note}");
+        return;
+    }
+    let names: Vec<String> = context["on"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .map(|c| text_of(&c["name"]))
+        .collect();
+    let on = if names.is_empty() {
+        "anywhere".to_string()
+    } else {
+        names.join(" · ")
+    };
+    let mut line = format!("Available now: {on}");
+    if let Some(at) = context["set_at"].as_str() {
+        line.push_str(&format!("  (said {at})"));
+    }
+    if context["stale"] == json!(true) {
+        line.push_str("  — said on an earlier day; still true?");
+    }
+    println!("{line}");
+    if let Some(until) = context["available_until"].as_str() {
+        println!("Time available until {until}");
+    }
+    if let Some(expiry) = context["expires_at"].as_str() {
+        println!("Lapses at {expiry}");
+    }
+    if context["mode"] == json!("finish") {
+        println!("Goal: finish something");
+    }
+    let last: Vec<String> = context["last_context"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .map(|c| text_of(&c["name"]))
+        .collect();
+    if !last.is_empty() {
+        println!("Last context: {}", last.join(" · "));
+    }
+}
+
 fn render_workspace_dependencies(payload: &Value) {
     if payload.get("task").is_none() {
         return render_fallback(payload);

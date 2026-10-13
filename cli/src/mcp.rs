@@ -1015,6 +1015,54 @@ fn workspace_tool_definitions() -> Vec<Value> {
             },
         }),
         json!({
+            "name": "workspace_conditions",
+            "description": "Conditions: the places and circumstances a task can require before it is offered (Home, Campus, Floor space), under their categories in the order the app shows them, each with how many open tasks need it. Location is one at a time. Also the context: which conditions hold now (on), when they were said (set_at; stale when that was an earlier day, so probably no longer true), the available-time window, goal and expiry, and the last context an expiry set aside. A task that needs a condition that is not on is held back from Today, next up and the focus panel: this is how to explain why. With condition (a name or id), also the open tasks that need it. workspace_tasks shows each task's requires.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "condition": { "type": "string", "description": "A condition's name or id: also list the open tasks that need it." },
+                },
+                "additionalProperties": false,
+            },
+        }),
+        json!({
+            "name": "workspace_task_conditions_set",
+            "description": "Set what a local task requires before it is offered. requires replaces the whole set: each item is one requirement that must hold, either a condition or an array of conditions any one of which will do (places a task can be done in go in one array: [[\"Home\", \"Campus\"]]). Conditions by name or id; an empty array requires nothing. With create_missing, a name no condition has yet becomes a new condition first. Archived conditions are refused unless the task already needed them. One undo step.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "task_id": id("From workspace_tasks."),
+                    "requires": {
+                        "type": "array",
+                        "items": { "anyOf": [
+                            { "type": "string" },
+                            { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+                        ] },
+                    },
+                    "create_missing": { "type": "boolean", "description": "Default: false." },
+                },
+                "required": ["task_id", "requires"],
+                "additionalProperties": false,
+            },
+        }),
+        json!({
+            "name": "workspace_context_set",
+            "description": "Say what holds now, as the app's Conditions tab does: which conditions are on (the user says where they are, or what they have), the time available, the goal and when the answer lapses. set replaces the conditions on; clear turns them all off; then off and on adjust. Turning a place on turns the other place off. Conditions by name or id. available_minutes and expires_in_minutes count from now; 0 removes the limit. The app picks the change up at once. Not an undo step. Returns the context as workspace_conditions reports it.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "set": { "type": "array", "items": { "type": "string" } },
+                    "on": { "type": "array", "items": { "type": "string" } },
+                    "off": { "type": "array", "items": { "type": "string" } },
+                    "clear": { "type": "boolean" },
+                    "mode": { "type": "string", "enum": ["progress", "finish"] },
+                    "available_minutes": { "type": "integer", "minimum": 0 },
+                    "expires_in_minutes": { "type": "integer", "minimum": 0 },
+                },
+                "additionalProperties": false,
+            },
+        }),
+        json!({
             "name": "agent_instructions_set",
             "description": "Save the user's standing instructions for the account, a folder or a list: durable preferences, facts and conventions they want kept, never a one-off request. Pick the narrowest scope that fits. mode replace (the default) writes the whole text, so read the scope first and merge rather than duplicate; append adds a paragraph. Blank text with replace clears the scope. Keep it short. Returns the text before and after. One undo step.",
             "inputSchema": {

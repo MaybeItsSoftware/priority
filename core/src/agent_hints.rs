@@ -219,6 +219,13 @@ fn build(tool: &str, input: &Map<String, Value>, hint: &mut Hint) -> Option<()> 
         "workspace_board_column_delete" => {
             hint.key("planBoardRemoveColumn");
         }
+        "workspace_task_conditions_set" => {
+            hint.key("taskConditions").words("then tick what it needs");
+        }
+        "workspace_context_set" => {
+            hint.key("focusSetAvailable")
+                .words("then Space on each condition that holds");
+        }
         "agent_instructions_set" => {
             if input.get("scope").and_then(Value::as_str) != Some("list") {
                 return None;

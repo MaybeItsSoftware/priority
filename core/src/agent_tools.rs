@@ -30,6 +30,7 @@ pub const READ_ONLY_TOOLS: &[&str] = &[
     "workspace_filter_lists",
     "workspace_filter_list_tasks",
     "workspace_board_columns",
+    "workspace_conditions",
     "agent_instructions_get",
 ];
 
@@ -66,6 +67,8 @@ pub const WRITE_TOOLS: &[&str] = &[
     "workspace_list_delete",
     "workspace_board_column_set",
     "workspace_board_column_delete",
+    "workspace_task_conditions_set",
+    "workspace_context_set",
     "agent_instructions_set",
 ];
 

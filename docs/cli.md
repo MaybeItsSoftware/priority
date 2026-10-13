@@ -279,6 +279,10 @@ takt ws to-list <TASK_ID> --folder <FOLDER_ID>  # promote to its own list
 takt ws block <TASK_ID> <BLOCKER_ID>          # TASK waits on BLOCKER until it is done
 takt ws unblock <TASK_ID> <BLOCKER_ID>
 takt ws deps <TASK_ID>                        # what it waits on, what waits on it
+takt ws conditions [NAME]                     # conditions, open-task counts, what holds now; NAME's tasks
+takt ws require <TASK_ID> 'Home|Campus' Mat   # needs Home or Campus, and Mat; none clears
+takt ws here Campus --for 60                  # at Campus (the last place goes off), an hour free
+takt ws here --clear                          # anywhere
 takt ws new-folder Computer Science
 takt ws new-list Revision --folder <FOLDER_ID>
 takt ws move-list <LIST_ID> --folder <FOLDER_ID>

@@ -57,9 +57,11 @@ pub fn take_last_step() -> Option<String> {
 }
 
 mod board;
+mod conditions;
 mod filters;
 mod instructions;
 pub use board::ColumnEdit;
+pub use conditions::ContextEdit;
 pub use filters::{FilterEdit, rule_catalog_text, rule_fields};
 pub use instructions::instruction_scope;
 
@@ -112,6 +114,10 @@ struct TaskRow {
     waiting_on: Option<String>,
     follow_up_at: Option<String>,
     follow_up_of: Option<String>,
+    planning_json: Option<String>,
+    /// The conditions it requires, by name: every group must hold, any one
+    /// condition in a group will do. Filled in by [`task_rows`].
+    requires: Vec<Vec<String>>,
 }
 
 impl TaskRow {
@@ -136,6 +142,8 @@ impl TaskRow {
             waiting_on: row.get(17)?,
             follow_up_at: row.get(18)?,
             follow_up_of: row.get(19)?,
+            planning_json: row.get(20)?,
+            requires: Vec::new(),
         })
     }
 
@@ -190,6 +198,9 @@ impl TaskRow {
         }
         if let Some(source) = &self.follow_up_of {
             object.insert("follow_up_of".into(), json!(source));
+        }
+        if !self.requires.is_empty() {
+            object.insert("requires".into(), json!(self.requires));
         }
         if let Some(rule) = self
             .recurrence_rule
@@ -1043,16 +1054,17 @@ fn task_rows<P: rusqlite::Params>(
     };
     let mut statement = connection
         .prepare(&format!(
-            "SELECT {TASK_COLUMNS}, {waiting} FROM tasks t \
+            "SELECT {TASK_COLUMNS}, {waiting}, m.planningJSON FROM tasks t \
              LEFT JOIN task_metadata m ON m.taskId = t.id \
              WHERE {filter} ORDER BY t.sortOrder, t.createdAt, t.id"
         ))
         .map_err(map_query_error)?;
-    let rows = statement
+    let mut rows = statement
         .query_map(params, TaskRow::from_row)
         .map_err(map_query_error)?
         .collect::<rusqlite::Result<Vec<_>>>()
         .map_err(map_query_error)?;
+    conditions::name_requirements(connection, &mut rows)?;
     Ok(rows)
 }
 

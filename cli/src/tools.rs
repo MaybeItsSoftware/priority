@@ -646,6 +646,65 @@ impl Tools {
                 ))
             }
 
+            "workspace_conditions" => {
+                let condition = as_id(arguments.get("condition"));
+                let payload = self.workspace.conditions(condition.as_deref())?;
+                let on = payload["context"]["on"].as_array().map_or(0, Vec::len);
+                let title = match payload["condition"]["name"].as_str() {
+                    Some(name) => format!(
+                        "{name}: {} open {}",
+                        payload["tasks"].as_array().map_or(0, Vec::len),
+                        if payload["tasks"].as_array().map_or(0, Vec::len) == 1 {
+                            "task needs it"
+                        } else {
+                            "tasks need it"
+                        }
+                    ),
+                    None => format!("Conditions ({}), {on} on now", payload["count"]),
+                };
+                Ok(outcome(title, payload))
+            }
+
+            "workspace_task_conditions_set" => {
+                let task_id = required_string(arguments, "task_id")?;
+                let groups = as_requirement_groups(arguments.get("requires"))?;
+                let create = as_bool(arguments.get("create_missing"), false)?;
+                let payload = self
+                    .workspace
+                    .set_task_conditions(&task_id, groups, create)?;
+                let title = if payload["changed"] == json!(false) {
+                    "It already required exactly that"
+                } else {
+                    "Conditions saved"
+                };
+                Ok(outcome(title, payload))
+            }
+
+            "workspace_context_set" => {
+                let edit = crate::workspace_tasks::ContextEdit {
+                    set: as_string_list(arguments.get("set"))?,
+                    on: as_string_list(arguments.get("on"))?.unwrap_or_default(),
+                    off: as_string_list(arguments.get("off"))?.unwrap_or_default(),
+                    clear: as_bool(arguments.get("clear"), false)?,
+                    mode: as_string(arguments.get("mode")),
+                    available_minutes: as_optional_int(arguments.get("available_minutes"))?,
+                    expires_in_minutes: as_optional_int(arguments.get("expires_in_minutes"))?,
+                };
+                let payload = self.workspace.set_context(edit)?;
+                let names: Vec<&str> = payload["on"]
+                    .as_array()
+                    .into_iter()
+                    .flatten()
+                    .filter_map(|c| c["name"].as_str())
+                    .collect();
+                let title = if names.is_empty() {
+                    "Available now: anywhere".to_string()
+                } else {
+                    format!("Available now: {}", names.join(" · "))
+                };
+                Ok(outcome(title, payload))
+            }
+
             "workspace_folder_create" => {
                 let name = required_string(arguments, "name")?;
                 let parent = as_id(arguments.get("parent_folder_id"));
@@ -716,6 +775,34 @@ pub fn as_string_list(value: Option<&Value>) -> Result<Option<Vec<String>>> {
             type_name(other)
         ))),
     }
+}
+
+/// Requirement groups: an array whose items are a condition (a group of one)
+/// or an array of conditions any one of which will do. Absent or null is
+/// none.
+pub fn as_requirement_groups(value: Option<&Value>) -> Result<Vec<Vec<String>>> {
+    let items = match value {
+        None | Some(Value::Null) => return Ok(Vec::new()),
+        Some(Value::Array(items)) => items,
+        Some(Value::String(text)) => return Ok(vec![vec![text.clone()]]),
+        Some(other) => {
+            return Err(ToolError::new(format!(
+                "requires is an array of conditions or of arrays of conditions, not {}.",
+                type_name(other)
+            )));
+        }
+    };
+    items
+        .iter()
+        .map(|item| match item {
+            Value::String(text) => Ok(vec![text.clone()]),
+            Value::Array(_) => Ok(as_string_list(Some(item))?.unwrap_or_default()),
+            other => Err(ToolError::new(format!(
+                "Each requirement is a condition or an array of conditions, not {}.",
+                type_name(other)
+            ))),
+        })
+        .collect()
 }
 
 /// A filter list's name, icon and definition from a create or update call.
