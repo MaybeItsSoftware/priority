@@ -449,10 +449,15 @@ struct LocalTaskInspector: View {
     .inspectorStop("commitment.\(commitment.taskId)")
   }
 
-  /// "Every friday · until Fri 31 Oct".
+  /// "Every friday · until Fri 31 Oct", and "· stacks, 2 missed" for one
+  /// whose missed appearances stack.
   static func commitmentSummary(_ commitment: WorkspaceCommitment) -> String {
-    guard let last = commitment.lastDay() else { return "\(commitment.ruleLabel) · until the task is done" }
-    return "\(commitment.ruleLabel) · until \(last.formatted(.dateTime.weekday(.abbreviated).day().month(.abbreviated)))"
+    let ends =
+      commitment.lastDay().map { "until \($0.formatted(.dateTime.weekday(.abbreviated).day().month(.abbreviated)))" }
+      ?? "until the task is done"
+    guard commitment.stacksMissed else { return "\(commitment.ruleLabel) · \(ends)" }
+    let stack = commitment.missed > 0 ? "stacks, \(commitment.missed) missed" : "stacks"
+    return "\(commitment.ruleLabel) · \(ends) · \(stack)"
   }
 
   /// What you do to the task rather than set on it, least often wanted

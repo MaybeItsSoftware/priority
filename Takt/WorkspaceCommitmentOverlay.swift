@@ -13,7 +13,12 @@ struct WorkspaceCommitmentRequest: Identifiable {
 /// The commitment form: `⌘⇧D`, or "Commit periodically" in the inspector.
 /// Committing to a task periodically makes a subtask, "Work on <task>", that
 /// comes round in Dailies and Today on its days, until a last day if it has
-/// one and in any case until the task is done.
+/// one and in any case until the task is done. The form names that task as
+/// the parent, first, so it is plain what the subtask goes under and what
+/// "is done" refers to.
+///
+/// A missed appearance vanishes (the default, as it always has) or stacks,
+/// each one staying owed until it is done.
 ///
 /// One row has the keyboard at a time. Tab, ⇧Tab, ↑ and ↓ move between rows;
 /// ← and → change a choice; Return saves from anywhere; ⌘⌫ stops a commitment
@@ -29,13 +34,14 @@ struct WorkspaceCommitmentOverlay: View {
   @State private var weekday = 2
   @State private var customRule = ""
   @State private var endsOnDate = false
+  @State private var stacksMissed = false
   @State private var untilText = ""
   @State private var row: Row = .title
   @State private var error: String?
   @FocusState private var textFocus: Row?
 
   enum Row: Hashable, CaseIterable {
-    case title, interval, weekday, custom, ends, until
+    case title, interval, weekday, custom, missed, ends, until
 
     var isText: Bool { self == .title || self == .custom || self == .until }
   }
@@ -62,7 +68,15 @@ struct WorkspaceCommitmentOverlay: View {
       header
       FocusRule()
       VStack(alignment: .leading, spacing: 0) {
-        formRow(.title, label: "Name") { textField("Work on it", text: $title, row: .title) }
+        parentRow
+        formRow(.title, label: "Name") {
+          VStack(alignment: .leading, spacing: theme.space.xxs) {
+            textField("Work on it", text: $title, row: .title)
+            Text("A subtask of the parent task, in Today on its days")
+              .font(theme.captionFont)
+              .foregroundStyle(theme.muted)
+          }
+        }
         formRow(.interval, label: "How often") {
           chips(Interval.allCases, selected: interval, label: \.label) { setInterval($0) }
         }
@@ -85,9 +99,20 @@ struct WorkspaceCommitmentOverlay: View {
             }
           }
         }
+        formRow(.missed, label: "If missed") {
+          VStack(alignment: .leading, spacing: theme.space.xxs) {
+            HStack(spacing: theme.space.xs) {
+              chip("Vanishes", selected: !stacksMissed) { stacksMissed = false }
+              chip("Stacks", selected: stacksMissed) { stacksMissed = true }
+            }
+            Text(missedPreview)
+              .font(theme.captionFont)
+              .foregroundStyle(theme.muted)
+          }
+        }
         formRow(.ends, label: "Ends") {
           HStack(spacing: theme.space.xs) {
-            chip("When the task is done", selected: !endsOnDate) { endsOnDate = false }
+            chip(Self.whenDoneLabel(parentTitle: request.task.title), selected: !endsOnDate) { endsOnDate = false }
             chip("After a date", selected: endsOnDate) { setEndsOnDate() }
           }
         }
@@ -124,11 +149,6 @@ struct WorkspaceCommitmentOverlay: View {
   private var header: some View {
     HStack(spacing: theme.space.sm) {
       MicroLabel(request.editing == nil ? "Commit periodically" : "Edit commitment")
-      Text(request.task.title)
-        .font(theme.bodyFont())
-        .foregroundStyle(theme.muted)
-        .lineLimit(1)
-        .truncationMode(.tail)
       Spacer(minLength: 0)
       if request.editing != nil {
         Button("Stop") { stop() }
@@ -144,6 +164,39 @@ struct WorkspaceCommitmentOverlay: View {
     .font(theme.bodyFont())
     .padding(.horizontal, theme.space.md)
     .padding(.vertical, theme.space.sm)
+  }
+
+  /// The task committed to: the parent the subtask goes under and the task
+  /// whose completion ends it. Shown, not chosen, so the keys pass it by.
+  private var parentRow: some View {
+    HStack(alignment: .firstTextBaseline, spacing: theme.space.sm) {
+      MicroLabel("Parent task")
+        .frame(width: 92, alignment: .leading)
+      Text(request.task.title)
+        .font(theme.bodyFont())
+        .foregroundStyle(theme.ink)
+        .lineLimit(1)
+        .truncationMode(.tail)
+        .layoutPriority(1)
+      if let list = model.list(for: request.task) {
+        Text(list.name)
+          .font(theme.bodyFont())
+          .foregroundStyle(theme.muted)
+          .lineLimit(1)
+          .truncationMode(.tail)
+      }
+      Spacer(minLength: 0)
+    }
+    .padding(.horizontal, theme.space.md)
+    .padding(.vertical, theme.space.xs)
+  }
+
+  /// "When “Write thesis” is done", or, for a title too long to read in a
+  /// chip, "When the parent task is done".
+  static func whenDoneLabel(parentTitle: String) -> String {
+    let title = parentTitle.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard !title.isEmpty, title.count <= 32 else { return "When the parent task is done" }
+    return "When “\(title)” is done"
   }
 
   private func formRow<Content: View>(_ target: Row, label: String, @ViewBuilder content: () -> Content) -> some View {
@@ -200,7 +253,7 @@ struct WorkspaceCommitmentOverlay: View {
   private var hints: String {
     switch row {
     case .title, .custom, .until: "tab ↑↓ fields"
-    case .interval, .ends: "←→ choose"
+    case .interval, .missed, .ends: "←→ choose"
     case .weekday: "←→ day · 1–7 Mon–Sun"
     }
   }
@@ -241,6 +294,19 @@ struct WorkspaceCommitmentOverlay: View {
     return WorkspaceCommitment.normalizedRule(customRule).map { "Reads as “\($0)”" } ?? "Not a schedule yet"
   }
 
+  /// What the chosen "If missed" does, for the schedule as it stands.
+  private var missedPreview: String {
+    if stacksMissed {
+      let owed = request.editing?.missed ?? 0
+      let base = "Each missed one stays in Today until it is done; a completion clears the oldest"
+      return owed > 0 ? "\(base) · \(owed) missed now" : base
+    }
+    guard let carries = WorkspaceCommitment.carriesMissedDays(rule) else { return "A missed one is not kept" }
+    return carries
+      ? "A missed one stays until the next one replaces it"
+      : "A missed one drops off at the end of its day"
+  }
+
   private var parsedUntil: Date? {
     TaskCapture.dateTime(from: untilText)
   }
@@ -270,6 +336,7 @@ struct WorkspaceCommitmentOverlay: View {
         customRule = commitment.rule
       }
     }
+    stacksMissed = commitment.stacksMissed
     if let last = commitment.lastDay() {
       endsOnDate = true
       untilText = WorkspaceHabitOverlay.dayText(last)
@@ -337,6 +404,8 @@ struct WorkspaceCommitmentOverlay: View {
       } else if let digit = Int(key), (1...7).contains(digit) {
         weekday = Self.weekdayOrder[digit - 1]
       }
+    case .missed where offset != 0:
+      stacksMissed.toggle()
     case .ends where offset != 0:
       if endsOnDate { endsOnDate = false } else { setEndsOnDate() }
     default:
@@ -369,7 +438,7 @@ struct WorkspaceCommitmentOverlay: View {
       }
       expiresAt = WorkspaceCommitment.expiry(forLastDay: day)
     }
-    let draft = WorkspaceCommitmentDraft(title: name, rule: rule, expiresAt: expiresAt)
+    let draft = WorkspaceCommitmentDraft(title: name, rule: rule, expiresAt: expiresAt, stacksMissed: stacksMissed)
     if let failure = model.saveCommitment(draft, to: request.task, editing: request.editing) {
       error = failure
       return

@@ -992,14 +992,28 @@ small form rather than flipping a switch:
 
 | Row | What it sets |
 | --- | --- |
+| Parent task | Shown, not chosen: the selected task, with its list, which the commitment's subtask goes under and whose completion ends it |
 | Name | What turns up in Dailies, prefilled as "Work on *task*" |
 | How often | **Every day**, **Weekdays**, **Weekly** (on a day you pick; `←` `→` or `1`–`7` for Mon–Sun) or **Custom**, in the repeat syntax: `every 2 weeks`, `every 3 days`, `every friday`, `mon, wed, fri` |
-| Ends | **When the task is done**, or **after a date**: type the last day it should appear, in the follow-up field's shorthands (`fri`, `3w`, `2026-12-31`) |
+| If missed | **Vanishes** (the default) or **Stacks**; see below |
+| Ends | **When “*task*” is done** (named "the parent task" when its title is long), or **after a date**: type the last day it should appear, in the follow-up field's shorthands (`fri`, `3w`, `2026-12-31`) |
+
+`↑` `↓` (or `Tab`) move between rows and `←` `→` change a choice.
 
 Saving adds a subtask under the task, carrying a habit whose source is the
 task: it lands in Today on its days and appears in Dailies, where ticking it
-records the day's contribution and leaves both tasks open. A daily rhythm drops
-a missed day; a weekly one, or one day a week, is carried until you tick it.
+records the day's contribution and leaves both tasks open. What happens to a
+missed appearance is the **If missed** row's:
+
+- **Vanishes** — as commitments always behaved: a daily rhythm drops a missed
+  day at its end, and a weekly one, or one day a week, stays until the next one
+  replaces it.
+- **Stacks** — each missed appearance stays owed. The subtask stays in Today
+  while any scheduled day since you chose it is undone, and each tick pays off
+  the oldest, so three missed days take three ticks. Switching it on does not
+  reach back before the day you switched; switching it off forgives what is
+  owed. The inspector shows how many are missed.
+
 The task's inspector lists its commitments with **Edit** and **Stop**; stopping
 keeps what was logged and closes the subtask. Completing the task ends every
 commitment on it, whatever its end date, and closes their subtasks — undo
