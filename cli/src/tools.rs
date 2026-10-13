@@ -32,7 +32,22 @@ pub struct Tools {
 }
 
 impl Tools {
+    /// Runs one tool. A workspace write that made an undo step says which,
+    /// as `undo_step` in its payload: the journal group the Mac's agent
+    /// panel hands back to the core to take back exactly that change.
     pub fn call(&self, name: &str, arguments: &Map<String, Value>) -> Result<ToolOutcome> {
+        crate::workspace_tasks::take_last_step();
+        let mut outcome = self.dispatch(name, arguments)?;
+        if let (Some(step), Some(payload)) = (
+            crate::workspace_tasks::take_last_step(),
+            outcome.payload.as_object_mut(),
+        ) {
+            payload.insert("undo_step".into(), json!(step));
+        }
+        Ok(outcome)
+    }
+
+    fn dispatch(&self, name: &str, arguments: &Map<String, Value>) -> Result<ToolOutcome> {
         let list_id = || {
             self.client
                 .resolve_list_id(as_string(arguments.get("list_id")).as_deref())

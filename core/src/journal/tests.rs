@@ -263,3 +263,136 @@ fn a_step_holds_whatever_its_writes_touched() {
         .unwrap();
     assert_eq!(left, 0);
 }
+
+fn group_of(connection: &Connection, label: &str) -> String {
+    connection
+        .query_row(
+            "SELECT groupId FROM change_log WHERE label = ?1 ORDER BY id DESC LIMIT 1",
+            [label],
+            |row| row.get(0),
+        )
+        .unwrap()
+}
+
+#[test]
+fn an_earlier_step_is_taken_back_alone_when_later_ones_do_not_depend_on_it() {
+    let mut connection = workspace();
+    step(&mut connection, "Add A", &add_task("a", None, "A"));
+    step(&mut connection, "Add B", &add_task("b", None, "B"));
+    step(
+        &mut connection,
+        "Rename B",
+        "UPDATE tasks SET title = 'B2' WHERE id = 'b'",
+    );
+    let a = group_of(&connection, "Add A");
+
+    let plan = step_undo_plan(&mut connection, &a).unwrap();
+    assert!(plan.available && !plan.is_undone);
+    assert!(plan.later_steps.is_empty());
+    // The plan wrote nothing.
+    assert_eq!(titles(&connection), ["A", "B2"]);
+
+    assert_eq!(undo_step(&mut connection, &a).unwrap(), ["Add A"]);
+    assert_eq!(titles(&connection), ["B2"]);
+    // The menu's undo still takes back the newest step.
+    assert_eq!(
+        undoable_label(&connection).unwrap().as_deref(),
+        Some("Rename B")
+    );
+    // Again is nothing: it is undone already.
+    assert!(undo_step(&mut connection, &a).unwrap().is_empty());
+
+    let plan = step_undo_plan(&mut connection, &a).unwrap();
+    assert!(plan.is_undone && plan.can_redo);
+    assert!(redo_step(&mut connection, &a).unwrap());
+    assert_eq!(titles(&connection), ["A", "B2"]);
+}
+
+#[test]
+fn a_step_a_later_one_built_on_is_taken_back_with_it() {
+    let mut connection = workspace();
+    step(&mut connection, "Add A", &add_task("a", None, "A"));
+    step(
+        &mut connection,
+        "Rename A",
+        "UPDATE tasks SET title = 'A2' WHERE id = 'a'",
+    );
+    let a = group_of(&connection, "Add A");
+    let plan = step_undo_plan(&mut connection, &a).unwrap();
+    assert_eq!(
+        plan.later_steps
+            .iter()
+            .map(|s| s.label.as_str())
+            .collect::<Vec<_>>(),
+        ["Rename A"]
+    );
+    assert_eq!(
+        undo_step(&mut connection, &a).unwrap(),
+        ["Rename A", "Add A"]
+    );
+    assert!(titles(&connection).is_empty());
+}
+
+#[test]
+fn a_subtask_added_later_keeps_its_parent_from_being_taken_back_alone() {
+    // The rows differ, but deleting the parent would cascade to the subtask.
+    let mut connection = workspace();
+    step(&mut connection, "Add A", &add_task("a", None, "A"));
+    step(&mut connection, "Add B", &add_task("b", None, "B"));
+    step(&mut connection, "Add Child", &add_task("c", Some("a"), "C"));
+    let a = group_of(&connection, "Add A");
+    let plan = step_undo_plan(&mut connection, &a).unwrap();
+    assert_eq!(
+        plan.later_steps
+            .iter()
+            .map(|s| s.label.as_str())
+            .collect::<Vec<_>>(),
+        ["Add Child", "Add B"],
+        "every later step, newest first, as the menu would"
+    );
+    undo_step(&mut connection, &a).unwrap();
+    assert!(titles(&connection).is_empty());
+}
+
+#[test]
+fn a_step_that_is_gone_has_no_plan_and_undoes_nothing() {
+    let mut connection = workspace();
+    assert_eq!(
+        step_undo_plan(&mut connection, "NOPE").unwrap(),
+        StepUndoPlan::default()
+    );
+    assert!(undo_step(&mut connection, "NOPE").unwrap().is_empty());
+    assert!(!redo_step(&mut connection, "NOPE").unwrap());
+    // A redo a newer change dropped is gone too.
+    step(&mut connection, "Add A", &add_task("a", None, "A"));
+    let a = group_of(&connection, "Add A");
+    undo_step(&mut connection, &a).unwrap();
+    step(&mut connection, "Add B", &add_task("b", None, "B"));
+    assert!(!step_undo_plan(&mut connection, &a).unwrap().available);
+}
+
+#[test]
+fn only_the_later_steps_that_built_on_it_go_back_with_it() {
+    let mut connection = workspace();
+    step(&mut connection, "Add A", &add_task("a", None, "A"));
+    step(&mut connection, "Add B", &add_task("b", None, "B"));
+    step(
+        &mut connection,
+        "Rename A",
+        "UPDATE tasks SET title = 'A2' WHERE id = 'a'",
+    );
+    let a = group_of(&connection, "Add A");
+    let plan = step_undo_plan(&mut connection, &a).unwrap();
+    assert_eq!(
+        plan.later_steps
+            .iter()
+            .map(|s| s.label.as_str())
+            .collect::<Vec<_>>(),
+        ["Rename A"]
+    );
+    assert_eq!(
+        undo_step(&mut connection, &a).unwrap(),
+        ["Rename A", "Add A"]
+    );
+    assert_eq!(titles(&connection), ["B"]);
+}

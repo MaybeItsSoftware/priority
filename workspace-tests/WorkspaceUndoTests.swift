@@ -45,6 +45,32 @@ final class WorkspaceUndoTests: XCTestCase {
     XCTAssertEqual(try store.undoHistory(limit: 0), [])
   }
 
+  /// The agent panel's cards: one step taken back by its id, alone when the
+  /// later steps do not depend on it, and with them when one does.
+  func testOneStepIsTakenBackByIdAloneOrWithTheStepsThatBuiltOnIt() throws {
+    let milk = try store.createTask(listId: listID, title: "Milk")
+    let first = try XCTUnwrap(store.undoHistory(limit: 1).first).id
+    let eggs = try store.createTask(listId: listID, title: "Eggs")
+
+    let plan = try store.stepUndoPlan(first)
+    XCTAssertTrue(plan.isAvailable)
+    XCTAssertFalse(plan.isUndone)
+    XCTAssertEqual(plan.laterSteps, [])
+    XCTAssertEqual(try store.undoStep(first), ["New Task"])
+    XCTAssertNil(try store.task(id: milk.id))
+    XCTAssertNotNil(try store.task(id: eggs.id), "the later step stands")
+    XCTAssertTrue(try store.stepUndoPlan(first).canRedo)
+    XCTAssertTrue(try store.redoStep(first))
+    XCTAssertNotNil(try store.task(id: milk.id))
+
+    try store.updateTask(id: milk.id, title: "Oat milk", notes: "", dueAt: nil, estimateSeconds: nil)
+    XCTAssertEqual(try store.stepUndoPlan(first).laterSteps.map(\.label), ["Edit Task"])
+    XCTAssertEqual(try store.undoStep(first), ["Edit Task", "New Task"])
+    XCTAssertNil(try store.task(id: milk.id))
+    XCTAssertNotNil(try store.task(id: eggs.id), "a later step that did not build on it stands")
+    XCTAssertFalse(try store.stepUndoPlan("NOT-A-STEP").isAvailable)
+  }
+
   func testUndoTakesBackACreationAndRedoPutsItBack() throws {
     let task = try store.createTask(listId: listID, title: "Write the report")
     XCTAssertEqual(try store.undoableLabel(), "New Task")

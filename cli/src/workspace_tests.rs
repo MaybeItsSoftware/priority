@@ -1748,3 +1748,27 @@ fn agent_instructions_are_read_set_appended_and_each_write_is_one_undo_step() {
         assert!(error.contains(message), "{error}");
     }
 }
+
+#[test]
+fn a_write_names_its_undo_step_and_a_write_that_changes_nothing_does_not() {
+    let fixture = Fixture::new();
+    let added = fixture.call(
+        "workspace_task_add",
+        json!({ "list_id": PROJECTS, "title": "Milk" }),
+    );
+    let step = added["undo_step"].as_str().expect("undo_step").to_string();
+    let label: String = fixture.scalar(
+        "SELECT label FROM change_log WHERE groupId = ?1 LIMIT 1",
+        &step,
+    );
+    assert_eq!(label, "MCP: New Task");
+
+    let same = fixture.call(
+        "agent_instructions_set",
+        json!({ "scope": "account", "text": "" }),
+    );
+    assert!(same.get("undo_step").is_none(), "{same}");
+    // A read never carries one, even straight after a write.
+    let tree = fixture.call("workspace_tree", json!({}));
+    assert!(tree.get("undo_step").is_none());
+}

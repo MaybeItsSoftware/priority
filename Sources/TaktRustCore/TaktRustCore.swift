@@ -1045,6 +1045,22 @@ public protocol CoreWorkspaceProtocol: AnyObject, Sendable {
     func updateFilterList(id: String, name: String, icon: String?, colorHex: String?, definition: FilterDefinition, nowMs: Int64) throws  -> FilterListRow
     
     /**
+     * Puts back one step taken back; see [`redo_step`].
+     */
+    func redoStep(id: String) throws  -> Bool
+    
+    /**
+     * What Undo on one step would do; see [`step_undo_plan`].
+     */
+    func stepUndoPlan(id: String) throws  -> StepUndoPlan
+    
+    /**
+     * Takes back one step, with the later ones only when it must; see
+     * [`undo_step`].
+     */
+    func undoStep(id: String) throws  -> [String]
+    
+    /**
      * Settles the session left paused when the app last went away: closes
      * it, crediting its seconds at the moment it was paused, as one "Log
      * Daily Progress" step, or discards it. `resolveStaleFocusSession`.
@@ -2289,6 +2305,46 @@ open func updateFilterList(id: String, name: String, icon: String?, colorHex: St
         FfiConverterOptionString.lower(colorHex),
         FfiConverterTypeFilterDefinition_lower(definition),
         FfiConverterInt64.lower(nowMs),uniffiCallStatus
+    )
+})
+}
+    
+    /**
+     * Puts back one step taken back; see [`redo_step`].
+     */
+open func redoStep(id: String)throws  -> Bool  {
+    return try  FfiConverterBool.lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_redo_step(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(id),uniffiCallStatus
+    )
+})
+}
+    
+    /**
+     * What Undo on one step would do; see [`step_undo_plan`].
+     */
+open func stepUndoPlan(id: String)throws  -> StepUndoPlan  {
+    return try  FfiConverterTypeStepUndoPlan_lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_step_undo_plan(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(id),uniffiCallStatus
+    )
+})
+}
+    
+    /**
+     * Takes back one step, with the later ones only when it must; see
+     * [`undo_step`].
+     */
+open func undoStep(id: String)throws  -> [String]  {
+    return try  FfiConverterSequenceString.lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_undo_step(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(id),uniffiCallStatus
     )
 })
 }
@@ -16022,6 +16078,101 @@ public func FfiConverterTypeSidebarOutlineRow_lower(_ value: SidebarOutlineRow) 
 
 
 /**
+ * What pressing Undo on one step would do.
+ */
+public struct StepUndoPlan: Equatable, Hashable {
+    /**
+     * The step is still in the journal. A step trimmed off its end, or a
+     * redo dropped by a newer change, is gone for good.
+     */
+    public var available: Bool
+    /**
+     * It has been taken back already, so the button is Redo.
+     */
+    public var isUndone: Bool
+    /**
+     * Later steps that have to be taken back with it, newest first. Empty
+     * when it can be taken back alone.
+     */
+    public var laterSteps: [UndoStep]
+    /**
+     * For an undone step: Redo would put it back without disturbing a
+     * later step.
+     */
+    public var canRedo: Bool
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(
+        /**
+         * The step is still in the journal. A step trimmed off its end, or a
+         * redo dropped by a newer change, is gone for good.
+         */available: Bool, 
+        /**
+         * It has been taken back already, so the button is Redo.
+         */isUndone: Bool, 
+        /**
+         * Later steps that have to be taken back with it, newest first. Empty
+         * when it can be taken back alone.
+         */laterSteps: [UndoStep], 
+        /**
+         * For an undone step: Redo would put it back without disturbing a
+         * later step.
+         */canRedo: Bool) {
+        self.available = available
+        self.isUndone = isUndone
+        self.laterSteps = laterSteps
+        self.canRedo = canRedo
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension StepUndoPlan: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeStepUndoPlan: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> StepUndoPlan {
+        return
+            try StepUndoPlan(
+                available: FfiConverterBool.read(from: &buf), 
+                isUndone: FfiConverterBool.read(from: &buf), 
+                laterSteps: FfiConverterSequenceTypeUndoStep.read(from: &buf), 
+                canRedo: FfiConverterBool.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: StepUndoPlan, into buf: inout [UInt8]) {
+        FfiConverterBool.write(value.available, into: &buf)
+        FfiConverterBool.write(value.isUndone, into: &buf)
+        FfiConverterSequenceTypeUndoStep.write(value.laterSteps, into: &buf)
+        FfiConverterBool.write(value.canRedo, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeStepUndoPlan_lift(_ buf: RustBuffer) throws -> StepUndoPlan {
+    return try FfiConverterTypeStepUndoPlan.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeStepUndoPlan_lower(_ value: StepUndoPlan) -> RustBuffer {
+    return FfiConverterTypeStepUndoPlan.lower(value)
+}
+
+
+/**
  * Keys a command answers to on one surface only.
  */
 public struct SurfaceKeys: Equatable, Hashable {
@@ -28319,6 +28470,15 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_method_coreworkspace_update_filter_list() != 10132) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_redo_step() != 44009) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_step_undo_plan() != 16637) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_undo_step() != 48266) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_method_coreworkspace_resolve_stale_focus_session() != 39926) {

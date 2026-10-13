@@ -43,6 +43,19 @@ use serde_json::{Value, json};
 use std::collections::{HashMap, HashSet};
 use std::time::Duration;
 
+// The journal group of the last write on this thread that changed
+// anything, for `take_last_step`.
+thread_local! {
+    static LAST_STEP: std::cell::RefCell<Option<String>> = const { std::cell::RefCell::new(None) };
+}
+
+/// The undo step the last journalled write on this thread made, if it made
+/// one, clearing it. A tool's result carries it as `undo_step`, so the agent
+/// panel can take back exactly that change (`CoreWorkspace::undo_step`).
+pub fn take_last_step() -> Option<String> {
+    LAST_STEP.with(|step| step.borrow_mut().take())
+}
+
 mod board;
 mod filters;
 mod instructions;
@@ -914,8 +927,11 @@ impl Workspace {
         let group = takt_core::journal::begin(&tx, &format!("{LABEL_PREFIX}{label}"))
             .map_err(map_core_error)?;
         let result = work(&tx, &now)?;
-        takt_core::journal::finish(&tx, &group).map_err(map_core_error)?;
+        let changed = takt_core::journal::finish(&tx, &group).map_err(map_core_error)?;
         tx.commit().map_err(map_write_error)?;
+        if changed {
+            LAST_STEP.with(|step| *step.borrow_mut() = Some(group));
+        }
         Ok(result)
     }
 

@@ -88,6 +88,10 @@ workspace's uppercase UUIDs, not Checkvist's integers:
 Notes:
 
 - The Checkvist tools talk directly to the Checkvist API.
+- A workspace write that changed anything carries `undo_step` in its result:
+  the journal group of its "MCP: …" step. The Mac's agent panel hands it to
+  the core (`CoreWorkspace::undo_step`) to take back exactly that change; any
+  other client can ignore it.
 - It does not automate the local macOS app UI.
 - `task_add` supports both root insertion and specific parent insertion.
 - The local tools need no IPC. They read the app's preferences plist by bundle

@@ -60,6 +60,50 @@ extension WorkspaceStore {
     try coreWrite { try core.redo() }
   }
 
+  /// What taking back one step would do: alone, or with the later steps
+  /// that built on it. Writes nothing. The agent panel's change cards ask
+  /// it to say so on their Undo button (`core/src/journal/steps.rs`).
+  public func stepUndoPlan(_ step: String) throws -> WorkspaceStepUndoPlan {
+    let plan = try Self.mappingCoreErrors { try core.stepUndoPlan(id: step) }
+    return WorkspaceStepUndoPlan(
+      isAvailable: plan.available, isUndone: plan.isUndone, canRedo: plan.canRedo,
+      laterSteps: plan.laterSteps.map {
+        WorkspaceUndoStep(id: $0.id, label: $0.label, isUndone: $0.isUndone, changeCount: Int($0.changeCount))
+      })
+  }
+
+  /// Takes back one step, and the later steps that built on it if there are
+  /// any. Returns the labels taken back, the named step last; empty when it
+  /// was gone or undone already.
+  @discardableResult
+  public func undoStep(_ step: String) throws -> [String] {
+    try coreWrite { try core.undoStep(id: step) }
+  }
+
+  /// Puts back one step taken back, when no later step is in the way.
+  /// Returns whether it did.
+  @discardableResult
+  public func redoStep(_ step: String) throws -> Bool {
+    try coreWrite { try core.redoStep(id: step) }
+  }
+}
+
+/// See `WorkspaceStore.stepUndoPlan(_:)`.
+public struct WorkspaceStepUndoPlan: Equatable, Sendable {
+  /// Still in the journal; a step trimmed off it, or a redo a newer change
+  /// dropped, is gone for good.
+  public let isAvailable: Bool
+  public let isUndone: Bool
+  public let canRedo: Bool
+  /// Taken back with it, newest first. Empty when it goes back alone.
+  public let laterSteps: [WorkspaceUndoStep]
+
+  public init(isAvailable: Bool, isUndone: Bool, canRedo: Bool, laterSteps: [WorkspaceUndoStep]) {
+    self.isAvailable = isAvailable
+    self.isUndone = isUndone
+    self.canRedo = canRedo
+    self.laterSteps = laterSteps
+  }
 }
 
 /// One named step in the undo journal, as `undoHistory(limit:)` reports it.

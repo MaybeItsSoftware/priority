@@ -1097,6 +1097,12 @@ internal object IntegrityCheckingUniffiLib {
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_update_filter_list(
     ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_redo_step(
+    ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_step_undo_plan(
+    ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_undo_step(
+    ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_resolve_stale_focus_session(
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_work_progress(
@@ -1542,6 +1548,12 @@ internal object UniffiLib {
     external fun uniffi_takt_core_fn_method_coreworkspace_rename_filter_list(`ptr`: Long,`id`: RustBuffer.ByValue,`name`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
     external fun uniffi_takt_core_fn_method_coreworkspace_update_filter_list(`ptr`: Long,`id`: RustBuffer.ByValue,`name`: RustBuffer.ByValue,`icon`: RustBuffer.ByValue,`colorHex`: RustBuffer.ByValue,`definition`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_method_coreworkspace_redo_step(`ptr`: Long,`id`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): Byte
+    external fun uniffi_takt_core_fn_method_coreworkspace_step_undo_plan(`ptr`: Long,`id`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_method_coreworkspace_undo_step(`ptr`: Long,`id`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_method_coreworkspace_resolve_stale_focus_session(`ptr`: Long,`nowMs`: Long,`zone`: RustBuffer.ByValue,`rolloverHour`: Byte,`context`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
@@ -2989,6 +3001,15 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_update_filter_list() and 0xFFFF) != 10132) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_redo_step() and 0xFFFF) != 44009) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_step_undo_plan() and 0xFFFF) != 16637) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_undo_step() and 0xFFFF) != 48266) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_resolve_stale_focus_session() and 0xFFFF) != 39926) {
@@ -4577,6 +4598,22 @@ public interface CoreWorkspaceInterface {
     fun `updateFilterList`(`id`: kotlin.String, `name`: kotlin.String, `icon`: kotlin.String?, `colorHex`: kotlin.String?, `definition`: FilterDefinition, `nowMs`: kotlin.Long): FilterListRow
     
     /**
+     * Puts back one step taken back; see [`redo_step`].
+     */
+    fun `redoStep`(`id`: kotlin.String): kotlin.Boolean
+    
+    /**
+     * What Undo on one step would do; see [`step_undo_plan`].
+     */
+    fun `stepUndoPlan`(`id`: kotlin.String): StepUndoPlan
+    
+    /**
+     * Takes back one step, with the later ones only when it must; see
+     * [`undo_step`].
+     */
+    fun `undoStep`(`id`: kotlin.String): List<kotlin.String>
+    
+    /**
      * Settles the session left paused when the app last went away: closes
      * it, crediting its seconds at the moment it was paused, as one "Log
      * Daily Progress" step, or discards it. `resolveStaleFocusSession`.
@@ -5951,6 +5988,61 @@ open class CoreWorkspace: Disposable, AutoCloseable, CoreWorkspaceInterface
         FfiConverterOptionalString.lower(`colorHex`),
         FfiConverterTypeFilterDefinition.lower(`definition`),
         FfiConverterLong.lower(`nowMs`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * Puts back one step taken back; see [`redo_step`].
+     */
+    @Throws(CoreException::class)override fun `redoStep`(`id`: kotlin.String): kotlin.Boolean {
+            return FfiConverterBoolean.lift(
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_redo_step(
+        it,
+        
+        FfiConverterString.lower(`id`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * What Undo on one step would do; see [`step_undo_plan`].
+     */
+    @Throws(CoreException::class)override fun `stepUndoPlan`(`id`: kotlin.String): StepUndoPlan {
+            return FfiConverterTypeStepUndoPlan.lift(
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_step_undo_plan(
+        it,
+        
+        FfiConverterString.lower(`id`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * Takes back one step, with the later ones only when it must; see
+     * [`undo_step`].
+     */
+    @Throws(CoreException::class)override fun `undoStep`(`id`: kotlin.String): List<kotlin.String> {
+            return FfiConverterSequenceString.lift(
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_undo_step(
+        it,
+        
+        FfiConverterString.lower(`id`),_status)
 }
     }
     )
@@ -18162,6 +18254,72 @@ public object FfiConverterTypeSidebarOutlineRow: FfiConverterRustBuffer<SidebarO
             FfiConverterTypeSidebarRowKind.write(value.`kind`, buf)
             FfiConverterUInt.write(value.`subject`, buf)
             FfiConverterUInt.write(value.`depth`, buf)
+    }
+}
+
+
+
+/**
+ * What pressing Undo on one step would do.
+ */
+data class StepUndoPlan (
+    /**
+     * The step is still in the journal. A step trimmed off its end, or a
+     * redo dropped by a newer change, is gone for good.
+     */
+    var `available`: kotlin.Boolean
+    , 
+    /**
+     * It has been taken back already, so the button is Redo.
+     */
+    var `isUndone`: kotlin.Boolean
+    , 
+    /**
+     * Later steps that have to be taken back with it, newest first. Empty
+     * when it can be taken back alone.
+     */
+    var `laterSteps`: List<UndoStep>
+    , 
+    /**
+     * For an undone step: Redo would put it back without disturbing a
+     * later step.
+     */
+    var `canRedo`: kotlin.Boolean
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeStepUndoPlan: FfiConverterRustBuffer<StepUndoPlan> {
+    override fun read(buf: ByteBuffer): StepUndoPlan {
+        return StepUndoPlan(
+            FfiConverterBoolean.read(buf),
+            FfiConverterBoolean.read(buf),
+            FfiConverterSequenceTypeUndoStep.read(buf),
+            FfiConverterBoolean.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: StepUndoPlan) = (
+            FfiConverterBoolean.allocationSize(value.`available`) +
+            FfiConverterBoolean.allocationSize(value.`isUndone`) +
+            FfiConverterSequenceTypeUndoStep.allocationSize(value.`laterSteps`) +
+            FfiConverterBoolean.allocationSize(value.`canRedo`)
+    )
+
+    override fun write(value: StepUndoPlan, buf: ByteBuffer) {
+            FfiConverterBoolean.write(value.`available`, buf)
+            FfiConverterBoolean.write(value.`isUndone`, buf)
+            FfiConverterSequenceTypeUndoStep.write(value.`laterSteps`, buf)
+            FfiConverterBoolean.write(value.`canRedo`, buf)
     }
 }
 

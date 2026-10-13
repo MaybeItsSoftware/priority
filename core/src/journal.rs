@@ -233,7 +233,7 @@ struct Entry {
     after: Option<String>,
 }
 
-fn replay(transaction: &Transaction, group: &str, reversed: bool) -> Result<(), CoreError> {
+fn replay(transaction: &Connection, group: &str, reversed: bool) -> Result<(), CoreError> {
     // Recording is already off outside a journalled write; set explicitly so
     // a replay can never record undoing as another thing to undo.
     transaction.execute("UPDATE undo_control SET suppressed = 1 WHERE id = 0", [])?;
@@ -330,6 +330,9 @@ fn columns(connection: &Connection, table: &str) -> Result<Vec<String>, CoreErro
         .collect::<Result<_, _>>()?;
     Ok(columns)
 }
+
+mod steps;
+pub use steps::{StepUndoPlan, redo_step, step_undo_plan, undo_step};
 
 #[cfg(test)]
 mod tests;
