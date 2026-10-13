@@ -765,3 +765,53 @@ fn closing_a_habits_source_ends_the_habit_and_clears_its_placement() {
         .unwrap();
     assert_eq!(placement, (None, None));
 }
+
+#[test]
+fn a_task_created_with_its_conditions_is_one_step_and_one_undo_takes_both() {
+    let mut connection = workspace();
+    connection
+        .execute_batch(&format!(
+            "INSERT INTO task_conditions (id, workspaceId, name, createdAt, updatedAt)
+               VALUES ('home', 'w', 'Home', '{T}', '{T}'), ('desk', 'w', 'Desk', '{T}', '{T}');"
+        ))
+        .unwrap();
+    let new = NewTask {
+        list_id: "l".into(),
+        title: "Water the plants".into(),
+        kind: "task".into(),
+        due_at_ms: Some(1_700_000_000_000),
+        estimate_seconds: Some(900),
+        ..NewTask::default()
+    };
+    let groups = vec![vec!["home".to_string()], vec!["desk".to_string()]];
+    let id = journalled(&mut connection, "New Task", |tx| {
+        create_task_requiring(tx, &new, &groups, 0, "UTC")
+    })
+    .unwrap();
+    let saved = crate::editor::snapshot(&connection, &id).unwrap();
+    assert_eq!(saved.estimate_seconds, Some(900));
+    assert_eq!(saved.due_at_ms, Some(1_700_000_000_000));
+    assert_eq!(
+        saved.planning.and_then(|p| p.requirement_groups),
+        Some(groups)
+    );
+
+    assert_eq!(undo(&mut connection).unwrap().as_deref(), Some("New Task"));
+    assert!(!ids(&connection).contains(&id));
+}
+
+#[test]
+fn a_task_created_needing_a_condition_that_does_not_exist_is_not_created() {
+    let mut connection = workspace();
+    let new = NewTask {
+        list_id: "l".into(),
+        title: "Nowhere".into(),
+        kind: "task".into(),
+        ..NewTask::default()
+    };
+    let result = journalled(&mut connection, "New Task", |tx| {
+        create_task_requiring(tx, &new, &[vec!["missing".to_string()]], 0, "UTC")
+    });
+    assert!(result.is_err());
+    assert_eq!(ids(&connection), ["c", "g", "o", "p"]);
+}

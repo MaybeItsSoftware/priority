@@ -142,6 +142,19 @@ impl CoreWorkspace {
         })
     }
 
+    /// Creates a task and the conditions it needs as one "New Task" step.
+    pub fn create_task_requiring(
+        &self,
+        task: NewTask,
+        requirement_groups: Vec<Vec<String>>,
+        now_ms: i64,
+        zone: String,
+    ) -> Result<String, CoreError> {
+        journal::journalled(&mut self.lock(), "New Task", |tx| {
+            tasks::create_task_requiring(tx, &task, &requirement_groups, now_ms, &zone)
+        })
+    }
+
     /// Moves a task and its subtree as one "Move Task" step.
     pub fn move_task(
         &self,

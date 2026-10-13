@@ -1,5 +1,6 @@
 import Foundation
 import TaktCore
+import TaktRustCore
 
 extension WorkspaceStore {
   /// `createTask`, for a title a person typed: the details written on the end
@@ -30,5 +31,34 @@ extension WorkspaceStore {
       startAt: startAt, atTop: atTop, adjacentTaskId: adjacentTaskId, above: above,
       dueAt: capture.dueAt ?? defaultDueAt, estimateSeconds: capture.estimateSeconds, tags: capture.tags,
       priority: capture.priority, waitingOn: capture.waitingOn, now: now)
+  }
+
+  /// A typed task with what the add field's slots hold: a due day and an
+  /// estimate that win over any the title's words name, and the conditions
+  /// it needs. All of it one "New Task" step — the Rust core's
+  /// `tasks::create_task_requiring` — so one undo takes the lot.
+  public func createTask(
+    capturing typed: String,
+    listId: String,
+    parentTaskId: String? = nil,
+    dueAt: Date?,
+    estimateSeconds: Int?,
+    requirementGroups: [[String]],
+    now: Date = .now
+  ) throws -> WorkspaceTask {
+    let capture = TaskCapture.parse(typed, now: now)
+    let new = NewTask(
+      listId: listId, title: capture.title, parentTaskId: parentTaskId, kind: WorkspaceItemKind.task.rawValue,
+      notes: "", kanbanColumn: nil, startAtMs: nil, dueAtMs: (dueAt ?? capture.dueAt)?.coreMilliseconds,
+      estimateSeconds: (estimateSeconds ?? capture.estimateSeconds).map(Int64.init), tags: capture.tags,
+      priority: capture.priority.map(Int64.init), waitingOn: capture.waitingOn, externalLinks: [], atTop: false,
+      adjacentTaskId: nil, above: false)
+    let id = try coreWrite {
+      try core.createTaskRequiring(
+        task: new, requirementGroups: requirementGroups, nowMs: now.coreMilliseconds,
+        zone: TimeZone.current.identifier)
+    }
+    guard let task = try task(id: id) else { throw WorkspaceStoreError.missingTask }
+    return task
   }
 }

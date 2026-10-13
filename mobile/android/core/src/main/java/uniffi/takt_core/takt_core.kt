@@ -1237,6 +1237,8 @@ internal object IntegrityCheckingUniffiLib {
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_create_task_blocker(
     ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_create_task_requiring(
+    ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_data_version(
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_delete_folder(
@@ -1688,6 +1690,8 @@ internal object UniffiLib {
     external fun uniffi_takt_core_fn_method_coreworkspace_create_task(`ptr`: Long,`task`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_method_coreworkspace_create_task_blocker(`ptr`: Long,`taskId`: RustBuffer.ByValue,`task`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_method_coreworkspace_create_task_requiring(`ptr`: Long,`task`: RustBuffer.ByValue,`requirementGroups`: RustBuffer.ByValue,`nowMs`: Long,`zone`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_method_coreworkspace_data_version(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): Long
@@ -3215,6 +3219,9 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_create_task_blocker() and 0xFFFF) != 56190) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_create_task_requiring() and 0xFFFF) != 37407) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_data_version() and 0xFFFF) != 15691) {
@@ -4961,6 +4968,11 @@ public interface CoreWorkspaceInterface {
      * step (`dependencies::create_blocker`). Returns the new task's id.
      */
     fun `createTaskBlocker`(`taskId`: kotlin.String, `task`: NewTask, `nowMs`: kotlin.Long): kotlin.String
+    
+    /**
+     * Creates a task and the conditions it needs as one "New Task" step.
+     */
+    fun `createTaskRequiring`(`task`: NewTask, `requirementGroups`: List<List<kotlin.String>>, `nowMs`: kotlin.Long, `zone`: kotlin.String): kotlin.String
     
     /**
      * SQLite's `data_version` on this handle's connection: it moves when
@@ -7281,6 +7293,27 @@ open class CoreWorkspace: Disposable, AutoCloseable, CoreWorkspaceInterface
         FfiConverterString.lower(`taskId`),
         FfiConverterTypeNewTask.lower(`task`),
         FfiConverterLong.lower(`nowMs`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * Creates a task and the conditions it needs as one "New Task" step.
+     */
+    @Throws(CoreException::class)override fun `createTaskRequiring`(`task`: NewTask, `requirementGroups`: List<List<kotlin.String>>, `nowMs`: kotlin.Long, `zone`: kotlin.String): kotlin.String {
+            return FfiConverterString.lift(
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_create_task_requiring(
+        it,
+        
+        FfiConverterTypeNewTask.lower(`task`),
+        FfiConverterSequenceSequenceString.lower(`requirementGroups`),
+        FfiConverterLong.lower(`nowMs`),
+        FfiConverterString.lower(`zone`),_status)
 }
     }
     )

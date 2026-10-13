@@ -158,6 +158,31 @@ pub fn create_task(
     Ok(id)
 }
 
+/// [`create_task`], then the conditions it needs, in the caller's one
+/// transaction: the add field's slots, which can tick conditions before the
+/// task exists, file them with it so one undo takes back the task and all it
+/// was given. The requirements go through the editor's save, so a condition
+/// from another workspace, or archived, is refused as the editor refuses it.
+pub fn create_task_requiring(
+    transaction: &Transaction,
+    new: &NewTask,
+    requirement_groups: &[Vec<String>],
+    now_ms: i64,
+    zone: &str,
+) -> Result<String, CoreError> {
+    let id = create_task(transaction, new, now_ms)?;
+    if requirement_groups.is_empty() {
+        return Ok(id);
+    }
+    let baseline = crate::editor::snapshot(transaction, &id)?;
+    let mut edit = baseline.clone();
+    let mut planning = edit.planning.clone().unwrap_or_default();
+    planning.requirement_groups = Some(requirement_groups.to_vec());
+    edit.planning = Some(planning);
+    crate::editor::save_editor(transaction, &edit, &baseline, now_ms, zone)?;
+    Ok(id)
+}
+
 /// Tags trimmed, blanks dropped and repeats (ignoring case) kept once, in
 /// the order given: `WorkspaceStore.normalizedStrings`.
 pub fn normalized_strings(values: &[String]) -> Vec<String> {
