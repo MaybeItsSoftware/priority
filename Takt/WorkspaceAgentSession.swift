@@ -55,6 +55,16 @@ import os
     var undoStep: String?
     /// Taken back from the card. The labels are every step that went with it.
     var undoneLabels: [String]?
+    /// The keys that would have made the same change, from the keymap in
+    /// force when the card was drawn; nil when no key does.
+    var keyHint: AgentKeyHintLine?
+
+    init(request: AgentPermissionRequest, state: ApprovalState, before: [String: String] = [:]) {
+      self.request = request
+      self.state = state
+      self.before = before
+      keyHint = AgentKeyHintLine.forTool(request.toolName, input: request.input)
+    }
   }
 
   enum Entry: Equatable {
@@ -430,7 +440,7 @@ import os
       } else if AgentToolPolicy.isPreAllowed(use.name, asksBeforeChanges: asksBeforeChanges) {
         let request = AgentPermissionRequest(requestID: "", toolName: use.name, input: use.input, toolUseID: use.id)
         let before = currentValues?(use.name, use.input) ?? [:]
-        let item = Item(entry: .write(Approval(request: request, state: .automatic, outcome: nil, before: before)))
+        let item = Item(entry: .write(Approval(request: request, state: .automatic, before: before)))
         toolItems[use.id] = item.id
         items.append(item)
       }
@@ -464,12 +474,12 @@ import os
           let index = items.firstIndex(where: { $0.id == itemID }),
           case .write(var approval) = items[index].entry, approval.state == .automatic
         {
-          approval = Approval(request: request, state: .pending, outcome: nil, before: approval.before)
+          approval = Approval(request: request, state: .pending, before: approval.before)
           items[index].entry = .write(approval)
           return
         }
         let before = currentValues?(request.toolName, request.input) ?? [:]
-        let item = Item(entry: .write(Approval(request: request, state: .pending, outcome: nil, before: before)))
+        let item = Item(entry: .write(Approval(request: request, state: .pending, before: before)))
         if let toolUseID = request.toolUseID { toolItems[toolUseID] = item.id }
         items.append(item)
       }

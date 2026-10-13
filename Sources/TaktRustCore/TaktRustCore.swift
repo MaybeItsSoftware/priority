@@ -5073,6 +5073,59 @@ public func FfiConverterTypeAgentInstructionSeed_lower(_ value: AgentInstruction
 
 
 /**
+ * The keystrokes for one tool call, in order.
+ */
+public struct AgentKeyHint: Equatable, Hashable {
+    public var parts: [AgentKeyHintPart]
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(parts: [AgentKeyHintPart]) {
+        self.parts = parts
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension AgentKeyHint: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeAgentKeyHint: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> AgentKeyHint {
+        return
+            try AgentKeyHint(
+                parts: FfiConverterSequenceTypeAgentKeyHintPart.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: AgentKeyHint, into buf: inout [UInt8]) {
+        FfiConverterSequenceTypeAgentKeyHintPart.write(value.parts, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeAgentKeyHint_lift(_ buf: RustBuffer) throws -> AgentKeyHint {
+    return try FfiConverterTypeAgentKeyHint.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeAgentKeyHint_lower(_ value: AgentKeyHint) -> RustBuffer {
+    return FfiConverterTypeAgentKeyHint.lower(value)
+}
+
+
+/**
  * A row of `focus_awards`. `FocusAward`.
  */
 public struct AwardRow: Equatable, Hashable {
@@ -17982,6 +18035,84 @@ public func FfiConverterTypeAgentInstructionKind_lower(_ value: AgentInstruction
 
 
 /**
+ * One piece of a hint: a key to press, or the words between keys.
+ */
+
+public enum AgentKeyHintPart: Equatable, Hashable {
+    
+    /**
+     * A key in the catalogue's spelling (`dd`, `cmd+shift+m`, `space`).
+     */
+    case key(key: String
+    )
+    case text(text: String
+    )
+
+
+
+
+
+}
+
+#if compiler(>=6)
+extension AgentKeyHintPart: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeAgentKeyHintPart: FfiConverterRustBuffer {
+    typealias SwiftType = AgentKeyHintPart
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> AgentKeyHintPart {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .key(key: try FfiConverterString.read(from: &buf)
+        )
+        
+        case 2: return .text(text: try FfiConverterString.read(from: &buf)
+        )
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: AgentKeyHintPart, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case let .key(key):
+            writeInt(&buf, Int32(1))
+            FfiConverterString.write(key, into: &buf)
+            
+        
+        case let .text(text):
+            writeInt(&buf, Int32(2))
+            FfiConverterString.write(text, into: &buf)
+            
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeAgentKeyHintPart_lift(_ buf: RustBuffer) throws -> AgentKeyHintPart {
+    return try FfiConverterTypeAgentKeyHintPart.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeAgentKeyHintPart_lower(_ value: AgentKeyHintPart) -> RustBuffer {
+    return FfiConverterTypeAgentKeyHintPart.lower(value)
+}
+
+
+
+/**
  * Something to ask Checkvist.
  */
 
@@ -21708,6 +21839,30 @@ fileprivate struct FfiConverterOptionString: FfiConverterRustBuffer {
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterOptionTypeAgentKeyHint: FfiConverterRustBuffer {
+    typealias SwiftType = AgentKeyHint?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterTypeAgentKeyHint.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterTypeAgentKeyHint.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterOptionTypeAwardRow: FfiConverterRustBuffer {
     typealias SwiftType = AwardRow?
 
@@ -25232,6 +25387,31 @@ fileprivate struct FfiConverterSequenceTypeWorkspaceRow: FfiConverterRustBuffer 
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterSequenceTypeAgentKeyHintPart: FfiConverterRustBuffer {
+    typealias SwiftType = [AgentKeyHintPart]
+
+    public static func write(_ value: [AgentKeyHintPart], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeAgentKeyHintPart.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [AgentKeyHintPart] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [AgentKeyHintPart]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeAgentKeyHintPart.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterSequenceTypeCoreThemeIssue: FfiConverterRustBuffer {
     typealias SwiftType = [CoreThemeIssue]
 
@@ -25493,6 +25673,21 @@ public func coreVersion() -> String  {
     return try!  FfiConverterString.lift(try! rustCall() {
         uniffiCallStatus in
     uniffi_takt_core_fn_func_core_version(uniffiCallStatus
+    )
+})
+}
+/**
+ * The keys that do what `tool` did with `input_json`, or none when nothing
+ * does. `tool` may be qualified (`mcp__takt__task_update`); `commands` are
+ * the commands with the keys in force, the Mac's `WorkspaceCommandCatalog`.
+ */
+public func agentKeyHint(tool: String, inputJson: String, commands: [CommandEntry]) -> AgentKeyHint?  {
+    return try!  FfiConverterOptionTypeAgentKeyHint.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_agent_key_hint(
+        FfiConverterString.lower(tool),
+        FfiConverterString.lower(inputJson),
+        FfiConverterSequenceTypeCommandEntry.lower(commands),uniffiCallStatus
     )
 })
 }
@@ -27840,6 +28035,9 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.contractVersionMismatch
     }
     if (uniffi_takt_core_checksum_func_core_version() != 3784) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_agent_key_hint() != 34698) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_func_agent_read_only_tools() != 53195) {

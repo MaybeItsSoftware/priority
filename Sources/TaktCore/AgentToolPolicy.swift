@@ -200,6 +200,8 @@ public enum AgentSystemPrompt {
 
       \(asksBeforeChanges ? approvalRule : undoRule)
 
+      \(keysRule)
+
       A message may begin with bracketed notes from the app rather than the user: what is on \
       screen, and the user's standing instructions for their account, a folder or a list. \
       Instructions are sent again only when they change; the latest replace any before them.
@@ -235,6 +237,14 @@ public enum AgentSystemPrompt {
     exactly that change. Make one change per call, so each can be undone on its own, and only \
     make the changes the user asked for or agreed to. If they undo one, do not make it again; \
     ask what they would like instead.
+    """
+
+  /// The app draws the keys for each change on its card (`AgentKeyHintLine`),
+  /// so the assistant need not, and would only get them wrong after a rebind.
+  static let keysRule = """
+    Each change card also shows the keys that would have made the same change in the app, \
+    worked out by the app from your call and the user's own key bindings. So do not spell out \
+    keyboard shortcuts for your changes yourself.
     """
 
   /// Ahead of the next message when the user has taken back changes from

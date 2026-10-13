@@ -677,6 +677,8 @@ internal object IntegrityCheckingUniffiLib {
     internal fun ensureInitialized() = Unit
     external fun uniffi_takt_core_checksum_func_core_version(
     ): Int
+    external fun uniffi_takt_core_checksum_func_agent_key_hint(
+    ): Int
     external fun uniffi_takt_core_checksum_func_agent_read_only_tools(
     ): Int
     external fun uniffi_takt_core_checksum_func_agent_write_tools(
@@ -1895,6 +1897,8 @@ internal object UniffiLib {
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_func_core_version(uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_agent_key_hint(`tool`: RustBuffer.ByValue,`inputJson`: RustBuffer.ByValue,`commands`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_func_agent_read_only_tools(uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_func_agent_write_tools(uniffi_out_err: UniffiRustCallStatus, 
@@ -2371,6 +2375,9 @@ private fun uniffiCheckContractApiVersion(lib: IntegrityCheckingUniffiLib) {
 @Suppress("UNUSED_PARAMETER")
 private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
     if ((lib.uniffi_takt_core_checksum_func_core_version() and 0xFFFF) != 3784) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_agent_key_hint() and 0xFFFF) != 34698) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_func_agent_read_only_tools() and 0xFFFF) != 53195) {
@@ -9728,6 +9735,42 @@ public object FfiConverterTypeAgentInstructionSeed: FfiConverterRustBuffer<Agent
             FfiConverterTypeAgentInstructionKind.write(value.`kind`, buf)
             FfiConverterOptionalString.write(value.`id`, buf)
             FfiConverterString.write(value.`text`, buf)
+    }
+}
+
+
+
+/**
+ * The keystrokes for one tool call, in order.
+ */
+data class AgentKeyHint (
+    var `parts`: List<AgentKeyHintPart>
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeAgentKeyHint: FfiConverterRustBuffer<AgentKeyHint> {
+    override fun read(buf: ByteBuffer): AgentKeyHint {
+        return AgentKeyHint(
+            FfiConverterSequenceTypeAgentKeyHintPart.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: AgentKeyHint) = (
+            FfiConverterSequenceTypeAgentKeyHintPart.allocationSize(value.`parts`)
+    )
+
+    override fun write(value: AgentKeyHint, buf: ByteBuffer) {
+            FfiConverterSequenceTypeAgentKeyHintPart.write(value.`parts`, buf)
     }
 }
 
@@ -19691,6 +19734,95 @@ public object FfiConverterTypeAgentInstructionKind: FfiConverterRustBuffer<Agent
 
 
 /**
+ * One piece of a hint: a key to press, or the words between keys.
+ */
+sealed class AgentKeyHintPart {
+    
+    /**
+     * A key in the catalogue's spelling (`dd`, `cmd+shift+m`, `space`).
+     */
+    data class Key(
+        val `key`: kotlin.String) : AgentKeyHintPart()
+        
+    {
+        
+
+        companion object
+    }
+    
+    data class Text(
+        val `text`: kotlin.String) : AgentKeyHintPart()
+        
+    {
+        
+
+        companion object
+    }
+    
+
+    
+
+    
+    
+
+
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeAgentKeyHintPart : FfiConverterRustBuffer<AgentKeyHintPart>{
+    override fun read(buf: ByteBuffer): AgentKeyHintPart {
+        return when(buf.getInt()) {
+            1 -> AgentKeyHintPart.Key(
+                FfiConverterString.read(buf),
+                )
+            2 -> AgentKeyHintPart.Text(
+                FfiConverterString.read(buf),
+                )
+            else -> throw RuntimeException("invalid enum value, something is very wrong!!")
+        }
+    }
+
+    override fun allocationSize(value: AgentKeyHintPart): ULong = when(value) {
+        is AgentKeyHintPart.Key -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`key`)
+            )
+        }
+        is AgentKeyHintPart.Text -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`text`)
+            )
+        }
+    }
+
+    override fun write(value: AgentKeyHintPart, buf: ByteBuffer) {
+        when(value) {
+            is AgentKeyHintPart.Key -> {
+                buf.putInt(1)
+                FfiConverterString.write(value.`key`, buf)
+                Unit
+            }
+            is AgentKeyHintPart.Text -> {
+                buf.putInt(2)
+                FfiConverterString.write(value.`text`, buf)
+                Unit
+            }
+        }.let { /* this makes the `when` an expression, which ensures it is exhaustive */ }
+    }
+}
+
+
+
+
+
+/**
  * Something to ask Checkvist.
  */
 sealed class CheckvistCall {
@@ -24109,6 +24241,38 @@ public object FfiConverterOptionalString: FfiConverterRustBuffer<kotlin.String?>
 /**
  * @suppress
  */
+public object FfiConverterOptionalTypeAgentKeyHint: FfiConverterRustBuffer<AgentKeyHint?> {
+    override fun read(buf: ByteBuffer): AgentKeyHint? {
+        if (buf.get().toInt() == 0) {
+            return null
+        }
+        return FfiConverterTypeAgentKeyHint.read(buf)
+    }
+
+    override fun allocationSize(value: AgentKeyHint?): ULong {
+        if (value == null) {
+            return 1UL
+        } else {
+            return 1UL + FfiConverterTypeAgentKeyHint.allocationSize(value)
+        }
+    }
+
+    override fun write(value: AgentKeyHint?, buf: ByteBuffer) {
+        if (value == null) {
+            buf.put(0)
+        } else {
+            buf.put(1)
+            FfiConverterTypeAgentKeyHint.write(value, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
 public object FfiConverterOptionalTypeAwardRow: FfiConverterRustBuffer<AwardRow?> {
     override fun read(buf: ByteBuffer): AwardRow? {
         if (buf.get().toInt() == 0) {
@@ -28317,6 +28481,34 @@ public object FfiConverterSequenceTypeWorkspaceRow: FfiConverterRustBuffer<List<
 /**
  * @suppress
  */
+public object FfiConverterSequenceTypeAgentKeyHintPart: FfiConverterRustBuffer<List<AgentKeyHintPart>> {
+    override fun read(buf: ByteBuffer): List<AgentKeyHintPart> {
+        val len = buf.getInt()
+        return List<AgentKeyHintPart>(len) {
+            FfiConverterTypeAgentKeyHintPart.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<AgentKeyHintPart>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeAgentKeyHintPart.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<AgentKeyHintPart>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeAgentKeyHintPart.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
 public object FfiConverterSequenceTypeCoreThemeIssue: FfiConverterRustBuffer<List<CoreThemeIssue>> {
     override fun read(buf: ByteBuffer): List<CoreThemeIssue> {
         val len = buf.getInt()
@@ -28646,6 +28838,24 @@ public object FfiConverterMapStringTypeSyncValue: FfiConverterRustBuffer<Map<kot
     UniffiLib.uniffi_takt_core_fn_func_core_version(
     
         _status)
+}
+    )
+    }
+    
+
+        /**
+         * The keys that do what `tool` did with `input_json`, or none when nothing
+         * does. `tool` may be qualified (`mcp__takt__task_update`); `commands` are
+         * the commands with the keys in force, the Mac's `WorkspaceCommandCatalog`.
+         */ fun `agentKeyHint`(`tool`: kotlin.String, `inputJson`: kotlin.String, `commands`: List<CommandEntry>): AgentKeyHint? {
+            return FfiConverterOptionalTypeAgentKeyHint.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_agent_key_hint(
+    
+        
+        FfiConverterString.lower(`tool`),
+        FfiConverterString.lower(`inputJson`),
+        FfiConverterSequenceTypeCommandEntry.lower(`commands`),_status)
 }
     )
     }

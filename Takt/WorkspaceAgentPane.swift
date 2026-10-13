@@ -324,6 +324,9 @@ struct WorkspaceAgentApprovalCard: View {
           }
         }
       }
+      if let hint = approval.keyHint, showsKeyHint {
+        WorkspaceAgentKeyHint(hint: hint)
+      }
       DisclosureGroup(isExpanded: $showsInput) {
         Text(approval.request.input.jsonString(pretty: true))
           .font(theme.monoCaptionFont)
@@ -363,6 +366,17 @@ struct WorkspaceAgentApprovalCard: View {
     .task(id: "\(approval.undoStep ?? "")·\(model.historyVersion)") {
       guard let step = approval.undoStep else { return }
       plan = model.agentUndoPlan(for: step)
+    }
+  }
+
+  /// The keys go with a change that is waiting, running or made: one that was
+  /// declined, withdrawn or failed made nothing to repeat.
+  private var showsKeyHint: Bool {
+    switch approval.state {
+    case .denied, .withdrawn: return false
+    case .pending, .approved, .automatic:
+      if case .failed = approval.outcome { return false }
+      return true
     }
   }
 
