@@ -503,6 +503,49 @@ pub enum WsCommand {
         #[arg(long, value_name = "COLUMN_ID")]
         to: Option<String>,
     },
+    /// The agent's standing instructions: every scope's, or one's.
+    Instructions {
+        #[command(flatten)]
+        scope: InstructionScopeArgs,
+    },
+    /// Replace a scope's agent instructions, or add a paragraph with --append.
+    /// Empty text clears the scope.
+    InstructionsSet {
+        #[command(flatten)]
+        scope: InstructionScopeArgs,
+        /// Add a paragraph rather than replace the text.
+        #[arg(long)]
+        append: bool,
+        #[arg(num_args = 0.., value_name = "TEXT")]
+        text: Vec<String>,
+    },
+}
+
+/// Which scope's agent instructions: --account, --folder ID or --list ID.
+#[derive(Args)]
+#[group(multiple = false)]
+pub struct InstructionScopeArgs {
+    /// The whole account's.
+    #[arg(long)]
+    account: bool,
+    #[arg(long, value_name = "FOLDER_ID")]
+    folder: Option<String>,
+    #[arg(long, value_name = "LIST_ID")]
+    list: Option<String>,
+}
+
+impl InstructionScopeArgs {
+    fn insert(&self, arguments: &mut Map<String, Value>) {
+        if self.account {
+            arguments.insert("scope".into(), json!("account"));
+        } else if let Some(folder) = &self.folder {
+            arguments.insert("scope".into(), json!("folder"));
+            arguments.insert("id".into(), json!(folder));
+        } else if let Some(list) = &self.list {
+            arguments.insert("scope".into(), json!("list"));
+            arguments.insert("id".into(), json!(list));
+        }
+    }
 }
 
 /// A filter list's icon and definition, as `filter-new` and `filter-edit`
@@ -1073,6 +1116,27 @@ fn resolve_workspace(
             insert_if_some(arguments, "move_to", to.as_deref());
             "workspace_board_column_delete"
         }
+        WsCommand::Instructions { scope } => {
+            scope.insert(arguments);
+            "agent_instructions_get"
+        }
+        WsCommand::InstructionsSet {
+            scope,
+            append,
+            text,
+        } => {
+            if !(scope.account || scope.folder.is_some() || scope.list.is_some()) {
+                return Err(ToolError::new(
+                    "Say which scope: --account, --folder ID or --list ID.",
+                ));
+            }
+            scope.insert(arguments);
+            arguments.insert("text".into(), json!(text.join(" ")));
+            if *append {
+                arguments.insert("mode".into(), json!("append"));
+            }
+            "agent_instructions_set"
+        }
         WsCommand::Filters => "workspace_filter_lists",
         WsCommand::Filter { filter } => {
             arguments.insert("filter_list".into(), json!(filter.join(" ")));
@@ -1165,7 +1229,36 @@ pub fn render(tool: &str, outcome: &ToolOutcome, as_json: bool) {
             render_filter_list(payload)
         }
         "workspace_filter_list_tasks" => render_filter_list_tasks(payload),
+        "agent_instructions_get" => {
+            let instructions = payload["instructions"].as_array();
+            if instructions.is_none_or(|all| all.is_empty()) {
+                println!("No agent instructions.");
+            }
+            for instruction in instructions.into_iter().flatten() {
+                render_instruction(instruction);
+            }
+        }
+        "agent_instructions_set" => render_instruction(payload),
         _ => render_task(payload),
+    }
+}
+
+fn render_instruction(instruction: &Value) {
+    let scope = instruction["scope"].as_str().unwrap_or("");
+    let heading = match instruction["name"].as_str() {
+        Some(name) if scope != "account" => format!("{scope} \"{name}\""),
+        _ => scope.to_string(),
+    };
+    match instruction["id"].as_str() {
+        Some(id) => println!("{heading}  ({id})"),
+        None => println!("{heading}"),
+    }
+    let text = instruction["text"].as_str().unwrap_or("");
+    if text.is_empty() {
+        println!("  (none)");
+    }
+    for line in text.lines() {
+        println!("  {line}");
     }
 }
 

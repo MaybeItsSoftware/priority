@@ -1002,6 +1002,33 @@ fn workspace_tool_definitions() -> Vec<Value> {
                 "additionalProperties": false,
             },
         }),
+        json!({
+            "name": "agent_instructions_get",
+            "description": "The user's standing instructions for the agent: what they want kept in mind for the whole account, a folder or a list. With no scope, every scope that has any, each with its scope, id and name. With a scope, that one (empty text when none is written).",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "scope": { "type": "string", "enum": ["account", "folder", "list"] },
+                    "id": id("A folder or list id from workspace_tree. Not for account."),
+                },
+                "additionalProperties": false,
+            },
+        }),
+        json!({
+            "name": "agent_instructions_set",
+            "description": "Save the user's standing instructions for the account, a folder or a list: durable preferences, facts and conventions they want kept, never a one-off request. Pick the narrowest scope that fits. mode replace (the default) writes the whole text, so read the scope first and merge rather than duplicate; append adds a paragraph. Blank text with replace clears the scope. Keep it short. Returns the text before and after. One undo step.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "scope": { "type": "string", "enum": ["account", "folder", "list"] },
+                    "id": id("A folder or list id from workspace_tree. Not for account."),
+                    "text": { "type": "string" },
+                    "mode": { "type": "string", "enum": ["replace", "append"], "description": "Default: replace." },
+                },
+                "required": ["scope", "text"],
+                "additionalProperties": false,
+            },
+        }),
     ]
 }
 

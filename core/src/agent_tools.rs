@@ -14,7 +14,7 @@
 
 /// The tools that change nothing: the Checkvist reads, the local day log and
 /// dailies, the focus clock (opened read-only by the CLI), the workspace
-/// tree and its filter lists.
+/// tree and its filter lists, and the agent's standing instructions.
 pub const READ_ONLY_TOOLS: &[&str] = &[
     "task_lists",
     "task_fetch",
@@ -30,6 +30,7 @@ pub const READ_ONLY_TOOLS: &[&str] = &[
     "workspace_filter_lists",
     "workspace_filter_list_tasks",
     "workspace_board_columns",
+    "agent_instructions_get",
 ];
 
 /// Every other tool the server declares. Each goes through the approval card.
@@ -65,6 +66,7 @@ pub const WRITE_TOOLS: &[&str] = &[
     "workspace_list_delete",
     "workspace_board_column_set",
     "workspace_board_column_delete",
+    "agent_instructions_set",
 ];
 
 /// [`READ_ONLY_TOOLS`], for the apps.

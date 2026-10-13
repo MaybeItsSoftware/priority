@@ -1654,3 +1654,97 @@ fn the_ws_subcommands_resolve_to_the_workspace_tools() {
         assert_eq!(resolved(args).0, tool, "{args:?}");
     }
 }
+
+#[test]
+fn agent_instructions_are_read_set_appended_and_each_write_is_one_undo_step() {
+    let fixture = Fixture::new();
+    let empty = fixture.call("agent_instructions_get", json!({}));
+    assert_eq!(empty["instructions"], json!([]));
+
+    let saved = fixture.call(
+        "agent_instructions_set",
+        json!({ "scope": "list", "id": PROJECTS, "text": "  Keep titles short.  " }),
+    );
+    assert_eq!(saved["text"], json!("Keep titles short."));
+    assert_eq!(saved["previous"], json!(""));
+    assert_eq!(saved["name"], json!("Projects"));
+    assert_eq!(saved["changed"], json!(true));
+
+    let appended = fixture.call(
+        "agent_instructions_set",
+        json!({ "scope": "list", "id": PROJECTS, "text": "Due dates on Fridays.", "mode": "append" }),
+    );
+    assert_eq!(appended["previous"], json!("Keep titles short."));
+    assert_eq!(
+        appended["text"],
+        json!("Keep titles short.\n\nDue dates on Fridays.")
+    );
+
+    fixture.call(
+        "agent_instructions_set",
+        json!({ "scope": "account", "text": "I work in British English." }),
+    );
+    let folder = fixture.call(
+        "agent_instructions_set",
+        json!({ "scope": "folder", "id": FOLDER, "text": "Modules by code." }),
+    );
+    assert_eq!(folder["name"], json!("Computer Science"));
+
+    let all = fixture.call("agent_instructions_get", json!({}));
+    let scopes: Vec<&str> = all["instructions"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|instruction| instruction["scope"].as_str().unwrap())
+        .collect();
+    assert_eq!(scopes, ["account", "folder", "list"]);
+    let one = fixture.call(
+        "agent_instructions_get",
+        json!({ "scope": "list", "id": PROJECTS }),
+    );
+    assert_eq!(one["instructions"][0]["text"], appended["text"]);
+
+    // Saving what is there already is not a step.
+    let unchanged = fixture.call(
+        "agent_instructions_set",
+        json!({ "scope": "account", "text": "I work in British English." }),
+    );
+    assert_eq!(unchanged["changed"], json!(false));
+    let steps: Vec<String> = fixture
+        .journal()
+        .into_iter()
+        .map(|(label, _)| label)
+        .filter(|label| label == "MCP: Edit Agent Instructions")
+        .collect();
+    assert_eq!(steps.len(), 4);
+
+    // Blank text clears the scope.
+    fixture.call(
+        "agent_instructions_set",
+        json!({ "scope": "account", "text": "" }),
+    );
+    let account = fixture.call("agent_instructions_get", json!({ "scope": "account" }));
+    assert_eq!(account["instructions"][0]["text"], json!(""));
+
+    for (arguments, message) in [
+        (json!({ "scope": "list", "text": "x" }), "needs an id"),
+        (
+            json!({ "scope": "account", "id": PROJECTS, "text": "x" }),
+            "takes no id",
+        ),
+        (json!({ "scope": "shelf", "text": "x" }), "Unknown scope"),
+        (
+            json!({ "scope": "list", "id": "NOPE", "text": "x" }),
+            "No list with id NOPE",
+        ),
+        (
+            json!({ "scope": "list", "id": PROJECTS, "text": "x", "mode": "prepend" }),
+            "Unknown mode",
+        ),
+    ] {
+        let error = fixture
+            .try_call("agent_instructions_set", arguments)
+            .expect_err("refused");
+        assert!(error.contains(message), "{error}");
+    }
+}

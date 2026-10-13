@@ -299,6 +299,12 @@ takt ws column-set <LIST_ID> -t Review --position 2              # a new column
 takt ws column-set <LIST_ID> -c urgent -t Urgent -r tag:has:urgent   # a rule column
 takt ws column-set default -t Someday         # the columns a board without its own uses
 takt ws column-rm <LIST_ID> in-progress --to this-week   # its tasks move in the same step
+
+takt ws instructions                          # the agent's standing instructions, every scope
+takt ws instructions --list <LIST_ID>         # one scope: --account, --folder ID or --list ID
+takt ws instructions-set --account Write task titles as verbs.
+takt ws instructions-set --folder <FOLDER_ID> --append Modules go by their code.
+takt ws instructions-set --list <LIST_ID>     # no text: clears the list's
 ```
 
 These write while the app is open. Each command is one step in the app's Undo
@@ -318,6 +324,14 @@ Rust core (`core/src/filter_lists.rs`), the same code the apps use, in this
 machine's time zone. The fields and their operators are listed in the
 `workspace_filter_list_create` line of `takt tools`. Today and Everything are
 built in and cannot be edited.
+
+The agent instructions are what the Mac's agent panel sends ahead of a
+message: the account's, then each enclosing folder's, then the list's
+(`docs/agent-panel.md`). They live in the workspace database
+(`agent_instructions`, written by `core/src/agent_instructions.rs`), so the
+app's settings fields, these commands and the agent's own
+`agent_instructions_set` tool all edit the same rows, and they sync. Without
+`--append` the text replaces what the scope holds.
 
 ### The escape hatch
 

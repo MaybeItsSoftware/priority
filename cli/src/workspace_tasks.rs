@@ -45,8 +45,10 @@ use std::time::Duration;
 
 mod board;
 mod filters;
+mod instructions;
 pub use board::ColumnEdit;
 pub use filters::{FilterEdit, rule_catalog_text, rule_fields};
+pub use instructions::instruction_scope;
 
 /// The newest migration whose schema these writes are written against. An
 /// older database is missing columns they name; a newer one is fine, because

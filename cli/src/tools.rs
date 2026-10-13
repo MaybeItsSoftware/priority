@@ -588,6 +588,49 @@ impl Tools {
                 ))
             }
 
+            "agent_instructions_get" => {
+                let scope = crate::workspace_tasks::instruction_scope(
+                    as_string(arguments.get("scope")).as_deref(),
+                    as_id(arguments.get("id")).as_deref(),
+                )?;
+                Ok(outcome(
+                    "Agent instructions",
+                    self.workspace.agent_instructions(scope)?,
+                ))
+            }
+
+            "agent_instructions_set" => {
+                let (kind, id) = crate::workspace_tasks::instruction_scope(
+                    Some(required_string(arguments, "scope")?.as_str()),
+                    as_id(arguments.get("id")).as_deref(),
+                )?
+                .expect("a scope was given");
+                let text = arguments
+                    .get("text")
+                    .and_then(Value::as_str)
+                    .ok_or_else(|| ToolError::new("text is required."))?;
+                let append = match as_string(arguments.get("mode")).as_deref() {
+                    None | Some("replace") => false,
+                    Some("append") => true,
+                    Some(other) => {
+                        return Err(ToolError::new(format!(
+                            "Unknown mode {other}. Use replace or append."
+                        )));
+                    }
+                };
+                let payload =
+                    self.workspace
+                        .set_agent_instructions(kind, id.as_deref(), text, append)?;
+                Ok(outcome(
+                    if payload["changed"] == json!(false) {
+                        "Agent instructions unchanged"
+                    } else {
+                        "Agent instructions saved"
+                    },
+                    payload,
+                ))
+            }
+
             "workspace_folder_create" => {
                 let name = required_string(arguments, "name")?;
                 let parent = as_id(arguments.get("parent_folder_id"));

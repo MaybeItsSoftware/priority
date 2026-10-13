@@ -794,6 +794,17 @@ const EVERY_SUBCOMMAND: &[&[&str]] = &[
     &["ws", "columns"],
     &["ws", "column-set", "L", "-t", "New"],
     &["ws", "column-rm", "L", "backlog"],
+    &["ws", "instructions"],
+    &[
+        "ws",
+        "instructions-set",
+        "--list",
+        "L",
+        "--append",
+        "Keep",
+        "it",
+        "short",
+    ],
 ];
 
 /// Tools a terminal reaches only through `takt call`, each with the reason.
@@ -928,7 +939,7 @@ fn every_advertised_tool_is_actually_implemented() {
 }
 
 #[test]
-fn the_tool_surface_is_forty_five_uniquely_named_tools() {
+fn the_tool_surface_is_forty_seven_uniquely_named_tools() {
     let definitions = tool_definitions();
     let mut names: Vec<&str> = definitions
         .iter()
@@ -938,7 +949,7 @@ fn the_tool_surface_is_forty_five_uniquely_named_tools() {
     names.sort_unstable();
     names.dedup();
     assert_eq!(names.len(), total, "duplicate tool name");
-    assert_eq!(total, 45);
+    assert_eq!(total, 47);
 
     for definition in &definitions {
         assert!(
@@ -1610,4 +1621,31 @@ fn a_missing_database_says_where_it_looked() {
         .focus_status(utc("2026-09-26 10:00:00"))
         .expect_err("should fail");
     assert!(error.message.contains("priority-definitely-absent.sqlite"));
+}
+
+#[test]
+fn instructions_set_names_its_scope_and_refuses_without_one() {
+    let (tool, arguments) = resolved(&[
+        "takt",
+        "ws",
+        "instructions-set",
+        "--folder",
+        "F",
+        "--append",
+        "Modules",
+        "by",
+        "code",
+    ]);
+    assert_eq!(tool, "agent_instructions_set");
+    assert_eq!(arguments["scope"], json!("folder"));
+    assert_eq!(arguments["id"], json!("F"));
+    assert_eq!(arguments["text"], json!("Modules by code"));
+    assert_eq!(arguments["mode"], json!("append"));
+
+    let (tool, arguments) = resolved(&["takt", "ws", "instructions", "--account"]);
+    assert_eq!(tool, "agent_instructions_get");
+    assert_eq!(arguments["scope"], json!("account"));
+
+    let cli = Cli::try_parse_from(["takt", "ws", "instructions-set", "Hello"]).unwrap();
+    assert!(resolve(&cli).is_err());
 }
