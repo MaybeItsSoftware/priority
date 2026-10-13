@@ -2,57 +2,46 @@ import TaktCore
 import TaktWorkspace
 import SwiftUI
 
-/// Timeline mode: a day of focused work drawn against the clock.
+/// The timeline: a day of focused work drawn against the clock, in the bottom
+/// dock.
 ///
-/// It takes the main pane rather than floating over it. The question it answers — where did today actually go — is asked by
-/// comparing the shape of the day with the shape you expected, and a panel
-/// floating over the board gives you a dialog-sized slot to do that in. At
-/// pane size the gaps are as legible as the blocks, which is most of the
-/// point: what you did not work on is the finding.
+/// The hours run left to right across the dock's width and each block is a
+/// bar along them, so a short, wide dock holds a whole working day; the day's
+/// figures and the breakdown by task sit in a column on the right. It was a
+/// column of the right dock once, with the hours running down it, and at that
+/// width the figures wrapped a letter at a time and two blocks a few seconds
+/// apart drew their titles over each other. The question it answers — where
+/// did today actually go — is asked by comparing the shape of the day with
+/// the shape you expected, so the gaps have to be as legible as the blocks:
+/// what you did not work on is the finding.
 struct WorkspaceTimelineScreen: View {
   @Environment(\.theme) private var theme
   @Environment(WorkspaceViewModel.self) private var model
   @Environment(AppCoordinator.self) private var manager
-  /// In the right dock: a narrow column under the dock's own tab bar, so the
-  /// day controls stand alone and the breakdown goes under the chart.
-  var inDock = false
 
-  /// Points per hour of ruler. Tall enough that a ten-minute block is still a
-  /// visible bar rather than a rule, which is what makes a fragmented morning
-  /// look fragmented.
-  private static let hourHeight: CGFloat = 72
-  /// The gutter the hour labels sit in, to the left of the lanes.
-  private static let rulerWidth: CGFloat = 58
-  /// The height of an hour label's row. Placed by offset at half of this, so
-  /// the label sits centred on its own rule.
-  private static let hourLabelHeight: CGFloat = 12
+  /// The narrowest an hour is drawn. Below it the hours scroll sideways rather
+  /// than squeeze, so a ten-minute block stays a bar rather than a rule.
+  private static let minimumHourWidth: CGFloat = 56
+  /// The strip along the top the hour labels sit in.
+  private static let axisHeight: CGFloat = 18
+  /// A row of blocks: tall enough for a line of caption text, short enough
+  /// that four rows fit the dock at its default height.
+  private static let rowHeight: CGFloat = 22
+  private static let rowGap: CGFloat = 3
+  /// The shortest a block is drawn, so a block of a few seconds still shows.
+  private static let minimumBlockWidth: CGFloat = 4
+  /// Below this a block has no room for its title, and shows none; the
+  /// tooltip and the breakdown name it.
+  private static let titledBlockWidth: CGFloat = 28
+  /// The column on the right: the day's figures, then the tasks.
+  private static let sideWidth: CGFloat = 260
 
   var body: some View {
-    VStack(spacing: 0) {
-      if inDock {
-        HStack {
-          Text(model.timelineShowsToday ? "Today" : dayTitle)
-            .font(theme.bodyFont())
-            .foregroundStyle(theme.ink)
-            .lineLimit(1)
-          Spacer(minLength: theme.space.xs)
-          dayControls
-        }
-        .padding(.horizontal, theme.space.sm)
-        .padding(.vertical, theme.space.xs)
-        FocusRule()
-      } else {
-        header
-      }
-      // No footer. It was a second strip along the bottom, above the status
-      // bar: two key hints the reference and the palette already carry, and a
-      // note about pauses that is now the subtitle's tooltip.
-      day
-    }
-    .frame(maxWidth: .infinity, maxHeight: .infinity)
-    .background(theme.paper)
-    .onAppear { model.reloadFocus() }
-    .onChange(of: model.focusHistoryDate) { _, _ in model.reloadFocus() }
+    day
+      .frame(maxWidth: .infinity, maxHeight: .infinity)
+      .background(theme.paper)
+      .onAppear { model.reloadFocus() }
+      .onChange(of: model.focusHistoryDate) { _, _ in model.reloadFocus() }
   }
 
   /// Almost all of the day is a finished record and does not care what time
@@ -62,7 +51,7 @@ struct WorkspaceTimelineScreen: View {
   /// `nowRule` — so a tick redraws one bar rather than the whole chart.
   ///
   /// The one exception is the minute: while a block runs, the day is
-  /// reassembled once a minute so the totals and the lanes take its growth.
+  /// reassembled once a minute so the totals and the rows take its growth.
   @ViewBuilder private var day: some View {
     if isRunningToday {
       TimelineView(.periodic(from: .now, by: 60)) { context in
@@ -79,243 +68,208 @@ struct WorkspaceTimelineScreen: View {
     return session.pausedAt == nil && session.activeTaskId != nil
   }
 
-  // MARK: - Chrome
-
-  private var header: some View {
-    // The day this is, in the place every other surface puts what you are
-    // looking at. The micro-label said "Timeline", which the title strip toggle and
-    // the sidebar row were already saying, and left the date buried in a date
-    // picker in the middle of the row.
-    WorkspacePaneHeader(title: model.timelineShowsToday ? "Today" : dayTitle) {
-      Text("Where the focused time went")
-        // What the footer used to say along the bottom, kept where it is asked
-        // about: pauses are not drawn, so a paused block reads as one span.
-        .help("Active work time; pauses are not drawn, so a block paused mid-way reads as one span.")
-    } trailing: {
-      dayControls
-      WorkspacePaneIconButton("xmark", title: "Leave the timeline", command: .timelineClose) {
-        model.dismissTimelineScreen()
-      }
-    }
-  }
-
-  private var dayTitle: String {
-    model.focusHistoryDate.formatted(.dateTime.weekday(.wide).day().month(.wide))
-  }
-
-  private var dayControls: some View {
-    HStack(spacing: theme.space.xxs) {
-      WorkspacePaneIconButton("chevron.left", title: "Previous day", command: .timelinePreviousDay) {
-        model.moveTimelineDay(by: -1)
-      }
-      DatePicker("Day", selection: Bindable(model).focusHistoryDate, in: ...Date.now, displayedComponents: .date)
-        .labelsHidden()
-        .datePickerStyle(.field)
-        .font(theme.captionFont)
-        // The field's own keys; the day-by-day keys are on the chevrons.
-        .help("The day on screen · ↑ ↓ change the part under the caret")
-      WorkspacePaneIconButton("chevron.right", title: "Next day", command: .timelineNextDay) {
-        model.moveTimelineDay(by: 1)
-      }
-      .disabled(model.timelineShowsToday)
-      WorkspacePaneIconButton("calendar", title: "Back to today", command: .timelineToday) {
-        model.showTimelineToday()
-      }
-      .disabled(model.timelineShowsToday)
-    }
-  }
-
   // MARK: - The day
 
   @ViewBuilder
   private func content(now: Date) -> some View {
     let day = TimelineDay(model: model, now: now, theme: theme)
-    VStack(spacing: 0) {
-      summary(day)
-      FocusRule()
-      if inDock {
-        chart(day)
-          .frame(maxWidth: .infinity, maxHeight: .infinity)
+    HStack(spacing: 0) {
+      chart(day)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+      Rectangle()
+        .fill(theme.border)
+        .frame(width: theme.hairline)
+      VStack(alignment: .leading, spacing: 0) {
+        summary(day)
         FocusRule()
         breakdown(day)
-          .frame(maxWidth: .infinity)
-          .frame(maxHeight: 220)
-      } else {
-        HStack(spacing: 0) {
-          chart(day)
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-          Rectangle()
-            .fill(theme.border)
-            .frame(width: theme.hairline)
-          breakdown(day)
-            .frame(width: 260)
-        }
-        .frame(maxHeight: .infinity)
       }
+      .frame(width: Self.sideWidth)
+      .frame(maxHeight: .infinity, alignment: .top)
     }
   }
 
+  /// The day's figures on one line, never wrapped: the less telling ones drop
+  /// off before anything breaks mid-word.
   private func summary(_ day: TimelineDay) -> some View {
-    HStack(alignment: .firstTextBaseline, spacing: theme.space.xl) {
-      figure(duration(day.totalSeconds), "Focused")
-      figure("\(day.blocks.count)", day.blocks.count == 1 ? "Block" : "Blocks")
-      figure(day.longestLabel, "Longest")
-      if !manager.preferences.scoresEachFocusBlock {
-        // Scoring is off: no points, even for days that were scored.
-      } else if day.isToday {
-        figure("\(FocusPoints.formatted(model.focusPoints.today)) pts", "Scored")
-      } else if day.scoredPoints > 0 {
-        figure("\(FocusPoints.formatted(day.scoredPoints)) pts", "Scored")
-      }
-      Spacer()
-      Text(day.date, format: .dateTime.weekday(.wide).day().month(.wide))
-        .font(theme.bodyFont())
-        .foregroundStyle(theme.muted)
+    let focused = figure(duration(day.totalSeconds), "focused")
+    let blocks = figure("\(day.blocks.count)", day.blocks.count == 1 ? "block" : "blocks")
+    let longest = figure(day.longestLabel, "longest")
+    let points = scoredPoints(day).map { figure(FocusPoints.formatted($0), "pts") }
+    return ViewThatFits(in: .horizontal) {
+      HStack(spacing: theme.space.md) { focused; blocks; longest; points }
+      HStack(spacing: theme.space.md) { focused; blocks; points }
+      HStack(spacing: theme.space.md) { focused; blocks }
+      focused
     }
-    .focusSurfaceGutter()
-    .padding(.vertical, theme.space.md)
+    .font(theme.monoCaptionFont)
+    .monospacedDigit()
+    .lineLimit(1)
+    .frame(maxWidth: .infinity, alignment: .leading)
+    .padding(.horizontal, theme.paneGutter)
+    .padding(.vertical, theme.space.xs)
+    .help("Active work time; pauses are not drawn, so a block paused mid-way reads as one span.")
+  }
+
+  /// Points for the day, or nil when there are none to show. Scoring off
+  /// means no points, even for days that were scored.
+  private func scoredPoints(_ day: TimelineDay) -> Double? {
+    guard manager.preferences.scoresEachFocusBlock else { return nil }
+    if day.isToday { return model.focusPoints.today }
+    return day.scoredPoints > 0 ? day.scoredPoints : nil
   }
 
   private func figure(_ value: String, _ caption: String) -> some View {
-    VStack(alignment: .leading, spacing: theme.space.xxs) {
-      Text(value)
-        .font(theme.numeralFont(theme.scale.display))
-        .monospacedDigit()
-        .foregroundStyle(theme.ink)
-      MicroLabel(caption)
+    HStack(spacing: theme.space.xxs) {
+      Text(value).foregroundStyle(theme.ink)
+      Text(caption).foregroundStyle(theme.muted)
     }
+    .fixedSize()
   }
 
-  @ViewBuilder
+  /// The hours across, the blocks along them in as many rows as their drawn
+  /// lengths need. The width is shared out between the hours down to a
+  /// floor, and past it the chart scrolls sideways; rows past the dock's
+  /// height scroll down.
   private func chart(_ day: TimelineDay) -> some View {
-    ScrollView {
-      ZStack(alignment: .topLeading) {
-        hourGrid(day.layout)
-        lanes(day)
-        nowRule(day)
+    GeometryReader { geometry in
+      let gutter = theme.paneGutter
+      let hours = CGFloat(day.layout.hourCount)
+      let hourWidth = max(Self.minimumHourWidth, (geometry.size.width - gutter * 2) / hours)
+      let rows = drawnRows(day, hourWidth: hourWidth)
+      let rowsHeight = CGFloat(rows.count) * (Self.rowHeight + Self.rowGap)
+      let height = max(geometry.size.height, Self.axisHeight + theme.space.xs + rowsHeight + theme.space.sm)
+      ScrollView([.horizontal, .vertical]) {
+        ZStack(alignment: .topLeading) {
+          hourGrid(day.layout, hourWidth: hourWidth, height: height)
+            .offset(x: gutter)
+          ForEach(day.layout.placements) { placement in
+            placed(placement, day: day, hourWidth: hourWidth)
+              .offset(
+                x: gutter + CGFloat(placement.offsetMinutes) / 60 * hourWidth,
+                y: Self.axisHeight + theme.space.xs
+                  + CGFloat(rows.rows[placement.id] ?? 0) * (Self.rowHeight + Self.rowGap))
+          }
+          nowRule(day, hourWidth: hourWidth, height: height)
+            .offset(x: gutter)
+        }
+        .frame(width: hourWidth * hours + gutter * 2, height: height, alignment: .topLeading)
       }
-      .frame(
-        maxWidth: .infinity,
-        minHeight: CGFloat(day.layout.hourCount) * Self.hourHeight + theme.space.lg,
-        alignment: .topLeading)
-      .focusSurfaceGutter()
-      .padding(.vertical, theme.space.lg)
+      .scrollIndicators(.automatic)
+      .defaultScrollAnchor(day.isToday ? .topTrailing : .topLeading)
     }
     .overlay {
       if day.blocks.isEmpty {
         // Over the grid rather than in place of it: an empty day still has a
         // shape, and saying so against the hours reads as "nothing here yet"
-        // rather than as a screen that failed to load.
+        // rather than as a pane that failed to load.
         Text(day.isToday ? "No focus time recorded yet today." : "No focus time recorded on this day.")
-          .font(theme.bodyFont())
+          .font(theme.captionFont)
           .foregroundStyle(theme.muted)
-          .padding(.horizontal, theme.space.md)
-          .padding(.vertical, theme.space.sm)
-          .themedSurface(theme)
+          .padding(.horizontal, theme.space.sm)
+          .padding(.vertical, theme.space.xs)
+          .background(theme.paper)
       }
     }
   }
 
-  /// Rules and labels are placed by offset rather than stacked, because a
-  /// stack would let the label's own height decide the spacing between hours
-  /// — and the spacing is the scale everything else on the chart is drawn to.
-  private func hourGrid(_ layout: FocusDayTimeline.Layout) -> some View {
+  /// Each block's row, from its drawn extent: start to the end of whichever
+  /// is longer, the bar or the room its title needs.
+  private func drawnRows(_ day: TimelineDay, hourWidth: CGFloat) -> (rows: [String: Int], count: Int) {
+    let spans = day.layout.placements.map { placement in
+      let start = Double(CGFloat(placement.offsetMinutes) / 60 * hourWidth)
+      return (start: start, end: start + Double(blockWidth(minutes: placement.minutes, hourWidth: hourWidth)))
+    }
+    let packed = FocusDayTimeline.drawnRows(spans: spans, gap: Double(Self.rowGap))
+    let rows = Dictionary(
+      zip(day.layout.placements.map(\.id), packed.rows), uniquingKeysWith: { first, _ in first })
+    return (rows, packed.count)
+  }
+
+  private func blockWidth(minutes: Double, hourWidth: CGFloat) -> CGFloat {
+    max(Self.minimumBlockWidth, CGFloat(minutes) / 60 * hourWidth - 1)
+  }
+
+  /// A rule down from each hour, its label just after it along the top.
+  /// Placed by offset rather than stacked, because a stack would let the
+  /// label's width decide the spacing between hours — and the spacing is the
+  /// scale everything else on the chart is drawn to.
+  private func hourGrid(_ layout: FocusDayTimeline.Layout, hourWidth: CGFloat, height: CGFloat) -> some View {
     ZStack(alignment: .topLeading) {
       ForEach(Array(layout.hours.enumerated()), id: \.offset) { index, hour in
-        HStack(spacing: theme.space.sm) {
+        let x = CGFloat(index) * hourWidth
+        Rectangle()
+          .fill(theme.borderMuted)
+          .frame(width: theme.hairline, height: height)
+          .offset(x: x)
+        if index < layout.hourCount {
           Text(hour, format: .dateTime.hour())
-            .font(theme.numeralFont(theme.scale.caption, weight: .regular))
+            .font(theme.monoCaptionFont)
             .monospacedDigit()
             .foregroundStyle(theme.dim)
-            .frame(width: Self.rulerWidth - theme.space.sm, alignment: .trailing)
-          Rectangle()
-            .fill(theme.borderMuted)
-            .frame(maxWidth: .infinity)
-            .frame(height: theme.hairline)
+            .lineLimit(1)
+            .fixedSize()
+            .frame(height: Self.axisHeight)
+            .offset(x: x + theme.space.xxs)
         }
-        .frame(height: Self.hourLabelHeight)
-        .offset(y: CGFloat(index) * Self.hourHeight - Self.hourLabelHeight / 2)
-      }
-    }
-    .frame(maxWidth: .infinity, alignment: .topLeading)
-  }
-
-  private func lanes(_ day: TimelineDay) -> some View {
-    GeometryReader { geometry in
-      // Lanes share the grid's origin: hour zero's rule is drawn at y = 0.
-      let width = max(40, geometry.size.width - Self.rulerWidth)
-      let laneWidth = width / CGFloat(day.layout.laneCount)
-      ForEach(day.layout.placements) { placement in
-        placed(placement, day: day, laneWidth: laneWidth)
       }
     }
   }
 
-  /// A block at its place on the ruler. The running one ticks on its own, so
-  /// the second hand redraws one bar and nothing else: its start is fixed, so
-  /// only its length has to follow the clock.
+  /// A block at its place. The running one ticks on its own, so the second
+  /// hand redraws one bar and nothing else: its start is fixed, so only its
+  /// length has to follow the clock.
   @ViewBuilder
-  private func placed(_ placement: FocusDayTimeline.Placement, day: TimelineDay, laneWidth: CGFloat) -> some View {
+  private func placed(_ placement: FocusDayTimeline.Placement, day: TimelineDay, hourWidth: CGFloat) -> some View {
     if placement.block.isLive, isRunningToday, let session = model.activeFocusSession {
       TimelineView(.periodic(from: .now, by: 1)) { context in
         let minutes = max(placement.minutes, Double(session.elapsedSeconds(now: context.date)) / 60)
-        positioned(placement, minutes: minutes, day: day, laneWidth: laneWidth)
+        block(placement, minutes: minutes, day: day, hourWidth: hourWidth)
       }
     } else {
-      positioned(placement, minutes: placement.minutes, day: day, laneWidth: laneWidth)
+      block(placement, minutes: placement.minutes, day: day, hourWidth: hourWidth)
     }
-  }
-
-  private func positioned(
-    _ placement: FocusDayTimeline.Placement, minutes: Double, day: TimelineDay, laneWidth: CGFloat
-  ) -> some View {
-    block(placement, minutes: minutes, day: day)
-      .frame(
-        width: max(10, laneWidth - theme.space.xs),
-        height: max(14, CGFloat(minutes) / 60 * Self.hourHeight - theme.space.xxs),
-        alignment: .topLeading)
-      .offset(
-        x: Self.rulerWidth + CGFloat(placement.lane) * laneWidth,
-        y: CGFloat(placement.offsetMinutes) / 60 * Self.hourHeight)
   }
 
   /// A block is the status convention in its task's hue: a tinted fill, a
   /// border and an edge of the same colour. The running one is the same shape
   /// with the border at full strength, so "live" reads without a second style.
-  private func block(_ placement: FocusDayTimeline.Placement, minutes: Double, day: TimelineDay) -> some View {
+  /// Its text is clipped to it, so a short block never writes over the next.
+  private func block(
+    _ placement: FocusDayTimeline.Placement, minutes: Double, day: TimelineDay, hourWidth: CGFloat
+  ) -> some View {
     let hue = day.colour(for: placement.block.id)
     // Scoring off means no points on the timeline either, scored days included.
     let award = manager.preferences.scoresEachFocusBlock ? model.focusHistoryAwards[placement.block.id] : nil
     let isLive = placement.block.isLive
+    let width = blockWidth(minutes: minutes, hourWidth: hourWidth)
     let shape = RoundedRectangle(cornerRadius: theme.controlRadius, style: .continuous)
-    return VStack(alignment: .leading, spacing: 0) {
-      Text(placement.block.title)
-        .font(theme.bodyFont(size: theme.scale.caption))
-        .foregroundStyle(theme.ink)
-        .lineLimit(minutes >= 25 ? 3 : 1)
-      if minutes >= 12 {
-        Text(duration(Int(minutes * 60)) + (award.map { " · \($0.quality?.title ?? FocusPoints.formatted($0.points) + " pts")" } ?? ""))
-          .font(theme.captionFont)
+    return HStack(spacing: theme.space.xs) {
+      if width >= Self.titledBlockWidth {
+        Text(placement.block.title)
+          .foregroundStyle(theme.ink)
+          .layoutPriority(1)
+        Text(duration(Int(minutes * 60)))
           .monospacedDigit()
           .foregroundStyle(theme.muted)
-          .lineLimit(1)
       }
-      Spacer(minLength: 0)
     }
-    .padding(.horizontal, theme.space.sm)
-    .padding(.vertical, theme.space.xs)
-    .frame(maxWidth: .infinity, alignment: .topLeading)
+    .font(theme.captionFont)
+    .lineLimit(1)
+    .padding(.horizontal, theme.space.xs)
+    .frame(width: width, height: Self.rowHeight, alignment: .leading)
     .background(hue.opacity(isLive ? Theme.statusFillOpacity * 2 : Theme.statusFillOpacity))
     .overlay(alignment: .leading) {
-      Rectangle().fill(hue).frame(width: theme.emphasisBorder)
+      Rectangle().fill(hue).frame(width: min(theme.emphasisBorder, width))
     }
     .clipShape(shape)
     .overlay(
       shape.strokeBorder(
         hue.opacity(isLive ? 1 : Theme.statusBorderOpacity),
         lineWidth: isLive ? theme.emphasisBorder : theme.hairline))
+    .contentShape(shape)
     .help(tooltip(placement, minutes: minutes, award: award))
-    .accessibilityElement(children: .combine)
+    .accessibilityElement(children: .ignore)
     .accessibilityLabel(tooltip(placement, minutes: minutes, award: award))
   }
 
@@ -323,25 +277,24 @@ struct WorkspaceTimelineScreen: View {
     let end = placement.startedAt.addingTimeInterval(minutes * 60)
     var line = "\(placement.block.title) — \(time(placement.startedAt))–\(time(end)), \(duration(Int(minutes * 60)))"
     if placement.block.isLive { line += " (running)" }
-    if let award, manager.preferences.scoresEachFocusBlock { line += " · \(award.quality?.title ?? "scored") \(FocusPoints.formatted(award.points)) pts" }
+    if let award, manager.preferences.scoresEachFocusBlock {
+      line += " · \(award.quality?.title ?? "scored") \(FocusPoints.formatted(award.points)) pts"
+    }
     return line
   }
 
   /// Today only, and ticking by the minute on its own: the rule is the one
   /// thing on a finished day that moves, and it moves about a point a minute.
   @ViewBuilder
-  private func nowRule(_ day: TimelineDay) -> some View {
+  private func nowRule(_ day: TimelineDay, hourWidth: CGFloat, height: CGFloat) -> some View {
     if day.isToday {
       TimelineView(.periodic(from: .now, by: 60)) { context in
         if let offset = day.nowOffsetMinutes(at: context.date) {
-          HStack(spacing: 0) {
-            Text("now")
-              .microLabel(theme, color: theme.primary)
-              .frame(width: Self.rulerWidth - theme.space.sm, alignment: .trailing)
-              .padding(.trailing, theme.space.sm)
-            Rectangle().fill(theme.primary).frame(height: theme.hairline)
-          }
-          .offset(y: CGFloat(offset) / 60 * Self.hourHeight)
+          Rectangle()
+            .fill(theme.primary)
+            .frame(width: theme.hairline, height: height)
+            .offset(x: CGFloat(offset) / 60 * hourWidth)
+            .help("Now")
         }
       }
       .allowsHitTesting(false)
@@ -356,12 +309,13 @@ struct WorkspaceTimelineScreen: View {
     let cursor = model.timelineCursorSummary(in: day.summaries)?.id
     return ScrollViewReader { proxy in
       ScrollView {
-        VStack(alignment: .leading, spacing: 0) {
-          MicroLabel("By task")
-            .padding(.horizontal, theme.paneGutter)
-            .padding(.bottom, theme.space.sm)
+        LazyVStack(alignment: .leading, spacing: 0) {
           if day.summaries.isEmpty {
-            WorkspaceEmptyMessage("Nothing logged.")
+            Text("Nothing logged.")
+              .font(theme.captionFont)
+              .foregroundStyle(theme.dim)
+              .padding(.horizontal, theme.paneGutter)
+              .padding(.vertical, theme.space.sm)
           }
           ForEach(day.summaries) { summary in
             breakdownRow(summary, of: day, isCursor: summary.id == cursor)
@@ -369,7 +323,7 @@ struct WorkspaceTimelineScreen: View {
           }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.vertical, theme.space.lg)
+        .padding(.vertical, theme.space.xxs)
       }
       .onChange(of: model.timelineCursorID) { _, id in
         guard let id else { return }
@@ -378,26 +332,26 @@ struct WorkspaceTimelineScreen: View {
     }
   }
 
+  /// One line a task: its hue, its title, and its time and share at the end.
   private func breakdownRow(_ summary: TimelineDay.TaskSummary, of day: TimelineDay, isCursor: Bool) -> some View {
-    HStack(alignment: .top, spacing: theme.space.sm) {
-      Rectangle()
+    HStack(spacing: theme.space.sm) {
+      RoundedRectangle(cornerRadius: 1)
         .fill(day.colour(forTask: summary.id))
-        .frame(width: theme.emphasisBorder)
-        .frame(maxHeight: .infinity)
-      VStack(alignment: .leading, spacing: theme.space.xxs) {
-        Text(summary.title)
-          .font(theme.bodyFont())
-          .foregroundStyle(theme.ink)
-          .lineLimit(3)
-        Text(shareLine(summary, of: day))
-          .font(theme.captionFont)
-          .monospacedDigit()
-          .foregroundStyle(theme.muted)
-      }
-      Spacer(minLength: 0)
+        .frame(width: theme.emphasisBorder, height: theme.space.md)
+      Text(summary.title)
+        .font(theme.captionFont)
+        .foregroundStyle(theme.ink)
+        .lineLimit(1)
+        .truncationMode(.tail)
+      Spacer(minLength: theme.space.xs)
+      Text(shareLine(summary, of: day))
+        .font(theme.monoCaptionFont)
+        .monospacedDigit()
+        .foregroundStyle(theme.muted)
+        .lineLimit(1)
+        .fixedSize()
     }
-    .fixedSize(horizontal: false, vertical: true)
-    .padding(.vertical, theme.rowVerticalPadding)
+    .padding(.vertical, theme.space.xxs)
     // The whole gutter inside the highlight, as the done rail's rows have it.
     .padding(.horizontal, theme.paneGutter)
     .contentShape(Rectangle())
@@ -406,7 +360,7 @@ struct WorkspaceTimelineScreen: View {
       model.timelineCursorID = summary.id
       model.reportKeyboardFocus(.timeline)
     }
-    .commandHelp(.timelineReveal, note: summary.title)
+    .commandHelp(.timelineReveal, note: "\(summary.title) · \(summary.blocks == 1 ? "1 block" : "\(summary.blocks) blocks")")
     .contextMenu {
       Button("Open where it lives") { model.revealTimelineTask(summary.id) }
         .commandShortcut(.timelineReveal)
@@ -418,8 +372,7 @@ struct WorkspaceTimelineScreen: View {
 
   private func shareLine(_ summary: TimelineDay.TaskSummary, of day: TimelineDay) -> String {
     let share = day.totalSeconds > 0 ? Int((Double(summary.seconds) / Double(day.totalSeconds) * 100).rounded()) : 0
-    let blocks = summary.blocks == 1 ? "1 block" : "\(summary.blocks) blocks"
-    return "\(duration(summary.seconds)) · \(share)% · \(blocks)"
+    return "\(duration(summary.seconds)) · \(share)%"
   }
 
   // MARK: - Formatting
@@ -433,6 +386,47 @@ struct WorkspaceTimelineScreen: View {
 
   private func time(_ date: Date) -> String {
     date.formatted(date: .omitted, time: .shortened)
+  }
+}
+
+/// The timeline's end of the bottom dock's tab bar: the day on screen, one
+/// line however narrow, and the keys to move it.
+struct WorkspaceTimelineDayControls: View {
+  @Environment(\.theme) private var theme
+  @Environment(WorkspaceViewModel.self) private var model
+
+  var body: some View {
+    HStack(spacing: theme.space.xxs) {
+      Text(model.timelineShowsToday ? "Today" : dayTitle)
+        .font(theme.captionFont)
+        .foregroundStyle(theme.ink)
+        .lineLimit(1)
+        .fixedSize()
+        .padding(.trailing, theme.space.xs)
+      WorkspacePaneIconButton("chevron.left", title: "Previous day", command: .timelinePreviousDay) {
+        model.moveTimelineDay(by: -1)
+      }
+      DatePicker("Day", selection: Bindable(model).focusHistoryDate, in: ...Date.now, displayedComponents: .date)
+        .labelsHidden()
+        .datePickerStyle(.field)
+        .font(theme.captionFont)
+        .fixedSize()
+        // The field's own keys; the day-by-day keys are on the chevrons.
+        .help("The day on screen · ↑ ↓ change the part under the caret")
+      WorkspacePaneIconButton("chevron.right", title: "Next day", command: .timelineNextDay) {
+        model.moveTimelineDay(by: 1)
+      }
+      .disabled(model.timelineShowsToday)
+      WorkspacePaneIconButton("calendar", title: "Back to today", command: .timelineToday) {
+        model.showTimelineToday()
+      }
+      .disabled(model.timelineShowsToday)
+    }
+  }
+
+  /// Short, so it stays on one line: "Tue 13 Oct".
+  private var dayTitle: String {
+    model.focusHistoryDate.formatted(.dateTime.weekday(.abbreviated).day().month(.abbreviated))
   }
 }
 

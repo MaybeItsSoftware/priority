@@ -64,7 +64,8 @@ struct WorkspaceDesktopView: View {
           WorkspaceHeightHandle(
             height: Bindable(model).bottomDockHeight,
             range: WorkspaceViewModel.minBottomDockHeight...WorkspaceViewModel.maxBottomDockHeight)
-          WorkspaceProgressDock()
+          WorkspaceBottomDock(focusedArea: $focusedArea)
+            .focusSection()
             .frame(height: model.bottomDockHeight)
         }
       }
@@ -99,7 +100,7 @@ struct WorkspaceDesktopView: View {
 
   private var mainPane: some View {
     // The work. The timeline used to take this pane over; it is a tab of
-    // the right dock now, read beside the list rather than instead of it.
+    // the bottom dock now, read under the list rather than instead of it.
     Group {
       taskPane
         .safeAreaInset(edge: .bottom, spacing: 0) { WorkspaceTaskDeletionInset() }

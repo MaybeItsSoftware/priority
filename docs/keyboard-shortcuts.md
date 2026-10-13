@@ -32,9 +32,9 @@ a task as Zed treats a line:
 | Toggle left dock | `Cmd+B` | Show or hide the sidebar |
 | Focus project panel | `Cmd+Shift+E` | Focus the sidebar |
 | Toggle agent panel | `Cmd+Shift+A` | The left dock's Agent tab |
-| Toggle bottom dock | `Cmd+J` | The progress graph |
+| Toggle bottom dock | `Cmd+J` | Progress, Done and Timeline, on the tab it was on |
 | Toggle right dock | `Cmd+Alt+B` | The right dock (`Cmd+Ctrl+I` still works) |
-| Close all docks | `Cmd+Alt+Y` | Put the sidebar, right dock and graph away |
+| Close all docks | `Cmd+Alt+Y` | Put the sidebar, right dock and bottom dock away |
 | Move line up / down | `Alt+↑` / `Alt+↓` | Move the task, or the sidebar row; on Today, a planned card through the day |
 | Document start / end | `Cmd+↑` / `Cmd+↓` | First / last task, or sidebar row |
 | Delete line | `Cmd+Shift+K` | Delete the task |
@@ -171,7 +171,7 @@ not fall through to open the task selected behind it. See
 
 ## Surfaces own the keyboard
 
-The timeline is a tab in the right dock (`Cmd+9`), and while it has the
+The timeline is a tab in the bottom dock (`Cmd+9`), and while it has the
 keyboard it owns it outright. A key the screen does not answer to does not fall
 through to the task surface behind it — `Delete`, a digit or `i` there used to
 act on a task nobody could see. The only workspace keys that stay live are the
@@ -197,13 +197,16 @@ condition a place or not, `e` archives or restores it, `c` clears what is
 available and `Shift+U` uses the last context again. In a name field `Return`
 saves and `Esc` gives up, both handing the keyboard back to the cursor.
 
-The right dock's four tabs — the inspector, the done rail, the timeline and the
-conditions — are changed with `Cmd+Shift+{` / `Cmd+Shift+}`, Zed's previous / next tab, and
-with `[` / `]` where no field would take them; the keyboard comes along to the
-new tab. On a task pane the same chords change list. `Esc` on any of them
-hands the keyboard back to the work and leaves the dock open — in the
-inspector that includes `Esc` from inside one of its fields — and `r` puts the
-dock away.
+The right dock's two tabs — the inspector and the conditions — and the bottom
+dock's done rail and timeline are changed with `Cmd+Shift+{` / `Cmd+Shift+}`,
+Zed's previous / next tab, and with `[` / `]` where no field would take them;
+the keyboard comes along to the new tab, within the same dock. The bottom
+dock's Progress tab has nothing to step through, so it is reached by clicking
+its tab and is not a stop. On a task pane the same chords change list. `Esc` on
+any of them hands the keyboard back to the work and leaves the dock open — in
+the inspector that includes `Esc` from inside one of its fields — and `r` puts
+the right dock away, `Cmd+J` the bottom one. `Ctrl+Tab` walks the sidebar, the
+tasks, the bottom dock and the right dock, left to right.
 
 ## Vim's find
 

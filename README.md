@@ -71,7 +71,7 @@ something you already have to know.
 | --- | --- |
 | `Cmd+1` / `Cmd+2` / `Cmd+3` | Show the list as a board / outline / matrix |
 | `Cmd+T` | Today |
-| `Cmd+8` / `Cmd+9` | The focus panel / the timeline, a tab in the right dock |
+| `Cmd+8` / `Cmd+9` | The focus panel / the timeline, a tab in the bottom dock |
 | `Cmd+0` / `Cmd+E` / `gh` | Everything, across all active lists |
 | `Cmd+I` | The Inbox |
 | `Ctrl+1` / `Ctrl+2` / `Ctrl+3` | Focus the sidebar, the task surface, the inspector |
@@ -114,11 +114,11 @@ something you already have to know.
 | `Shift+Return` / `Alt+Shift+Return` | New task above the selection (Checkvist's) / new subtask |
 | `Cmd+F` / `Cmd+Shift+F` | Search |
 | `Cmd+P` / `gl` | Go to a list — opened empty, it lists the ones you were in most recently first. Every list and nested list, matched by the letters you type (`wsr` finds "Write the spring report"), with its folder beside it. Clicking the list's name at the top of the pane opens it too |
-| `Cmd+Ctrl+I` / `Cmd+Ctrl+D` | The right dock on its Inspector / Done tab, or put it away |
+| `Cmd+Ctrl+I` / `Cmd+Ctrl+D` | The right dock on its Inspector tab / the bottom dock on its Done tab, or put it away |
 | `Cmd+Shift+A` | The left dock's Agent tab — Claude Code, each change it makes shown with an Undo |
-| `Cmd+J` | The bottom dock: a graph of tasks done and added per day (Zed's bottom dock) |
+| `Cmd+J` | The bottom dock — Progress, Done and Timeline — on the tab it was on, with the keyboard in it on Done or Timeline, or put it away (Zed's bottom dock) |
 | `Cmd+R`, `r` or `Cmd+Alt+B` / `Cmd+Alt+Y` | The right dock, on the tab it was on and with the keyboard in it, or put it away / close all docks (Zed's) |
-| `Cmd+Shift+{` / `Cmd+Shift+}`, or `[` / `]` | In the right dock, its previous / next tab — Inspector, Done, Timeline, Conditions — with the keyboard brought along (Zed's previous / next tab; on a task pane the same chords change list). `Ctrl+Tab` leaves it for the next region |
+| `Cmd+Shift+{` / `Cmd+Shift+}`, or `[` / `]` | In a dock, its previous / next tab — Inspector and Conditions on the right, Done and Timeline below — with the keyboard brought along (Zed's previous / next tab; on a task pane the same chords change list). `Ctrl+Tab` leaves it for the next region |
 | `oo` / `Cmd+Alt+I` | List settings |
 | `Cmd+Z` / `Cmd+Shift+Z`, or `Ctrl+Z` / `Ctrl+Shift+Z`, or `uu` | Undo / redo |
 | `Cmd+Shift+P` / `Cmd+K` | The command palette — everything the workspace can do, and its key |
@@ -270,8 +270,8 @@ genuinely finished, and ticking off such a task records the contribution rather
 than closing it.
 
 The window also carries a strip naming which of the four modes is up, then
-Focus, which raises the focus panel, and Timeline, which opens in the right
-dock beside them — so none of it is reachable only by a key you have to already know.
+Focus, which raises the focus panel, and Timeline, which opens in the bottom
+dock under them — so none of it is reachable only by a key you have to already know.
 
 | Key | Action |
 | --- | --- |
@@ -325,13 +325,17 @@ carries pause, log and done, so closing the main window while a block is running
 leaves the clock up rather than taking it away. It appears on its own whenever
 the last window closes on a running block.
 
-`Cmd+9` opens the day's **timeline** as a tab in the right dock, beside the
-inspector and the done rail: every block drawn against an hour ruler, with the
-running one growing live, and the day's breakdown under it. `←` / `→` (or `h` /
-`l`) step a day, `t` comes back to today, `↑` / `↓` (or `j` / `k`) walk the
-breakdown and `o` opens the task under the cursor in its own list. `Esc` hands
-the keyboard back to the work and leaves the timeline open; `Cmd+9` or `r`
-puts it away.
+`Cmd+9` opens the day's **timeline** as a tab in the bottom dock, beside the
+progress graph and the done rail: the hours run left to right across the dock
+and every block is a bar along them, the running one growing live, with blocks
+too close to share a row stacked into rows of their own so no two titles
+overlap. The day's figures (time focused, blocks, the longest, points) and the
+breakdown by task sit in a column on the right, and the day and its controls on
+the dock's tab bar. A long day scrolls sideways rather than squeezing; drag the
+dock taller for more rows. `←` / `→` (or `h` / `l`) step a day, `t` comes back
+to today, `↑` / `↓` (or `j` / `k`) walk the breakdown and `o` opens the task
+under the cursor in its own list. `Esc` hands the keyboard back to the work and
+leaves the timeline open; `Cmd+9` or `Cmd+J` puts it away.
 
 ### Conditions
 
@@ -554,7 +558,7 @@ that has not finished migrating, reachable by nothing.
 A list is drawn one of three ways — board, outline or matrix — and the mode
 strip in the title bar names the one you are in, in ink on a quiet fill, the
 others muted. Today is a list of its own in the sidebar, drawn as the day. The
-focus panel and the timeline are tabs in the right dock.
+timeline is a tab in the bottom dock.
 
 | Mode | Key | What it shows |
 | --- | --- | --- |
@@ -802,24 +806,33 @@ the bottom.
   the way back out of an opened task) and a count or a few glyph buttons on the
   right, then the mode's content. Panes carry no footers of their own: their
   key hints are in the reference (`Cmd+/`) and the palette (`Cmd+K`).
-- **Right dock** — the inspector, the done rail, the timeline and the
-  conditions, as tabs of one resizable column, in a tab bar: the showing tab in ink with a rule under it,
-  the done rail's tally and a close glyph at its right. Its visibility, width
-  and tab are remembered, and it does not close itself when you navigate; with
-  nothing selected the inspector says so.
-- **Bottom dock** (`Cmd+J`) — under the main pane, the progress graph: a bar
-  per day for the tasks closed and a line for the tasks added, over 7, 30 or
-  90 days, with the totals and the net in its header (hover a day for its own
-  figures). Its visibility, height and period are remembered.
+The docks split by job: the left one is for getting about, the right one
+helps you finish the task in front of you, and the bottom one keeps track of
+what has been done.
+
+- **Right dock** — the inspector and the conditions, as tabs of one resizable
+  column, in a tab bar: the showing tab in ink with a rule under it and a close
+  glyph at its right. Its visibility, width and tab are remembered, and it does
+  not close itself when you navigate; with nothing selected the inspector says
+  so.
+- **Bottom dock** (`Cmd+J`) — under the main pane, Progress, Done and Timeline
+  as tabs, in the right dock's tab bar with the showing tab's own figures and
+  controls at its far end. Progress is a bar per day for the tasks closed and a
+  line for the tasks added, over 7, 30 or 90 days, with the totals and the net
+  on the tab bar (hover a day for its own figures). Done is the rail of what
+  you finished, by day, with today's tally on the tab bar. Timeline is the
+  day's focus blocks across the hours. Its visibility, height, tab and period
+  are remembered; Done and Timeline take the keyboard and are stops for
+  `Ctrl+Tab`, the graph has nothing to step through and is not.
 - **Status bar** — a thin strip along the foot, glyphs at its ends like an
   editor's. On the left, the left dock's Lists and Agent toggles and the
-  bottom dock's Progress toggle (the Lists
+  bottom dock's Progress, Done and Timeline toggles (the Lists
   tooltip says which region has the keyboard); in the middle, a half-typed key sequence (`d…`), an error,
   or a passing message; on the right, the running block and its clock (click to
   return to it), today's time logged, points and tasks done (the week's in the
   tooltip; click for the timeline), what is available now (click for the
   Conditions tab), Google Tasks sync, and at the right edge
-  the right dock's Inspector and Done toggles — each toggle on the side its
+  the right dock's Inspector toggle — each toggle on the side its
   pane opens on.
 
 A selected row is a quiet fill; the row the keyboard is on adds a one-point

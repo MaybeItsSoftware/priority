@@ -53,21 +53,22 @@ extension WorkspaceViewModel {
     focusFloatRequest += 1
   }
 
-  /// Opens the timeline in the right dock, beside whatever you are working
+  /// Opens the timeline in the bottom dock, under whatever you are working
   /// on, with the keyboard on it. It used to take the whole main pane, which
-  /// meant leaving the list to look at the day.
+  /// meant leaving the list to look at the day, and then a column of the right
+  /// dock, too narrow for a day's worth of hours.
   func presentTimelineScreen() {
-    showRightDock(.timeline)
+    showBottomDock(.timeline)
     requestKeyboardFocus(.timeline)
   }
 
   func dismissTimelineScreen() {
     guard showsTimelineScreen else { return }
-    hideRightDock()
+    hideBottomDock()
   }
 
   /// Escape on the timeline: back to the work, leaving the tab where it is,
-  /// as Escape leaves the inspector and the done rail. `r` and ⌘9 put it away.
+  /// as Escape leaves the inspector and the done rail. ⌘9 and ⌘J put it away.
   func leaveTimeline() {
     guard keyboardFocusArea == .timeline else { return }
     requestKeyboardFocus(.tasks)

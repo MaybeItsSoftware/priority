@@ -3,8 +3,8 @@ import TaktCore
 import TaktWorkspace
 import SwiftUI
 
-/// The right dock: the inspector, the done rail, the timeline and the
-/// conditions as tabs of one column.
+/// The right dock: the inspector and the conditions as tabs of one column —
+/// what helps you finish the task in front of you.
 ///
 /// See `WorkspaceViewModel+Dock.swift` for why it is one dock rather than two
 /// columns, and why it no longer closes itself on navigation.
@@ -19,22 +19,12 @@ struct WorkspaceRightDock: View {
       switch model.rightDockTab {
       case .inspector:
         WorkspaceInspectorPane(focusedArea: focusedArea)
-      case .done:
-        WorkspaceDoneRail()
-          // Claimed the way the sidebar claims its own area: a
-          // `requestedFocusArea` no view answers to is handed straight back,
-          // so the rail would take the keyboard and lose it again on the next
-          // layout pass.
-          .focusable()
-          .focusEffectDisabled()
-          .focused(focusedArea, equals: .done)
-      case .timeline:
-        WorkspaceTimelineScreen(inDock: true)
-          .focusable()
-          .focusEffectDisabled()
-          .focused(focusedArea, equals: .timeline)
       case .conditions:
         WorkspaceConditionsPane()
+          // Claimed the way the sidebar claims its own area: a
+          // `requestedFocusArea` no view answers to is handed straight back,
+          // so the tab would take the keyboard and lose it again on the next
+          // layout pass.
           .focusable()
           .focusEffectDisabled()
           .focused(focusedArea, equals: .conditions)
@@ -57,9 +47,6 @@ struct WorkspaceRightDock: View {
         }
       }
       Spacer(minLength: theme.space.xs)
-      if model.rightDockTab == .done {
-        WorkspaceDoneSummary()
-      }
       WorkspacePaneIconButton("xmark", title: "Close the dock", command: .windowToggleRightDock) {
         model.hideRightDock()
       }

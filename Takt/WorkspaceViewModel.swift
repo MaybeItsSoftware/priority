@@ -40,11 +40,11 @@ enum WorkspaceFocusArea: Hashable {
   case sidebar
   case tasks
   case inspector
-  /// The right-hand rail of finished work. A region rather than a scroll view
+  /// The bottom dock's rail of finished work. A region rather than a scroll view
   /// with a click target, because the app's premise is that anything you can
   /// reach you can reach from the keyboard.
   case done
-  /// The timeline, as a tab of the right dock.
+  /// The timeline, as a tab of the bottom dock.
   case timeline
   /// The right dock's Conditions tab: what is available now, and the
   /// conditions themselves, walked by one cursor.
@@ -382,9 +382,11 @@ enum WorkspaceSidebarItem: Identifiable {
     didSet { UserDefaults.standard.set(isRightDockVisible, forKey: Self.rightDockVisibleKey) }
   }
 
-  /// Which of the dock's tabs is showing. Persisted with the dock.
+  /// Which of the dock's tabs is showing. Persisted with the dock. A dock
+  /// last left on the done rail or the timeline, which have since moved to
+  /// the bottom dock, opens on the inspector.
   var rightDockTab = WorkspaceDockTab(
-    rawValue: UserDefaults.standard.string(forKey: WorkspaceViewModel.rightDockTabKey) ?? "") ?? .done {
+    rawValue: UserDefaults.standard.string(forKey: WorkspaceViewModel.rightDockTabKey) ?? "") ?? .inspector {
     didSet { UserDefaults.standard.set(rightDockTab.rawValue, forKey: Self.rightDockTabKey) }
   }
 
@@ -493,10 +495,23 @@ enum WorkspaceSidebarItem: Identifiable {
   /// Set by `reloadNestedListsNow()`.
   var sidebarLayoutKey = 0
   var focusedBoardColumnID: String?
-  /// The bottom dock, which holds the progress graph. Persisted like the
-  /// other docks, so it is only ever put away on purpose.
+  /// The bottom dock, which holds the progress graph, the done rail and the
+  /// timeline. Persisted like the other docks, so it is only ever put away on
+  /// purpose.
   var isBottomDockVisible = UserDefaults.standard.bool(forKey: WorkspaceViewModel.bottomDockVisibleKey) {
     didSet { UserDefaults.standard.set(isBottomDockVisible, forKey: Self.bottomDockVisibleKey) }
+  }
+  /// Which of the bottom dock's tabs is showing. Persisted with the dock. A
+  /// right dock last left on the done rail or the timeline hands that tab
+  /// down here, so the next ⌘J opens on what was being read.
+  var bottomDockTab: WorkspaceBottomDockTab = {
+    let defaults = UserDefaults.standard
+    return WorkspaceBottomDockTab(rawValue: defaults.string(forKey: WorkspaceViewModel.bottomDockTabKey) ?? "")
+      ?? WorkspaceBottomDockTab(rawValue: defaults.string(forKey: WorkspaceViewModel.rightDockTabKey) ?? "")
+      .flatMap { $0 == .progress ? nil : $0 }
+      ?? .progress
+  }() {
+    didSet { UserDefaults.standard.set(bottomDockTab.rawValue, forKey: Self.bottomDockTabKey) }
   }
   var bottomDockHeight: CGFloat = {
     let stored = UserDefaults.standard.double(forKey: WorkspaceViewModel.bottomDockHeightKey)
@@ -517,6 +532,7 @@ enum WorkspaceSidebarItem: Identifiable {
   static let maxBottomDockHeight: CGFloat = 420
   private static let bottomDockVisibleKey = "localWorkspaceBottomDockVisibleV1"
   private static let bottomDockHeightKey = "localWorkspaceBottomDockHeightV1"
+  private static let bottomDockTabKey = "localWorkspaceBottomDockTabV1"
   private static let progressPeriodKey = "localWorkspaceProgressPeriodV1"
   /// Tasks whose subtasks are folded away — in the outline, on a board card,
   /// and on the subtask rows drawn on one; one set, so a branch put away in
@@ -672,11 +688,10 @@ enum WorkspaceSidebarItem: Identifiable {
   /// into the list on screen, so it is not drawn in it.
   var quickCaptureFocusRequest = 0
   /// The normal composer is deliberately lightweight. These fields are only
-  /// active for global capture, where destination and start day can be chosen
+  /// active for global capture, where the destination can be chosen
   /// without taking your hands off the keyboard.
   var isQuickCaptureActive = false
   var quickCaptureDestinationID: String?
-  var quickCaptureStartDayOffset: Int?
   /// Not observed: it moves on every key, and nothing should redraw for that.
   /// What the status bar shows is `pendingKeyPrefix`, which moves only when
   /// the half-typed sequence does.

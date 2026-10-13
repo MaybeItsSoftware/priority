@@ -114,7 +114,7 @@ struct MainApp: App {
           AppDelegate.shared.workspace.toggleAgentPanel()
         }
         .commandShortcut(.windowToggleAgentPanel)
-        Button("Progress") {
+        Button("Bottom Dock") {
           AppDelegate.shared.workspace.toggleBottomDock()
         }
         .commandShortcut(.windowToggleProgressDock)

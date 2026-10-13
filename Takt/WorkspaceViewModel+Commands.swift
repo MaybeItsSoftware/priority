@@ -122,7 +122,7 @@ extension WorkspaceViewModel {
       if let inbox = inboxList { selectList(inbox.id) }
       requestKeyboardFocus(.tasks)
     case .goFocus, .focusFinish, .focusStop, .focusSetAvailable, .focusManageConditions: runFocusCommand(id)
-    case .goTimeline: toggleDockTab(.timeline)
+    case .goTimeline: toggleBottomDockTab(.timeline)
     case .goListNavigator: presentOverlay(.listNavigator)
     case .goSearch: presentSearch()
     case .goCommandPalette: presentOverlay(.commandPalette)

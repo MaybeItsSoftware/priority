@@ -5,7 +5,8 @@ import SwiftUI
 
 /// The strip along the foot of the window.
 ///
-/// Left: the left dock's Lists and Agent toggles, glyphs and nothing else. Middle: what is
+/// Left: the left dock's Lists and Agent toggles and the bottom dock's Progress, Done
+/// and Timeline, glyphs and nothing else. Middle: what is
 /// happening right now — a half-typed key sequence, a message, an error.
 /// Right: the running block, the day's tally, sync, and last, against the
 /// right edge, the right dock's toggles — each toggle on the side of the window
@@ -26,12 +27,7 @@ struct WorkspaceStatusBar: View {
   var body: some View {
     HStack(spacing: theme.space.sm) {
       leftDockToggles
-      // The bottom dock's toggle beside the left dock's, where Zed keeps its
-      // terminal's.
-      WorkspacePaneIconButton(
-        "chart.bar.xaxis", title: "Progress", command: .windowToggleProgressDock,
-        isOn: model.isBottomDockVisible
-      ) { model.toggleBottomDock() }
+      bottomDockToggles
       Spacer(minLength: theme.space.sm)
       WorkspaceStatusMessage()
       Spacer(minLength: theme.space.sm)
@@ -70,6 +66,19 @@ struct WorkspaceStatusBar: View {
             : "Agent — asks before every change"
         ) {
           if isOn { model.hideLeftDock() } else { model.showLeftDock(tab) }
+        }
+      }
+    }
+  }
+
+  /// The bottom dock's toggles, one per tab, beside the left dock's, where
+  /// Zed keeps its terminal's.
+  private var bottomDockToggles: some View {
+    HStack(spacing: theme.space.xxs) {
+      ForEach(WorkspaceBottomDockTab.allCases) { tab in
+        let isOn = model.isBottomDockVisible && model.bottomDockTab == tab
+        WorkspacePaneIconButton(tab.symbolName, title: tab.title, command: tab.command, isOn: isOn) {
+          if isOn { model.hideBottomDock() } else { model.showBottomDock(tab) }
         }
       }
     }

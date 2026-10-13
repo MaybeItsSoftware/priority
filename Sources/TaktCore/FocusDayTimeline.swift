@@ -156,6 +156,32 @@ public enum FocusDayTimeline {
       points: shaped.points)
   }
 
+  /// Rows for blocks as they are drawn rather than as they ran: each span is
+  /// a block's drawn extent along the axis, in points, and two blocks share a
+  /// row only when `gap` or more lies between them.
+  ///
+  /// The core's lanes are about time, and two blocks a few seconds apart
+  /// never overlap in time; but a block is drawn at least a few points long
+  /// and its title runs on past a short one, so drawn they collide. Greedy
+  /// in start order, each into the first row free, which never uses more rows
+  /// than the deepest pile of spans over one point needs.
+  public static func drawnRows(spans: [(start: Double, end: Double)], gap: Double = 0) -> (rows: [Int], count: Int) {
+    var rows = Array(repeating: 0, count: spans.count)
+    var rowEnds: [Double] = []
+    let order = spans.indices.sorted { spans[$0].start != spans[$1].start ? spans[$0].start < spans[$1].start : $0 < $1 }
+    for index in order {
+      let span = spans[index]
+      if let free = rowEnds.firstIndex(where: { $0 + gap <= span.start }) {
+        rows[index] = free
+        rowEnds[free] = max(span.start, span.end)
+      } else {
+        rows[index] = rowEnds.count
+        rowEnds.append(max(span.start, span.end))
+      }
+    }
+    return (rows, max(1, rowEnds.count))
+  }
+
   /// The narrowest the ruler gets. An afternoon with one 20-minute block in it
   /// should still read as an afternoon, not as a bar filling the pane.
   public static let minimumHours = 5

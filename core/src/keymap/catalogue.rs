@@ -66,7 +66,7 @@ fn go() -> Vec<Spec> {
         c("goFocus", "Open the focus panel", "Go", &["cmd+8"])
             .note("Pick a task and start it, or bring back the block already running"),
         c("goTimeline", "Show the day's timeline", "Go", &["cmd+9"]).note(
-            "A tab of the right dock, with the keyboard in it; again from inside it puts it away",
+            "A tab of the bottom dock, with the keyboard in it; again from inside it puts it away",
         ),
         c(
             "goListNavigator",
@@ -445,23 +445,23 @@ fn window() -> Vec<Spec> {
         c("windowToggleRightDock", "Show or hide the right dock", "Window", &["cmd+r", "r", "cmd+option+b"])
             .note("On whichever tab it was on, with the keyboard in it. ⌘R works from inside a field too; ⌥⌘B is Zed's toggle right dock"),
         c("windowToggleDoneRail", "Show or hide what you have finished", "Window", &["cmd+ctrl+d"])
-            .note("Opens it and takes the keyboard; again from inside it closes it"),
+            .note("The bottom dock's Done tab: opens it and takes the keyboard; again from inside it closes it"),
         c("windowToggleAgentPanel", "Show or hide the agent panel", "Window", &["cmd+shift+a", "cmd+ctrl+a"])
             .note("Claude Code in the left dock: reads freely, asks before every change"),
-        c("windowToggleProgressDock", "Show or hide the progress graph", "Window", &["cmd+j"])
-            .note("The bottom dock: tasks done and added a day at a time. ⌘J toggles the bottom dock, as in Zed"),
+        c("windowToggleProgressDock", "Show or hide the bottom dock", "Window", &["cmd+j"])
+            .note("Progress, Done and Timeline, on the tab it was on. ⌘J toggles the bottom dock, as in Zed"),
         c("windowCloseAllDocks", "Close all docks", "Window", &["cmd+option+y"])
-            .note("The sidebar, the right dock and the progress graph, as in Zed"),
+            .note("The sidebar, the right dock and the bottom dock, as in Zed"),
         // Zed's previous / next tab, ⌘{ and ⌘}, on the dock's own tabs while the
         // dock has the keyboard; on a task pane the same chords change list, a
         // list being the tab there. [ and ] as well wherever no field takes them.
-        c("windowDockNextTab", "Next tab in the right dock", "Window", &[])
+        c("windowDockNextTab", "Next tab in the dock", "Window", &[])
             .also(Inspector, &["cmd+shift+}", "]"])
             .also(Done, &["cmd+shift+}", "]"])
             .also(Timeline, &["cmd+shift+}", "]"])
             .also(Conditions, &["cmd+shift+}", "]"])
-            .note("Inspector, Done, Timeline, Conditions, and round again, with the keyboard in it"),
-        c("windowDockPreviousTab", "Previous tab in the right dock", "Window", &[])
+            .note("Inspector and Conditions on the right, Done and Timeline below, and round again, with the keyboard in it"),
+        c("windowDockPreviousTab", "Previous tab in the dock", "Window", &[])
             .also(Inspector, &["cmd+shift+{", "["])
             .also(Done, &["cmd+shift+{", "["])
             .also(Timeline, &["cmd+shift+{", "["])
@@ -524,7 +524,7 @@ fn timeline() -> Vec<Spec> {
             &["escape"],
         )
         .on(Timeline)
-        .note("Back to the work, leaving it open; r or ⌘9 puts it away"),
+        .note("Back to the work, leaving it open; ⌘9 or ⌘J puts it away"),
     ]
 }
 
@@ -546,7 +546,7 @@ fn done() -> Vec<Spec> {
         c("doneReopen", "Put it back on the list", "Done", &["space"]).on(Done),
         c("doneClose", "Leave the rail", "Done", &["escape", "left"])
             .on(Done)
-            .note("Left, like leaving any pane on the right: back towards the work"),
+            .note("Back to the work, leaving the rail open; ⌘⌃D or ⌘J puts it away"),
     ]
 }
 

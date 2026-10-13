@@ -24,10 +24,7 @@ extension WorkspaceViewModel {
   }
 
   func requestTaskComposerFocus() {
-    if !isQuickCaptureActive {
-      quickCaptureDestinationID = nil
-      quickCaptureStartDayOffset = nil
-    }
+    if !isQuickCaptureActive { quickCaptureDestinationID = nil }
     taskInsertionReference = nil
     // Not `requestKeyboardFocus(.tasks)`: the draft row takes the key itself,
     // and asking SwiftUI to focus the task pane would race it for it.
@@ -108,6 +105,7 @@ extension WorkspaceViewModel {
       if leftDockTab != .lists { leftDockTab = .lists }
     }
     if let tab = WorkspaceDockTab(area: area) { showRightDock(tab) }
+    if let tab = WorkspaceBottomDockTab(area: area) { showBottomDock(tab) }
     requestedFocusArea = area
     keyboardFocusArea = area
     focusRequest += 1
@@ -121,8 +119,13 @@ extension WorkspaceViewModel {
 
   func cycleKeyboardFocus(by offset: Int) {
     var areas: [WorkspaceFocusArea] = isListsPaneVisible ? [.sidebar, .tasks] : [.tasks]
-    // The dock's tab is a stop when it has something to hold the keyboard:
-    // the inspector needs a task, the rail and the timeline do not.
+    // Left to right, and the bottom dock before the right one since it sits
+    // under the tasks. A dock's tab is a stop when it has something to hold
+    // the keyboard: the inspector needs a task, the graph has nothing, and
+    // the rest always do.
+    if isBottomDockVisible, let area = bottomDockTab.area {
+      areas.append(area)
+    }
     if isRightDockVisible, rightDockTab != .inspector || selectedTask != nil {
       areas.append(rightDockTab.area)
     }

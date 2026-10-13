@@ -131,4 +131,26 @@ final class FocusDayTimelineTests: XCTestCase {
 
     XCTAssertEqual(summaries.map(\.id), ["x", "y"])
   }
+
+  func testDrawnRowsSeparateBlocksWhoseDrawnExtentsTouch() {
+    // Two blocks seconds apart, each drawn wider than the time between them.
+    let packed = FocusDayTimeline.drawnRows(spans: [(100, 140), (102, 142), (150, 160)], gap: 2)
+
+    XCTAssertEqual(packed.rows, [0, 1, 0])
+    XCTAssertEqual(packed.count, 2)
+  }
+
+  func testDrawnRowsReuseTheFirstFreeRowWhateverTheInputOrder() {
+    let packed = FocusDayTimeline.drawnRows(spans: [(50, 60), (0, 40), (10, 20), (45, 48)])
+
+    XCTAssertEqual(packed.rows, [0, 0, 1, 0])
+    XCTAssertEqual(packed.count, 2)
+  }
+
+  func testDrawnRowsOfNothingIsOneEmptyRow() {
+    let packed = FocusDayTimeline.drawnRows(spans: [])
+
+    XCTAssertEqual(packed.rows, [])
+    XCTAssertEqual(packed.count, 1)
+  }
 }

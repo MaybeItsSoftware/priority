@@ -3,11 +3,11 @@ import OSLog
 import TaktCore
 import TaktWorkspace
 
-/// The tabs of the right dock.
+/// The tabs of the right dock: what helps you finish the task in front of
+/// you. The left dock is for getting about and the bottom dock for keeping
+/// track; this one is about the work itself.
 enum WorkspaceDockTab: String, CaseIterable, Identifiable {
   case inspector
-  case done
-  case timeline
   case conditions
 
   var id: String { rawValue }
@@ -15,8 +15,6 @@ enum WorkspaceDockTab: String, CaseIterable, Identifiable {
   var title: String {
     switch self {
     case .inspector: "Inspector"
-    case .done: "Done"
-    case .timeline: "Timeline"
     case .conditions: "Conditions"
     }
   }
@@ -24,8 +22,6 @@ enum WorkspaceDockTab: String, CaseIterable, Identifiable {
   var symbolName: String {
     switch self {
     case .inspector: "sidebar.trailing"
-    case .done: "checkmark.circle"
-    case .timeline: "clock"
     case .conditions: "location"
     }
   }
@@ -34,8 +30,6 @@ enum WorkspaceDockTab: String, CaseIterable, Identifiable {
   var area: WorkspaceFocusArea {
     switch self {
     case .inspector: .inspector
-    case .done: .done
-    case .timeline: .timeline
     case .conditions: .conditions
     }
   }
@@ -44,8 +38,6 @@ enum WorkspaceDockTab: String, CaseIterable, Identifiable {
   var command: WorkspaceCommandID {
     switch self {
     case .inspector: .windowToggleInspectorPane
-    case .done: .windowToggleDoneRail
-    case .timeline: .goTimeline
     case .conditions: .focusSetAvailable
     }
   }
@@ -53,49 +45,95 @@ enum WorkspaceDockTab: String, CaseIterable, Identifiable {
   init?(area: WorkspaceFocusArea) {
     switch area {
     case .inspector: self = .inspector
-    case .done: self = .done
-    case .timeline: self = .timeline
     case .conditions: self = .conditions
-    case .sidebar, .tasks: return nil
+    case .sidebar, .tasks, .done, .timeline: return nil
     }
   }
 }
 
-/// The right dock: the inspector, the done rail, the timeline and the
-/// conditions as tabs of one resizable column.
+/// The tabs of the bottom dock: keeping track of what has been done. The
+/// progress graph, the done rail and the day's timeline all look back, and
+/// all of them read better wide than tall.
+enum WorkspaceBottomDockTab: String, CaseIterable, Identifiable {
+  case progress
+  case done
+  case timeline
+
+  var id: String { rawValue }
+
+  var title: String {
+    switch self {
+    case .progress: "Progress"
+    case .done: "Done"
+    case .timeline: "Timeline"
+    }
+  }
+
+  var symbolName: String {
+    switch self {
+    case .progress: "chart.bar.xaxis"
+    case .done: "checkmark.circle"
+    case .timeline: "clock"
+    }
+  }
+
+  /// The keyboard region the tab is. The graph has none: there is nothing in
+  /// it to type into or step through.
+  var area: WorkspaceFocusArea? {
+    switch self {
+    case .progress: nil
+    case .done: .done
+    case .timeline: .timeline
+    }
+  }
+
+  /// The catalogue entry that toggles the dock onto this tab.
+  var command: WorkspaceCommandID {
+    switch self {
+    case .progress: .windowToggleProgressDock
+    case .done: .windowToggleDoneRail
+    case .timeline: .goTimeline
+    }
+  }
+
+  init?(area: WorkspaceFocusArea) {
+    switch area {
+    case .done: self = .done
+    case .timeline: self = .timeline
+    case .sidebar, .tasks, .inspector, .conditions: return nil
+    }
+  }
+}
+
+/// The right dock: the inspector and the conditions as tabs of one resizable
+/// column.
 ///
 /// They were two columns, each with its own idea of when to be on screen. The
 /// inspector closed itself on about fifteen kinds of navigation — choosing a
 /// list, entering a task, undoing, an external write — so the pane you had
 /// opened on purpose kept going away under you, and the done rail took a third
 /// column beside it. One dock, one width, one visibility, all persisted, and it
-/// only goes away when you put it away.
+/// only goes away when you put it away. The done rail and the timeline were
+/// tabs here too, until they moved to the bottom dock: a timeline squeezed
+/// into a column wrapped its figures a letter at a time.
 @MainActor
 extension WorkspaceViewModel {
   var isInspectorVisible: Bool { isRightDockVisible && rightDockTab == .inspector }
-  var isDoneRailVisible: Bool { isRightDockVisible && rightDockTab == .done }
-  /// The timeline is the dock's third tab. Kept under its old name because
-  /// the title strip, the menu and the keys all ask it.
-  var showsTimelineScreen: Bool { isRightDockVisible && rightDockTab == .timeline }
+  var isDoneRailVisible: Bool { isBottomDockVisible && bottomDockTab == .done }
+  /// The timeline is a tab of the bottom dock. Kept under its old name
+  /// because the title strip, the menu and the keys all ask it.
+  var showsTimelineScreen: Bool { isBottomDockVisible && bottomDockTab == .timeline }
 
-  /// Shows the dock on `tab`, loading what the tab needs. Does not move the
-  /// keyboard; the callers that mean to do that say so.
+  /// Shows the dock on `tab`. Does not move the keyboard; the callers that
+  /// mean to do that say so.
   func showRightDock(_ tab: WorkspaceDockTab) {
-    let wasShowingDone = isDoneRailVisible
     if rightDockTab != tab { rightDockTab = tab }
     if !isRightDockVisible { isRightDockVisible = true }
-    if tab == .done && !wasShowingDone { reloadCompleted() }
-    if tab == .timeline {
-      focusHistoryDate = min(focusHistoryDate, .now)
-      reloadFocus()
-    }
   }
 
   /// Puts the dock away, handing the keyboard back to the tasks if it had it.
   func hideRightDock() {
     isRightDockVisible = false
-    completedTasks = []
-    completedTasksKey = nil
     if WorkspaceDockTab(area: keyboardFocusArea) != nil {
       requestKeyboardFocus(.tasks)
     }
@@ -116,11 +154,11 @@ extension WorkspaceViewModel {
     }
   }
 
-  /// For the rail, one key, three states, the way an editor's panel toggle behaves: hidden
-  /// (or on the other tab) opens it on this one and takes the keyboard,
-  /// open-but-elsewhere brings the keyboard over, and open-and-focused puts it
-  /// away. A toggle that only shows and hides is a pane you have to reach for
-  /// separately, which is a pane you read once.
+  /// For a tab, one key, three states, the way an editor's panel toggle
+  /// behaves: hidden (or on the other tab) opens it on this one and takes the
+  /// keyboard, open-but-elsewhere brings the keyboard over, and
+  /// open-and-focused puts it away. A toggle that only shows and hides is a
+  /// pane you have to reach for separately, which is a pane you read once.
   ///
   /// The inspector only takes the keyboard when there is a task to inspect;
   /// with none it opens on its empty state and the keys stay on the tasks.
@@ -142,28 +180,90 @@ extension WorkspaceViewModel {
 
   func toggleInspector() { toggleDockTab(.inspector) }
 
-  /// ⌘{ and ⌘} (or `[` and `]`) while the dock has the keyboard: the tab
-  /// beside this one, round the end, with the keyboard brought along. Unlike
-  /// `toggleDockTab` it never puts the dock away, and the inspector takes the
-  /// keyboard even with nothing selected — its empty state is a stop on the
-  /// way to the next tab, not somewhere to be thrown back to the tasks from.
+  /// ⌘{ and ⌘} (or `[` and `]`) while a dock has the keyboard: the tab beside
+  /// this one in the same dock, round the end, with the keyboard brought
+  /// along. Unlike `toggleDockTab` it never puts the dock away, and the
+  /// inspector takes the keyboard even with nothing selected — its empty
+  /// state is a stop on the way to the next tab, not somewhere to be thrown
+  /// back to the tasks from. In the bottom dock it steps between the done
+  /// rail and the timeline; the graph has no keyboard to bring along.
   func cycleRightDockTab(by offset: Int) {
+    if WorkspaceBottomDockTab(area: keyboardFocusArea) != nil {
+      let areas = WorkspaceBottomDockTab.allCases.compactMap(\.area)
+      let current = areas.firstIndex(of: keyboardFocusArea) ?? 0
+      requestKeyboardFocus(areas[(current + offset % areas.count + areas.count) % areas.count])
+      return
+    }
     let tabs = WorkspaceDockTab.allCases
     let current = tabs.firstIndex(of: rightDockTab) ?? 0
     let next = tabs[(current + offset % tabs.count + tabs.count) % tabs.count]
     requestKeyboardFocus(next.area)
   }
 
-  /// The bottom dock has one thing in it and nothing to type into, so it
-  /// never takes the keyboard: the key shows it and hides it.
-  func toggleBottomDock() { isBottomDockVisible.toggle() }
+  /// Shows the bottom dock on `tab`, loading what the tab needs. Does not
+  /// move the keyboard.
+  func showBottomDock(_ tab: WorkspaceBottomDockTab) {
+    let wasShowingDone = isDoneRailVisible
+    if bottomDockTab != tab { bottomDockTab = tab }
+    if !isBottomDockVisible { isBottomDockVisible = true }
+    if tab == .done && !wasShowingDone { reloadCompleted() }
+    if tab == .timeline {
+      focusHistoryDate = min(focusHistoryDate, .now)
+      reloadFocus()
+    }
+  }
+
+  /// Puts the bottom dock away, handing the keyboard back to the tasks if it
+  /// had it.
+  func hideBottomDock() {
+    isBottomDockVisible = false
+    completedTasks = []
+    completedTasksKey = nil
+    if WorkspaceBottomDockTab(area: keyboardFocusArea) != nil {
+      requestKeyboardFocus(.tasks)
+    }
+  }
+
+  /// ⌘J, Zed's toggle bottom dock, on whichever tab it was on. On the done
+  /// rail or the timeline it works as `r` does for the right dock: opening
+  /// takes the keyboard, open-but-elsewhere brings it over, and again puts
+  /// the dock away. The graph never takes the keyboard, so there it is a
+  /// plain show and hide.
+  func toggleBottomDock() {
+    let area = bottomDockTab.area
+    if isBottomDockVisible, let area, keyboardFocusArea != area {
+      requestKeyboardFocus(area)
+    } else if isBottomDockVisible {
+      hideBottomDock()
+    } else {
+      showBottomDock(bottomDockTab)
+      if let area { requestKeyboardFocus(area) }
+    }
+  }
+
+  /// The done rail's and the timeline's keys: the three states of
+  /// `toggleDockTab`, in the bottom dock. The progress tab has no keyboard,
+  /// so its key shows it or, already showing, puts the dock away.
+  func toggleBottomDockTab(_ tab: WorkspaceBottomDockTab) {
+    let isShowing = isBottomDockVisible && bottomDockTab == tab
+    guard let area = tab.area else {
+      if isShowing { hideBottomDock() } else { showBottomDock(tab) }
+      return
+    }
+    if isShowing && keyboardFocusArea == area {
+      hideBottomDock()
+      return
+    }
+    showBottomDock(tab)
+    requestKeyboardFocus(area)
+  }
 
   /// ⌥⌘Y, Zed's close all docks: the left, the right and the bottom, with the
   /// keyboard handed back to the tasks from whichever of them had it.
   func closeAllDocks() {
     if isRightDockVisible { hideRightDock() }
     if isSidebarVisible { hideLeftDock() }
-    isBottomDockVisible = false
+    if isBottomDockVisible { hideBottomDock() }
   }
 
   /// The progress graph for the period, read from the store. Empty without
@@ -176,7 +276,7 @@ extension WorkspaceViewModel {
     else { return TaskProgressSeries.build(period: progressPeriod, completions: [], creations: []) }
     return TaskProgressSeries.build(period: progressPeriod, completions: completions, creations: creations)
   }
-  func toggleDoneRail() { toggleDockTab(.done) }
+  func toggleDoneRail() { toggleBottomDockTab(.done) }
 }
 
 /// The tabs of the left dock: the lists, and the agent panel beside them.
