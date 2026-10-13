@@ -1,8 +1,10 @@
 import TaktWorkspace
 import SwiftUI
 
-/// Manage conditions: add, rename, mark as a place, archive and restore. The
-/// Mac's `WorkspaceConditionsEditor`.
+/// Manage conditions: add, rename, file under a category, archive and
+/// restore. The Mac's Conditions tab. Conditions show under their category's
+/// heading; Location is the category whose conditions are places, so
+/// choosing one in Focus replaces the last.
 ///
 /// Tasks name conditions by identity, so a rename here is a rename
 /// everywhere and every requirement survives it. Archiving takes a condition
@@ -14,7 +16,12 @@ struct ConditionsSheet: View {
   @Environment(\.dismiss) private var dismiss
   @State private var catalogue = StoreQuery(ConditionsCatalogue.empty)
   @State private var newName = ""
-  @State private var newIsLocation = false
+  /// The category a new condition is filed under; nil is none.
+  @State private var newCategory: String?
+  /// Typing a new category: for this condition, or (nil) for the new one.
+  @State private var namingCategoryFor: TaskCondition?
+  @State private var isNamingCategory = false
+  @State private var categoryText = ""
   @State private var renaming: TaskCondition?
   @State private var renameText = ""
   @FocusState private var addFocused: Bool
@@ -29,13 +36,19 @@ struct ConditionsSheet: View {
             .listRowBackground(Color.clear)
             .listRowInsets(EdgeInsets(top: 0, leading: theme.space.xs, bottom: 0, trailing: theme.space.xs))
         }
-        Section {
-          if catalogue.isLoaded, catalogue.value.active.isEmpty {
+        if catalogue.isLoaded, catalogue.value.active.isEmpty {
+          Section {
             Text("No conditions yet").font(theme.type.body).foregroundStyle(theme.muted)
+          } header: {
+            label("Available")
           }
-          ForEach(catalogue.value.active) { condition in row(condition) }
-        } header: {
-          label("Available")
+        }
+        ForEach(catalogue.value.activeSections) { section in
+          Section {
+            ForEach(section.conditions) { condition in row(condition) }
+          } header: {
+            label(section.title)
+          }
         }
         Section {
           HStack(spacing: theme.space.sm) {
@@ -45,15 +58,15 @@ struct ConditionsSheet: View {
               .submitLabel(.done)
               .onSubmit(add)
               .accessibilityIdentifier("conditions.newName")
-            Button {
-              newIsLocation.toggle()
+            Menu {
+              categoryChoices(current: newCategory, choose: { newCategory = $0 }, for: nil)
             } label: {
-              Tag(text: "Place", tint: newIsLocation ? theme.primary : theme.dim, systemImage: "mappin")
+              Tag(text: newCategory ?? "No category", tint: newCategory == nil ? theme.dim : theme.primary,
+                  systemImage: "folder")
             }
-            .buttonStyle(.plain)
-            .accessibilityLabel("Place")
-            .accessibilityValue(newIsLocation ? "On" : "Off")
-            .accessibilityIdentifier("conditions.newIsLocation")
+            .accessibilityLabel("Category")
+            .accessibilityValue(newCategory ?? "None")
+            .accessibilityIdentifier("conditions.newCategory")
             Button("Add", action: add)
               .buttonStyle(ThemedButtonStyle(kind: .primary, compact: true))
               .disabled(newName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
@@ -63,7 +76,7 @@ struct ConditionsSheet: View {
         } header: {
           label("Add")
         } footer: {
-          Text("A place is where you are; choosing one in Focus replaces the last. Anything else — a tool, a state — can be combined.")
+          Text("Location is where you are: choosing one in Focus replaces the last. Any other category — Equipment, Energy — combines. Focus offers only what an open task needs.")
             .font(theme.type.footnote)
             .foregroundStyle(theme.dim)
         }
@@ -88,6 +101,19 @@ struct ConditionsSheet: View {
       .task(id: model.revision) {
         let workspaceID = model.workspace.id
         await catalogue.load(model.store) { store in try ConditionsCatalogue.load(store: store, workspaceID: workspaceID) }
+      }
+      .alert("New category", isPresented: $isNamingCategory) {
+        TextField("Category", text: $categoryText)
+        Button("Cancel", role: .cancel) { namingCategoryFor = nil }
+        Button("File") {
+          let category = TaskConditionSection.normalizedCategory(categoryText)
+          if let condition = namingCategoryFor {
+            model.setConditionCategory(condition, category: category)
+          } else {
+            newCategory = category
+          }
+          namingCategoryFor = nil
+        }
       }
       .alert("Rename condition", isPresented: renameBinding, presenting: renaming) { condition in
         TextField("Name", text: $renameText)
@@ -148,16 +174,13 @@ struct ConditionsSheet: View {
         .tint(theme.warning)
       }
     }
-    .swipeActions(edge: .leading) {
-      Button { model.saveCondition(condition, isLocation: !condition.isLocation) } label: {
-        Label(condition.isLocation ? "Not a place" : "Place", systemImage: "mappin")
-      }
-      .tint(theme.primary)
-    }
     .contextMenu {
       Button { startRename(condition) } label: { Label("Rename", systemImage: "pencil") }
-      Button { model.saveCondition(condition, isLocation: !condition.isLocation) } label: {
-        Label(condition.isLocation ? "Not a place" : "Mark as a place", systemImage: "mappin")
+      Menu {
+        categoryChoices(current: condition.category, choose: { model.setConditionCategory(condition, category: $0) },
+                        for: condition)
+      } label: {
+        Label("Category", systemImage: "folder")
       }
       if condition.isArchived {
         Button { model.saveCondition(condition, isArchived: false) } label: {
@@ -174,17 +197,37 @@ struct ConditionsSheet: View {
       Button(condition.isArchived ? "Restore" : "Archive") {
         model.saveCondition(condition, isArchived: !condition.isArchived)
       }
-      Button(condition.isLocation ? "Not a place" : "Mark as a place") {
-        model.saveCondition(condition, isLocation: !condition.isLocation)
-      }
+      Button("New category") { startNamingCategory(for: condition) }
     }
   }
 
   private func detail(_ condition: TaskCondition, uses: Int) -> String {
-    var parts = [condition.isLocation ? "Place" : "Capability"]
+    var parts = [condition.categoryTitle]
     parts.append(uses == 0 ? "No tasks" : uses == 1 ? "1 task" : "\(uses) tasks")
     if condition.isArchived { parts.append("Archived") }
     return parts.joined(separator: " · ")
+  }
+
+  /// The categories in use (Location first), "No category", and "New
+  /// category…", which asks for a name.
+  @ViewBuilder
+  private func categoryChoices(current: String?, choose: @escaping (String?) -> Void, for condition: TaskCondition?) -> some View {
+    ForEach(catalogue.value.categories, id: \.self) { name in
+      Button { choose(name) } label: {
+        if name == current { Label(name, systemImage: "checkmark") } else { Text(name) }
+      }
+    }
+    Button { choose(nil) } label: {
+      if current == nil { Label("No category", systemImage: "checkmark") } else { Text("No category") }
+    }
+    Divider()
+    Button("New category…") { startNamingCategory(for: condition) }
+  }
+
+  private func startNamingCategory(for condition: TaskCondition?) {
+    namingCategoryFor = condition
+    categoryText = ""
+    isNamingCategory = true
   }
 
   private func startRename(_ condition: TaskCondition) {
@@ -195,9 +238,9 @@ struct ConditionsSheet: View {
   private func add() {
     let name = newName.trimmingCharacters(in: .whitespacesAndNewlines)
     guard !name.isEmpty else { return }
-    if model.createCondition(named: name, isLocation: newIsLocation) != nil {
+    // The category stays chosen, for the next one in it.
+    if model.createCondition(named: name, category: newCategory) != nil {
       newName = ""
-      newIsLocation = false
     }
   }
 }

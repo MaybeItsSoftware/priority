@@ -210,34 +210,29 @@ private struct FocusContextControls: View {
   @Bindable var focus: FocusModel
   @State private var isAddingCondition = false
   @State private var newCondition = ""
-  @State private var newIsLocation = false
+  @State private var newCategory = ""
   @State private var showsConditions = false
 
   var body: some View {
     VStack(alignment: .leading, spacing: theme.space.md) {
       ScrollView(.horizontal, showsIndicators: false) {
         HStack(spacing: theme.space.sm) {
-          ForEach(focus.visibleConditions) { condition in
-            let isOn = focus.conditionIDs.contains(condition.id)
-            Button {
-              focus.toggleCondition(condition)
-            } label: {
-              HStack(spacing: theme.space.xs) {
-                if condition.isLocation { Image(systemName: "mappin").imageScale(.small) }
-                Text(condition.name)
-              }
-              .font(theme.type.callout)
-              .foregroundStyle(isOn ? theme.primary : theme.ink)
-              .padding(.horizontal, theme.space.md)
-              .frame(minHeight: 34)
-              .background(isOn ? theme.primary.opacity(0.10) : theme.raised,
-                in: RoundedRectangle(cornerRadius: theme.radius.control))
-              .overlay(RoundedRectangle(cornerRadius: theme.radius.control)
-                .strokeBorder(isOn ? theme.primary.opacity(0.5) : theme.border, lineWidth: theme.stroke))
+          if focus.isLoaded, focus.conditionSections.isEmpty {
+            Text("No open tasks need a condition")
+              .font(theme.type.caption)
+              .foregroundStyle(theme.muted)
+              .accessibilityIdentifier("focus.conditionsEmpty")
+          }
+          ForEach(focus.conditionSections) { section in
+            // Only what an open task needs, under its category: a condition
+            // nothing waits on changes nothing, so it is not asked about.
+            Text(section.title)
+              .font(theme.type.caption)
+              .foregroundStyle(theme.muted)
+              .accessibilityAddTraits(.isHeader)
+            ForEach(section.conditions) { condition in
+              chip(condition, isExclusive: section.isExclusive)
             }
-            .buttonStyle(.plain)
-            .accessibilityAddTraits(isOn ? .isSelected : [])
-            .accessibilityIdentifier("focus.condition.\(condition.name)")
           }
           Button {
             isAddingCondition = true
@@ -303,11 +298,12 @@ private struct FocusContextControls: View {
     }
     .alert("New condition", isPresented: $isAddingCondition) {
       TextField("Name", text: $newCondition)
-      Button("Cancel", role: .cancel) { newCondition = "" }
-      Button("Add place") { add(location: true) }
-      Button("Add") { add(location: false) }
+      TextField("Category (optional)", text: $newCategory)
+      Button("Cancel", role: .cancel) { newCondition = ""; newCategory = "" }
+      Button("Add") { add() }
     } message: {
-      Text("A place, a tool or a state you need to be in for some tasks.")
+      Text("A place, a tool or a state you need to be in for some tasks, filed under a category — "
+        + "Location, Equipment… Location is one place at a time.")
     }
     .sheet(isPresented: $showsConditions) { ConditionsSheet() }
   }
@@ -359,12 +355,40 @@ private struct FocusContextControls: View {
     return "\(minutes)m · until \(Format.time(until))"
   }
 
-  private func add(location: Bool) {
+  private func add() {
     let name = newCondition.trimmingCharacters(in: .whitespacesAndNewlines)
+    let category = TaskConditionSection.normalizedCategory(newCategory)
     newCondition = ""
+    newCategory = ""
     guard !name.isEmpty else { return }
-    focus.createCondition(named: name, isLocation: location)
+    focus.createCondition(named: name, category: category)
   }
+
+  /// A condition you can say holds; a pin under Location, where choosing one
+  /// replaces the last.
+  private func chip(_ condition: TaskCondition, isExclusive: Bool) -> some View {
+    let isOn = focus.conditionIDs.contains(condition.id)
+    return Button {
+      focus.toggleCondition(condition)
+    } label: {
+      HStack(spacing: theme.space.xs) {
+        if isExclusive { Image(systemName: "mappin").imageScale(.small) }
+        Text(condition.name)
+      }
+      .font(theme.type.callout)
+      .foregroundStyle(isOn ? theme.primary : theme.ink)
+      .padding(.horizontal, theme.space.md)
+      .frame(minHeight: 34)
+      .background(isOn ? theme.primary.opacity(0.10) : theme.raised,
+        in: RoundedRectangle(cornerRadius: theme.radius.control))
+      .overlay(RoundedRectangle(cornerRadius: theme.radius.control)
+        .strokeBorder(isOn ? theme.primary.opacity(0.5) : theme.border, lineWidth: theme.stroke))
+    }
+    .buttonStyle(.plain)
+    .accessibilityAddTraits(isOn ? .isSelected : [])
+    .accessibilityIdentifier("focus.condition.\(condition.name)")
+  }
+
 }
 
 /// The task about to be started and the estimate it is started with.

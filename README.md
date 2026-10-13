@@ -394,9 +394,11 @@ tab.
   category menu beside its name) and requires it — and **Or…** widens a
   requirement to either of two.
 
-On Android, the Focus screen's **Where you are** follows the same rule: only
-the conditions an open task needs, under their category headings, and **New
-condition** asks for a category (one in use, or typed).
+On the phones, the Focus screen's **Where you are** follows the same rule: only
+the conditions an open task needs (and any that is on), under their category
+headings, and **New condition** asks for a category (one in use, or typed). The
+iPhone's Conditions sheet groups by category too, and a condition's long-press
+menu files it under one (**Category**, with **New category…**).
 
 ### The focus panel
 

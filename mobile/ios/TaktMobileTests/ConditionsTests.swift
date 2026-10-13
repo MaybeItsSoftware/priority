@@ -34,6 +34,20 @@ final class ConditionsTests: XCTestCase {
     catalogue = try ConditionsCatalogue.load(store: model.store, workspaceID: model.workspace.id)
     XCTAssertTrue(catalogue.active.contains { $0.id == condition.id }, "archiving is one undo step")
   }
+
+  func testACategoryGroupsTheSheetAndLocationMakesAPlace() throws {
+    let model = try WorkspaceModel.temporary()
+    let mat = try XCTUnwrap(model.createCondition(named: "Mat", category: "Equipment"))
+    var catalogue = try ConditionsCatalogue.load(store: model.store, workspaceID: model.workspace.id)
+    XCTAssertEqual(catalogue.activeSections.map(\.title), ["Location", "Equipment", "Other"])
+    XCTAssertEqual(catalogue.categories, ["Location", "Equipment"])
+
+    model.setConditionCategory(mat, category: "location")
+    catalogue = try ConditionsCatalogue.load(store: model.store, workspaceID: model.workspace.id)
+    let moved = try XCTUnwrap(catalogue.conditions.first { $0.id == mat.id })
+    XCTAssertEqual(moved.category, "Location")
+    XCTAssertTrue(moved.isLocation)
+  }
 }
 
 @MainActor

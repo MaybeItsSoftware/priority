@@ -90,6 +90,27 @@ final class FocusModelTests: XCTestCase {
     XCTAssertNil(focus.session?.pausedAt)
   }
 
+  func testWhereYouAreOffersOnlyWhatOpenTasksNeedUnderCategoryHeadings() throws {
+    let mat = try XCTUnwrap(model.createCondition(named: "Mat", category: "Equipment"))
+    let home = try XCTUnwrap(model.store.conditions(in: model.workspace.id).first { $0.name == "Home" })
+    focus.loadNow()
+    XCTAssertTrue(focus.conditionSections.isEmpty, "nothing open needs a condition")
+
+    let gym = try add("Gym")
+    let inspector = InspectorModel(taskID: gym.id, draftsURL: FileManager.default.temporaryDirectory
+      .appending(path: "drafts-\(UUID().uuidString).json"))
+    inspector.load(model)
+    inspector.addRequirement(mat.id, model: model)
+    XCTAssertTrue(inspector.save(model))
+    focus.loadNow()
+    XCTAssertEqual(focus.conditionSections.map(\.title), ["Equipment"])
+    XCTAssertEqual(focus.visibleConditions.map(\.id), [mat.id])
+
+    focus.toggleCondition(home)
+    XCTAssertEqual(focus.conditionSections.map(\.title), ["Location", "Equipment"], "one that is on stays")
+    XCTAssertTrue(focus.conditionSections[0].isExclusive)
+  }
+
   func testAnExpiredContextIsSetAsideAndOfferedBack() throws {
     let office = try XCTUnwrap(model.createCondition(named: "Office", isLocation: true))
     focus.loadNow()

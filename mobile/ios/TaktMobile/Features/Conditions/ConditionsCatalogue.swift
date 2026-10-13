@@ -21,6 +21,10 @@ struct ConditionsCatalogue: Sendable, Equatable {
   }
 
   var active: [TaskCondition] { conditions.filter { !$0.isArchived } }
+  /// The active conditions under their category headings.
+  var activeSections: [TaskConditionSection] { TaskConditionSection.sections(active) }
+  /// The categories a condition can be filed under: Location, then every other one in use.
+  var categories: [String] { TaskConditionSection.categories(conditions) }
   var archived: [TaskCondition] { conditions.filter(\.isArchived) }
 }
 
@@ -33,6 +37,19 @@ extension WorkspaceModel {
   func createCondition(named name: String, isLocation: Bool) -> TaskCondition? {
     let workspaceID = workspace.id
     return performReturning { try $0.createCondition(workspaceId: workspaceID, name: name, isLocation: isLocation) }
+  }
+
+  /// Makes a condition under a category (nil for none; "Location" makes it a place).
+  @discardableResult
+  func createCondition(named name: String, category: String?) -> TaskCondition? {
+    let workspaceID = workspace.id
+    return performReturning { try $0.createCondition(workspaceId: workspaceID, name: name, category: category) }
+  }
+
+  /// Files a condition under a category, or none. Location makes it a place;
+  /// anything else makes it not one.
+  func setConditionCategory(_ condition: TaskCondition, category: String?) {
+    perform { store in try store.setConditionCategory(id: condition.id, category: category) }
   }
 
   func saveCondition(_ condition: TaskCondition, name: String? = nil, isLocation: Bool? = nil, isArchived: Bool? = nil) {

@@ -30,6 +30,8 @@ struct FocusSnapshot: Sendable {
   var ladder: [ScoredNextUp] = []
   var blocked: [BlockedFocusTask] = []
   var conditions: [TaskCondition] = []
+  /// The conditions an open task requires: only these are offered as chips.
+  var requiredConditionIDs: Set<String> = []
   var hasManualOrder = false
   var session: FocusSession?
   var activeTask: WorkspaceTask?
@@ -46,6 +48,7 @@ struct FocusSnapshot: Sendable {
     snapshot.ladder = next.ranking.ranked.filter { $0.id != session?.activeTaskId }
     snapshot.blocked = next.ranking.blocked
     snapshot.conditions = next.conditions
+    snapshot.requiredConditionIDs = next.requiredConditionIDs
     snapshot.hasManualOrder = next.hasManualFocusOrder
     snapshot.nextEvaluationAt = next.ranking.nextEvaluationAt
     snapshot.session = session
@@ -226,9 +229,19 @@ final class FocusModel {
     model.createCondition(named: name, isLocation: isLocation)
   }
 
-  var visibleConditions: [TaskCondition] {
-    snapshot.conditions.filter { !$0.isArchived || conditionIDs.contains($0.id) }
+  /// Makes a condition under a category (nil for none; "Location" makes it a place).
+  func createCondition(named name: String, category: String?) {
+    model.createCondition(named: name, category: category)
   }
+
+  /// What "where you are" offers, under category headings: only the
+  /// conditions an open task requires, plus any that is on so it can be
+  /// turned off. The rule is the Rust core's, so the Mac and Android agree.
+  var conditionSections: [TaskConditionSection] {
+    TaskConditionSection.available(snapshot.conditions, required: snapshot.requiredConditionIDs, active: conditionIDs)
+  }
+
+  var visibleConditions: [TaskCondition] { conditionSections.flatMap(\.conditions) }
 
   func unavailableDescription(_ reason: TaskUnavailableReason) -> String {
     switch reason {
