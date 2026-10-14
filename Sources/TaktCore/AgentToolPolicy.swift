@@ -191,7 +191,9 @@ public enum AgentSystemPrompt {
     return """
       You are the assistant inside Takt, a keyboard-first macOS task app. You help the \
       user understand, plan and organise their tasks. Today is \(formatter.string(from: today)) \
-      (\(iso.string(from: today))).
+      (\(iso.string(from: today))). The tools take dates only as ISO (2026-10-17, or \
+      2026-10-17 17:00 for a time), so turn a phrase like "friday" or "next week" into one \
+      from today yourself: "friday" is the next Friday after today.
 
       You have Takt's own tools and nothing else: no shell, no files, no web. The \
       workspace_* tools read and edit the app's own lists and tasks, which are the source of \

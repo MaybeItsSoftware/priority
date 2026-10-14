@@ -236,9 +236,13 @@ which arrives before the tool runs: the action in words ("Add a task"), each
 argument labelled, with ids resolved to list and task names, and the raw input
 behind a disclosure. A change to a workspace task (`workspace_task_update`,
 `workspace_task_move`) shows what each field held struck through above what
-it holds now — the title, notes, status, list or parent — read from the
-workspace as the app last loaded it, which the CLI's write reaches only on the
-next poll. An `agent_instructions_set` shows the scope's whole text before and
+it holds now — the title, notes, status, list or parent, the due date, start,
+priority and estimate — read from the workspace as the app last loaded it,
+which the CLI's write reaches only on the next poll. Dates, priorities and
+estimates are put into words on both sides (`AgentToolSummary.words`): **Due**
+~~None~~ Fri 17 Oct, **Priority** ~~3 (Medium)~~ 1 (Urgent), **Estimate**
+~~45 min~~ 1 h 30 min; a due time reads "Fri 17 Oct, 17:00", and a date in
+another year carries the year. An `agent_instructions_set` shows the scope's whole text before and
 after. The card then follows the tool's result: running, done, or failed with
 the tool's message.
 
@@ -297,7 +301,7 @@ What maps, by tool:
 | Tool | Keys |
 |---|---|
 | `workspace_task_add`, `task_add` | `Return` (`⌥⇧Return` under a parent) then type the title; a list adds `⇧⌘L`, notes add `N N` |
-| `workspace_task_update` | title `E E`, notes `N N` (cleared: `C N`), status `Space` or `⇧Space`, board column `⌘1` then `⌘←`/`⌘→`, kind `⇧⌘L`, pinned `⌥⌘P`, waiting `W W` — each changed field a step |
+| `workspace_task_update` | title `E E`, notes `N N` (cleared: `C N`), status `Space` or `⇧Space`, board column `⌘1` then `⌘←`/`⌘→`, kind `⇧⌘L`, pinned `⌥⌘P`, waiting `W W`, due `D D` then the date (cleared: `C D`), start `⌥S`, priority the digit `1`–`4` (cleared: `0`), estimate `⌥T` then the minutes — each changed field a step |
 | `task_update` | content `E E`, due `D D` (cleared: `C D`), tags `T T` (cleared: `C T`) |
 | `workspace_task_move` | to a list `M M` then choose the list; under a task `M M` then choose the new parent; otherwise `⌥↑`/`⌥↓` |
 | `task_move`, `task_reparent`, `project_move` | `⌥↑`/`⌥↓`; `M M` |
@@ -318,8 +322,7 @@ No hint: the dailies (`daily_add`, `daily_update`, `daily_tick`), removing a
 blocker and deleting a filter list (the inspector and the sidebar do those,
 with no key), the account's and a folder's instructions, a matrix call
 placing several tasks at once, and an update whose only change is one no key
-makes (links). No tool sets a workspace task's priority or due date yet, so
-the digits never appear, and the due keys only for `task_update`. The core's
+makes (links). The core's
 tests (`core/src/agent_hints/tests.rs`) hold every write tool to either a hint
 or that list, so a new write tool fails until it is placed.
 

@@ -45,13 +45,17 @@ public struct AgentToolSummary: Equatable, Sendable {
     tool qualified: String,
     input: JSONValue,
     name: (String) -> String? = { _ in nil },
-    current: (String) -> String? = { _ in nil }
+    current: (String) -> String? = { _ in nil },
+    now: Date = .now,
+    timeZone: TimeZone = .current
   ) -> AgentToolSummary {
     let tool = AgentToolPolicy.priorityToolName(qualified) ?? qualified
     var object = input.objectValue ?? [:]
     if tool == "agent_instructions_set" { object = instructionsAsTheyWouldBe(object, current: current) }
     let fields = orderedKeys(object).compactMap { key -> Field? in
-      guard let value = object[key], let text = display(value, key: key, name: name) else {
+      guard let value = object[key],
+        let text = display(value, key: key, name: name, now: now, timeZone: timeZone)
+      else {
         return nil
       }
       let previous = subjectKeys.contains(key) ? nil : current(key)
@@ -137,7 +141,8 @@ public struct AgentToolSummary: Equatable, Sendable {
   private static let keyOrder = [
     "task_id", "daily_id", "scope", "id", "title", "content", "name", "status", "done", "list_id",
     "source_list_id", "target_list_id", "parent_task_id", "folder_id", "parent_folder_id",
-    "location", "position", "at_top", "kind", "pinned", "kanban_column", "due", "tags",
+    "location", "position", "at_top", "kind", "pinned", "kanban_column", "due", "start",
+    "priority", "estimate_minutes", "tags",
     "notes", "note", "external_links", "items", "text", "mode",
   ]
 
@@ -149,8 +154,31 @@ public struct AgentToolSummary: Equatable, Sendable {
     "position": "Position", "at_top": "At the top", "kind": "Kind", "pinned": "Pinned",
     "kanban_column": "Column", "due": "Due", "tags": "Tags", "notes": "Notes", "note": "Note",
     "external_links": "Links", "items": "Items", "scope": "Scope", "id": "For",
-    "text": "Instructions", "mode": "Mode",
+    "text": "Instructions", "mode": "Mode", "start": "Start", "priority": "Priority",
+    "estimate_minutes": "Estimate",
   ]
+
+  /// Keys whose value is a day (`2026-10-17`) or a moment, shown as the app
+  /// writes dates: "Fri 17 Oct", "Fri 17 Oct, 17:00".
+  private static let dateKeys: Set<String> = ["due", "start", "follow_up_at"]
+
+  /// The workspace's four priorities, as the editor names them.
+  private static let priorityNames = [1: "Urgent", 2: "High", 3: "Medium", 4: "Low"]
+
+  /// A value the way the card shows it, for the app to put the task's
+  /// current value in the same words: `priority` 1 is "1 (Urgent)", `due`
+  /// "2026-10-17" is "Sat 17 Oct". Nil for a value not worth a row.
+  public static func words(
+    for key: String, value: JSONValue, now: Date = .now, timeZone: TimeZone = .current
+  ) -> String? {
+    display(value, key: key, name: { _ in nil }, now: now, timeZone: timeZone)
+  }
+
+  /// A moment as the tools take it, local and to the minute: what `words`
+  /// reads back as a time rather than a day.
+  public static func stamp(_ date: Date, timeZone: TimeZone = .current) -> String {
+    formatter("yyyy-MM-dd HH:mm", timeZone: timeZone).string(from: date)
+  }
 
   /// Keys whose value is an id the app can put a name to.
   private static let idKeys: Set<String> = [
@@ -177,8 +205,20 @@ public struct AgentToolSummary: Equatable, Sendable {
   /// A value as text, or `nil` for one not worth a row (an empty string).
   /// A present `null` is kept, because in an update it means "clear this".
   private static func display(
-    _ value: JSONValue, key: String, name: (String) -> String?
+    _ value: JSONValue, key: String, name: (String) -> String?,
+    now: Date = .now, timeZone: TimeZone = .current
   ) -> String? {
+    if key == "priority", let level = value.intValue ?? (value == .null ? 0 : nil) {
+      return priorityNames[level].map { "\(level) (\($0))" } ?? "None"
+    }
+    if key == "estimate_minutes", let minutes = value.intValue ?? (value == .null ? 0 : nil) {
+      return minutes > 0 ? duration(minutes: minutes) : "None"
+    }
+    if dateKeys.contains(key), let text = value.stringValue,
+      let date = dateWords(text, now: now, timeZone: timeZone)
+    {
+      return date
+    }
     switch value {
     case .null:
       return key == "folder_id" || key == "parent_task_id" ? "Top level" : "None"
@@ -202,5 +242,52 @@ public struct AgentToolSummary: Equatable, Sendable {
     case .object:
       return value.jsonString()
     }
+  }
+
+  /// "45 min", "1 h 30 min", "2 h".
+  private static func duration(minutes: Int) -> String {
+    let hours = minutes / 60
+    let rest = minutes % 60
+    switch (hours, rest) {
+    case (0, _): return "\(rest) min"
+    case (_, 0): return "\(hours) h"
+    default: return "\(hours) h \(rest) min"
+    }
+  }
+
+  /// A day or a moment in the card's words, or nil for text that is
+  /// neither (Checkvist's `due` takes "friday" as it is).
+  private static func dateWords(_ raw: String, now: Date, timeZone: TimeZone) -> String? {
+    let text = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+    var calendar = Calendar(identifier: .gregorian)
+    calendar.timeZone = timeZone
+    let sameYear = { (date: Date) in
+      calendar.component(.year, from: date) == calendar.component(.year, from: now)
+    }
+    if let day = formatter("yyyy-MM-dd", timeZone: timeZone).date(from: text), text.count == 10 {
+      return formatter(sameYear(day) ? "EEE d MMM" : "EEE d MMM yyyy", timeZone: timeZone, words: true)
+        .string(from: day)
+    }
+    let moment =
+      ["yyyy-MM-dd HH:mm", "yyyy-MM-dd'T'HH:mm", "yyyy-MM-dd HH:mm:ss", "yyyy-MM-dd'T'HH:mm:ss"]
+      .lazy.compactMap { formatter($0, timeZone: timeZone).date(from: text) }.first
+      ?? ISO8601DateFormatter().date(from: text)
+    guard let moment else { return nil }
+    return formatter(
+      sameYear(moment) ? "EEE d MMM, HH:mm" : "EEE d MMM yyyy, HH:mm", timeZone: timeZone, words: true
+    )
+    .string(from: moment)
+  }
+
+  /// Fixed formats parse in POSIX; the card's words are British, as the
+  /// system prompt's date is.
+  private static func formatter(_ format: String, timeZone: TimeZone, words: Bool = false)
+    -> DateFormatter
+  {
+    let formatter = DateFormatter()
+    formatter.locale = Locale(identifier: words ? "en_GB" : "en_US_POSIX")
+    formatter.timeZone = timeZone
+    formatter.dateFormat = format
+    return formatter
   }
 }

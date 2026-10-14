@@ -506,6 +506,23 @@ extension WorkspaceViewModel {
       "parent_task_id": task.parentTaskId.map { self.task(withID: $0)?.title ?? $0 } ?? "Top level",
     ]
     values["list_id"] = (lists + archivedLists).first { $0.id == task.listId }?.name
+    // The schedule, priority and estimate in the card's own words, so
+    // "Fri 17 Oct" is struck through beside "Mon 20 Oct" rather than beside
+    // a stored timestamp. A due day is the planning's; a due time the task's.
+    let planning = taskPlanningByID[task.id]
+    let due: JSONValue =
+      if let day = planning?.dueDate { .string(day) } else if let at = task.dueAt {
+        .string(AgentToolSummary.stamp(at))
+      } else { .null }
+    let current: [String: JSONValue] = [
+      "due": due,
+      "start": planning?.startAt.map { .string(AgentToolSummary.stamp($0)) } ?? .null,
+      "priority": taskPriorities[task.id].map { .int($0) } ?? .null,
+      "estimate_minutes": task.estimateSeconds.map { .int(($0 + 30) / 60) } ?? .null,
+    ]
+    for (key, value) in current {
+      values[key] = AgentToolSummary.words(for: key, value: value) ?? "None"
+    }
     return values
   }
 

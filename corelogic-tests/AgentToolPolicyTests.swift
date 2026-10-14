@@ -104,6 +104,7 @@ final class AgentToolPolicyTests: XCTestCase {
     let text = AgentSystemPrompt.text(today: date, timeZone: TimeZone(identifier: "Europe/London")!)
     XCTAssertTrue(text.contains("2026-09-28"))
     XCTAssertTrue(text.contains("Monday 28 September 2026"))
+    XCTAssertTrue(text.contains("turn a phrase like \"friday\""))
     XCTAssertTrue(text.contains("apply straight away"))
     XCTAssertTrue(text.contains("If they undo one, do not make it again"))
     let asking = AgentSystemPrompt.text(today: date, asksBeforeChanges: true)
@@ -177,6 +178,50 @@ final class AgentToolPolicyTests: XCTestCase {
       name: { _ in "Milk" })
     XCTAssertEqual(
       summary.fields, [.init(label: "Task", value: "Milk"), .init(label: "Column", value: "None")])
+  }
+
+  func testDatesPrioritiesAndEstimatesReadAsWords() {
+    let london = TimeZone(identifier: "Europe/London")!
+    let now = ISO8601DateFormatter().date(from: "2026-10-14T12:00:00Z")!
+    let before = ["due": "None", "priority": "3 (Medium)", "estimate_minutes": "45 min"]
+    let summary = AgentToolSummary.describe(
+      tool: "mcp__takt__workspace_task_update",
+      input: .object([
+        "task_id": .string("T1"), "due": .string("2026-10-16"), "priority": .int(1),
+        "start": .string("2026-10-15 09:30"), "estimate_minutes": .int(90),
+      ]),
+      name: { _ in "Report" }, current: { before[$0] }, now: now, timeZone: london)
+    XCTAssertEqual(
+      summary.fields,
+      [
+        .init(label: "Task", value: "Report"),
+        .init(label: "Due", value: "Fri 16 Oct", previous: "None"),
+        .init(label: "Start", value: "Thu 15 Oct, 09:30"),
+        .init(label: "Priority", value: "1 (Urgent)", previous: "3 (Medium)"),
+        .init(label: "Estimate", value: "1 h 30 min", previous: "45 min"),
+      ])
+  }
+
+  func testClearingAPriorityOrADateSaysNone() {
+    let now = ISO8601DateFormatter().date(from: "2026-10-14T12:00:00Z")!
+    let summary = AgentToolSummary.describe(
+      tool: "mcp__takt__workspace_task_update",
+      input: .object([
+        "task_id": .string("T1"), "due": .null, "priority": .int(0), "estimate_minutes": .null,
+      ]),
+      current: { ["due": "Fri 16 Oct", "priority": "2 (High)"][$0] }, now: now)
+    XCTAssertEqual(
+      summary.fields,
+      [
+        .init(label: "Task", value: "T1"),
+        .init(label: "Due", value: "None", previous: "Fri 16 Oct"),
+        .init(label: "Priority", value: "None", previous: "2 (High)"),
+        .init(label: "Estimate", value: "None"),
+      ])
+    // Another year says which; a phrase Checkvist takes as it is stays as it is.
+    XCTAssertEqual(AgentToolSummary.words(for: "due", value: .string("2027-01-04"), now: now), "Mon 4 Jan 2027")
+    XCTAssertEqual(AgentToolSummary.words(for: "due", value: .string("friday"), now: now), "friday")
+    XCTAssertEqual(AgentToolSummary.words(for: "estimate_minutes", value: .int(120)), "2 h")
   }
 
   func testAnUnknownToolStillGetsWords() {
