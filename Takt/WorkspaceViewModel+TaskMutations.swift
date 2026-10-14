@@ -19,6 +19,7 @@ extension WorkspaceViewModel {
           try store.logContribution(dailyId: daily.id)
           reloadDailies()
           reloadNextUp()
+          refresh([.outline, .board])
         }
       }
       return

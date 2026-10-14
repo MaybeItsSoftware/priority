@@ -22,6 +22,11 @@ final class QuickCapturePanelController: NSObject, NSWindowDelegate {
 
   private var panel: FocusPanelWindow?
   private var interruptedApp: NSRunningApplication?
+  /// When the hotkey last brought the panel up, by the uptime clock.
+  private var shownAt: TimeInterval?
+  /// How long after the hotkey a window of this app taking the keyboard is
+  /// taken as the app settling rather than as a click away.
+  private static let settleInterval: TimeInterval = 0.5
   private weak var model: WorkspaceViewModel?
 
   var isVisible: Bool { panel?.isVisible ?? false }
@@ -36,10 +41,14 @@ final class QuickCapturePanelController: NSObject, NSWindowDelegate {
     if !NSApp.isActive { interruptedApp = NSWorkspace.shared.frontmostApplication }
     position(panel)
     model.beginQuickCapture()
+    // The panel is non-activating, so it takes the keyboard without the app
+    // coming forward — the way Spotlight's does. It used to activate the app
+    // as well, and activation is asynchronous: once it landed, AppKit gave
+    // the keyboard back to the main window, the panel resigned key and put
+    // itself away as if clicked away from, and the title typed next went to
+    // the main window instead, where its `d` was the due-date command.
+    shownAt = ProcessInfo.processInfo.systemUptime
     panel.orderFrontRegardless()
-    panel.makeKey()
-    // Only the panel comes forward, not the main window with it.
-    NSRunningApplication.current.activate()
     panel.makeKeyAndOrderFront(nil)
     DispatchQueue.main.async { [weak panel] in
       guard let panel, panel.isVisible, !panel.isKeyWindow else { return }
@@ -126,7 +135,18 @@ final class QuickCapturePanelController: NSObject, NSWindowDelegate {
   }
 
   func windowDidResignKey(_ notification: Notification) {
-    guard (notification.object as? NSWindow) === panel else { return }
+    guard let panel, (notification.object as? NSWindow) === panel else { return }
+    // A window of this app taking the keyboard in the moment after the
+    // hotkey is the app settling — the main window coming back as key when
+    // Takt activates — not a click away: the panel takes it back.
+    if let shownAt, ProcessInfo.processInfo.systemUptime - shownAt < Self.settleInterval,
+      NSApp.keyWindow != nil {
+      DispatchQueue.main.async { [weak panel] in
+        guard let panel, panel.isVisible else { return }
+        panel.makeKeyAndOrderFront(nil)
+      }
+      return
+    }
     // Clicking away is a change of mind, as it is in Spotlight. The keyboard
     // has already gone where the user sent it, so it is not handed back.
     interruptedApp = nil

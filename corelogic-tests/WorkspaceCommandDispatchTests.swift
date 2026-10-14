@@ -362,6 +362,19 @@ final class WorkspaceCommandDispatchTests: XCTestCase {
     }
   }
 
+  /// ⌃⌥⇧⌘D is quick add's global hotkey and ⌃⌥⇧⌘F the focus panel's. If
+  /// either reached the window as a key, it must not be a command there —
+  /// in particular not ⌘D's or `dd`'s due date.
+  func testTheGlobalHotkeysAreNoWindowCommand() {
+    for (code, character) in [(UInt16(2), "d"), (UInt16(3), "f")] {
+      let hyper = key(code, character, shift: true, ctrl: true, cmd: true, option: true)
+      XCTAssertEqual(hyper, "cmd+ctrl+option+shift+\(character)")
+      for surface in WorkspaceCommandSurface.allCases {
+        XCTAssertNil(WorkspaceCommandCatalog.command(forKey: hyper!, on: surface), "\(surface)")
+      }
+    }
+  }
+
   /// Zed's previous and next tab move between lists. ⌘{ arrives as Shift-[
   /// with Command held, so it is spelled with the brace the key produces.
   func testZedsTabKeysMoveBetweenLists() {

@@ -187,7 +187,17 @@ extension WorkspaceViewModel {
       }
       reloadDailies()
       reloadNextUp()
+      // A commitment's subtask rests once today's is ticked, and is back
+      // the moment it is not; the core's list reads decide, so reread them.
+      refresh([.outline, .board])
     }
+  }
+
+  /// Whether today's appearance of `commitment` is ticked: its subtask is
+  /// resting, out of the outline and boards, and the parent's Repeat row
+  /// says so.
+  func isCommitmentDoneToday(_ commitment: WorkspaceCommitment) -> Bool {
+    dailyItems.contains { $0.daily.id == commitment.dailyId && $0.isDoneToday }
   }
 
   // MARK: - Next up
