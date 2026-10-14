@@ -3,7 +3,11 @@ package uk.co.maybeitsadam.takt.ui.focus
 import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.datastore.preferences.core.stringPreferencesKey
+import androidx.datastore.preferences.core.stringSetPreferencesKey
 import java.time.Instant
+import java.time.ZoneId
+import uniffi.takt_core.StoredFocusContext
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.ImmutableSet
 import kotlinx.collections.immutable.persistentListOf
@@ -19,6 +23,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.flowOn
@@ -42,6 +47,7 @@ import uk.co.maybeitsadam.takt.core.TaskPlanningError
 import uk.co.maybeitsadam.takt.core.TaskPlanningException
 import uk.co.maybeitsadam.takt.core.WorkspaceNextUpSnapshot
 import uk.co.maybeitsadam.takt.data.workspace.FocusCompletionOutcome
+import uk.co.maybeitsadam.takt.data.workspace.emptyFocusContext
 import uk.co.maybeitsadam.takt.ui.today.dayTicks
 import uk.co.maybeitsadam.takt.ui.today.minuteTicks
 
@@ -60,6 +66,10 @@ data class FocusContextState(
     val mode: FocusTimeMode = FocusTimeMode.PROGRESS,
     val time: AvailableTime = AvailableTime.Unlimited,
     val endsAt: Instant? = null,
+    /** When the conditions on were said, here or on another device. */
+    val conditionsSetAt: Instant? = null,
+    /** Said on an earlier day: probably not where you are now. The core's rule, as the Mac's. */
+    val isStale: Boolean = false,
 ) {
     val context: FocusContext get() = FocusContext(selected, endsAt, mode)
 }
@@ -83,6 +93,7 @@ data class FocusUiState(
     val isRunning: Boolean get() = session != null && session.phase != FocusSessionPhase.FINISHED
 }
 
+// Where the context lived before it was the workspace's; moved in once.
 private const val CONDITIONS_KEY = "focus.conditions"
 private const val MODE_KEY = "focus.mode"
 
@@ -92,14 +103,37 @@ class FocusViewModel(private val container: AppContainer) : ViewModel() {
     private val actions = FocusActions(container)
     private val settings = container.settings
 
+    /** How the time you have was chosen here ("30m"), with the end it gave, so the control keeps its label. */
     private val time = MutableStateFlow<Pair<AvailableTime, Instant?>>(AvailableTime.Unlimited to null)
 
-    val contextState: StateFlow<FocusContextState> = combine(
-        settings.stringSet(CONDITIONS_KEY),
-        settings.string(MODE_KEY),
-        time,
-    ) { selected, mode, (available, endsAt) ->
-        FocusContextState(selected.toImmutableSet(), FocusTimeMode.of(mode ?: "") ?: FocusTimeMode.PROGRESS, available, endsAt)
+    /**
+     * What holds now, as the workspace keeps it: shared through sync with the
+     * Mac and the iPhone, and set by the CLI and the agent too.
+     */
+    private val stored: StateFlow<StoredFocusContext?> = container.withSession { session ->
+        session.repository.observeFocusContext(session.workspace.id)
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, null)
+
+    val contextState: StateFlow<FocusContextState> = combine(stored, time, minuteTicks()) { saved, (available, chosenEnd), _ ->
+        val now = Instant.now()
+        val context = saved?.let { uniffi.takt_core.focusContextInForce(it, now.toEpochMilli()) } ?: emptyFocusContext()
+        val until = context.availableUntilMs?.let(Instant::ofEpochMilli)
+        // A window said on another device reads as "until" its end.
+        val shown = when {
+            until == chosenEnd -> available
+            until == null -> AvailableTime.Unlimited
+            else -> AvailableTime.Until(until.atZone(ZoneId.systemDefault()).toLocalTime().withSecond(0).withNano(0))
+        }
+        // The time you have runs to whichever comes first, the window or the context's expiry.
+        val ends = listOfNotNull(until, context.expiresAtMs?.let(Instant::ofEpochMilli)).minOrNull()
+        FocusContextState(
+            selected = context.conditionIds.toImmutableSet(),
+            mode = FocusTimeMode.of(context.mode) ?: FocusTimeMode.PROGRESS,
+            time = shown,
+            endsAt = ends,
+            conditionsSetAt = context.conditionsSetAtMs?.let(Instant::ofEpochMilli),
+            isStale = uniffi.takt_core.focusContextIsStale(context, now.toEpochMilli(), ZoneId.systemDefault().id),
+        )
     }.stateIn(viewModelScope, SharingStarted.Eagerly, FocusContextState())
 
     private val _staged = MutableStateFlow<String?>(null)
@@ -157,9 +191,38 @@ class FocusViewModel(private val container: AppContainer) : ViewModel() {
 
     init {
         StaleFocus.resolveOnce(container)
+        adoptPhoneContext()
     }
 
     // region Context
+
+    /**
+     * Moves the conditions and mode this phone kept in its own settings into
+     * the workspace, once, if the workspace has no context yet; then forgets them.
+     */
+    private fun adoptPhoneContext() {
+        viewModelScope.launch {
+            val ids = settings.stringSet(CONDITIONS_KEY).first()
+            val mode = settings.string(MODE_KEY).first()
+            if (ids.isEmpty() && mode == null) return@launch
+            val session = container.awaitSession()
+            session.repository.adoptPhoneFocusContext(session.workspace.id, ids, mode)
+            settings.edit {
+                it.remove(stringSetPreferencesKey(CONDITIONS_KEY))
+                it.remove(stringPreferencesKey(MODE_KEY))
+            }
+        }
+    }
+
+    /** Saves the context into the workspace, changed by [change]. Not an undo step. */
+    private fun saveContext(change: (StoredFocusContext) -> StoredFocusContext) {
+        viewModelScope.launch {
+            val session = container.awaitSession()
+            val repo = session.repository
+            val current = repo.focusContext(session.workspace.id) ?: emptyFocusContext()
+            repo.saveFocusContext(session.workspace.id, change(current))
+        }
+    }
 
     fun toggleCondition(condition: TaskCondition) {
         val current = contextState.value.selected
@@ -170,16 +233,23 @@ class FocusViewModel(private val container: AppContainer) : ViewModel() {
             condition.isLocation,
             current.toList(),
             state.value.conditions.filter { it.isLocation }.map { it.id },
-        ).toSet()
-        viewModelScope.launch { settings.putStringSet(CONDITIONS_KEY, next) }
+        )
+        saveContext { it.copy(conditionIds = next, suggestedIds = emptyList()) }
+    }
+
+    /** Nothing holds any more: every condition off. Clears a stale answer. */
+    fun clearConditions() {
+        saveContext { it.copy(conditionIds = emptyList(), suggestedIds = emptyList()) }
     }
 
     fun setMode(mode: FocusTimeMode) {
-        viewModelScope.launch { settings.putString(MODE_KEY, mode.raw) }
+        saveContext { it.copy(mode = mode.raw) }
     }
 
     fun setAvailable(available: AvailableTime, now: Instant = Instant.now()) {
-        time.value = available to FocusText.endsAt(available, now)
+        val ends = FocusText.endsAt(available, now)
+        time.value = available to ends
+        saveContext { it.copy(availableUntilMs = ends?.toEpochMilli()) }
     }
 
     /** Makes a condition under a category (null for none; "Location" makes it a place). */

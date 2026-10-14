@@ -258,6 +258,9 @@ private struct FocusContextControls: View {
         }
         .padding(.vertical, 1)
       }
+      if focus.isContextStale {
+        staleContext
+      }
       if !focus.suggestedContextIDs.isEmpty {
         suggestedContext
       }
@@ -306,6 +309,27 @@ private struct FocusContextControls: View {
         + "Location, Equipment… Location is one place at a time.")
     }
     .sheet(isPresented: $showsConditions) { ConditionsSheet() }
+  }
+
+  /// Said on an earlier day, here or on another device: probably not where
+  /// you are now. The Mac's notice, in the same words.
+  private var staleContext: some View {
+    HStack(spacing: theme.space.sm) {
+      Image(systemName: "clock.badge.exclamationmark")
+        .foregroundStyle(theme.warning)
+      Text(focus.conditionsSetAt.map {
+        "Set \($0.formatted(.relative(presentation: .named))) — still true?"
+      } ?? "Set on an earlier day — still true?")
+        .font(theme.type.caption)
+        .foregroundStyle(theme.muted)
+        .lineLimit(2)
+      Spacer(minLength: 0)
+      Button("Clear") { focus.clearConditions() }
+        .font(theme.type.caption)
+        .foregroundStyle(theme.primary)
+        .accessibilityIdentifier("focus.clearStaleContext")
+    }
+    .buttonStyle(.plain)
   }
 
   /// "Last context: Office, Laptop — Use again". What an expired context

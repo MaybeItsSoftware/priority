@@ -33,6 +33,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -313,6 +314,24 @@ private fun ContextControls(state: FocusUiState, context: FocusContextState, vm:
                         onClick = { vm.toggleCondition(condition) },
                     )
                 }
+            }
+        }
+        // Said on an earlier day, here or on another device: probably not
+        // where you are now. The Mac's notice, in the same words.
+        if (context.isStale) {
+            Row(
+                Modifier.fillMaxWidth().padding(horizontal = Metrics.lg).testTag("focus_context_stale"),
+                horizontalArrangement = Arrangement.spacedBy(Metrics.sm),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(Icons.Filled.Warning, contentDescription = null, tint = TaktTheme.colors.warning, modifier = Modifier.size(16.dp))
+                Text(
+                    "Set on an earlier day — still true?",
+                    style = TaktTheme.type.small,
+                    color = TaktTheme.colors.mutedText,
+                    modifier = Modifier.weight(1f),
+                )
+                Tag("Clear", color = TaktTheme.colors.primary, onClick = { vm.clearConditions() })
             }
         }
         Text("Time you have", style = TaktTheme.type.label, color = TaktTheme.colors.mutedText, modifier = Modifier.padding(start = Metrics.lg, end = Metrics.lg, top = Metrics.xs))

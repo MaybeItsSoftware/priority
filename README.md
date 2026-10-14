@@ -433,7 +433,10 @@ the status bar's indicator and the tab show it in the warning colour, with
   off. A **Location** replaces the last one, since you are in one place at a
   time; other conditions combine. `c` clears them all. Under the rows are an available-time window, a
   goal (make progress or finish something) and an expiry. What you set is kept
-  across relaunches; a context that expires is offered back with **Use
+  across relaunches and follows you across your devices: say you are at
+  Campus on the phone and the Mac knows, and the last device to say where
+  you are wins. A context said on an earlier day is flagged as possibly
+  stale on every device. A context that expires is offered back with **Use
   again** (`Shift+U`).
 - **Conditions**: a new-condition row (`a` or `Cmd+N` puts the caret in it,
   `Return` makes the condition, filed under the category in the menu beside

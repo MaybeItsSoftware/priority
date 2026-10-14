@@ -690,6 +690,46 @@ class WorkspaceRepository(
         coreWrite { it.setConditionCategory(id, category, now.toEpochMilli()) }
     }
 
+    /**
+     * What holds now, as the workspace keeps it (`focus_contexts`), or null if
+     * it never was said: the Rust core's `focus_context::load`. The row syncs,
+     * so this is the same answer the Mac, the iPhone, the CLI and the agent see.
+     */
+    suspend fun focusContext(workspaceId: String): uniffi.takt_core.StoredFocusContext? =
+        database.read { it.core.focusContext(workspaceId) }
+
+    /** [focusContext], again whenever it changes here, on another device or through the CLI. */
+    fun observeFocusContext(workspaceId: String): Flow<uniffi.takt_core.StoredFocusContext?> =
+        database.observe(setOf("focus_contexts")) { it.core.focusContext(workspaceId) }
+
+    /**
+     * Saves what holds now: the Rust core's `focus_context::save`, which stamps
+     * when the conditions on were said. Not an undo step. False when nothing changed.
+     */
+    suspend fun saveFocusContext(
+        workspaceId: String,
+        context: uniffi.takt_core.StoredFocusContext,
+        now: Instant = now(),
+    ): Boolean = coreWrite { it.saveFocusContext(workspaceId, context, now.toEpochMilli()) }
+
+    /**
+     * Moves a context this phone kept in its own settings, before the context
+     * was the workspace's, into the workspace — once, and only when the
+     * workspace has none: the phone's carried no time, so an answer the
+     * workspace already holds (from this phone's sync or another device) is
+     * the newer one. Returns whether it moved.
+     */
+    suspend fun adoptPhoneFocusContext(
+        workspaceId: String,
+        conditionIds: Set<String>,
+        mode: String?,
+        now: Instant = now(),
+    ): Boolean {
+        if (conditionIds.isEmpty() && mode == null) return false
+        if (focusContext(workspaceId) != null) return false
+        return saveFocusContext(workspaceId, emptyFocusContext().copy(conditionIds = conditionIds.sorted(), mode = mode ?: "progress"), now)
+    }
+
     /** The conditions an open task requires: the Rust core's `conditions::required_condition_ids`. */
     suspend fun requiredConditionIds(workspaceId: String): Set<String> =
         database.read { it.core.requiredConditionIds(workspaceId).toSet() }
@@ -1157,4 +1197,14 @@ data class BoardMetadata(val columns: Map<String, String>, val positions: Map<St
 internal fun emptyMetadata(taskId: String, now: Instant) = TaskMetadata(
     taskId = taskId, priority = null, startAt = null, tagsJSON = "[]", recurrenceRule = null, matrixUrgency = null,
     matrixImportance = null, kanbanColumn = null, externalLinksJSON = "[]", focusRank = null, updatedAt = now,
+)
+
+/** What holds when nothing has been said: no conditions, no limits, making progress. */
+fun emptyFocusContext(): uniffi.takt_core.StoredFocusContext = uniffi.takt_core.StoredFocusContext(
+    conditionIds = emptyList(),
+    conditionsSetAtMs = null,
+    availableUntilMs = null,
+    expiresAtMs = null,
+    mode = "progress",
+    suggestedIds = emptyList(),
 )

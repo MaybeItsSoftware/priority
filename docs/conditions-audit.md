@@ -20,8 +20,11 @@ is polish.
   out of the day, the panel and next up.
 - The Mac edits requirements with `cc` and the inspector; it sets the
   context and manages conditions in the right dock's Conditions tab. The
-  phones set their own context on the Focus screen, and the iPhone has a
-  Conditions sheet.
+  phones set the same context on the Focus screen ("Where you are"), and the
+  iPhone has a Conditions sheet.
+- The context is one row per workspace, `focus_contexts`, synced since
+  `v28_synced_focus_context`: every client, the CLI and the agent read and
+  write the same row, and the last device to say where you are wins.
 
 ## Findings
 
@@ -37,7 +40,7 @@ is polish.
 | 8 | Medium | Archived conditions sat among the live ones under their categories, and a long category could not be put away. | **Fixed.** Archived conditions are a collapsed **Archived** section at the foot; `z` folds the category under the cursor (`⇧Z` folds or unfolds them all), remembered per workspace. |
 | 9 | Medium | Saying where you are took the dock: `⌥⌘8`, walk to the place, `Space`, `Esc` — four or more keys, away from the work. | **Fixed.** **Say where you are…** (`gw`, palette) is a finder of the places, plus *Anywhere*: type a few letters and `Return`. |
 | 10 | Low | Three names for one thing: "Available now" (Mac), "Where you are" (phones), "focus context" (code). | **Kept.** "Available now" stays the Mac's heading; the new place finder is "Say where you are…", which is what it does. The code keeps "context". |
-| 11 | Low | The phones keep their own context in their own settings, and have no reordering, merging or category renaming. | **Deferred.** The phones read the order, the open-task counts and merged requirements from the core, so nothing they show is wrong. Moving their context into `focus_contexts` and adding the organising gestures is the next step. |
+| 11 | Low | The phones keep their own context in their own settings, and have no reordering, merging or category renaming. | **Context fixed; gestures deferred.** The iPhone and Android read and write `focus_contexts` through the core, moving the context their own settings held into it once on first launch when the workspace had none, and flag a stale context under "Where you are". The phones read the order, the open-task counts and merged requirements from the core, so nothing they show is wrong; reordering, merging and category renaming on the phones are still to come. |
 | 12 | Low | A filter list cannot filter by condition ("everything that needs Campus"). | **Deferred.** It needs a new value kind in every client's rule editor; `o` in the tab and `workspace_conditions` with `condition` cover the question meanwhile. |
 | 13 | Low | Making a condition whose name already exists (in any case) made a second one. | **Fixed.** Creating a condition named like a live one returns that one. |
-| 14 | Low | The context is not synced: saying you are at Campus on the phone does not tell the Mac. | **Deferred, on purpose.** `focus_contexts` is local; sharing it is a product decision (one person, several devices, several places at once), not a fix. |
+| 14 | Low | The context is not synced: saying you are at Campus on the phone does not tell the Mac. | **Fixed.** The decision was one shared answer: you are in one place, whichever device you say it on. `v28_synced_focus_context` syncs `focus_contexts` (one row per workspace, keyed by the workspace, which every paired device shares). Every change pushes the whole row (`triggers::WHOLE_ROW_TABLES`), so the server's per-column merge keeps one device's answer rather than a mix, and the last device to write wins by the sync clock. `conditionsSetAt` travels with it, so a context said yesterday on the phone is stale on the Mac too. A device that joins brings its context into the account's workspace when that has none or its own is newer (`focus_context::adopt`). |

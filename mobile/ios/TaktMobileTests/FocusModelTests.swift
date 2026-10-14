@@ -130,6 +130,50 @@ final class FocusModelTests: XCTestCase {
     XCTAssertTrue(focus.suggestedContextIDs.isEmpty)
   }
 
+  /// The context is the workspace's: what this screen says is saved there,
+  /// for the Mac and the other phones through sync, and what another device
+  /// says lands here on the next load.
+  func testTheContextIsTheWorkspacesBothWays() throws {
+    let office = try XCTUnwrap(model.createCondition(named: "Office", isLocation: true))
+    let laptop = try XCTUnwrap(model.createCondition(named: "Laptop", category: "Equipment"))
+    focus.loadNow()
+    focus.toggleCondition(office)
+    focus.mode = .finish
+    let saved = try XCTUnwrap(model.store.focusContext(in: model.workspace.id))
+    XCTAssertEqual(saved.conditionIDs, [office.id])
+    XCTAssertEqual(saved.mode, .finish)
+    XCTAssertNotNil(focus.conditionsSetAt)
+    XCTAssertFalse(focus.isContextStale)
+
+    // Said elsewhere — on the Mac, synced in, or by the agent.
+    try model.store.saveFocusContext(SavedFocusContext(conditionIDs: [laptop.id]), in: model.workspace.id)
+    focus.loadNow()
+    XCTAssertEqual(focus.conditionIDs, [laptop.id])
+    XCTAssertEqual(focus.mode, .progress)
+    XCTAssertEqual(FocusModel(model: model).conditionIDs, [laptop.id], "a fresh screen reads it too")
+  }
+
+  /// Conditions kept in the phone's own settings before the context was the
+  /// workspace's move into it once, unless the workspace already has one.
+  func testThePhonesOwnContextMovesIntoTheWorkspaceOnce() throws {
+    let office = try XCTUnwrap(model.createCondition(named: "Office", isLocation: true))
+    let key = "focus-context-\(model.workspace.id)"
+    defer { AppGroup.defaults.removeObject(forKey: key) }
+    try model.store.saveFocusContext(SavedFocusContext(), in: model.workspace.id)
+    AppGroup.defaults.set([office.id], forKey: key)
+    XCTAssertTrue(FocusModel(model: model).conditionIDs.isEmpty, "the workspace's answer stands")
+    XCTAssertNil(AppGroup.defaults.stringArray(forKey: key))
+
+    let fresh = try WorkspaceModel.temporary()
+    let place = try XCTUnwrap(fresh.createCondition(named: "Home", isLocation: true))
+    let freshKey = "focus-context-\(fresh.workspace.id)"
+    defer { AppGroup.defaults.removeObject(forKey: freshKey) }
+    AppGroup.defaults.set([place.id], forKey: freshKey)
+    XCTAssertEqual(FocusModel(model: fresh).conditionIDs, [place.id])
+    XCTAssertEqual(try fresh.store.focusContext(in: fresh.workspace.id)?.conditionIDs, [place.id])
+    XCTAssertNil(AppGroup.defaults.stringArray(forKey: freshKey))
+  }
+
   func testAClockJumpRebasesTheRunningBlockToTheTimeActuallyWorked() throws {
     let task = try add("Draft")
     focus.loadNow()

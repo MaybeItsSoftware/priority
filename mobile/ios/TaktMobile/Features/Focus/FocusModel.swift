@@ -82,24 +82,32 @@ final class FocusModel {
 
   // MARK: Context
 
-  var conditionIDs: Set<String> {
-    didSet {
-      guard conditionIDs != oldValue else { return }
-      AppGroup.defaults.set(Array(conditionIDs).sorted(), forKey: contextKey)
-      contextVersion &+= 1
-    }
-  }
+  // The context is the workspace's (`focus_contexts`), shared with the Mac,
+  // Android, the CLI and the agent through sync: every change is saved there,
+  // and `restoreContext` reads it back after a write anywhere.
+  var conditionIDs: Set<String> = [] { didSet { if conditionIDs != oldValue { contextChanged() } } }
   /// The end of the time you have, or nil for no limit.
-  var availableUntil: Date? { didSet { if availableUntil != oldValue { contextVersion &+= 1 } } }
+  var availableUntil: Date? { didSet { if availableUntil != oldValue { contextChanged() } } }
   /// When the conditions you said were true stop being trusted — "at the
   /// office until 5". Past it, the context is set aside and the last one is
   /// offered back rather than assumed. The Mac's `contextExpiresAt`.
-  var contextExpiresAt: Date? { didSet { if contextExpiresAt != oldValue { contextVersion &+= 1 } } }
+  var contextExpiresAt: Date? { didSet { if contextExpiresAt != oldValue { contextChanged() } } }
   /// The conditions an expired context held, offered back with "Use again".
-  var suggestedContextIDs: Set<String> = []
-  var mode: FocusTimeMode = .progress { didSet { if mode != oldValue { contextVersion &+= 1 } } }
+  var suggestedContextIDs: Set<String> = [] { didSet { if suggestedContextIDs != oldValue { contextChanged() } } }
+  var mode: FocusTimeMode = .progress { didSet { if mode != oldValue { contextChanged() } } }
+  /// When the conditions on were said, on whichever device said them.
+  private(set) var conditionsSetAt: Date?
   /// Moves when the context does, so the ladder is ranked again.
   private(set) var contextVersion = 0
+  /// Set while the stored context is being put back, so putting it back is
+  /// not saved again as a new answer.
+  @ObservationIgnored private var isRestoringContext = false
+
+  /// Whether the conditions on were said on an earlier day: a place left on
+  /// overnight is probably not where you are. The core's rule, as the Mac's.
+  var isContextStale: Bool {
+    FocusContextSelection.isStale(conditionIDs, setAt: conditionsSetAt, now: .now)
+  }
 
   /// The context the ranking sees. The time you have runs to whichever
   /// comes first, your stated end or the context's expiry: a context that
@@ -126,11 +134,12 @@ final class FocusModel {
   @ObservationIgnored private var lastUptime = ProcessInfo.processInfo.systemUptime
   @ObservationIgnored private var lastTimeZone = TimeZone.current.identifier
 
-  private var contextKey: String { "focus-context-\(model.workspace.id)" }
+  /// Where the conditions on lived before they were the workspace's.
+  private var legacyContextKey: String { "focus-context-\(model.workspace.id)" }
 
   init(model: WorkspaceModel) {
     self.model = model
-    conditionIDs = Set(AppGroup.defaults.stringArray(forKey: "focus-context-\(model.workspace.id)") ?? [])
+    restoreContext()
   }
 
   var lastAward: FocusAward? { model.lastBlockResult?.award }
@@ -158,6 +167,7 @@ final class FocusModel {
 
   /// Ranks off the main actor and lands the result if nothing newer was asked.
   func load() async {
+    restoreContext()
     generation &+= 1
     let mine = generation
     let store = model.store
@@ -172,6 +182,7 @@ final class FocusModel {
 
   /// Ranks on the spot. Tests, and callers that read the ladder next line.
   func loadNow() {
+    restoreContext()
     generation &+= 1
     if let result = try? FocusSnapshot.load(store: model.store, workspaceID: model.workspace.id, context: context) {
       apply(result)
@@ -186,6 +197,50 @@ final class FocusModel {
   }
 
   // MARK: - Context
+
+  /// Puts back the context as the workspace holds it — said here, on another
+  /// device or by the agent. The first time, conditions kept only in this
+  /// phone's own settings move into the workspace, unless it already holds
+  /// an answer: the phone's had no time on it, so it never beats one that does.
+  func restoreContext() {
+    let store = model.store
+    let workspaceID = model.workspace.id
+    var saved = (try? store.focusContext(in: workspaceID)) ?? nil
+    if let legacy = AppGroup.defaults.stringArray(forKey: legacyContextKey) {
+      AppGroup.defaults.removeObject(forKey: legacyContextKey)
+      if saved == nil, !legacy.isEmpty {
+        let moved = SavedFocusContext(conditionIDs: Set(legacy))
+        _ = try? store.saveFocusContext(moved, in: workspaceID)
+        saved = (try? store.focusContext(in: workspaceID)) ?? moved
+      }
+    }
+    guard let saved else { return }
+    isRestoringContext = true
+    defer { isRestoringContext = false }
+    let before = contextVersion
+    conditionIDs = saved.conditionIDs
+    availableUntil = saved.availableUntil
+    contextExpiresAt = saved.expiresAt
+    suggestedContextIDs = saved.suggestedIDs
+    mode = saved.mode
+    if conditionsSetAt != saved.conditionsSetAt {
+      conditionsSetAt = saved.conditionsSetAt
+      if contextVersion == before { contextVersion &+= 1 }
+    }
+  }
+
+  /// Every change to the context: the ladder is ranked again and, unless it
+  /// came from the workspace, the change is saved there for every device.
+  private func contextChanged() {
+    contextVersion &+= 1
+    guard !isRestoringContext else { return }
+    let context = SavedFocusContext(
+      conditionIDs: conditionIDs, availableUntil: availableUntil, expiresAt: contextExpiresAt,
+      mode: mode, suggestedIDs: suggestedContextIDs)
+    let workspaceID = model.workspace.id
+    _ = try? model.store.saveFocusContext(context, in: workspaceID)
+    conditionsSetAt = ((try? model.store.focusContext(in: workspaceID)) ?? nil)?.conditionsSetAt
+  }
 
   func toggleCondition(_ condition: TaskCondition) {
     suggestedContextIDs = []
@@ -213,6 +268,12 @@ final class FocusModel {
     contextExpiresAt = nil
     conditionIDs = []
     model.showToast("Your context expired")
+  }
+
+  /// Nothing holds any more: every condition off.
+  func clearConditions() {
+    suggestedContextIDs = []
+    conditionIDs = []
   }
 
   /// Puts back the conditions an expired context held.
