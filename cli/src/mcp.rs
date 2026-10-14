@@ -745,7 +745,7 @@ fn workspace_tool_definitions() -> Vec<Value> {
         }),
         json!({
             "name": "workspace_task_update",
-            "description": "Change a local task's title, notes, external links (replaces the whole set), status, kanban column, kind, sidebar pin, or what it is waiting on and when to follow up. Fields left out are unchanged; one call is one undo step. Completing a repeating task writes its next occurrence, as Takt does.",
+            "description": "Change a local task's title, notes, external links (replaces the whole set), status, kanban column, kind, sidebar pin, what it is waiting on and when to follow up, its due date, start, priority or estimate. Fields left out are unchanged; null clears one. One call is one undo step. Completing a repeating task writes its next occurrence, as Takt does. Dates are ISO only: turn a phrase like \"friday\" or \"next week\" into a date yourself, from today's date, before calling.",
             "inputSchema": {
                 "type": "object",
                 "properties": {
@@ -770,6 +770,22 @@ fn workspace_tool_definitions() -> Vec<Value> {
                     "follow_up_at": {
                         "type": ["string", "null"],
                         "description": "When to chase it: 2026-10-08 14:00 (local) or RFC 3339. Files it in the waiting-on column; if it is still waiting then, Takt adds a 'Follow up' task to Today. Null or empty clears it.",
+                    },
+                    "due": {
+                        "type": ["string", "null"],
+                        "description": "When it is due. A date (2026-10-17) means any time that day; a date and time (2026-10-17 17:00, local, or RFC 3339) means by then. Replaces whichever it had. Null or empty clears it.",
+                    },
+                    "start": {
+                        "type": ["string", "null"],
+                        "description": "When it may start: a date (the start of that day, local) or a date and time (2026-10-20 09:00, local, or RFC 3339). Must come before the due date. Null or empty clears it.",
+                    },
+                    "priority": {
+                        "type": ["integer", "null"], "minimum": 0, "maximum": 4,
+                        "description": "1 urgent, 2 high, 3 medium, 4 low. Null or 0 clears it.",
+                    },
+                    "estimate_minutes": {
+                        "type": ["integer", "null"], "minimum": 0,
+                        "description": "How long it will take, in minutes. Null or 0 clears it.",
                     },
                 },
                 "required": ["task_id"],

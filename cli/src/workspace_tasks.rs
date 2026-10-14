@@ -115,6 +115,8 @@ struct TaskRow {
     follow_up_at: Option<String>,
     follow_up_of: Option<String>,
     planning_json: Option<String>,
+    priority: Option<i64>,
+    start_at: Option<String>,
     /// The conditions it requires, by name: every group must hold, any one
     /// condition in a group will do. Filled in by [`task_rows`].
     requires: Vec<Vec<String>>,
@@ -143,6 +145,8 @@ impl TaskRow {
             follow_up_at: row.get(18)?,
             follow_up_of: row.get(19)?,
             planning_json: row.get(20)?,
+            priority: row.get(21)?,
+            start_at: row.get(22)?,
             requires: Vec::new(),
         })
     }
@@ -153,6 +157,14 @@ impl TaskRow {
 
     fn is_list(&self) -> bool {
         self.item_kind.as_deref() == Some("list")
+    }
+
+    /// The planning's due day, `yyyy-MM-dd`, if it has one.
+    fn due_date(&self) -> Option<String> {
+        self.planning_json
+            .as_deref()
+            .and_then(|json| takt_core::planning::Planning::from_json(json).ok())
+            .and_then(|planning| planning.due_date)
     }
 
     fn to_json(&self) -> Value {
@@ -180,6 +192,17 @@ impl TaskRow {
             if field.is_some() {
                 object.insert(key.into(), json!(local_string(field)));
             }
+        }
+        // A due day, the editor's "any time that day", lives in the
+        // planning; a due time in `due_at`. A task has one or the other.
+        if let Some(day) = self.due_date() {
+            object.insert("due_date".into(), json!(day));
+        }
+        if self.start_at.is_some() {
+            object.insert("start_at".into(), json!(local_string(&self.start_at)));
+        }
+        if let Some(priority) = self.priority.filter(|p| (1..=4).contains(p)) {
+            object.insert("priority".into(), json!(priority));
         }
         if let Some(seconds) = self.estimate_seconds {
             object.insert("estimate_seconds".into(), json!(seconds));
@@ -276,6 +299,17 @@ pub struct TaskEdit {
     /// When to chase it, as typed: `2026-10-08 14:00`, local time, or RFC 3339.
     /// `Some(None)` clears it. The app makes the follow-up task when it is due.
     pub follow_up_at: Option<Option<String>>,
+    /// When it is due, as typed: `2026-10-17` for any time that day (the
+    /// editor's due date), `2026-10-17 17:00` local or RFC 3339 for a due
+    /// time. `Some(None)` clears both.
+    pub due: Option<Option<String>>,
+    /// When it may start, as typed: a day (its start, local time), a local
+    /// time or RFC 3339. `Some(None)` clears it.
+    pub start: Option<Option<String>>,
+    /// 1 (urgent) to 4 (low). `Some(None)` clears it.
+    pub priority: Option<Option<i64>>,
+    /// How long it takes, in minutes. `Some(None)` clears it.
+    pub estimate_minutes: Option<Option<i64>>,
 }
 
 impl TaskEdit {
@@ -292,6 +326,10 @@ impl TaskEdit {
             self.kind.is_some(),
             self.pinned.is_some(),
             self.waiting_on.is_some() || self.follow_up_at.is_some(),
+            self.due.is_some(),
+            self.start.is_some(),
+            self.priority.is_some(),
+            self.estimate_minutes.is_some(),
         ]
         .iter()
         .filter(|set| **set)
@@ -312,6 +350,15 @@ impl TaskEdit {
         }
         if self.waiting_on.is_some() || self.follow_up_at.is_some() {
             return "Waiting On";
+        }
+        if self.due.is_some() {
+            return "Set Due Date";
+        }
+        if self.start.is_some() {
+            return "Schedule Task";
+        }
+        if self.priority.is_some() {
+            return "Set Priority";
         }
         match (self.kind.as_deref(), self.pinned) {
             (Some("list"), _) => "Convert to List",
@@ -535,7 +582,8 @@ impl Workspace {
         if edit.is_empty() {
             return Err(ToolError::new(
                 "No updates provided. Pass title, notes, external_links, status, kanban_column, \
-                 kind, pinned, waiting_on and/or follow_up_at.",
+                 kind, pinned, waiting_on, follow_up_at, due, start, priority and/or \
+                 estimate_minutes.",
             ));
         }
         let title = edit
@@ -560,6 +608,41 @@ impl Workspace {
             Some(_) => Some(None),
             None => None,
         };
+        let due = match edit.due.as_ref() {
+            Some(Some(text)) if !text.trim().is_empty() => Some(Some(parse_when(text, "due")?)),
+            Some(_) => Some(None),
+            None => None,
+        };
+        let start = match edit.start.as_ref() {
+            Some(Some(text)) if !text.trim().is_empty() => {
+                Some(Some(parse_when(text, "start")?.start_ms()))
+            }
+            Some(_) => Some(None),
+            None => None,
+        };
+        let priority = match edit.priority {
+            // 0 is the app's own "clear the priority" key.
+            Some(Some(0) | None) => Some(None),
+            Some(Some(level @ 1..=4)) => Some(Some(level)),
+            Some(Some(other)) => {
+                return Err(ToolError::new(format!(
+                    "priority must be 1 (urgent), 2 (high), 3 (medium) or 4 (low), or null to \
+                     clear it, not {other}."
+                )));
+            }
+            None => None,
+        };
+        let estimate_seconds = match edit.estimate_minutes {
+            Some(Some(0) | None) => Some(None),
+            Some(Some(minutes)) if minutes > 0 => Some(Some(minutes * 60)),
+            Some(Some(other)) => {
+                return Err(ToolError::new(format!(
+                    "estimate_minutes must be a positive number of minutes, or null to clear \
+                     it, not {other}."
+                )));
+            }
+            None => None,
+        };
         let label = edit.label();
 
         self.journalled(label, |tx, _now| {
@@ -572,18 +655,49 @@ impl Workspace {
                     .map(|at| at.timestamp_millis())
             };
 
-            if title.is_some() || edit.notes.is_some() {
+            // Moving the start and the deadline together: the start goes
+            // last, so neither is checked against the other's old value.
+            if start.is_some() && due.is_some() && task.start_at.is_some() {
+                takt_core::editor::schedule_task(tx, &task.id, None, now_ms, &zone)
+                    .map_err(map_core_error)?;
+            }
+
+            let due_at = match &due {
+                Some(Some(When::At(at))) => Some(*at),
+                _ => None,
+            };
+            if title.is_some()
+                || edit.notes.is_some()
+                || estimate_seconds.is_some()
+                || due_at.is_some()
+            {
                 takt_core::editor::update_task(
                     tx,
                     &task.id,
                     title.as_deref().unwrap_or(&task.title),
                     edit.notes.as_deref().unwrap_or(&task.notes),
-                    stored_ms(task.due_at.as_deref()),
-                    task.estimate_seconds,
+                    due_at.or_else(|| stored_ms(task.due_at.as_deref())),
+                    estimate_seconds.unwrap_or(task.estimate_seconds),
                     now_ms,
                     &zone,
                 )
                 .map_err(map_core_error)?;
+            }
+            // A due day replaces a due time, and clearing clears both.
+            match &due {
+                Some(Some(When::Day(day))) => {
+                    takt_core::editor::set_due_day(tx, &task.id, Some(day), now_ms, &zone)
+                        .map_err(map_core_error)?;
+                }
+                Some(None) => {
+                    takt_core::editor::set_due_day(tx, &task.id, None, now_ms, &zone)
+                        .map_err(map_core_error)?;
+                }
+                _ => {}
+            }
+            if let Some(start) = start {
+                takt_core::editor::schedule_task(tx, &task.id, start, now_ms, &zone)
+                    .map_err(map_core_error)?;
             }
 
             if let Some(status) = edit.status.as_deref()
@@ -593,11 +707,16 @@ impl Workspace {
                     .map_err(map_core_error)?;
             }
 
-            if let Some(links) = edit.external_links.as_ref() {
+            if edit.external_links.is_some() || priority.is_some() {
                 let mut metadata = takt_core::editor::snapshot(tx, &task.id)
                     .map_err(map_core_error)?
                     .metadata;
-                metadata.external_links = links.clone();
+                if let Some(links) = edit.external_links.as_ref() {
+                    metadata.external_links = links.clone();
+                }
+                if let Some(priority) = priority {
+                    metadata.priority = priority;
+                }
                 takt_core::editor::update_editor_metadata(tx, &task.id, &metadata, now_ms)
                     .map_err(map_core_error)?;
             }
@@ -1054,7 +1173,7 @@ fn task_rows<P: rusqlite::Params>(
     };
     let mut statement = connection
         .prepare(&format!(
-            "SELECT {TASK_COLUMNS}, {waiting}, m.planningJSON FROM tasks t \
+            "SELECT {TASK_COLUMNS}, {waiting}, m.planningJSON, m.priority, m.startAt FROM tasks t \
              LEFT JOIN task_metadata m ON m.taskId = t.id \
              WHERE {filter} ORDER BY t.sortOrder, t.createdAt, t.id"
         ))
@@ -1200,6 +1319,18 @@ fn has_migration(connection: &Connection, identifier: &str) -> Result<bool> {
 /// A follow-up time as stored: UTC, whole minutes. Takes `2026-10-08 14:00`
 /// or `2026-10-08T14:00` in local time, or an RFC 3339 instant.
 fn parse_follow_up(text: &str) -> Result<String> {
+    let text = text.trim();
+    let instant = parse_instant(text).ok_or_else(|| {
+        ToolError::new(format!(
+            "follow_up_at must be a date and time such as 2026-10-08 14:00, not \"{text}\"."
+        ))
+    })?;
+    Ok(stored_string(instant))
+}
+
+/// A moment, to the minute: `2026-10-08 14:00` or `2026-10-08T14:00` in
+/// local time, or an RFC 3339 instant.
+fn parse_instant(text: &str) -> Option<chrono::DateTime<Utc>> {
     use chrono::{DateTime, Local, NaiveDateTime, TimeZone, Timelike};
     let text = text.trim();
     let instant = DateTime::parse_from_rfc3339(text)
@@ -1216,17 +1347,54 @@ fn parse_follow_up(text: &str) -> Result<String> {
             .find_map(|format| NaiveDateTime::parse_from_str(text, format).ok())
             .and_then(|naive| Local.from_local_datetime(&naive).earliest())
             .map(|local| local.with_timezone(&Utc))
-        })
+        })?;
+    Some(
+        instant
+            .with_second(0)
+            .and_then(|date| date.with_nanosecond(0))
+            .unwrap_or(instant),
+    )
+}
+
+/// A due or start value: a whole day, or a moment.
+enum When {
+    /// `yyyy-MM-dd`.
+    Day(String),
+    /// Unix milliseconds, whole minutes.
+    At(i64),
+}
+
+impl When {
+    /// A start on a day starts at the beginning of it, local time.
+    fn start_ms(&self) -> i64 {
+        use chrono::{Local, NaiveDate, TimeZone};
+        match self {
+            When::At(at) => *at,
+            When::Day(day) => NaiveDate::parse_from_str(day, "%Y-%m-%d")
+                .ok()
+                .and_then(|date| date.and_hms_opt(0, 0, 0))
+                .and_then(|midnight| Local.from_local_datetime(&midnight).earliest())
+                .map(|local| local.timestamp_millis())
+                .unwrap_or_default(),
+        }
+    }
+}
+
+/// `2026-10-17` is a day; anything [`parse_follow_up`] reads is a moment.
+fn parse_when(text: &str, field: &str) -> Result<When> {
+    let text = text.trim();
+    if let Ok(day) = chrono::NaiveDate::parse_from_str(text, "%Y-%m-%d") {
+        return Ok(When::Day(day.format("%Y-%m-%d").to_string()));
+    }
+    parse_instant(text)
+        .map(|at| When::At(at.timestamp_millis()))
         .ok_or_else(|| {
             ToolError::new(format!(
-                "follow_up_at must be a date and time such as 2026-10-08 14:00, not \"{text}\"."
+                "{field} must be a date such as 2026-10-17, or a date and time such as \
+                 2026-10-17 17:00, not \"{text}\". Work out a phrase like \"friday\" from today's \
+                 date first."
             ))
-        })?;
-    let minute = instant
-        .with_second(0)
-        .and_then(|date| date.with_nanosecond(0))
-        .unwrap_or(instant);
-    Ok(stored_string(minute))
+        })
 }
 
 /// `WorkspaceStore.nonEmptyName`.
@@ -1284,6 +1452,9 @@ fn map_core_error(error: takt_core::CoreError) -> ToolError {
         refused @ (takt_core::CoreError::InvalidFolderMove
         | takt_core::CoreError::InvalidTaskMove
         | takt_core::CoreError::DependencyCycle
+        | takt_core::CoreError::InvalidSchedule
+        | takt_core::CoreError::InvalidDate
+        | takt_core::CoreError::EstimateRequired
         | takt_core::CoreError::EmptyName) => ToolError::new(refused.to_string()),
         permanent @ takt_core::CoreError::SystemListIsPermanent => {
             ToolError::new(permanent.to_string())

@@ -431,6 +431,137 @@ fn waiting_on_and_a_follow_up_file_the_task_in_waiting_on() {
 }
 
 #[test]
+fn due_start_priority_and_estimate_set_and_clear() {
+    let fixture = Fixture::new();
+    let id = fixture.add(PROJECTS, "File the report", None);
+
+    // A day is the editor's "any time that day": the planning's due date.
+    let dated = fixture.call(
+        "workspace_task_update",
+        json!({ "task_id": id, "due": "2026-10-16" }),
+    );
+    assert_eq!(dated["due_date"], json!("2026-10-16"));
+    assert_eq!(dated.get("due_at"), None);
+    assert_eq!(fixture.journal().last().unwrap().0, "MCP: Set Due Date");
+
+    // A time replaces the day.
+    let timed = fixture.call(
+        "workspace_task_update",
+        json!({ "task_id": id, "due": "2026-10-17 17:00" }),
+    );
+    assert_eq!(timed.get("due_date"), None);
+    assert!(
+        timed["due_at"]
+            .as_str()
+            .is_some_and(|at| at.starts_with("2026-10-17 17:00")),
+        "{timed}"
+    );
+    // And a day replaces the time again.
+    let back = fixture.call(
+        "workspace_task_update",
+        json!({ "task_id": id, "due": "2026-10-18" }),
+    );
+    assert_eq!(back["due_date"], json!("2026-10-18"));
+    assert_eq!(back.get("due_at"), None);
+
+    // Priority, start and estimate in one call: one undo step.
+    let steps = fixture.journal().len();
+    let planned = fixture.call(
+        "workspace_task_update",
+        json!({ "task_id": id, "priority": 1, "start": "2026-10-15 09:00", "estimate_minutes": 45 }),
+    );
+    assert_eq!(planned["priority"], json!(1));
+    assert_eq!(planned["estimate_seconds"], json!(2700));
+    assert!(
+        planned["start_at"]
+            .as_str()
+            .is_some_and(|at| at.starts_with("2026-10-15 09:00")),
+        "{planned}"
+    );
+    assert_eq!(
+        planned["due_date"],
+        json!("2026-10-18"),
+        "the due day stays"
+    );
+    assert_eq!(fixture.journal().len(), steps + 1);
+    assert_eq!(fixture.journal().last().unwrap().0, "MCP: Edit Task");
+
+    // Moving the start past the old deadline is fine when the deadline
+    // moves with it.
+    let moved = fixture.call(
+        "workspace_task_update",
+        json!({ "task_id": id, "start": "2026-10-20", "due": "2026-10-24" }),
+    );
+    assert_eq!(moved["due_date"], json!("2026-10-24"));
+    assert!(moved["start_at"].as_str().is_some_and(|at| !at.is_empty()));
+    // But not past it on its own.
+    let error = fixture
+        .try_call(
+            "workspace_task_update",
+            json!({ "task_id": id, "start": "2026-10-30" }),
+        )
+        .unwrap_err();
+    assert!(error.contains("before the deadline"), "{error}");
+
+    // Null clears each; 0 is the app's "clear the priority" key.
+    let cleared = fixture.call(
+        "workspace_task_update",
+        json!({ "task_id": id, "due": null, "start": null, "priority": 0, "estimate_minutes": null }),
+    );
+    for key in [
+        "due_date",
+        "due_at",
+        "start_at",
+        "priority",
+        "estimate_seconds",
+    ] {
+        assert_eq!(cleared.get(key), None, "{key} in {cleared}");
+    }
+    let priority: Option<i64> =
+        fixture.scalar("SELECT priority FROM task_metadata WHERE taskId = ?1", &id);
+    assert_eq!(priority, None);
+
+    // Refusals name what they want.
+    for (arguments, expected) in [
+        (json!({ "task_id": id, "priority": 5 }), "priority must be"),
+        (json!({ "task_id": id, "due": "friday" }), "2026-10-17"),
+        (
+            json!({ "task_id": id, "estimate_minutes": -5 }),
+            "estimate_minutes",
+        ),
+        (json!({ "task_id": id, "due": "2026-02-30" }), "2026-10-17"),
+    ] {
+        let error = fixture
+            .try_call("workspace_task_update", arguments)
+            .unwrap_err();
+        assert!(error.contains(expected), "{error}");
+    }
+}
+
+#[test]
+fn a_single_change_to_priority_or_start_is_named_for_it() {
+    let fixture = Fixture::new();
+    let id = fixture.add(PROJECTS, "Book the venue", None);
+    fixture.call(
+        "workspace_task_update",
+        json!({ "task_id": id, "priority": 2 }),
+    );
+    assert_eq!(fixture.journal().last().unwrap().0, "MCP: Set Priority");
+    fixture.call(
+        "workspace_task_update",
+        json!({ "task_id": id, "start": "2026-10-20" }),
+    );
+    assert_eq!(fixture.journal().last().unwrap().0, "MCP: Schedule Task");
+    // Setting what it already has leaves no step.
+    let steps = fixture.journal().len();
+    fixture.call(
+        "workspace_task_update",
+        json!({ "task_id": id, "priority": 2 }),
+    );
+    assert_eq!(fixture.journal().len(), steps);
+}
+
+#[test]
 fn completing_a_source_task_ends_the_habits_made_from_it() {
     let fixture = Fixture::new();
     let source = fixture.add(PROJECTS, "Learn drums", None);
@@ -1560,6 +1691,25 @@ fn the_ws_subcommands_resolve_to_the_workspace_tools() {
     let (name, arguments) = resolved(&["ws", "update", "T", "--no-links"]);
     assert_eq!(name, "workspace_task_update");
     assert_eq!(arguments["external_links"], json!([]));
+
+    let (name, arguments) = resolved(&[
+        "ws",
+        "update",
+        "T",
+        "--due",
+        "2026-10-17",
+        "-p",
+        "1",
+        "--start",
+        "",
+        "-e",
+        "30",
+    ]);
+    assert_eq!(name, "workspace_task_update");
+    assert_eq!(arguments["due"], json!("2026-10-17"));
+    assert_eq!(arguments["priority"], json!(1));
+    assert_eq!(arguments["start"], json!(""));
+    assert_eq!(arguments["estimate_minutes"], json!(30));
 
     // The global --list-id is Checkvist's, and must not leak in.
     let (name, arguments) = resolved(&["-l", "123", "ws", "to-list", "T", "-f", "F"]);

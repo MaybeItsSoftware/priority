@@ -46,6 +46,9 @@ pub struct Cli {
     pub command: Option<Command>,
 }
 
+// Parsed once per process, so the size of its largest variant (`ws update`,
+// with a field per thing a task can have changed) costs nothing worth boxing.
+#[allow(clippy::large_enum_variant)]
 #[derive(Subcommand)]
 pub enum Command {
     /// List your non-archived checklists.
@@ -349,7 +352,8 @@ pub enum WsCommand {
         #[arg(long)]
         top: bool,
     },
-    /// Change a task's title, notes, links, status or column.
+    /// Change a task's title, notes, links, status, column, due date,
+    /// start, priority or estimate.
     Update {
         task_id: String,
         #[arg(long, short = 't', value_name = "TITLE")]
@@ -383,6 +387,19 @@ pub enum WsCommand {
         /// When to follow up, e.g. "2026-10-08 14:00". Empty clears.
         #[arg(long, value_name = "WHEN")]
         follow_up: Option<String>,
+        /// Due on a day ("2026-10-17") or by a time ("2026-10-17 17:00").
+        /// Empty clears.
+        #[arg(long, short = 'd', value_name = "WHEN")]
+        due: Option<String>,
+        /// When it may start: a day or a day and time. Empty clears.
+        #[arg(long, value_name = "WHEN")]
+        start: Option<String>,
+        /// 1 urgent, 2 high, 3 medium, 4 low; 0 clears.
+        #[arg(long, short = 'p', value_name = "N")]
+        priority: Option<i64>,
+        /// How long it takes, in minutes; 0 clears.
+        #[arg(long, short = 'e', value_name = "MINUTES")]
+        estimate: Option<i64>,
     },
     /// Complete a task.
     Done { task_id: String },
@@ -1031,6 +1048,10 @@ fn resolve_workspace(
             unpin,
             waiting_on,
             follow_up,
+            due,
+            start,
+            priority,
+            estimate,
         } => {
             arguments.insert("task_id".into(), json!(task_id));
             insert_if_some(arguments, "title", title.as_deref());
@@ -1046,6 +1067,14 @@ fn resolve_workspace(
             }
             insert_if_some(arguments, "waiting_on", waiting_on.as_deref());
             insert_if_some(arguments, "follow_up_at", follow_up.as_deref());
+            insert_if_some(arguments, "due", due.as_deref());
+            insert_if_some(arguments, "start", start.as_deref());
+            if let Some(priority) = priority {
+                arguments.insert("priority".into(), json!(priority));
+            }
+            if let Some(minutes) = estimate {
+                arguments.insert("estimate_minutes".into(), json!(minutes));
+            }
             "workspace_task_update"
         }
         WsCommand::Done { task_id } | WsCommand::Reopen { task_id } => {
@@ -1827,6 +1856,22 @@ fn render_workspace_task(task: &Value, depth: usize) {
         text_of(&task["title"]),
         text_of(&task["id"])
     );
+    let mut details = Vec::new();
+    if let Some(priority) = task["priority"].as_i64() {
+        details.push(format!("!{priority}"));
+    }
+    if let Some(due) = task["due_date"].as_str().or(task["due_at"].as_str()) {
+        details.push(format!("due {due}"));
+    }
+    if let Some(start) = task["start_at"].as_str() {
+        details.push(format!("starts {start}"));
+    }
+    if let Some(seconds) = task["estimate_seconds"].as_i64() {
+        details.push(format!("~{} min", seconds / 60));
+    }
+    if !details.is_empty() {
+        println!("{indent}    {}", details.join(" · "));
+    }
     for link in task["external_links"].as_array().into_iter().flatten() {
         println!("{indent}    ↗ {}", text_of(link));
     }

@@ -435,6 +435,18 @@ impl Tools {
                     follow_up_at: arguments
                         .get("follow_up_at")
                         .map(|value| as_string(Some(value))),
+                    // Each of these: present-but-null (or empty) clears;
+                    // absent leaves it.
+                    due: arguments.get("due").map(|value| as_string(Some(value))),
+                    start: arguments.get("start").map(|value| as_string(Some(value))),
+                    priority: arguments
+                        .get("priority")
+                        .map(|value| as_optional_int(Some(value)))
+                        .transpose()?,
+                    estimate_minutes: arguments
+                        .get("estimate_minutes")
+                        .map(|value| as_optional_int(Some(value)))
+                        .transpose()?,
                 };
                 Ok(outcome(
                     "Task updated",

@@ -283,7 +283,7 @@ pub fn update_editor_metadata(
 /// Sets a task's due day (`yyyy-MM-dd`), or clears its due day and time:
 /// what dropping it into a board column whose rules ask for one does. A due
 /// day replaces a due time, as the editor's does.
-pub(crate) fn set_due_day(
+pub fn set_due_day(
     transaction: &Transaction,
     id: &str,
     day: Option<&str>,

@@ -242,6 +242,77 @@ fn the_workspace_edit_covers_each_field_it_has_a_key_for() {
 }
 
 #[test]
+fn due_start_priority_and_estimate_are_their_keys() {
+    assert_eq!(
+        render(
+            "workspace_task_update",
+            json!({"task_id": TASK, "due": "2026-10-17"})
+        )
+        .as_deref(),
+        Some("[dd] then type “2026-10-17”")
+    );
+    assert_eq!(
+        render(
+            "workspace_task_update",
+            json!({"task_id": TASK, "due": null})
+        )
+        .as_deref(),
+        Some("[cd]")
+    );
+    assert_eq!(
+        render(
+            "workspace_task_update",
+            json!({"task_id": TASK, "priority": 1})
+        )
+        .as_deref(),
+        Some("[1]")
+    );
+    assert_eq!(
+        render(
+            "workspace_task_update",
+            json!({"task_id": TASK, "priority": 4})
+        )
+        .as_deref(),
+        Some("[4]")
+    );
+    for cleared in [json!(null), json!(0)] {
+        assert_eq!(
+            render(
+                "workspace_task_update",
+                json!({"task_id": TASK, "priority": cleared})
+            )
+            .as_deref(),
+            Some("[0]")
+        );
+    }
+    assert_eq!(
+        render(
+            "workspace_task_update",
+            json!({"task_id": TASK, "start": "2026-10-20", "estimate_minutes": 45})
+        )
+        .as_deref(),
+        Some("[option+s] then type “2026-10-20” · [option+t] then type “45”")
+    );
+    assert_eq!(
+        render(
+            "workspace_task_update",
+            json!({"task_id": TASK, "start": null, "estimate_minutes": null})
+        )
+        .as_deref(),
+        Some("[option+s] then clear it · [option+t] then clear it")
+    );
+    // "Due friday, and make it urgent": two steps.
+    assert_eq!(
+        render(
+            "workspace_task_update",
+            json!({"task_id": TASK, "due": "2026-10-16", "priority": 1})
+        )
+        .as_deref(),
+        Some("[dd] then type “2026-10-16” · [1]")
+    );
+}
+
+#[test]
 fn lists_folders_and_columns() {
     assert_eq!(
         render("workspace_list_create", json!({"name": "Garden"})).as_deref(),

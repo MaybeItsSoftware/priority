@@ -171,6 +171,33 @@ fn build(tool: &str, input: &Map<String, Value>, hint: &mut Hint) -> Option<()> 
             if input.contains_key("waiting_on") || input.contains_key("follow_up_at") {
                 hint.step("taskWaiting").typed(text(input, "waiting_on"));
             }
+            match text(input, "due") {
+                Some(due) => hint.step("taskEditDue").typed(Some(due)),
+                None if input.contains_key("due") => hint.step("taskClearDue"),
+                None => hint,
+            };
+            match text(input, "start") {
+                Some(start) => hint.step("taskEditStart").typed(Some(start)),
+                None if input.contains_key("start") => {
+                    hint.step("taskEditStart").words("then clear it")
+                }
+                None => hint,
+            };
+            // The digit is the priority: `1` urgent to `4` low, `0` none.
+            match number(input, "priority") {
+                Some(level @ 1..=4) => hint.step_nth("motionSetPriority", level as usize - 1),
+                _ if input.contains_key("priority") => hint.step("taskClearPriority"),
+                _ => hint,
+            };
+            match number(input, "estimate_minutes").filter(|minutes| *minutes > 0) {
+                Some(minutes) => hint
+                    .step("taskEditEstimate")
+                    .typed(Some(minutes.to_string())),
+                None if input.contains_key("estimate_minutes") => {
+                    hint.step("taskEditEstimate").words("then clear it")
+                }
+                None => hint,
+            };
         }
         "workspace_task_move" => {
             if text(input, "parent_task_id").is_some() {
@@ -319,10 +346,21 @@ impl<'a> Hint<'a> {
 
     /// A further change in the same call, after a separator.
     fn step(&mut self, id: &str) -> &mut Self {
+        self.separate();
+        self.key(id)
+    }
+
+    /// [`Self::step`] with the command's `index`th key, for the priority
+    /// digits.
+    fn step_nth(&mut self, id: &str, index: usize) -> &mut Self {
+        self.separate();
+        self.nth_key(id, index)
+    }
+
+    fn separate(&mut self) {
         if !self.parts.is_empty() {
             self.words("·");
         }
-        self.key(id)
     }
 
     /// One of two keys, for a move whose direction the arguments do not say.

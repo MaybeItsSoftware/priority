@@ -64,7 +64,7 @@ workspace's uppercase UUIDs, not Checkvist's integers:
 | `workspace_tasks` | One list's task tree: ids, titles, notes, status, kind, kanban column, external links, `requires` (its conditions by name), `blocked: true` on a task waiting on an open task | read |
 | `workspace_task_dependencies` | What a task waits on (`blocked_by`) and what waits on it (`blocking`), each with id, title, status and list, and whether it is blocked now | read |
 | `workspace_task_add` | Create a task or nested list, at a list's top level or under a parent, with notes, links and a column | write |
-| `workspace_task_update` | Title, notes, links, status, column, kind (task ⇄ nested list), sidebar pin, `waiting_on` and `follow_up_at` (both file the task in Waiting on) | write |
+| `workspace_task_update` | Title, notes, links, status, column, kind (task ⇄ nested list), sidebar pin, `waiting_on` and `follow_up_at` (both file the task in Waiting on), `due`, `start`, `priority` and `estimate_minutes`; null clears any of them | write |
 | `workspace_task_move` | Reparent (subtree follows, across lists too) and/or reorder by 1-based position | write |
 | `workspace_task_to_list` | Promote a task to a standalone list, optionally in a folder, keeping its subtasks | write |
 | `workspace_task_delete` | Delete a task and its subtree | write |
@@ -155,6 +155,19 @@ subtasks become the list's contents with ids and hierarchy intact. The lighter
 "nested list pinned to the sidebar" (`isPromoted`) is
 `workspace_task_update` with `kind: "list", pinned: true`, and the task stays
 where it is.
+
+Dates on a workspace task follow the inspector. `due` is a day
+(`2026-10-17`, the task's planning `dueDate`, due by the end of it) or a time
+(`2026-10-17 17:00` local, or RFC 3339, the task's `dueAt`); either replaces
+the other, as the inspector's Time toggle does. `start` is a day (its local
+midnight) or a time, and must come before the deadline. `priority` is 1
+(Urgent) to 4 (Low); 0 or null clears it. `estimate_minutes` is whole minutes.
+Null clears each of them. The tool takes only ISO dates: "friday" is the
+agent's to resolve, which is why the app's system prompt states today's date.
+A single change is named as the app names it ("Set Priority", "Schedule
+Task", "Edit Task" for the due date and estimate), and a call that changes
+nothing leaves no undo step. `workspace_tasks` shows `due_date` or `due_at`,
+`start_at`, `priority` and `estimate_seconds` on the rows that have them.
 
 Deliberately not here: completing a **repeating** task. Its next occurrence is
 scheduled from a `PeriodicSchedule` that only `TaktCore` can parse, so the
