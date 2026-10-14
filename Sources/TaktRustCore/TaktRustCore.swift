@@ -1350,7 +1350,8 @@ public protocol CoreWorkspaceProtocol: AnyObject, Sendable {
     func checkpointFocusSession(id: String, nowMs: Int64) throws 
     
     /**
-     * The children of a task in a list, or its roots, in outline order.
+     * The children of a task in a list, or its roots, in outline order;
+     * none resting (`commitments::resting_task_ids`).
      */
     func childTasks(listId: String, parentTaskId: String?) throws  -> [TaskRow]
     
@@ -1928,7 +1929,9 @@ public protocol CoreWorkspaceProtocol: AnyObject, Sendable {
     func tasksById(ids: [String]) throws  -> [TaskRow]
     
     /**
-     * Every task in the given lists, each list in outline order.
+     * Every task in the given lists, each list in outline order, but a
+     * commitment resting today (`commitments::resting_task_ids`): what every
+     * client's outline and list board is built from.
      */
     func tasksInLists(listIds: [String]) throws  -> [TaskRow]
     
@@ -3163,7 +3166,8 @@ open func checkpointFocusSession(id: String, nowMs: Int64)throws   {try rustCall
 }
     
     /**
-     * The children of a task in a list, or its roots, in outline order.
+     * The children of a task in a list, or its roots, in outline order;
+     * none resting (`commitments::resting_task_ids`).
      */
 open func childTasks(listId: String, parentTaskId: String?)throws  -> [TaskRow]  {
     return try  FfiConverterSequenceTypeTaskRow.lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
@@ -4748,7 +4752,9 @@ open func tasksById(ids: [String])throws  -> [TaskRow]  {
 }
     
     /**
-     * Every task in the given lists, each list in outline order.
+     * Every task in the given lists, each list in outline order, but a
+     * commitment resting today (`commitments::resting_task_ids`): what every
+     * client's outline and list board is built from.
      */
 open func tasksInLists(listIds: [String])throws  -> [TaskRow]  {
     return try  FfiConverterSequenceTypeTaskRow.lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
@@ -29522,7 +29528,7 @@ private let initializationResult: InitializationResult = {
     if (uniffi_takt_core_checksum_method_coreworkspace_checkpoint_focus_session() != 13264) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_takt_core_checksum_method_coreworkspace_child_tasks() != 32228) {
+    if (uniffi_takt_core_checksum_method_coreworkspace_child_tasks() != 12775) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_method_coreworkspace_clear_contribution() != 5187) {
@@ -29849,7 +29855,7 @@ private let initializationResult: InitializationResult = {
     if (uniffi_takt_core_checksum_method_coreworkspace_tasks_by_id() != 674) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_takt_core_checksum_method_coreworkspace_tasks_in_lists() != 34639) {
+    if (uniffi_takt_core_checksum_method_coreworkspace_tasks_in_lists() != 15048) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_method_coreworkspace_tasks_in_lists_packed() != 64000) {

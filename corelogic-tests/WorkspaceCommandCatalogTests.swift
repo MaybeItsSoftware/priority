@@ -367,7 +367,7 @@ final class WorkspaceCommandCollisionTests: XCTestCase {
       "inspector:down", "sidebar:shift+g", "sidebar:ctrl+u", "sidebar:ctrl+d", "inspector:up", "inspector:j", "inspector:k",
       // It is a vim buffer of rows: gg and ⇧G, Home and End are its ends,
       // Return and i edit the row, x and Delete clear it, ← leaves.
-      "inspector:gg", "inspector:home", "inspector:end", "inspector:enter", "inspector:i",
+      "inspector:gg", "inspector:shift+g", "inspector:home", "inspector:end", "inspector:enter", "inspector:i",
       "inspector:x", "inspector:delete", "inspector:left",
       "done:cmd+shift+{", "done:cmd+shift+}", "done:[", "done:]",
       "timeline:cmd+shift+{", "timeline:cmd+shift+}", "timeline:[", "timeline:]",

@@ -3259,7 +3259,7 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_checkpoint_focus_session() and 0xFFFF) != 13264) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_child_tasks() and 0xFFFF) != 32228) {
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_child_tasks() and 0xFFFF) != 12775) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_clear_contribution() and 0xFFFF) != 5187) {
@@ -3586,7 +3586,7 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_tasks_by_id() and 0xFFFF) != 674) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_tasks_in_lists() and 0xFFFF) != 34639) {
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_tasks_in_lists() and 0xFFFF) != 15048) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_tasks_in_lists_packed() and 0xFFFF) != 64000) {
@@ -5015,7 +5015,8 @@ public interface CoreWorkspaceInterface {
     fun `checkpointFocusSession`(`id`: kotlin.String, `nowMs`: kotlin.Long)
     
     /**
-     * The children of a task in a list, or its roots, in outline order.
+     * The children of a task in a list, or its roots, in outline order;
+     * none resting (`commitments::resting_task_ids`).
      */
     fun `childTasks`(`listId`: kotlin.String, `parentTaskId`: kotlin.String?): List<TaskRow>
     
@@ -5593,7 +5594,9 @@ public interface CoreWorkspaceInterface {
     fun `tasksById`(`ids`: List<kotlin.String>): List<TaskRow>
     
     /**
-     * Every task in the given lists, each list in outline order.
+     * Every task in the given lists, each list in outline order, but a
+     * commitment resting today (`commitments::resting_task_ids`): what every
+     * client's outline and list board is built from.
      */
     fun `tasksInLists`(`listIds`: List<kotlin.String>): List<TaskRow>
     
@@ -7256,7 +7259,8 @@ open class CoreWorkspace: Disposable, AutoCloseable, CoreWorkspaceInterface
 
     
     /**
-     * The children of a task in a list, or its roots, in outline order.
+     * The children of a task in a list, or its roots, in outline order;
+     * none resting (`commitments::resting_task_ids`).
      */
     @Throws(CoreException::class)override fun `childTasks`(`listId`: kotlin.String, `parentTaskId`: kotlin.String?): List<TaskRow> {
             return FfiConverterSequenceTypeTaskRow.lift(
@@ -9386,7 +9390,9 @@ open class CoreWorkspace: Disposable, AutoCloseable, CoreWorkspaceInterface
 
     
     /**
-     * Every task in the given lists, each list in outline order.
+     * Every task in the given lists, each list in outline order, but a
+     * commitment resting today (`commitments::resting_task_ids`): what every
+     * client's outline and list board is built from.
      */
     @Throws(CoreException::class)override fun `tasksInLists`(`listIds`: List<kotlin.String>): List<TaskRow> {
             return FfiConverterSequenceTypeTaskRow.lift(

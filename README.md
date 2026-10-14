@@ -1080,6 +1080,18 @@ missed appearance is the **If missed** row's:
   reach back before the day you switched; switching it off forgives what is
   owed. The inspector shows how many are missed.
 
+The subtask is only there when there is something to do. Completing it —
+`Space`, its checkbox, ticking it in Today or Dailies, or an agent's
+`task_complete` — ticks today rather than finishing it, and once nothing is
+due today it *rests*: the outline, the boards (Today's column included), the
+filter lists and next-up leave it out until its next scheduled day, when it
+comes back on its own. Today not being one of its days rests it too (a
+weekdays commitment is gone on Saturday). With **Stacks** it stays while
+anything is still owed. Undoing the tick brings it back straight away. A
+resting commitment is still listed in its parent's Repeat row, marked
+**✓ today** once today's is ticked, and in Dailies on its days, ticked.
+Cancelling the subtask (`Shift+Space`) stops the commitment, as **Stop** does.
+
 The task's inspector lists its commitments with **Edit** and **Stop**; stopping
 keeps what was logged and closes the subtask. Completing the task ends every
 commitment on it, whatever its end date, and closes their subtasks — undo
@@ -1093,18 +1105,6 @@ itself, from before commitments, it stops that daily.
 - **Checkvist owns current state, the log owns history, Obsidian owns the archive.** Nothing syncs backwards, so there is no conflict resolution anywhere in this.
 - **The day's plan is derived, not authored.** The first time you open the app after your rollover hour, whatever is due, overdue or starting that day is snapshotted. That's what the day's note measures its "N of M planned left" against — you never plan a day by hand.
 - **Deferring is not slipping.** Pushing a due date forward is recorded distinctly from letting a task rot, so the view doesn't nag about a decision you made deliberately.
-The subtask is only there when there is something to do. Completing it —
-`Space`, its checkbox, ticking it in Today or Dailies, or an agent's
-`task_complete` — ticks today rather than finishing it, and once nothing is
-due today it *rests*: the outline, the boards (Today's column included), the
-filter lists and next-up leave it out until its next scheduled day, when it
-comes back on its own. Today not being one of its days rests it too (a
-weekdays commitment is gone on Saturday). With **Stacks** it stays while
-anything is still owed. Undoing the tick brings it back straight away. A
-resting commitment is still listed in its parent's Repeat row, marked
-**✓ today** once today's is ticked, and in Dailies on its days, ticked.
-Cancelling the subtask (`Shift+Space`) stops the commitment, as **Stop** does.
-
 - **The day starts at your rollover hour, not midnight** (default 04:00), so a session finishing at 01:30 counts towards the day it belonged to.
 - **No backfill.** History starts the day you first run this build. The chart is drawn from day one regardless — a flat run of days is a true statement about a history that has just started — with a "collecting since" line underneath until the window fills.
 
