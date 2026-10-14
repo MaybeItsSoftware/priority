@@ -2,36 +2,9 @@ import Foundation
 import TaktCore
 import TaktWorkspace
 
-/// A row of the Conditions tab the keyboard can stand on.
-///
-/// The tab has two halves — what is available now, and the conditions
-/// themselves — and one cursor walks down through both, the way the done
-/// rail's walks through its day groups.
-enum WorkspaceConditionsStop: Hashable {
-  /// A condition in the "Available now" half: Space turns it on or off.
-  case available(String)
-  /// The new-condition row: Return puts the caret in its field.
-  case add
-  /// A condition in the "Conditions" half: rename, category, archive.
-  case condition(String)
-
-  /// The condition the row is about, if it is about one.
-  var conditionID: String? {
-    switch self {
-    case .available(let id), .condition(let id): id
-    case .add: nil
-    }
-  }
-
-  /// The scroll anchor for the row.
-  var anchor: String {
-    switch self {
-    case .available(let id): "available.\(id)"
-    case .add: "add"
-    case .condition(let id): "condition.\(id)"
-    }
-  }
-}
+/// A row of the Conditions tab the keyboard can stand on: TaktCore's
+/// `ConditionsPaneRow`, where the folding rules are tested.
+typealias WorkspaceConditionsStop = ConditionsPaneRow
 
 /// The right dock's Conditions tab: saying what is available now, and adding,
 /// renaming, filing under a category and archiving the conditions themselves.
@@ -41,22 +14,34 @@ enum WorkspaceConditionsStop: Hashable {
 /// job, none of which could show you both halves at once.
 @MainActor
 extension WorkspaceViewModel {
+  /// The live conditions under their headings, for managing them; the
+  /// archived ones are apart, under their own heading at the foot.
+  var liveConditionSections: [TaskConditionSection] {
+    TaskConditionSection.sections(focusConditions.filter { !$0.isArchived })
+  }
+
+  /// The archived conditions, in the order the workspace keeps.
+  var archivedConditions: [TaskCondition] {
+    TaskConditionSection.sections(focusConditions.filter(\.isArchived)).flatMap(\.conditions)
+  }
+
+  private var conditionsLayoutSections: [ConditionsPaneLayout.Section] {
+    liveConditionSections.map { .init(id: $0.id, conditionIDs: $0.conditions.map(\.id)) }
+  }
+
   /// Every row the cursor can stand on, top to bottom.
   var conditionsStops: [WorkspaceConditionsStop] {
-    selectableFocusConditions.map { .available($0.id) } + [.add]
-      + conditionSections.flatMap(\.conditions).map { .condition($0.id) }
+    ConditionsPaneLayout.rows(
+      available: selectableFocusConditions.map(\.id), sections: conditionsLayoutSections,
+      folded: foldedConditionSections, archived: archivedConditions.map(\.id),
+      showsArchived: showsArchivedConditions)
   }
 
   /// The row the keyboard is on. A cursor whose row has gone — a condition
-  /// archived out of the "Available now" half, say — lands on the same
-  /// condition in the other half rather than jumping to the top.
+  /// archived out of the "Available now" half, or folded away — lands on the
+  /// nearest row about the same condition rather than jumping to the top.
   var conditionsCursorStop: WorkspaceConditionsStop {
-    let stops = conditionsStops
-    if let cursor = conditionsCursor {
-      if stops.contains(cursor) { return cursor }
-      if let id = cursor.conditionID, stops.contains(.condition(id)) { return .condition(id) }
-    }
-    return stops.first ?? .add
+    ConditionsPaneLayout.landing(conditionsCursor, in: conditionsStops, sections: conditionsLayoutSections)
   }
 
   /// Opens the tab with the keyboard in it. "Manage conditions…" lands on the
@@ -79,7 +64,7 @@ extension WorkspaceViewModel {
     }
   }
 
-  private var conditionUnderCursor: TaskCondition? {
+  var conditionUnderCursor: TaskCondition? {
     conditionsCursorStop.conditionID.flatMap { id in focusConditions.first { $0.id == id } }
   }
 
@@ -88,6 +73,9 @@ extension WorkspaceViewModel {
   func runConditionsCommand(_ id: WorkspaceCommandID, key: String? = nil) {
     switch id {
     case .motionConditionsSelect: if let key { moveConditionsCursor(key) }
+    case .conditionsToggle where conditionsCursorStop.isFolded:
+      // On a folded heading, Space opens it, as Return does.
+      runConditionsOrganiseCommand(.conditionsFold)
     case .conditionsToggle:
       // Only the conditions you can say hold: an archived one nothing needs
       // is in the lower half to be restored, not to be turned on.
@@ -113,7 +101,7 @@ extension WorkspaceViewModel {
     case .conditionsClear: clearFocusConditions()
     case .conditionsUseAgain: if !suggestedContextIDs.isEmpty { confirmSuggestedContext() }
     case .conditionsClose: leaveConditionsTab()
-    default: break
+    default: runConditionsOrganiseCommand(id)
     }
   }
 
@@ -125,6 +113,7 @@ extension WorkspaceViewModel {
     case .available(let id), .condition(let id):
       conditionsCursor = .condition(id)
       renamingConditionID = id
+    case .folded, .archived: runConditionsOrganiseCommand(.conditionsFold)
     }
   }
 

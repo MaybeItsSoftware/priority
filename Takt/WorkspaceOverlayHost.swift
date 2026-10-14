@@ -72,6 +72,14 @@ struct WorkspaceOverlayHost: View {
       WorkspaceConditionPicker(overlayID: overlay.id, request: request)
     case .conditionCategory(let request):
       WorkspaceConditionCategoryFinder(overlayID: overlay.id, request: request)
+    case .conditionFinder(let request):
+      WorkspaceConditionFinder(overlayID: overlay.id, request: request)
+    case .renameConditionCategory(let request):
+      WorkspaceNameOverlay(
+        overlayID: overlay.id, title: "Rename category", prompt: "Category name",
+        context: "Every condition under \(request.title) moves with it; a name in use merges the two",
+        initialName: request.category ?? "", submitHint: "↩ rename · esc cancel"
+      ) { model.renameConditionCategory(request.category, to: $0) }
     case .create(let kind):
       WorkspaceNameOverlay(
         overlayID: overlay.id, title: kind.title, prompt: "Name",

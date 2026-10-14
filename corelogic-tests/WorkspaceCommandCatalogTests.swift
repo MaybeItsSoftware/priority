@@ -374,6 +374,8 @@ final class WorkspaceCommandCollisionTests: XCTestCase {
       "conditions:cmd+up", "conditions:cmd+down", "conditions:pageup", "conditions:pagedown",
       "conditions:space", "conditions:enter", "conditions:f2", "conditions:cmd+n", "conditions:escape",
       "conditions:left", "conditions:cmd+shift+{", "conditions:cmd+shift+}", "conditions:[", "conditions:]",
+      // ⌥↑ ⌥↓ move the condition, and with ⇧ its category, as they move a task.
+      "conditions:option+up", "conditions:option+down", "conditions:option+shift+up", "conditions:option+shift+down",
       // Today is walked with the ordinary keys, but f queues behind a running
       // block rather than replacing it, and ← has no task to leave so goes to
       // the sidebar.

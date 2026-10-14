@@ -17,13 +17,14 @@ struct WorkspaceFocusContextIndicator: View {
 
   var body: some View {
     let summary = model.focusContextSummary
+    let stale = model.isFocusContextStale
     Button { model.toggleDockTab(.conditions) } label: {
       HStack(spacing: theme.space.xs) {
-        Image(systemName: summary == nil ? "location.slash" : "location.fill")
-          .foregroundStyle(summary == nil ? theme.dim : theme.primary)
+        Image(systemName: summary == nil ? "location.slash" : stale ? "clock.badge.exclamationmark" : "location.fill")
+          .foregroundStyle(summary == nil ? theme.dim : stale ? theme.warning : theme.primary)
         if !model.focusConditions.isEmpty {
           Text(summary ?? "Anywhere")
-            .foregroundStyle(summary == nil ? theme.dim : theme.ink)
+            .foregroundStyle(summary == nil ? theme.dim : stale ? theme.warning : theme.ink)
             .truncationMode(.tail)
             .frame(maxWidth: 200, alignment: .leading)
             .fixedSize(horizontal: true, vertical: false)
@@ -35,7 +36,7 @@ struct WorkspaceFocusContextIndicator: View {
     .focusable(false)
     .commandHelp(
       .focusSetAvailable,
-      note: summary.map { "Available now: \($0). Click to change" }
+      note: summary.map { stale ? "Available now: \($0) — said on an earlier day. Click to change" : "Available now: \($0). Click to change" }
         ?? "Nothing set as available: only tasks with no conditions are offered. Click to change")
     .accessibilityLabel(summary.map { "Available now: \($0)" } ?? "No conditions available")
   }
@@ -81,6 +82,54 @@ struct FocusPanelContextLine: View {
       .commandHelp(.focusSetAvailable, note: "What is available now, in the window's Conditions tab")
       .padding(.horizontal, theme.space.lg)
       .padding(.bottom, theme.space.sm)
+    }
+  }
+}
+
+/// One quiet line under the day: how many open tasks a condition is holding
+/// back, and the conditions they wait on, most-waited-on first — "4 waiting
+/// on Campus 3 · Library 1". Nothing when nothing is. Clicking it opens the
+/// Conditions tab; `gw` says where you are without leaving the day.
+struct WorkspaceHeldBackLine: View {
+  @Environment(WorkspaceViewModel.self) private var model
+  @Environment(\.theme) private var theme
+  let open: () -> Void
+
+  var body: some View {
+    let waiting = model.conditionWaitingCounts
+    let held = model.blockedFocusTasks.filter { blocked in
+      blocked.reasons.contains { if case .missingConditions = $0 { true } else { false } }
+    }.count
+    if held > 0 {
+      let names = waiting
+        .sorted { $0.value != $1.value ? $0.value > $1.value : $0.key < $1.key }
+        .prefix(3)
+        .compactMap { id, count in model.focusConditions.first { $0.id == id }.map { "\($0.name) \(count)" } }
+      VStack(spacing: 0) {
+        FocusRule()
+        Button(action: open) {
+          HStack(spacing: theme.space.xs) {
+            Image(systemName: "location")
+              .foregroundStyle(theme.warning)
+            Text("\(held) waiting on ").foregroundStyle(theme.muted)
+              + Text(names.joined(separator: " · ")).foregroundStyle(theme.ink)
+            Spacer(minLength: theme.space.sm)
+            Text(WorkspaceCommandHelpText.firstKey(for: .focusSetPlace))
+              .font(theme.monoCaptionFont)
+              .foregroundStyle(theme.dim)
+          }
+          .font(theme.captionFont)
+          .lineLimit(1)
+          .truncationMode(.tail)
+          .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .focusable(false)
+        .padding(.horizontal, theme.paneGutter)
+        .padding(.vertical, theme.space.xs)
+        .commandHelp(.focusSetAvailable, note: "\(held) open \(held == 1 ? "task is" : "tasks are") held back until a condition holds")
+        .accessibilityLabel("\(held) tasks waiting on a condition: \(names.joined(separator: ", "))")
+      }
     }
   }
 }

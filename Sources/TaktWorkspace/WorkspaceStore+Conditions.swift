@@ -70,8 +70,9 @@ extension WorkspaceStore {
   }
 
   /// The open tasks that require a condition, list by list.
-  public func tasksRequiring(condition id: String, in workspaceId: String) throws -> [RequiringTask] {
+  public func tasksRequiring(condition id: String, in workspaceId: String) throws -> [ConditionRequiringTask] {
     try Self.mappingCoreErrors { try core.tasksRequiringCondition(workspaceId: workspaceId, conditionId: id) }
+      .map { ConditionRequiringTask(id: $0.taskId, title: $0.title, listName: $0.listName) }
   }
 
   /// Moves a condition one place up (negative) or down under its heading.
@@ -183,5 +184,16 @@ public struct SavedFocusContext: Equatable, Sendable {
   /// offered back. The core's `focus_context_in_force`.
   public func inForce(at now: Date) -> SavedFocusContext {
     SavedFocusContext(focusContextInForce(context: core, nowMs: now.coreMilliseconds))
+  }
+}
+
+/// An open task that requires a condition, with the list it is in.
+public struct ConditionRequiringTask: Identifiable, Equatable, Sendable {
+  public let id: String
+  public let title: String
+  public let listName: String
+
+  public init(id: String, title: String, listName: String) {
+    self.id = id; self.title = title; self.listName = listName
   }
 }

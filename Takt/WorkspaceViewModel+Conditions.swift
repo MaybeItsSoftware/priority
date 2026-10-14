@@ -39,7 +39,9 @@ extension WorkspaceViewModel {
     guard let saved else { return false }
     needsSaving = needsSaving || saved.hasExpired(at: .now)
     let context = saved.inForce(at: .now)
-    let known = Set(focusConditions.map(\.id))
+    // Read here rather than from the ranking's copy, which lags a condition
+    // the CLI made a moment ago and then turned on.
+    let known = Set(((try? store.conditions(in: workspace.id)) ?? focusConditions).map(\.id))
     let ids = FocusContextSelection.restoring(Array(context.conditionIDs), known: known)
     let suggested = FocusContextSelection.restoring(Array(context.suggestedIDs), known: known)
     let changed = ids != focusContext.conditionIDs || context.mode != focusContext.mode

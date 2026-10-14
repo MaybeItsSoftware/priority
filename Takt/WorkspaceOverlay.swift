@@ -31,6 +31,11 @@ enum WorkspaceOverlay: Identifiable {
   case conditions(WorkspaceConditionPickerRequest)
   /// The category a condition is filed under, or the new-condition row's.
   case conditionCategory(WorkspaceConditionCategoryRequest)
+  /// One condition chosen: the place you are in (`gw`), or what one merges
+  /// into (`m` in the Conditions tab).
+  case conditionFinder(WorkspaceConditionFinderRequest)
+  /// A category's new name, for every condition under it: `⇧T`.
+  case renameConditionCategory(WorkspaceConditionCategoryRenameRequest)
   /// A new list or folder. Where it goes is `creationParentFolderID` and
   /// `creationIsNested` on the model, set by whoever asked.
   case create(WorkspaceCreationKind)
@@ -56,6 +61,8 @@ enum WorkspaceOverlay: Identifiable {
     case .blocker(let request): "blocker:\(request.id)"
     case .conditions(let request): "conditions:\(request.id)"
     case .conditionCategory(let request): "condition-category:\(request.id)"
+    case .conditionFinder(let request): "condition-finder:\(request.id)"
+    case .renameConditionCategory(let request): "rename-category:\(request.id)"
     case .create(let kind): "create:\(kind.rawValue)"
     case .newBoardColumn: "column"
     case .renameBoardColumn(let id): "column-rename:\(id)"

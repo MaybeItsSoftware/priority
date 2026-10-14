@@ -46,6 +46,7 @@ extension WorkspaceViewModel {
     case .focusStop: stopFocusSession()
     case .focusSetAvailable: toggleDockTab(.conditions)
     case .focusManageConditions: openConditionsTab(onNewCondition: true)
+    case .focusSetPlace: presentPlaceFinder()
     default: openFocusPanel()
     }
   }
@@ -121,7 +122,7 @@ extension WorkspaceViewModel {
       // selectList leaves a full-pane screen itself.
       if let inbox = inboxList { selectList(inbox.id) }
       requestKeyboardFocus(.tasks)
-    case .goFocus, .focusFinish, .focusStop, .focusSetAvailable, .focusManageConditions: runFocusCommand(id)
+    case .goFocus, .focusFinish, .focusStop, .focusSetAvailable, .focusSetPlace, .focusManageConditions: runFocusCommand(id)
     case .goTimeline: toggleBottomDockTab(.timeline)
     case .goListNavigator: presentOverlay(.listNavigator)
     case .goSearch: presentSearch()
@@ -259,7 +260,10 @@ extension WorkspaceViewModel {
 
     // MARK: Conditions tab
     case .conditionsToggle, .conditionsEdit, .conditionsNew, .conditionsCategory, .conditionsArchive,
-      .conditionsClear, .conditionsUseAgain, .conditionsClose, .motionConditionsSelect: runConditionsCommand(id, key: key)
+      .conditionsClear, .conditionsUseAgain, .conditionsClose, .motionConditionsSelect,
+      .conditionsMoveUp, .conditionsMoveDown, .conditionsMoveCategoryUp, .conditionsMoveCategoryDown,
+      .conditionsRenameCategory, .conditionsMerge, .conditionsShowTasks, .conditionsFold, .conditionsFoldAll:
+      runConditionsCommand(id, key: key)
 
     // MARK: Motions
     //

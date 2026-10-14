@@ -67,6 +67,11 @@ struct DayView: View {
         field
         FocusRule()
         content(rows)
+        WorkspaceHeldBackLine {
+          onClose?(.toWindow)
+          AppDelegate.shared.showMainWindow()
+          model.openConditionsTab()
+        }
         if model.pendingTaskDeletionID != nil, let pending = model.pendingTaskDeletion {
           TaskDeletionPrompt(task: pending)
         } else {
@@ -82,6 +87,9 @@ struct DayView: View {
         // of those already has a home, and here they were a second copy of it.
         header
         content(rows)
+        // Why the day is shorter than the list: the tasks a condition is
+        // holding back, and which conditions. Click for the Conditions tab.
+        WorkspaceHeldBackLine { model.openConditionsTab() }
       }
     }
     .frame(maxWidth: .infinity, maxHeight: .infinity)

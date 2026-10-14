@@ -14,8 +14,10 @@ import SwiftUI
 ///
 /// `↑` `↓` walk both halves, Space turns a condition on or off, Return or F2
 /// renames (on the new-condition row, puts the caret in its field), `t`
-/// files it under a category, `e` archives it, `c` clears, Esc goes back to
-/// the work.
+/// files it under a category and `⇧T` renames the category, `⌥↑`/`⌥↓` move
+/// it and `⌥⇧↑`/`⌥⇧↓` its category, `m` merges it into another, `o` lists
+/// the tasks that need it, `z` folds its category, `e` archives it, `c`
+/// clears, Esc goes back to the work.
 struct WorkspaceConditionsPane: View {
   @Environment(WorkspaceViewModel.self) private var model
   @Environment(\.theme) private var theme
@@ -70,6 +72,10 @@ struct WorkspaceConditionsPane: View {
         .focusSurfaceGutter()
         .padding(.bottom, theme.space.sm)
     }
+    if model.isFocusContextStale {
+      staleNotice
+    }
+    let waiting = model.conditionWaitingCounts
     ForEach(sections) { section in
       WorkspaceConditionsCategoryHeading(title: section.title)
       ForEach(section.conditions) { condition in
@@ -77,6 +83,7 @@ struct WorkspaceConditionsPane: View {
         WorkspaceAvailableConditionRow(
           condition: condition,
           isOn: model.focusContext.conditionIDs.contains(condition.id),
+          waiting: waiting[condition.id] ?? 0,
           isCursor: cursor == stop, hasKeyboard: hasKeyboard && cursor == stop)
           .id(stop.anchor)
       }
@@ -85,6 +92,27 @@ struct WorkspaceConditionsPane: View {
       lastContext
     }
     timeControls
+  }
+
+  /// Said on an earlier day: probably not where you are now.
+  private var staleNotice: some View {
+    HStack(spacing: theme.space.sm) {
+      Image(systemName: "clock.badge.exclamationmark")
+        .foregroundStyle(theme.warning)
+      Text(model.contextConditionsSetAt.map {
+        "Set \($0.formatted(.relative(presentation: .named))) — still true?"
+      } ?? "Set on an earlier day — still true?")
+      .foregroundStyle(theme.muted)
+      .lineLimit(2)
+      Spacer(minLength: theme.space.xs)
+      Button("Clear") { model.clearFocusConditions() }
+        .buttonStyle(.plain)
+        .foregroundStyle(theme.primary)
+        .commandHelp(.conditionsClear)
+    }
+    .font(theme.captionFont)
+    .focusSurfaceGutter()
+    .padding(.vertical, theme.space.xs)
   }
 
   /// The conditions that held before the last context expired, offered back.
@@ -180,15 +208,31 @@ struct WorkspaceConditionsPane: View {
       .padding(.bottom, theme.space.sm)
     WorkspaceNewConditionRow(isCursor: cursor == .add, hasKeyboard: hasKeyboard && cursor == .add)
       .id(WorkspaceConditionsStop.add.anchor)
-    ForEach(model.conditionSections) { section in
-      WorkspaceConditionsCategoryHeading(title: section.title)
-      ForEach(section.conditions) { condition in
-        let stop = WorkspaceConditionsStop.condition(condition.id)
-        WorkspaceConditionManageRow(
-          condition: condition, requiredBy: counts[condition.id] ?? 0,
-          isRenaming: model.renamingConditionID == condition.id,
-          isCursor: cursor == stop, hasKeyboard: hasKeyboard && cursor == stop)
-          .id(stop.anchor)
+    ForEach(model.liveConditionSections) { section in
+      let isFolded = model.foldedConditionSections.contains(section.id)
+      let stop = WorkspaceConditionsStop.folded(section.id)
+      WorkspaceConditionsFoldHeading(
+        title: section.title, count: section.conditions.count, isFolded: isFolded,
+        isCursor: isFolded && cursor == stop, hasKeyboard: hasKeyboard && cursor == stop
+      ) { model.toggleConditionSectionFold(section) }
+      .id(stop.anchor)
+      if !isFolded {
+        ForEach(section.conditions) { condition in
+          manageRow(condition, cursor: cursor, hasKeyboard: hasKeyboard, counts: counts)
+        }
+      }
+    }
+    let archived = model.archivedConditions
+    if !archived.isEmpty {
+      WorkspaceConditionsFoldHeading(
+        title: "Archived", count: archived.count, isFolded: !model.showsArchivedConditions,
+        isCursor: cursor == .archived, hasKeyboard: hasKeyboard && cursor == .archived
+      ) { model.showsArchivedConditions.toggle() }
+      .id(WorkspaceConditionsStop.archived.anchor)
+      if model.showsArchivedConditions {
+        ForEach(archived) { condition in
+          manageRow(condition, cursor: cursor, hasKeyboard: hasKeyboard, counts: counts)
+        }
       }
     }
     if let error = model.errorMessage {
@@ -198,6 +242,108 @@ struct WorkspaceConditionsPane: View {
         .focusSurfaceGutter()
         .padding(.vertical, theme.space.xs)
     }
+  }
+}
+
+extension WorkspaceConditionsPane {
+  /// A condition's row in the lower half, and under it, when `o` asked, the
+  /// open tasks that need it.
+  @ViewBuilder
+  fileprivate func manageRow(
+    _ condition: TaskCondition, cursor: WorkspaceConditionsStop, hasKeyboard: Bool, counts: [String: Int]
+  ) -> some View {
+    let stop = WorkspaceConditionsStop.condition(condition.id)
+    WorkspaceConditionManageRow(
+      condition: condition, requiredBy: counts[condition.id] ?? 0,
+      isRenaming: model.renamingConditionID == condition.id,
+      isCursor: cursor == stop, hasKeyboard: hasKeyboard && cursor == stop)
+      .id(stop.anchor)
+    if model.conditionTasksShownFor == condition.id {
+      WorkspaceConditionTasksList(tasks: model.conditionTasks)
+    }
+  }
+}
+
+/// The open tasks a condition gates, under its row: `o`. Clicking one shows
+/// it where it lives.
+private struct WorkspaceConditionTasksList: View {
+  @Environment(WorkspaceViewModel.self) private var model
+  @Environment(\.theme) private var theme
+  let tasks: [ConditionRequiringTask]
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: 0) {
+      if tasks.isEmpty {
+        Text("No open task needs it.")
+          .foregroundStyle(theme.dim)
+          .padding(.vertical, theme.space.xxs)
+      }
+      ForEach(tasks) { task in
+        Button { model.revealRequiringTask(task.id) } label: {
+          HStack(spacing: theme.space.sm) {
+            Text(task.title).foregroundStyle(theme.ink).lineLimit(1).truncationMode(.tail)
+            Spacer(minLength: theme.space.xs)
+            Text(task.listName).foregroundStyle(theme.dim).lineLimit(1)
+          }
+          .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .focusable(false)
+        .padding(.vertical, theme.space.xxs)
+        .help("Show it where it lives")
+      }
+    }
+    .font(theme.captionFont)
+    .padding(.leading, theme.paneGutter + 14 + theme.space.sm)
+    .padding(.trailing, theme.paneGutter)
+    .padding(.bottom, theme.space.xs)
+    .overlay(alignment: .leading) {
+      Rectangle().fill(theme.border).frame(width: 1)
+        .padding(.leading, theme.paneGutter + 6)
+    }
+  }
+}
+
+/// A category's heading in the Conditions half, with a disclosure: click, or
+/// `z`, folds it. Folded, it is a row the cursor stands on and says how many
+/// conditions it holds.
+private struct WorkspaceConditionsFoldHeading: View {
+  @Environment(\.theme) private var theme
+  let title: String
+  let count: Int
+  let isFolded: Bool
+  let isCursor: Bool
+  let hasKeyboard: Bool
+  let toggle: () -> Void
+
+  var body: some View {
+    HStack(spacing: theme.space.xs) {
+      Image(systemName: isFolded ? "chevron.right" : "chevron.down")
+        .font(.system(size: 9, weight: .semibold))
+        .foregroundStyle(theme.dim)
+        .frame(width: 10)
+      Text(title)
+        .foregroundStyle(theme.muted)
+        .lineLimit(1)
+      if isFolded {
+        Text("\(count)")
+          .font(theme.monoCaptionFont)
+          .monospacedDigit()
+          .foregroundStyle(theme.dim)
+      }
+      Spacer(minLength: 0)
+    }
+    .font(theme.captionFont)
+    .frame(maxWidth: .infinity, alignment: .leading)
+    .padding(.horizontal, theme.paneGutter)
+    .padding(.top, theme.space.sm)
+    .padding(.bottom, theme.space.xxs)
+    .contentShape(Rectangle())
+    .workspaceSelection(isSelected: isCursor, hasKeyboard: hasKeyboard)
+    .onTapGesture(perform: toggle)
+    .commandHelp(.conditionsFold)
+    .accessibilityAddTraits([.isHeader, .isButton])
+    .accessibilityLabel("\(title), \(isFolded ? "folded" : "open")")
   }
 }
 
@@ -244,6 +390,8 @@ private struct WorkspaceAvailableConditionRow: View {
   @Environment(\.theme) private var theme
   let condition: TaskCondition
   let isOn: Bool
+  /// How many held-back tasks wait on it.
+  let waiting: Int
   let isCursor: Bool
   let hasKeyboard: Bool
 
@@ -264,6 +412,12 @@ private struct WorkspaceAvailableConditionRow: View {
       Spacer(minLength: theme.space.sm)
       if condition.isArchived {
         Text("Archived").font(theme.captionFont).foregroundStyle(theme.dim)
+      }
+      if waiting > 0, !isOn {
+        Text("\(waiting) waiting")
+          .font(theme.captionFont)
+          .foregroundStyle(theme.warning)
+          .help("\(waiting) open \(waiting == 1 ? "task waits" : "tasks wait") for it")
       }
     }
     .frame(maxWidth: .infinity, alignment: .leading)

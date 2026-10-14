@@ -382,18 +382,35 @@ asking for both, since you can only be in one. `Space` ticks once you have
 moved with the arrows, or with nothing typed; otherwise it is a space in the
 name. `Cmd+Return` goes to the Conditions tab.
 
+**Saying where you are** is `gw` (or **Say where you are…** in the palette),
+from anywhere: a finder of the places — the ones tasks wait on first, each
+with how many are waiting — and *Anywhere*. Type a few letters and `Return`:
+the place replaces the last one, and *Anywhere* turns every place off and
+keeps the rest on.
+
 Saying what holds now, and managing the conditions themselves, live in the right dock's **Conditions** tab.
 `Cmd+Alt+8` (or `ga`, or **Set what's available now…** in the palette) opens
 it with the keyboard in it; so does clicking the status bar's indicator, which
 shows the active conditions (or *Anywhere*). The focus panel has the same line
 above its field: clicking it, or `Cmd+Alt+8` there, hands over to the window's
-tab.
+tab. When a condition is holding tasks back, Today (and the panel) ends with
+one line saying how many and on what — *4 waiting on Campus 3 · Library 1*;
+clicking it opens the tab.
+
+What holds now is kept in the workspace, not the app's preferences, so the
+`takt` CLI and the agent read it and set it too (`takt ws here`,
+`workspace_context_set`), and the app picks their change up at once. It
+remembers when its conditions were said: one said on an earlier day is
+**stale** — a place left on overnight is probably not where you are — and
+the status bar's indicator and the tab show it in the warning colour, with
+**Clear** (`c`) beside it.
 
 - **Available now**: the conditions under their category headings — a radio
   under Location, a box anywhere else — and **only those an open task
   needs**: a condition nothing open requires changes nothing, so it is not
   asked about, and a category with none of those is left out. One that is on
-  always stays, so it can be turned off. With nothing needing a condition it
+  always stays, so it can be turned off. Each one off says how many tasks are
+  **waiting** on it. With nothing needing a condition it
   says *No open tasks need a condition*. `Space` (or a click) turns one on or
   off. A **Location** replaces the last one, since you are in one place at a
   time; other conditions combine. `c` clears them all. Under the rows are an available-time window, a
@@ -403,13 +420,25 @@ tab.
 - **Conditions**: a new-condition row (`a` or `Cmd+N` puts the caret in it,
   `Return` makes the condition, filed under the category in the menu beside
   it — from a condition's row, that condition's category; `t` on the row
-  picks another), then every condition under its category heading with how
-  many open tasks need it. `Return` or `F2` renames one in its row (tasks
+  picks another; a name a live condition already has is that condition), then every condition under its category heading with how
+  many open tasks need it — completed and archived tasks do not count. `Return` or `F2` renames one in its row (tasks
   keep their requirements), `t` files it under a category — a finder of the
   categories in use, Location first, then *No category*; type a name nothing
   uses for **New category “…”** — and `e` archives or restores it. Filing one
   under Location makes it a place; filing it elsewhere makes it not one. **Manage conditions…** in the palette opens the tab
   on the new-condition row.
+- **Organising them**: `Alt+↑`/`Alt+↓` move a condition within its category
+  and `Alt+Shift+↑`/`Alt+Shift+↓` move its whole category, as they move tasks;
+  the order is kept in the workspace, so the phones and the finders follow it.
+  `Shift+T` renames the category under the cursor, every condition in it
+  with it — a name already in use merges the two; Location keeps its name. `m` merges
+  the condition into another, chosen in a finder: every task that needed it
+  needs the other instead, what holds now follows, and it is archived (one
+  undo step). `o` lists the open tasks that need it under its row (click one
+  to go to it; `o` again hides them). `z` folds or unfolds its category, and
+  `Shift+Z` every category; folds are remembered per workspace. Archived
+  conditions are apart, under a folded **Archived** heading at the foot: `z`
+  or `Return` on it shows them.
 - `↑`/`↓` (or `j`/`k`) walk both halves with one cursor; `Esc` or `←` hands
   the keyboard back to the work and leaves the dock open, `r` puts it away.
 - **In the inspector**: the Conditions row's **Add condition** does
@@ -420,9 +449,12 @@ tab.
 
 On the phones, the Focus screen's **Where you are** follows the same rule: only
 the conditions an open task needs (and any that is on), under their category
-headings, and **New condition** asks for a category (one in use, or typed). The
+headings in the order the Mac keeps, and **New condition** asks for a category (one in use, or typed). The
 iPhone's Conditions sheet groups by category too, and a condition's long-press
-menu files it under one (**Category**, with **New category…**).
+menu files it under one (**Category**, with **New category…**); its counts
+are open tasks only, as on the Mac. The phones keep what holds now on the
+phone itself, and reordering, merging and renaming a category are the Mac's
+for now; what they do there reaches the phones through sync.
 
 ### The focus panel
 

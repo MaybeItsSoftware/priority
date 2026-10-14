@@ -220,6 +220,9 @@ fn focus() -> Vec<Spec> {
         // Beside ⌘8, which opens the panel these conditions decide what it offers.
         c("focusSetAvailable", "Set what's available now…", "Focus", &["cmd+option+8", "ga"])
             .note("The right dock's Conditions tab, with the keyboard in it: the conditions that hold here — Home, Campus, Floor space. A task that needs one waits until it is on"),
+        // "Go where": the place finder, without leaving the work.
+        c("focusSetPlace", "Say where you are…", "Focus", &["gw"])
+            .note("A finder of the places, and Anywhere: the place you choose replaces the last one. Tasks that need somewhere else wait"),
         c("focusManageConditions", "Manage conditions…", "Focus", &[])
             .note("The Conditions tab, on its new-condition row: add, rename or archive the places and circumstances tasks can require"),
     ]
@@ -601,6 +604,75 @@ fn conditions() -> Vec<Spec> {
         )
         .on(Conditions)
         .note("Archived ones are not offered for new requirements; tasks that need one keep it"),
+        c(
+            "conditionsMoveUp",
+            "Move the condition up",
+            "Conditions",
+            &["option+up"],
+        )
+        .on(Conditions)
+        .note("Within its category; the order is kept for every device"),
+        c(
+            "conditionsMoveDown",
+            "Move the condition down",
+            "Conditions",
+            &["option+down"],
+        )
+        .on(Conditions),
+        c(
+            "conditionsMoveCategoryUp",
+            "Move the category up",
+            "Conditions",
+            &["option+shift+up"],
+        )
+        .on(Conditions)
+        .note("The whole category the cursor is in, above the one before it"),
+        c(
+            "conditionsMoveCategoryDown",
+            "Move the category down",
+            "Conditions",
+            &["option+shift+down"],
+        )
+        .on(Conditions),
+        c(
+            "conditionsRenameCategory",
+            "Rename the category",
+            "Conditions",
+            &["shift+t"],
+        )
+        .on(Conditions)
+        .note("Every condition in it moves with it; a name already in use merges the two. Location keeps its name"),
+        c(
+            "conditionsMerge",
+            "Merge into another condition",
+            "Conditions",
+            &["m"],
+        )
+        .on(Conditions)
+        .note("Every task that needs this one needs the other instead, and this one is archived"),
+        c(
+            "conditionsShowTasks",
+            "Show the tasks that need it",
+            "Conditions",
+            &["o"],
+        )
+        .on(Conditions)
+        .note("The open tasks that require the condition, under its row; again hides them"),
+        c(
+            "conditionsFold",
+            "Fold or unfold the category",
+            "Conditions",
+            &["z"],
+        )
+        .on(Conditions)
+        .note("In the Conditions half; on the Archived row, shows or hides the archived ones"),
+        c(
+            "conditionsFoldAll",
+            "Fold or unfold every category",
+            "Conditions",
+            &["shift+z"],
+        )
+        .on(Conditions),
         c(
             "conditionsClear",
             "Clear what's available",

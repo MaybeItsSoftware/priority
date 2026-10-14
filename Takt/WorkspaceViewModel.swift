@@ -825,6 +825,7 @@ enum WorkspaceSidebarItem: Identifiable {
       // day, and it should not paint empty and then fill.
       reloadNextUpNow()
       restoreFocusContext()
+      restoreFoldedConditionSections()
       watchForExternalWrites()
       startSync()
       startFocusMonitor()
@@ -1007,6 +1008,13 @@ enum WorkspaceSidebarItem: Identifiable {
   /// The category the Conditions tab's new-condition row files under; nil
   /// is none.
   var newConditionCategory: String?
+  /// The Conditions tab's folded headings, by section id; kept per workspace.
+  var foldedConditionSections: Set<String> = []
+  /// Whether the tab shows the archived conditions under their heading.
+  var showsArchivedConditions = false
+  /// The condition whose open tasks are listed under its row (`o`), and them.
+  var conditionTasksShownFor: String?
+  var conditionTasks: [ConditionRequiringTask] = []
   var contextExpiresAt: Date?
   /// When the conditions on were said, as the workspace stamped it: what
   /// makes a place left on overnight read as stale.

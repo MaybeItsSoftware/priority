@@ -34,7 +34,7 @@ public enum WorkspaceCommandID: String, CaseIterable, Sendable {
   case taskMoveToPreviousList, taskMoveToNextList
 
   // Focus
-  case focusFinish, focusStop, focusSetAvailable, focusManageConditions
+  case focusFinish, focusStop, focusSetAvailable, focusSetPlace, focusManageConditions
 
   // Plan
   case planEnterTask, planLeaveTask, planHideCompleted
@@ -68,6 +68,8 @@ public enum WorkspaceCommandID: String, CaseIterable, Sendable {
   // Conditions tab
   case conditionsToggle, conditionsEdit, conditionsNew, conditionsCategory, conditionsArchive
   case conditionsClear, conditionsUseAgain, conditionsClose, motionConditionsSelect
+  case conditionsMoveUp, conditionsMoveDown, conditionsMoveCategoryUp, conditionsMoveCategoryDown
+  case conditionsRenameCategory, conditionsMerge, conditionsShowTasks, conditionsFold, conditionsFoldAll
 
   // Motions
   case motionSelectNext, motionSelectPrevious, motionSelectEnds, motionSelectPage
