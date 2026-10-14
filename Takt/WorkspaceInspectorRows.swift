@@ -153,11 +153,12 @@ struct InspectorMenu<Content: View>: View {
 /// keyboard, then the field itself, framed only while it has the caret.
 ///
 /// The same text field throughout — never a button swapped for a field — so
-/// a click, Tab, or the inspector's ↑ and ↓ landing on it puts the caret
-/// straight in.
+/// a click, Tab, or Return on the inspector's cursor puts the caret straight
+/// in. The cursor standing on it rings it without putting the caret in.
 struct InspectorTextField: View {
   @Environment(\.theme) private var theme
   @Environment(\.inspectorFocus) private var focus
+  @Environment(\.inspectorCursor) private var cursor
   /// What it says while empty and away: "Add estimate".
   let add: String
   /// What it says while empty with the caret in it: "Minutes".
@@ -171,6 +172,7 @@ struct InspectorTextField: View {
 
   var body: some View {
     let isFocused = focus?.wrappedValue == stop
+    let isCursor = cursor == stop && !isFocused
     let shape = RoundedRectangle(cornerRadius: theme.controlRadius, style: .continuous)
     HStack(alignment: .firstTextBaseline, spacing: theme.space.xs) {
       field(isFocused: isFocused)
@@ -185,6 +187,7 @@ struct InspectorTextField: View {
     .padding(.vertical, theme.space.xxs)
     .background(shape.fill(isFocused ? theme.raised : (isHovering ? theme.hover : .clear)))
     .overlay(shape.strokeBorder(isFocused ? theme.focusRing : .clear, lineWidth: theme.hairline))
+    .overlay(shape.strokeBorder(isCursor ? theme.focusRing : .clear, lineWidth: theme.focusRingWidth))
     .contentShape(shape)
     .onHover { isHovering = $0 }
   }
@@ -194,7 +197,7 @@ struct InspectorTextField: View {
       .textFieldStyle(.plain)
       .font(theme.bodyFont())
       .foregroundStyle(theme.ink)
-      .inspectorField(stop)
+      .inspectorField(stop, ringed: false)
       .onSubmit(onSubmit)
       .overlay(alignment: .leading) {
         if text.isEmpty {
@@ -210,9 +213,14 @@ struct InspectorTextField: View {
 
 /// A multi-line field — the notes, the links — that is one dim "Add …" line
 /// until it has text or the caret, then opens to its full height.
+///
+/// The inspector's cursor rings it without putting the caret in, so walking
+/// down the panel passes over it; Return opens it and Esc gives the
+/// keyboard back.
 struct InspectorTextEditor: View {
   @Environment(\.theme) private var theme
   @Environment(\.inspectorFocus) private var focus
+  @Environment(\.inspectorCursor) private var cursor
   let add: String
   @Binding var text: String
   let stop: String
@@ -226,6 +234,7 @@ struct InspectorTextEditor: View {
 
   var body: some View {
     let isFocused = focus?.wrappedValue == stop
+    let isCursor = cursor == stop && !isFocused
     let isOpen = isFocused || !text.isEmpty
     let shape = RoundedRectangle(cornerRadius: theme.controlRadius, style: .continuous)
     let line = CGFloat(theme.scale.body) * 1.5
@@ -234,7 +243,7 @@ struct InspectorTextEditor: View {
       .foregroundStyle(theme.ink)
       .scrollContentBackground(.hidden)
       .frame(minHeight: isOpen ? minHeight : line, maxHeight: isOpen ? maxHeight : line)
-      .inspectorField(stop)
+      .inspectorField(stop, multiline: true, ringed: false)
       .overlay(alignment: .topLeading) {
         if text.isEmpty && !isFocused {
           Text(add)
@@ -248,6 +257,7 @@ struct InspectorTextEditor: View {
       .padding(.vertical, theme.space.xxs)
       .background(shape.fill(isFocused ? theme.raised : (isHovering ? theme.hover : .clear)))
       .overlay(shape.strokeBorder(isFocused ? theme.focusRing : .clear, lineWidth: theme.hairline))
+      .overlay(shape.strokeBorder(isCursor ? theme.focusRing : .clear, lineWidth: theme.focusRingWidth))
       .onHover { isHovering = $0 }
   }
 }
@@ -256,8 +266,8 @@ struct InspectorTextEditor: View {
 /// as one row: a dim "Add …" until it has one, then the value with a quiet
 /// button to clear it.
 ///
-/// "Add …" is a stop the keyboard rests on, and Space or a click sets the
-/// value; reaching it does not, since walking down the panel should never
+/// "Add …" is a stop the cursor rests on, and Return, Space or a click sets
+/// the value; reaching it does not, since walking down the panel should never
 /// give a task a date.
 struct InspectorOptionalRow<Value: View>: View {
   @Environment(\.theme) private var theme
@@ -295,7 +305,7 @@ struct InspectorOptionalRow<Value: View>: View {
       } else {
         Button(addTitle, action: add)
           .buttonStyle(InspectorValueButtonStyle(tone: .dim))
-          .inspectorStop(stop)
+          .inspectorStop(stop, press: add)
       }
     }
   }
@@ -315,7 +325,7 @@ struct InspectorClearButton: View {
         .frame(width: theme.scale.body, height: theme.scale.body)
     }
     .buttonStyle(InspectorValueButtonStyle(tone: .dim))
-    .inspectorStop(stop)
+    .inspectorStop(stop, press: action)
     .help(label)
     .accessibilityLabel(label)
   }

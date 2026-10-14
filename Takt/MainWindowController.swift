@@ -206,12 +206,13 @@ final class MainWindowController: NSObject, NSWindowDelegate {
         }
         return nil
       }
-      // In the inspector a field is one stop in a column of them: ↑ and ↓
-      // leave a one-line field for the control above or below, and Tab
-      // leaves the notes rather than typing a tab into them (⌥Tab still
-      // does).
-      if self.workspace.commandSurface == .inspector, let forward = Self.inspectorFieldStep(event, in: window) {
-        self.workspace.stepInspectorField(forward: forward)
+      // In the inspector a field is edited in insert mode: Esc (and Return
+      // in a one-line field) hands the keyboard back to the row cursor, Tab
+      // moves on to the next row's field, and ↑ and ↓ leave a one-line field
+      // for the row above or below. The notes keep their arrows and Return.
+      if self.workspace.commandSurface == .inspector, let meaning = Self.inspectorEditingKey(event, in: window) {
+        self.workspace.sendInspectorKey(.editing(meaning))
+        if case .commit(passKey: true) = meaning { return event }
         return nil
       }
       if self.isEditingText(in: window) || self.workspace.agentHoldsKeyboard {
@@ -288,22 +289,11 @@ final class MainWindowController: NSObject, NSWindowDelegate {
     return true
   }
 
-  /// Which way a key in an inspector text field leaves it, or `nil` when the
-  /// field keeps the key.
-  private static func inspectorFieldStep(_ event: NSEvent, in window: NSWindow) -> Bool? {
-    guard event.modifierFlags.isDisjoint(with: [.command, .option, .control]),
-      let editor = window.firstResponder as? NSTextView
-    else { return nil }
-    let shift = event.modifierFlags.contains(.shift)
-    if editor.isFieldEditor {
-      guard !shift else { return nil }
-      switch event.keyCode {
-      case 125: return true
-      case 126: return false
-      default: return nil
-      }
-    }
-    return event.keyCode == 48 ? !shift : nil
+  /// What a key in an inspector text field means to the inspector, or `nil`
+  /// when the field keeps it (`InspectorEditingKey`).
+  private static func inspectorEditingKey(_ event: NSEvent, in window: NSWindow) -> InspectorEditingKey? {
+    guard let editor = window.firstResponder as? NSTextView, let key = event.workspaceCommandKey else { return nil }
+    return InspectorEditingKey.meaning(of: key, multiline: !editor.isFieldEditor)
   }
 
   private func isEditingText(in window: NSWindow) -> Bool {

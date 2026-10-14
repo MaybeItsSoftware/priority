@@ -185,7 +185,7 @@ struct WorkspaceDependencyInspectorSection: View {
         }
         Button(blockers.isEmpty ? "Add blocker" : "Add another") { model.presentBlockerFinder() }
           .buttonStyle(InspectorValueButtonStyle(tone: .dim))
-          .inspectorStop("blocker.add")
+          .inspectorStop("blocker.add", press: { model.presentBlockerFinder() })
           .commandHelp(.taskAddBlocker, note: "Find a task this one waits on until it is done")
       }
       if !blocking.isEmpty {
@@ -221,7 +221,7 @@ struct WorkspaceDependencyInspectorSection: View {
       }
     }
     .buttonStyle(InspectorValueButtonStyle())
-    .inspectorStop(stop)
+    .inspectorStop(stop, press: { model.selectTask(other) })
     .help(isOpen ? "\(other.title) — open" : "\(other.title) — done")
   }
 }

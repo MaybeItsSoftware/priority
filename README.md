@@ -134,6 +134,24 @@ rename, `h` / `l` / `-` collapse, expand and go up, `gg` / `Shift+G` the ends,
 `{` / `}` the previous / next folder and `:` the palette. Right-clicking a row
 opens the same panel's menu, each item with its sidebar key beside it.
 
+The **inspector** is modal, as vim is. With the keyboard in it, `j` / `k` (or
+`↓` / `↑`) move a row cursor down every row — the title, Start focus, the
+dates, Conditions, the estimate, the notes, Priority, Tags, List, Blocked by,
+Waiting on, Repeat and each commitment's Edit and Stop, Links, the actions —
+and `gg` / `Shift+G` (or `Home` / `End`) go to the first and last. Landing on
+a text row only highlights it, so the notes no longer keep the keyboard.
+`Return`, `i` or `e` edits the row: it puts the caret in a field, presses a
+button, flips a switch, opens a menu, the date picker or, on Conditions, the
+`cc` finder. `x` or `Delete` clears it — empties a field, takes a date or a
+blocker away, sets the priority back to none. `←` / `→` step a menu such as
+Priority, `h` (and `←` elsewhere) hands the keyboard back to the tasks, and so
+does `Esc`. In a one-line field `Return` keeps what you typed and `Esc` puts
+it back, and either returns you to the row; `↑` / `↓` keep it and move on. In
+the notes and the links the arrows and `Return` are the text's: `Esc` or
+`Cmd+Return` keeps the text and comes out. `Tab` / `Shift+Tab` keep the field
+and go on to the next / previous row, editing it if it is a field. The mouse
+works as before.
+
 The palette, search, the list finder, the move picker, quick edits (`t`, `dd`,
 `ee`…), the reference and the new list / folder / column prompts all open in
 one **overlay** at the top of the window rather than as sheets. One is up at a

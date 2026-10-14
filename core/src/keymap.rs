@@ -193,7 +193,7 @@ pub fn workspace_command_catalog() -> Vec<CommandEntry> {
 
 /// Commands that act on which key ran them (the digit that sets a priority,
 /// the arrow that picks a direction), so another key cannot stand in.
-pub const READS_ITS_KEY: [&str; 11] = [
+pub const READS_ITS_KEY: [&str; 13] = [
     "goCycleRegion",
     "planMatrixPlace",
     "listNewTaskDestination",
@@ -205,6 +205,8 @@ pub const READS_ITS_KEY: [&str; 11] = [
     "motionDoneSelect",
     "motionTimelineSelect",
     "motionConditionsSelect",
+    "motionInspectorEnds",
+    "motionInspectorLeave",
 ];
 
 /// The command ids that cannot be rebound; see [`READS_ITS_KEY`].

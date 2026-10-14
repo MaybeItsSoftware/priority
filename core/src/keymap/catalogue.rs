@@ -737,18 +737,34 @@ fn motions() -> Vec<Spec> {
             .on(Sidebar)
             .motion()
             .note("Nothing to leave on Focus or the timeline, so it stays put. - is Zed's select parent"),
-        // The inspector is a column of controls, and Tab was the only way down
-        // it — which a notes field took for itself, so the keyboard got as far
-        // as the notes and no further. The task keys move through it instead,
-        // as they move through every other column of rows.
+        // The inspector is vim's: a row cursor in normal mode that stands on
+        // a field without giving it the keyboard, and a caret only once you
+        // ask to edit. Walking down it by handing each row the keyboard put
+        // the caret in the notes, which kept ↓ for themselves, and the walk
+        // stopped there for good.
         c("motionInspectorNext", "Go to the next field", "Moving around", &["down", "j"])
             .on(Inspector)
             .motion()
-            .note("In a one-line field ↓ moves on too; in the notes, Tab does"),
+            .note("Every row, the notes included: standing on a field only highlights it. In a one-line field ↓ moves on too"),
         c("motionInspectorPrevious", "Go to the previous field", "Moving around", &["up", "k"])
             .on(Inspector)
             .motion()
-            .note("In a one-line field ↑ moves back too; in the notes, ⇧Tab does"),
+            .note("In a one-line field ↑ moves back too"),
+        c("motionInspectorEnds", "Go to the first or last field", "Moving around", &["gg", "shift+g", "home", "end"])
+            .on(Inspector)
+            .motion(),
+        c("motionInspectorEdit", "Edit the field", "Moving around", &["enter", "i", "e"])
+            .on(Inspector)
+            .motion()
+            .note("A text field takes the caret — Return or Esc gives it back, in the notes Esc or ⌘Return; Tab moves on to the next field. A switch flips, a button, menu or date opens"),
+        c("motionInspectorClear", "Clear the field", "Moving around", &["x", "delete"])
+            .on(Inspector)
+            .motion()
+            .note("Empties a text field, takes a date or a blocker away, sets the priority back to none, turns a switch off"),
+        c("motionInspectorLeave", "Back to the tasks", "Moving around", &["left", "h"])
+            .on(Inspector)
+            .motion()
+            .note("On a picker ← steps its value instead. Esc leaves too, from the row cursor; in a field it only ends the edit"),
         c("motionBoardColumn", "Focus the next or previous column", "Moving around", &["left", "right"])
             .on(Board)
             .motion(),

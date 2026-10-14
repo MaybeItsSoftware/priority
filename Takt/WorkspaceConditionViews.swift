@@ -164,7 +164,9 @@ struct WorkspaceTaskConditionsEditor: View {
           isAddingCondition = true
         }
       }
-      .inspectorStop("condition.add")
+      // Return opens the `cc` finder, which the keyboard can work; a click
+      // still opens the menu.
+      .inspectorStop("condition.add", press: { model.presentConditionPicker() })
       .commandHelp(
         .taskConditions,
         note: model.focusConditions.isEmpty
@@ -216,6 +218,11 @@ struct WorkspaceTaskConditionsEditor: View {
         .focused($isNewConditionFocused)
         .onSubmit(addNewCondition)
         .onExitCommand { isAddingCondition = false }
+        // Esc reaches the inspector's cursor, not the field: an empty field
+        // it leaves goes away as the field's own Esc made it.
+        .onChange(of: isNewConditionFocused) { _, focused in
+          if !focused && newConditionName.trimmingCharacters(in: .whitespaces).isEmpty { isAddingCondition = false }
+        }
       WorkspaceConditionCategoryMenu(
         category: model.newConditionCategory,
         choose: { model.newConditionCategory = $0 },

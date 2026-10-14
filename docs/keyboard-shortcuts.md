@@ -187,7 +187,11 @@ The sidebar, the done rail, the Conditions tab and the inspector hold a cursor
 or controls of their own, so the bare task keys — `Space`, `x`, `Delete`, the
 digits, `Tab` — do not reach through them to the selected task. They keep the
 chords, `/`, `?`, `i` and `Esc`, and all but the inspector keep the two-letter
-sequences.
+sequences. The inspector's own keys take some of those over: it is a vim
+buffer of rows, where `j` / `k`, `gg` / `Shift+G` move the cursor, `Return`,
+`i` or `e` edit the row, `x` or `Delete` clear it and `h` or `←` leave; a field
+is insert mode, left with `Esc` (and `Return` in a one-line field). See the
+README.
 
 The Conditions tab's cursor walks both its halves — what is available now, and
 the conditions themselves. `Space` turns the condition on or off, `Return` or
@@ -204,7 +208,8 @@ the keyboard comes along to the new tab, within the same dock. The bottom
 dock's Progress tab has nothing to step through, so it is reached by clicking
 its tab and is not a stop. On a task pane the same chords change list. `Esc` on
 any of them hands the keyboard back to the work and leaves the dock open — in
-the inspector that includes `Esc` from inside one of its fields — and `r` puts
+the inspector, from the row cursor; `Esc` in one of its fields only ends the
+edit — and `r` puts
 the right dock away, `Cmd+J` the bottom one. `Ctrl+Tab` walks the sidebar, the
 tasks, the bottom dock and the right dock, left to right.
 

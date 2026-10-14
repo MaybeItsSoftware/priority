@@ -226,7 +226,7 @@ struct WorkspaceWaitingInspectorSection: View {
         InspectorRow("Waiting on") {
           Button("Add who or what") { model.presentWaitingForm() }
             .buttonStyle(InspectorValueButtonStyle(tone: .dim))
-            .inspectorStop("waiting.start")
+            .inspectorStop("waiting.start", press: { model.presentWaitingForm() })
             .commandHelp(.taskWaiting, note: "Move it to Waiting on, with who and when to follow up")
         }
       }
@@ -234,7 +234,7 @@ struct WorkspaceWaitingInspectorSection: View {
         InspectorRow("Follows up") {
           Button(source.title) { model.selectTask(source) }
             .buttonStyle(InspectorValueButtonStyle(tone: .muted))
-            .inspectorStop("waiting.source")
+            .inspectorStop("waiting.source", press: { model.selectTask(source) })
             .help("Go to \(source.title)")
         }
       }

@@ -1,3 +1,4 @@
+import AppKit
 import TaktCore
 import SwiftUI
 
@@ -49,45 +50,70 @@ extension View {
 ///
 /// The inspector moves its own keyboard rather than leaving it to Tab,
 /// because Tab only visits text fields unless Keyboard navigation is switched
-/// on in System Settings — so on most Macs ↓ from the title went straight to
-/// the notes, past every button, switch and picker between them, and stopped
-/// there for good. Every control names itself instead, and the names arrive
-/// in the order they are drawn (`InspectorStopsKey`), which is the order ↑
-/// and ↓ walk.
+/// on in System Settings. Every control names itself instead, and the names
+/// arrive in the order they are drawn (`InspectorStopsKey`), which is the
+/// order its row cursor walks (`InspectorCursor`).
 extension EnvironmentValues {
   @Entry var inspectorFocus: FocusState<String?>.Binding?
+  /// The row the inspector's cursor is on while the inspector has the
+  /// keyboard, edited or not.
+  @Entry var inspectorCursor: String?
+  /// Whether that row is being typed into.
+  @Entry var inspectorEditing = false
+  /// The last "press this" or "step this" the cursor sent a stop.
+  @Entry var inspectorStopRequest: InspectorStopRequest?
+}
+
+/// A key the cursor hands on to one stop: Return pressing it, ← and → stepping
+/// a picker. A serial each time, so the same request twice is two requests.
+struct InspectorStopRequest: Equatable {
+  enum Kind: Equatable { case press, adjust(Int) }
+  let id: String
+  let kind: Kind
+  let serial: Int
 }
 
 /// The inspector's stops, top to bottom. A preference collects them in the
 /// order the views are laid out, so the walk follows the layout with no
 /// second list to keep in step with it.
 struct InspectorStopsKey: PreferenceKey {
-  static let defaultValue: [String] = []
-  static func reduce(value: inout [String], nextValue: () -> [String]) { value += nextValue() }
+  static let defaultValue: [InspectorStopInfo] = []
+  static func reduce(value: inout [InspectorStopInfo], nextValue: () -> [InspectorStopInfo]) {
+    value += nextValue()
+  }
 }
 
 private struct InspectorStop: ViewModifier {
   @Environment(\.theme) private var theme
   @Environment(\.inspectorFocus) private var focus
+  @Environment(\.inspectorCursor) private var cursor
+  @Environment(\.inspectorEditing) private var editing
+  @Environment(\.inspectorStopRequest) private var request
   let id: String
   let radius: CGFloat?
-  let isTextField: Bool
+  let kind: InspectorStopKind
+  /// Whether this modifier draws the cursor's ring. A quiet field draws it
+  /// on its own frame instead.
+  let ringed: Bool
   let adjust: ((Int) -> Void)?
+  let press: (() -> Void)?
 
   func body(content: Content) -> some View {
     if let focus {
+      let isCursor = cursor == id && !(kind.isText && editing)
       Group {
         // A text field takes the keyboard of its own accord; anything else
         // has to be told it may.
-        if isTextField { content } else { content.focusable() }
+        if kind.isText { content } else { content.focusable() }
       }
       .focused(focus, equals: id)
       .focusEffectDisabled()
       .overlay {
-        // A field's own frame says it has the caret; a control gets the ring.
-        if !isTextField {
+        if ringed {
           RoundedRectangle(cornerRadius: radius ?? theme.controlRadius, style: .continuous)
-            .strokeBorder(focus.wrappedValue == id ? theme.focusRing : .clear, lineWidth: theme.focusRingWidth)
+            .strokeBorder(
+              isCursor || (!kind.isText && focus.wrappedValue == id) ? theme.focusRing : .clear,
+              lineWidth: theme.focusRingWidth)
             .allowsHitTesting(false)
         }
       }
@@ -96,47 +122,82 @@ private struct InspectorStop: ViewModifier {
         adjust(press.key == .leftArrow ? -1 : 1)
         return .handled
       }
+      .onChange(of: request) { _, request in
+        guard let request, request.id == id else { return }
+        switch request.kind {
+        case .adjust(let offset): adjust?(offset)
+        case .press:
+          if let press { press() } else { Self.pressWithSpace() }
+        }
+      }
       .id(id)
-      .preference(key: InspectorStopsKey.self, value: [id])
-    } else if isTextField {
+      .preference(key: InspectorStopsKey.self, value: [InspectorStopInfo(id, kind: kind)])
+    } else if kind.isText {
       content
     } else {
       content.keyboardFocusable(radius: radius)
     }
   }
+
+  /// Presses the control that has the keyboard as Space would: the one way to
+  /// open a menu without the mouse. Sent to the window rather than the
+  /// application, so it does not go round the workspace's key monitor.
+  private static func pressWithSpace() {
+    DispatchQueue.main.async {
+      guard let window = NSApp.keyWindow else { return }
+      for type in [NSEvent.EventType.keyDown, .keyUp] {
+        guard
+          let event = NSEvent.keyEvent(
+            with: type, location: .zero, modifierFlags: [], timestamp: ProcessInfo.processInfo.systemUptime,
+            windowNumber: window.windowNumber, context: nil, characters: " ", charactersIgnoringModifiers: " ",
+            isARepeat: false, keyCode: 49)
+        else { continue }
+        window.sendEvent(event)
+      }
+    }
+  }
 }
 
 extension View {
-  /// A control the inspector's ↑ and ↓ stop on, ringed while it has the
-  /// keyboard. `adjust`, for a picker, is what ← and → do to its value.
+  /// A control the inspector's cursor stops on, ringed while it is under the
+  /// cursor. `adjust`, for a picker, is what ← and → do to its value; `press`
+  /// is what Return does, when it is not what Space would.
   /// Outside the inspector it is `keyboardFocusable`.
-  func inspectorStop(_ id: String, radius: CGFloat? = nil, adjust: ((Int) -> Void)? = nil) -> some View {
-    modifier(InspectorStop(id: id, radius: radius, isTextField: false, adjust: adjust))
+  func inspectorStop(
+    _ id: String, radius: CGFloat? = nil, adjust: ((Int) -> Void)? = nil, press: (() -> Void)? = nil
+  ) -> some View {
+    modifier(
+      InspectorStop(
+        id: id, radius: radius, kind: adjust == nil ? .control : .adjustable, ringed: true, adjust: adjust,
+        press: press))
   }
 
-  /// A text field or editor the inspector's ↑ and ↓ stop on.
-  func inspectorField(_ id: String) -> some View {
-    modifier(InspectorStop(id: id, radius: nil, isTextField: true, adjust: nil))
+  /// A text field or editor the inspector's cursor stops on. Standing on it
+  /// rings it; only editing it puts the caret in.
+  func inspectorField(_ id: String, multiline: Bool = false, ringed: Bool = true) -> some View {
+    modifier(
+      InspectorStop(
+        id: id, radius: nil, kind: multiline ? .multilineField : .field, ringed: ringed, adjust: nil, press: nil))
   }
 }
 
-/// The band behind the inspector section that has the keyboard: the same
-/// fill a selected task or list row draws, edge to edge across the dock.
+/// The band behind the inspector section the cursor is in: the same fill a
+/// selected task or list row draws, edge to edge across the dock.
 ///
-/// The rings on single controls said which button the keys would press but
-/// not where you were in a column of twenty-odd of them; the band says that,
-/// as the task panes and the sidebar do. A section knows it has the keyboard
-/// when the stop that has it is one of its own, which it learns from the same
+/// The rings on single controls said which row the keys would act on but not
+/// where you were in a column of twenty-odd of them; the band says that, as
+/// the task panes and the sidebar do. A section knows the cursor is in it
+/// when the cursor's stop is one of its own, which it learns from the same
 /// preference the inspector walks.
 private struct InspectorBand: ViewModifier {
   @Environment(\.theme) private var theme
-  @Environment(\.inspectorFocus) private var focus
+  @Environment(\.inspectorCursor) private var cursor
   @State private var stops: [String] = []
 
   func body(content: Content) -> some View {
-    let isActive = focus?.wrappedValue.map(stops.contains) ?? false
+    let isActive = cursor.map(stops.contains) ?? false
     content
-      .onPreferenceChange(InspectorStopsKey.self) { stops = $0 }
+      .onPreferenceChange(InspectorStopsKey.self) { stops = $0.map(\.id) }
       .padding(.vertical, theme.space.xs)
       .padding(.horizontal, theme.paneGutter)
       .background(WorkspaceSelectionBackground(isSelected: isActive, hasKeyboard: isActive))
@@ -145,8 +206,8 @@ private struct InspectorBand: ViewModifier {
 }
 
 extension View {
-  /// Bands the group of inspector controls it wraps while one of them has
-  /// the keyboard. Outside the inspector it changes nothing but its padding.
+  /// Bands the group of inspector controls it wraps while the cursor is in
+  /// it. Outside the inspector it changes nothing but its padding.
   func inspectorBand() -> some View {
     modifier(InspectorBand())
   }
@@ -457,7 +518,7 @@ struct ThemedDateField: View {
         .fixedSize()
       }
     }
-    .inspectorStop(stop ?? "date")
+    .inspectorStop(stop ?? "date", press: { isPicking.toggle() })
     .popover(isPresented: $isPicking, arrowEdge: .bottom) {
       VStack(alignment: .leading, spacing: theme.space.sm) {
         DatePicker("", selection: $selection, displayedComponents: [.date])

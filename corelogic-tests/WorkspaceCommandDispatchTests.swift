@@ -204,7 +204,8 @@ final class WorkspaceCommandDispatchTests: XCTestCase {
   /// does not have the keyboard.
   func testRegionsDoNotTakeBareTaskKeys() {
     for surface: WorkspaceCommandSurface in [.sidebar, .done, .inspector] {
-      for key in ["x", "1", "0", "tab", "shift+enter", "option+enter"] {
+      // The inspector's x clears the row under its cursor, not the task.
+      for key in ["x", "1", "0", "tab", "shift+enter", "option+enter"] where !(surface == .inspector && key == "x") {
         XCTAssertNil(
           WorkspaceCommandCatalog.command(forKey: key, on: surface),
           "\(key) acts on the selected task from \(surface)")
@@ -270,8 +271,14 @@ final class WorkspaceCommandDispatchTests: XCTestCase {
     XCTAssertEqual(WorkspaceCommandCatalog.sequences(on: .outline), written)
   }
 
-  func testTheInspectorHasNoSequences() {
-    XCTAssertTrue(WorkspaceCommandCatalog.sequences(on: .inspector).isEmpty)
+  /// Its one sequence is vim's gg, to the top row; nothing a task pane
+  /// holds for a sequence reaches it.
+  func testTheInspectorsOnlySequenceIsGG() {
+    XCTAssertEqual(WorkspaceCommandCatalog.sequences(on: .inspector), ["gg"])
+    XCTAssertEqual(WorkspaceCommandCatalog.command(forKey: "gg", on: .inspector)?.id, .motionInspectorEnds)
+    XCTAssertEqual(WorkspaceCommandCatalog.command(forKey: "x", on: .inspector)?.id, .motionInspectorClear)
+    XCTAssertEqual(WorkspaceCommandCatalog.command(forKey: "enter", on: .inspector)?.id, .motionInspectorEdit)
+    XCTAssertEqual(WorkspaceCommandCatalog.command(forKey: "h", on: .inspector)?.id, .motionInspectorLeave)
   }
 
   /// Only the window's own sequences survive a screen that owns the keyboard,

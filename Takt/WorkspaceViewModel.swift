@@ -726,10 +726,10 @@ enum WorkspaceSidebarItem: Identifiable {
   @ObservationIgnored var pendingFindForward: Bool?
   /// What `;` repeats.
   @ObservationIgnored var lastFind: (character: Character, forward: Bool)?
-  /// Bumped to move the inspector's keyboard `inspectorStepOffset` stops on;
-  /// the inspector owns which stop that lands on.
-  var inspectorStepRequest = 0
-  var inspectorStepOffset = 1
+  /// The last key sent to the inspector's cursor, which the inspector owns
+  /// (`InspectorCursor`); a new serial each time, so the same key twice is
+  /// two requests.
+  var inspectorKeyRequest = InspectorKeyRequest(action: .step(0), serial: 0)
   /// Plain navigation keys only belong to the focused list/board surface.
   /// Buttons, menus, and other controls keep their native keyboard behavior.
   var keyboardNavigationSurfaceActive = false

@@ -13,8 +13,13 @@ struct LocalTaskInspector: View {
   var scroll: ScrollViewProxy?
   /// Which stop has the keyboard — see `inspectorStop`.
   @FocusState private var focus: String?
-  /// Every stop on screen, top to bottom.
-  @State private var stops: [String] = []
+  /// The row cursor, and whether its row is being edited (`InspectorCursor`).
+  @State private var cursor = InspectorCursor()
+  /// The draft as it was when the field being edited took the caret, so Esc
+  /// can put the field back.
+  @State private var editStart: TaskEditorValues?
+  /// The last press or step handed to one stop.
+  @State private var stopRequest: InspectorStopRequest?
 
   var body: some View {
     // A stack, not a Group: a Group hands its modifiers to each child, and
@@ -29,32 +34,37 @@ struct LocalTaskInspector: View {
       }
     }
     .environment(\.inspectorFocus, $focus)
-    .onPreferenceChange(InspectorStopsKey.self) { stops = $0 }
+    .environment(\.inspectorCursor, model.keyboardFocusArea == .inspector ? cursor.current : nil)
+    .environment(\.inspectorEditing, cursor.isEditing)
+    .environment(\.inspectorStopRequest, stopRequest)
+    .onPreferenceChange(InspectorStopsKey.self) { stops in
+      cursor.updateStops(stops)
+      // The title can take the caret before its row has been gathered.
+      if let focus, cursor.keyboardStop != focus { keyboardMoved(to: focus) }
+      sync()
+    }
     .onAppear {
       model.openTaskEditor(task)
       if requestedFocusArea == .inspector && model.inspectorFocusesTitle { focus = Self.titleStop }
     }
-    .onChange(of: task.id) { _, _ in model.openTaskEditor(task) }
+    .onChange(of: task.id) { _, _ in
+      cursor.reset()
+      editStart = nil
+      model.openTaskEditor(task)
+    }
     .onChange(of: focusRequest) { _, _ in
       if requestedFocusArea == .inspector && model.inspectorFocusesTitle { focus = Self.titleStop }
     }
-    .onChange(of: model.inspectorStepRequest) { _, _ in step(by: model.inspectorStepOffset) }
+    .onChange(of: focus) { _, focus in
+      // The cursor's own moves set the focus it already wants; anything
+      // else is a click, or the keyboard going elsewhere.
+      if focus != cursor.keyboardStop { keyboardMoved(to: focus) }
+    }
+    .onChange(of: model.inspectorKeyRequest) { _, request in handle(request.action) }
     .onDisappear { model.taskEditor.flush() }
   }
 
   static let titleStop = "title"
-
-  /// One stop on, or back, from wherever the keyboard is; from the pane
-  /// itself, the first or last. The ends stop rather than wrap: falling off
-  /// the bottom of a form onto its title is not a thing anyone means.
-  private func step(by offset: Int) {
-    guard !stops.isEmpty else { return }
-    let current = focus.flatMap { stops.firstIndex(of: $0) }
-    let next = current.map { $0 + offset } ?? (offset > 0 ? 0 : stops.count - 1)
-    guard stops.indices.contains(next) else { return }
-    focus = stops[next]
-    withAnimation(.easeOut(duration: 0.12)) { scroll?.scrollTo(stops[next]) }
-  }
 
   /// The editor, in the order a task is decided on.
   ///
@@ -125,9 +135,9 @@ struct LocalTaskInspector: View {
         .foregroundStyle(theme.muted)
         HStack(spacing: theme.space.xs) {
           Button("Use saved") { model.taskEditor.resolve(task.id, field: field, useSaved: true) }
-            .inspectorStop("conflict.\(field).saved")
+            .inspectorStop("conflict.\(field).saved", press: { model.taskEditor.resolve(task.id, field: field, useSaved: true) })
           Button("Keep my edit") { model.taskEditor.resolve(task.id, field: field, useSaved: false) }
-            .inspectorStop("conflict.\(field).mine")
+            .inspectorStop("conflict.\(field).mine", press: { model.taskEditor.resolve(task.id, field: field, useSaved: false) })
         }
         .buttonStyle(FocusActionButtonStyle())
       }
@@ -153,11 +163,11 @@ struct LocalTaskInspector: View {
             Label("Add to queue", systemImage: "plus.circle")
           }
           .buttonStyle(FocusActionButtonStyle(prominent: true))
-          .inspectorStop("focus.queue")
+          .inspectorStop("focus.queue", press: { model.addToFocusQueue(task) })
           .commandHelp(.taskStartFocus, note: "Add this task to the focus queue")
           Button("Open focus") { model.run(.goFocus) }
             .buttonStyle(InspectorValueButtonStyle(tone: .muted))
-            .inspectorStop("focus.open")
+            .inspectorStop("focus.open", press: { model.run(.goFocus) })
             .commandHelp(.goFocus)
           Spacer(minLength: 0)
           FocusStopButton()
@@ -167,7 +177,7 @@ struct LocalTaskInspector: View {
           Label("Start focus", systemImage: "bolt.fill")
         }
         .buttonStyle(FocusActionButtonStyle(prominent: true))
-        .inspectorStop("focus.start")
+        .inspectorStop("focus.start", press: { model.startFocus(on: task) })
         .commandHelp(.taskStartFocus, note: "Start a block on this task")
       }
     }
@@ -222,22 +232,12 @@ struct LocalTaskInspector: View {
         Toggle(
           isOn: Binding(
             get: { model.taskEditor.draft(for: task.id)?.values.dueAt != nil },
-            set: { exact in
-              model.taskEditor.edit(task.id) {
-                if exact {
-                  $0.dueAt = $0.dueDate.flatMap { TaskCalendarDate.date($0) } ?? .now
-                  $0.dueDate = nil
-                } else {
-                  $0.dueDate = TaskCalendarDate.string($0.dueAt ?? .now)
-                  $0.dueAt = nil
-                }
-              }
-            })
+            set: { exact in setExactDue(exact) })
         ) {
           quietValue(exact ? "At a set time" : "Any time that day", tone: exact ? .ink : .dim)
         }
         .toggleStyle(.themedSwitch)
-        .inspectorStop("due.exact")
+        .inspectorStop("due.exact", press: { toggleExactDue() })
         .help("Due at a set time rather than any time that day")
       }
     }
@@ -256,6 +256,22 @@ struct LocalTaskInspector: View {
         }
       })
     .commandHelp(.taskEditStart)
+  }
+
+  private func setExactDue(_ exact: Bool) {
+    model.taskEditor.edit(task.id) {
+      if exact {
+        $0.dueAt = $0.dueDate.flatMap { TaskCalendarDate.date($0) } ?? .now
+        $0.dueDate = nil
+      } else {
+        $0.dueDate = TaskCalendarDate.string($0.dueAt ?? .now)
+        $0.dueAt = nil
+      }
+    }
+  }
+
+  private func toggleExactDue() {
+    setExactDue(model.taskEditor.draft(for: task.id)?.values.dueAt == nil)
   }
 
   /// How long it takes: the estimate and what has been worked against it,
@@ -304,7 +320,9 @@ struct LocalTaskInspector: View {
         quietValue(required ? "Must finish in one go" : "Can be split", tone: required ? .ink : .dim)
       }
       .toggleStyle(.themedSwitch)
-      .inspectorStop("single-sitting")
+      .inspectorStop("single-sitting", press: {
+        model.taskEditor.edit(task.id) { $0.requiresSingleSitting = $0.requiresSingleSitting == true ? nil : true }
+      })
       .help("Must finish in one sitting")
     }
   }
@@ -391,7 +409,7 @@ struct LocalTaskInspector: View {
           quietValue("Make daily progress", tone: .ink)
         }
         .toggleStyle(.themedSwitch)
-        .inspectorStop("daily")
+        .inspectorStop("daily", press: { model.taskEditor.edit(task.id) { $0.dailyProgress.toggle() } })
         .commandHelp(.taskToggleDaily, note: "Show this ongoing task in Dailies without completing the task itself")
       }
     }
@@ -419,7 +437,7 @@ struct LocalTaskInspector: View {
       }
       Button("Commit periodically…") { model.presentCommitmentForm(for: task, editing: nil) }
         .buttonStyle(InspectorValueButtonStyle(tone: .dim))
-        .inspectorStop("commit")
+        .inspectorStop("commit", press: { model.presentCommitmentForm(for: task, editing: nil) })
         .commandHelp(.taskToggleDaily, note: "Add a subtask that comes round in Dailies on its days until this is done")
     }
   }
@@ -431,22 +449,31 @@ struct LocalTaskInspector: View {
           .font(theme.bodyFont())
           .foregroundStyle(theme.ink)
           .lineLimit(1)
-        Text(Self.commitmentSummary(commitment))
+        // "✓ today" once today's is ticked: its subtask is resting, out of
+        // the outline and the boards until its next day.
+        Text(
+          Self.commitmentSummary(commitment)
+            + (model.isCommitmentDoneToday(commitment) ? " · ✓ today" : ""))
           .font(theme.captionFont)
           .foregroundStyle(theme.muted)
       }
       Spacer(minLength: 0)
+      // Each its own stop, so the cursor reaches both. Stop is not what `x`
+      // does: what was logged is kept, but the commitment is gone.
       if let parent {
         Button("Edit") { model.presentCommitmentForm(for: parent, editing: commitment) }
           .buttonStyle(InspectorValueButtonStyle(tone: .muted))
+          .inspectorStop(
+            "commitment.\(commitment.taskId).edit",
+            press: { model.presentCommitmentForm(for: parent, editing: commitment) })
           .help("Change its name, schedule or end")
       }
       Button("Stop") { model.stopCommitment(commitment) }
         .buttonStyle(InspectorValueButtonStyle(tone: .muted))
+        .inspectorStop("commitment.\(commitment.taskId).stop", press: { model.stopCommitment(commitment) })
         .help("Stop it coming round; what was logged is kept")
     }
     .padding(.leading, theme.space.xs)
-    .inspectorStop("commitment.\(commitment.taskId)")
   }
 
   /// "Every friday · until Fri 31 Oct", and "· stacks, 2 missed" for one
@@ -504,7 +531,7 @@ struct LocalTaskInspector: View {
         .frame(maxWidth: .infinity, alignment: .leading)
     }
     .buttonStyle(InspectorValueButtonStyle(tone: .muted))
-    .inspectorStop(stop)
+    .inspectorStop(stop, press: action)
   }
 
   /// A switch's words, at the value column's inset.
@@ -521,14 +548,14 @@ struct LocalTaskInspector: View {
       Button("Save") { model.saveTaskEditor(task) }
         .buttonStyle(FocusActionButtonStyle(prominent: draft.isDirty))
         .keyboardShortcut("s", modifiers: .command)
-        .inspectorStop("save")
+        .inspectorStop("save", press: { model.saveTaskEditor(task) })
         .help("Save · ⌘S")
         .disabled(
           !draft.isDirty || draft.isUnavailable || !draft.conflicts.isEmpty
             || draft.values.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
       Button("Revert") { model.revertTaskEditor(task) }
         .buttonStyle(InspectorValueButtonStyle(tone: .muted))
-        .inspectorStop("revert")
+        .inspectorStop("revert", press: { model.revertTaskEditor(task) })
         .disabled(!draft.isDirty)
       Spacer(minLength: 0)
       if draft.isDirty {
@@ -579,232 +606,105 @@ struct LocalTaskInspector: View {
   }
 }
 
-struct WorkspaceSidebarEditorSheet: View {
-  @Environment(WorkspaceViewModel.self) private var model
-  @Environment(\.dismiss) private var dismiss
-  let editor: WorkspaceSidebarEditor
+// MARK: - The cursor
 
-  var body: some View {
-    switch editor {
-    case .list(let list):
-      ListSettingsEditor(list: list, dismiss: dismiss)
-    case .folder(let folder):
-      FolderSettingsEditor(folder: folder, dismiss: dismiss)
+extension LocalTaskInspector {
+  /// A key for the cursor, from `WorkspaceViewModel.sendInspectorKey`.
+  private func handle(_ action: InspectorKeyAction) {
+    // Whatever has the caret is what is being edited, even if it took it
+    // before the cursor heard.
+    if let focus, cursor.keyboardStop != focus { keyboardMoved(to: focus) }
+    let before = cursor.current
+    switch action {
+    case .step(let offset): cursor.step(by: offset)
+    case .first: cursor.moveToFirst()
+    case .last: cursor.moveToLast()
+    case .edit: cursor.activate().map(perform)
+    case .clear: cursor.clear().map(perform)
+    case .leave(let byArrow): perform(cursor.leave(byArrow: byArrow))
+    case .editing(.commit): cursor.finishEditing(commit: true)
+    case .editing(.cancel): cursor.finishEditing(commit: false).map(perform)
+    case .editing(.tab(let forward)): cursor.tab(forward: forward)
+    case .editing(.step(let offset)):
+      cursor.finishEditing(commit: true)
+      cursor.step(by: offset)
     }
-  }
-}
-
-private struct ListSettingsEditor: View {
-  @Environment(WorkspaceViewModel.self) private var model
-  @Environment(\.theme) private var theme
-  let list: TaskList
-  let dismiss: DismissAction
-  @State private var name: String
-  @State private var colorHex: String
-  @State private var iconSymbol = "list.bullet"
-  @State private var folderID: String?
-  @State private var isArchived: Bool
-  @State private var visibleRootTaskID: String?
-  @State private var agentInstructions = ""
-  @State private var saveError: String?
-  @FocusState private var nameIsFocused: Bool
-
-  init(list: TaskList, dismiss: DismissAction) {
-    self.list = list
-    self.dismiss = dismiss
-    _name = State(initialValue: list.name)
-    _colorHex = State(initialValue: list.colorHex ?? "")
-    _folderID = State(initialValue: list.folderId)
-    _isArchived = State(initialValue: list.isArchived)
-    _visibleRootTaskID = State(initialValue: list.visibleRootTaskId)
-  }
-
-  var body: some View {
-    VStack(alignment: .leading, spacing: theme.space.lg) {
-      SheetTitle("List settings")
-      VStack(alignment: .leading, spacing: theme.space.sm) {
-        ThemedControlRow("Name") {
-          TextField("Name", text: $name)
-            .themedTextField()
-            .focused($nameIsFocused)
-            .onSubmit { save() }
-            .help("↩ saves, esc cancels")
-        }
-        ThemedControlRow("Color (hex)") {
-          TextField("Color (hex)", text: $colorHex, prompt: Text("#4F86C6"))
-            .themedTextField()
-        }
-        ThemedPicker("Icon", selection: $iconSymbol, options: LocalTaskInspector.iconOptions(including: iconSymbol))
-          .focusable()
-        ThemedPicker(
-          "Folder", selection: $folderID,
-          options: [ThemedPickerOption("Ungrouped", value: nil as String?)]
-            + model.folders.map { ThemedPickerOption($0.name, value: Optional($0.id)) }
-        )
-        .focusable()
-        Toggle("Archived", isOn: $isArchived)
-          .toggleStyle(.themedSwitch)
-          .focusable()
-          .disabled(list.isSystemList)
-          .commandHelp(.listArchive, note: "Archive the list")
-        if !model.visibleRootCandidates(for: list).isEmpty || visibleRootTaskID != nil {
-          ThemedPicker(
-            "Show at list root", selection: $visibleRootTaskID, options: visibleRootOptions)
-          Text("Choose an imported project's children as the list's visible work. Tasks keep their titles and placement.")
-            .font(theme.captionFont).foregroundStyle(theme.muted)
-          let preview = model.visibleRootPreview(for: list, rootID: visibleRootTaskID)
-          Text("Preview: \(preview.prefix(3).map(\.title).joined(separator: ", "))\(preview.count > 3 ? "…" : "")")
-            .font(theme.captionFont).foregroundStyle(theme.muted)
-        }
-        ThemedControlRow("Tasks") {
-          Text("\(model.taskCount(for: list))")
-            .font(theme.bodyFont())
-            .monospacedDigit()
-            .foregroundStyle(theme.muted)
-        }
-        AgentInstructionsField(
-          prompt: "Agent instructions for this list", text: $agentInstructions, onSubmit: save)
-      }
-      if let saveError { Text(saveError).font(theme.captionFont).foregroundStyle(theme.danger) }
-      HStack(spacing: theme.space.xs) {
-        Button("Delete list", role: .destructive) {
-          model.requestDeletion(of: .list(list))
-          dismiss()
-        }
-        .focusable()
-        .disabled(list.isSystemList)
-        .commandHelp(.listDelete, note: "Delete the list")
-        Button("Move up") { model.moveListWithinFolder(list, by: -1) }
-          .focusable()
-          .commandHelp(.listMoveUp, note: "Move the list up")
-        Button("Move down") { model.moveListWithinFolder(list, by: 1) }
-          .focusable()
-          .commandHelp(.listMoveDown, note: "Move the list down")
-        Spacer()
-        Button("Cancel") { dismiss() }
-          .focusable()
-          .keyboardShortcut(.cancelAction)
-          .help("Cancel · esc")
-        Button("Save") { save() }
-          .buttonStyle(FocusActionButtonStyle(prominent: true))
-          .focusable()
-          .keyboardShortcut(.defaultAction)
-          .help("Save · ↩")
-          .disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-      }
-      .buttonStyle(FocusActionButtonStyle())
-    }
-    .padding(theme.space.xl)
-    .frame(width: 380)
-    .background(theme.raised)
-    .onAppear {
-      iconSymbol = model.icon(for: list)
-      agentInstructions = model.agentInstructions.list(list.id)
-      nameIsFocused = true
+    sync()
+    if let current = cursor.current, current != before {
+      withAnimation(.easeOut(duration: 0.12)) { scroll?.scrollTo(current) }
     }
   }
 
-  private var visibleRootOptions: [ThemedPickerOption<String?>] {
-    let candidates = model.visibleRootCandidates(for: list)
-    var options = [ThemedPickerOption("Top-level tasks", value: nil as String?)]
-    options += candidates.map { ThemedPickerOption("Children of \($0.title)", value: Optional($0.id)) }
-    if let rootID = visibleRootTaskID, !candidates.contains(where: { $0.id == rootID }) {
-      options.append(ThemedPickerOption("Current imported root (unavailable)", value: Optional(rootID)))
-    }
-    return options
+  private func keyboardMoved(to stop: String?) {
+    cursor.keyboardMoved(to: stop)
+    noteEditing()
   }
 
-  private func save() {
-    do {
-      try model.saveListSettings(list, name: name, colorHex: colorHex, folderID: folderID,
-                                isArchived: isArchived, visibleRootTaskID: visibleRootTaskID)
-      model.setIcon(iconSymbol, for: list)
-      model.agentInstructions.setList(agentInstructions, for: list.id)
-      dismiss()
-    } catch { saveError = error.localizedDescription }
-  }
-}
-
-private struct FolderSettingsEditor: View {
-  @Environment(WorkspaceViewModel.self) private var model
-  @Environment(\.theme) private var theme
-  let folder: ListFolder
-  let dismiss: DismissAction
-  @State private var name: String
-  @State private var parentFolderID: String?
-  @State private var agentInstructions = ""
-  @State private var saveError: String?
-  @FocusState private var nameIsFocused: Bool
-
-  init(folder: ListFolder, dismiss: DismissAction) {
-    self.folder = folder
-    self.dismiss = dismiss
-    _name = State(initialValue: folder.name)
-    _parentFolderID = State(initialValue: folder.parentFolderId)
-  }
-
-  var body: some View {
-    VStack(alignment: .leading, spacing: theme.space.lg) {
-      SheetTitle("Folder settings")
-      VStack(alignment: .leading, spacing: theme.space.sm) {
-        ThemedControlRow("Name") {
-          TextField("Name", text: $name)
-            .themedTextField()
-            .focused($nameIsFocused)
-            .onSubmit { save() }
-            .help("↩ saves, esc cancels")
-        }
-        ThemedPicker(
-          "Parent folder", selection: $parentFolderID,
-          options: [ThemedPickerOption("At sidebar root", value: nil as String?)]
-            + model.validParentFolders(for: folder).map { ThemedPickerOption($0.name, value: Optional($0.id)) }
-        )
-        .focusable()
-        AgentInstructionsField(
-          prompt: "Agent instructions for every list in this folder", text: $agentInstructions, onSubmit: save)
-      }
-      if let saveError { Text(saveError).font(theme.captionFont).foregroundStyle(theme.danger) }
-      HStack(spacing: theme.space.xs) {
-        Button("Delete folder", role: .destructive) {
-          model.requestDeletion(of: .folder(folder))
-          dismiss()
-        }
-        .focusable()
-        .commandHelp(.listDelete, note: "Delete the folder")
-        Button("Move up") { model.moveFolderWithinSiblings(folder, by: -1) }
-          .focusable()
-          .commandHelp(.folderMoveUp)
-        Button("Move down") { model.moveFolderWithinSiblings(folder, by: 1) }
-          .focusable()
-          .commandHelp(.folderMoveDown)
-        Spacer()
-        Button("Cancel") { dismiss() }
-          .focusable()
-          .keyboardShortcut(.cancelAction)
-          .help("Cancel · esc")
-        Button("Save") { save() }
-          .buttonStyle(FocusActionButtonStyle(prominent: true))
-          .focusable()
-          .keyboardShortcut(.defaultAction)
-          .help("Save · ↩")
-          .disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-      }
-      .buttonStyle(FocusActionButtonStyle())
-    }
-    .padding(theme.space.xl)
-    .frame(width: 380)
-    .background(theme.raised)
-    .onAppear {
-      agentInstructions = model.agentInstructions.folder(folder.id)
-      nameIsFocused = true
+  /// Remembers the draft when an edit begins, and forgets it when it ends.
+  private func noteEditing() {
+    if !cursor.isEditing {
+      editStart = nil
+    } else if editStart == nil {
+      editStart = model.taskEditor.draft(for: task.id)?.values
     }
   }
 
-  private func save() {
-    do {
-      try model.saveFolderSettings(folder, name: name, parentFolderID: parentFolderID)
-      model.agentInstructions.setFolder(agentInstructions, for: folder.id)
-      dismiss()
-    } catch { saveError = error.localizedDescription }
+  /// Puts the keyboard where the cursor says: in the field being edited, on
+  /// the control under the cursor, or — on a text row in normal mode — on
+  /// the inspector itself, so the row is only highlighted.
+  private func sync() {
+    noteEditing()
+    guard model.keyboardFocusArea == .inspector else { return }
+    let want = cursor.keyboardStop
+    guard focus != want else { return }
+    let hadKeyboard = focus != nil
+    focus = want
+    if want == nil && hadKeyboard { model.requestKeyboardFocus(.inspector, onTitle: false) }
+  }
+
+  private func perform(_ effect: InspectorEffect) {
+    let serial = (stopRequest?.serial ?? 0) + 1
+    switch effect {
+    case .press(let id): stopRequest = InspectorStopRequest(id: id, kind: .press, serial: serial)
+    case .adjust(let id, let offset): stopRequest = InspectorStopRequest(id: id, kind: .adjust(offset), serial: serial)
+    case .clearValue(let id): model.taskEditor.edit(task.id) { Self.clear(id, in: &$0) }
+    case .revert(let id):
+      guard let start = editStart else { return }
+      model.taskEditor.edit(task.id) { Self.restore(id, from: start, into: &$0) }
+    case .leave: model.requestKeyboardFocus(.tasks)
+    }
+  }
+
+  /// `x` on a row with no × of its own. The title is left alone: a task
+  /// needs one.
+  private static func clear(_ stop: String, in values: inout TaskEditorValues) {
+    switch stop {
+    case "estimate": values.estimateMinutes = ""
+    case "minimum-block": values.minimumBlockMinutes = nil
+    case "tags": values.tags = ""
+    case "repeat": values.recurrenceRule = ""
+    case "notes": values.notes = ""
+    case "links": values.links = ""
+    case "priority": values.priority = 0
+    case "single-sitting": values.requiresSingleSitting = nil
+    case "daily": values.dailyProgress = false
+    case "due.exact":
+      guard let at = values.dueAt else { return }
+      values.dueDate = TaskCalendarDate.string(at)
+      values.dueAt = nil
+    default: break
+    }
+  }
+
+  /// Esc in a one-line field: what it had when the caret went in.
+  private static func restore(_ stop: String, from start: TaskEditorValues, into values: inout TaskEditorValues) {
+    switch stop {
+    case titleStop: values.title = start.title
+    case "estimate": values.estimateMinutes = start.estimateMinutes
+    case "minimum-block": values.minimumBlockMinutes = start.minimumBlockMinutes
+    case "tags": values.tags = start.tags
+    case "repeat": values.recurrenceRule = start.recurrenceRule
+    default: break
+    }
   }
 }

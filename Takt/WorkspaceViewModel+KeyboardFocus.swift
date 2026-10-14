@@ -209,11 +209,29 @@ extension WorkspaceViewModel {
     taskInsertionIsChild = true
   }
 
-  /// Moves the keyboard one stop down or up the inspector, from whatever
-  /// has it now: a control, a field, or the notes, where Tab would only type
-  /// a tab. The inspector walks its own stops (`inspectorStop`).
-  func stepInspectorField(forward: Bool) {
-    inspectorStepOffset = forward ? 1 : -1
-    inspectorStepRequest += 1
+  /// Sends a key to the inspector's cursor: a motion in normal mode, or a
+  /// key that ends an edit. The inspector walks its own stops
+  /// (`inspectorStop`) and decides what the key does on the one it is on.
+  func sendInspectorKey(_ action: InspectorKeyAction) {
+    inspectorKeyRequest = InspectorKeyRequest(action: action, serial: inspectorKeyRequest.serial + 1)
   }
+}
+
+/// What a key asks of the inspector's cursor.
+enum InspectorKeyAction: Equatable {
+  case step(Int)
+  case first, last
+  /// Return, `i`, `e`: edit or press the row.
+  case edit
+  /// `x`, Delete.
+  case clear
+  /// `h`, `←`.
+  case leave(byArrow: Bool)
+  /// A key typed inside one of its fields.
+  case editing(InspectorEditingKey)
+}
+
+struct InspectorKeyRequest: Equatable {
+  let action: InspectorKeyAction
+  let serial: Int
 }

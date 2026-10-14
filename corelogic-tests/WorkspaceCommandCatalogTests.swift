@@ -365,6 +365,10 @@ final class WorkspaceCommandCollisionTests: XCTestCase {
       "inspector:cmd+shift+{", "inspector:cmd+shift+}", "inspector:[", "inspector:]",
       // The inspector's task keys step through its fields, not the tasks.
       "inspector:down", "sidebar:shift+g", "sidebar:ctrl+u", "sidebar:ctrl+d", "inspector:up", "inspector:j", "inspector:k",
+      // It is a vim buffer of rows: gg and ⇧G, Home and End are its ends,
+      // Return and i edit the row, x and Delete clear it, ← leaves.
+      "inspector:gg", "inspector:home", "inspector:end", "inspector:enter", "inspector:i",
+      "inspector:x", "inspector:delete", "inspector:left",
       "done:cmd+shift+{", "done:cmd+shift+}", "done:[", "done:]",
       "timeline:cmd+shift+{", "timeline:cmd+shift+}", "timeline:[", "timeline:]",
       // The Conditions tab is a list of its own as well: the list keys walk
