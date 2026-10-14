@@ -172,9 +172,16 @@ extension WorkspaceViewModel {
   }
 
   /// Every subtask row the card's folds leave showing, before the row limit.
+  ///
+  /// A subtask that is a card of its own — filed in another column — keeps
+  /// its row here, but what hangs beneath it is drawn on that card and not
+  /// again on this one: drawn twice, the same tasks stood in two columns
+  /// and the selection lit whichever copy the arrow keys reached first.
   func boardTreeUnfoldedRows(of card: WorkspaceTask) -> [TaskOutlineItem] {
     guard !foldedTaskIDs.contains(card.id) else { return [] }
-    return TaskOutlineFolding.visible(descendants(of: card), folded: foldedTaskIDs)
+    let folded = foldedTaskIDs
+    let cards = boardVisibleTaskIDs
+    return TaskOutlineFolding.visible(descendants(of: card)) { folded.contains($0) || cards.contains($0) }
   }
 
   /// Every row the arrow keys stop on in a column, top to bottom: each card,

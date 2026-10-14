@@ -17,9 +17,11 @@
 /// as every other card does, and nothing here turns on a measured height.
 ///
 /// The line is back, drawn from where the cards stand rather than levelling
-/// them: a hairline for every link, in a lane of its own in the gutter
-/// between columns, and the accent for those `linkIDs(touching:)` lights —
-/// the selection's and the pointer's (`BoardLinkRoute`). A card a little
+/// them, for the links `linkIDs(touching:)` lights — the selection's and the
+/// pointer's — in the accent, in a lane of its own in the gutter between
+/// columns (`BoardLinkRoute`). A link at rest draws none: a dashed line for
+/// every link crowded the gutters and crossed columns with nothing to do
+/// with it, so at rest the row's words say where the card went. A card a little
 /// above its row is moved down level with it, no more than about a card's
 /// height (`BoardLinkNudge`); further, and the line steps down instead.
 ///

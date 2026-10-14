@@ -205,28 +205,18 @@ struct WorkspaceBoardLinkMeasure: Equatable {
   let rect: CGRect
 }
 
-/// The links' lines, in one of the two layers they are drawn in.
+/// The lines of the lit links: the selection's and the pointer's, in the
+/// accent, over the columns.
 ///
-/// Every link has a line. At rest it is a dashed hairline in the dim text's
-/// colour, so it never reads as a card's or a column's rule; lit, it is the
-/// accent, solid and half as heavy again, over everything. A resting line
-/// that crosses a column on its way runs beneath that column's cards, which
-/// are opaque, so it reads as passing under them rather than scribbling over
-/// cards that have nothing to do with it; over its own two columns it is
-/// drawn on top, so it still runs unbroken from the row's mark to the card.
+/// A link at rest draws no line. Its row says where the subtask went in
+/// words — its title, muted, and "→ Today" — and the line appears only while
+/// the selection or the pointer is on one of its ends. Resting lines were a
+/// dashed hairline for every link, which left the board's gutters full of
+/// lines poking out past the cards and crossing columns that had nothing to
+/// do with them.
 struct WorkspaceBoardLinkLines: View {
-  /// Which of the board's two line layers this is.
-  enum Layer {
-    /// Behind the columns: resting lines that cross a column.
-    case beneath
-    /// Over the columns: resting lines over their own two columns, and lit
-    /// ones.
-    case above
-  }
-
   @Environment(\.theme) private var theme
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
-  let layer: Layer
   let geometry: WorkspaceBoardLinkGeometry
   /// Every link on the board, in a stable order.
   let links: [BoardLinks.Link]
@@ -241,34 +231,12 @@ struct WorkspaceBoardLinkLines: View {
   private struct Line: Identifiable {
     let id: String
     let path: BoardLinkRoute.Path
-    /// Whether it crosses a column on its way, rather than running to the
-    /// next one.
-    let crosses: Bool
-    /// Its two columns, with the gutter either side: where a crossing line
-    /// is drawn over the cards.
-    let ends: [CGRect]
   }
 
   var body: some View {
     GeometryReader { proxy in
-      let lines = lines()
-      let resting = lines.filter { line in !lit.contains(line.id) && (layer == .above || line.crosses) }
-      let lighted = layer == .above ? lines.filter { lit.contains($0.id) } : []
+      let lighted = lit.isEmpty ? [] : lines(links.filter { lit.contains($0.childID) })
       ZStack(alignment: .topLeading) {
-        ForEach(resting) { line in
-          WorkspaceBoardLinkShape(path: line.path)
-            .stroke(
-              theme.dim,
-              style: StrokeStyle(
-                lineWidth: theme.hairline, lineCap: .butt, lineJoin: .round, dash: WorkspaceBoardMetrics.linkRestingDash))
-            .mask {
-              if layer == .above && line.crosses {
-                Path { $0.addRects(line.ends) }
-              } else {
-                Rectangle()
-              }
-            }
-        }
         ForEach(lighted) { line in
           WorkspaceBoardLinkShape(path: line.path)
             .stroke(theme.primary, style: StrokeStyle(lineWidth: litWidth, lineCap: .round, lineJoin: .round))
@@ -292,7 +260,7 @@ struct WorkspaceBoardLinkLines: View {
     min(max(theme.hairline * 1.5, 1), 1.5)
   }
 
-  private func lines() -> [Line] {
+  private func lines(_ links: [BoardLinks.Link]) -> [Line] {
     let inset = Double(theme.space.xxs)
     let radius = Double(WorkspaceBoardMetrics.linkCornerRadius)
     // Every measured link's ends on the board, for its lane and its path.
@@ -304,7 +272,6 @@ struct WorkspaceBoardLinkLines: View {
       else { return nil }
       return (link, source, target, column)
     }
-    let half = gutter / 2
     let lanes = BoardLinkRoute.lanes(
       for: ends.map {
         BoardLinkRoute.LaneRequest(
@@ -318,11 +285,7 @@ struct WorkspaceBoardLinkLines: View {
       let path = BoardLinkRoute.path(
         from: Self.rect(end.source), to: Self.rect(end.target), sourceColumn: Self.rect(end.column),
         pointsForward: end.link.pointsForward, inset: inset, rail: rail, radius: radius)
-      let ends = [end.column, geometry.columns[columnIDs[end.link.childColumn]]].compactMap { frame in
-        frame.map { CGRect(x: $0.minX - half, y: $0.minY, width: $0.width + 2 * half, height: $0.height) }
-      }
-      return Line(
-        id: end.link.childID, path: path, crosses: abs(end.link.childColumn - end.link.sourceColumn) > 1, ends: ends)
+      return Line(id: end.link.childID, path: path)
     }
   }
 

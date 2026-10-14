@@ -12,13 +12,20 @@ public enum TaskOutlineFolding {
   /// fold beneath a folded task changes nothing until its ancestor opens.
   public static func visible(_ items: [TaskOutlineItem], folded: Set<String>) -> [TaskOutlineItem] {
     guard !folded.isEmpty else { return items }
+    return visible(items, closing: folded.contains)
+  }
+
+  /// The rows still drawn once the descendants of every row `closes` answers
+  /// true for are removed: a fold, or — on a board card — a subtask that is a
+  /// card of its own in another column, whose subtree that card draws.
+  public static func visible(_ items: [TaskOutlineItem], closing closes: (String) -> Bool) -> [TaskOutlineItem] {
     var hiddenBelow: Int?
     return items.filter { item in
       if let depth = hiddenBelow {
         if item.depth > depth { return false }
         hiddenBelow = nil
       }
-      if folded.contains(item.id) { hiddenBelow = item.depth }
+      if closes(item.id) { hiddenBelow = item.depth }
       return true
     }
   }

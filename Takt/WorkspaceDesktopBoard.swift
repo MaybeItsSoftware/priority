@@ -53,10 +53,6 @@ enum WorkspaceBoardMetrics {
   /// theme's: a square theme still wants the line to turn smoothly.
   static let linkCornerRadius: CGFloat = 6
 
-  /// A resting line's dashes, dash and gap: broken, so it is never taken
-  /// for a rule.
-  static let linkRestingDash: [CGFloat] = [3, 3]
-
   /// How far apart the lines turning beside one rule run.
   static let linkLaneSpacing: Double = 3
 
@@ -192,21 +188,13 @@ private struct WorkspaceKanbanColumnStrip: View {
           // the scroller, so it moves with them.
           .coordinateSpace(.named(WorkspaceBoardLinkGeometry.boardSpace))
           .environment(linkGeometry)
-          // Inside the scroller, so the lines move with the cards they join:
-          // beneath the columns for the resting lines that cross one, over
-          // them for the rest. A background or an overlay takes the strip's
-          // size and adds none, so drawing a line never moves a card. Always
-          // there, so a line that goes out fades rather than vanishing with
-          // its layer.
-          .background {
-            WorkspaceBoardLinkLines(
-              layer: .beneath, geometry: linkGeometry, links: allLinks, lit: litLinks, columnIDs: columnIDs,
-              gutter: gutter)
-          }
+          // Inside the scroller, so the lines move with the cards they join,
+          // and over the columns. An overlay takes the strip's size and adds
+          // none, so drawing a line never moves a card. Always there, so a
+          // line that goes out fades rather than vanishing with its layer.
           .overlay {
             WorkspaceBoardLinkLines(
-              layer: .above, geometry: linkGeometry, links: allLinks, lit: litLinks, columnIDs: columnIDs,
-              gutter: gutter)
+              geometry: linkGeometry, links: allLinks, lit: litLinks, columnIDs: columnIDs, gutter: gutter)
           }
           .onChange(of: links, initial: true) { _, links in
             linkGeometry.setLayout(links, columnIDs: columnIDs)
@@ -750,8 +738,9 @@ struct WorkspaceKanbanCard: View {
     let isOpen = item.task.status == .open
     let step = Self.markWidth(theme)
     let isRowSelected = selectedRowID == item.task.id
-    // A subtask filed in another column keeps its row here, untitled since
-    // its card is elsewhere: a line runs from the row's mark to that card.
+    // A subtask filed in another column keeps its row here, muted, naming
+    // the column its card stands in; selected or under the pointer, a line
+    // runs from the row to that card.
     let rowLink = model.boardLinks.rowLink(item.task.id, onCard: task.id)
     return HStack(alignment: isRowSelected ? .firstTextBaseline : .center, spacing: 0) {
       Button {
@@ -761,19 +750,6 @@ struct WorkspaceKanbanCard: View {
           task: item.task, isSubtask: true,
           elbowColour: rowLink.map { litLinkIDs.contains($0.childID) ? theme.primary : theme.dim })
           .frame(width: step)
-          // Where a link's line leaves for the subtask's own card: the
-          // `└`'s own box, the elbow's centred in the mark, narrowed by the
-          // gap the line leaves at its ends, so it runs on from the elbow's
-          // stroke as one line.
-          .overlay {
-            Text("└").font(theme.monoCaptionFont).hidden()
-              .overlay {
-                Color.clear
-                  .padding(.horizontal, theme.space.xxs)
-                  .boardLinkEnds(
-                    rowLink.map { [.source($0.childID)] } ?? [], inColumn: column.id, geometry: linkGeometry)
-              }
-          }
           .contentShape(Rectangle())
       }
       .buttonStyle(.plain)
@@ -786,10 +762,12 @@ struct WorkspaceKanbanCard: View {
           onCommit: { model.commitTaskTitleEdit(item.task, text: $0) },
           onCancel: { model.cancelTaskTitleEdit() })
           .frame(maxWidth: .infinity, alignment: .leading)
-      } else if rowLink != nil {
-        // The subtask is a card in another column, titled there, so its row
-        // here is only the line: the title holds the row's height and takes
-        // the click, unseen.
+      } else if let rowLink {
+        // The subtask is a card in another column, where its subtasks are
+        // drawn: its row here is its title, muted and on one line, and the
+        // column it went to. The title selects the row; the column goes to
+        // the card.
+        let destination = columnTitle(rowLink.childColumn)
         Button {
           model.focusedBoardColumnID = column.id
           model.selectTask(item.task)
@@ -797,13 +775,24 @@ struct WorkspaceKanbanCard: View {
         } label: {
           Text(item.task.title)
             .lineLimit(1)
-            .hidden()
+            .truncationMode(.tail)
+            .foregroundStyle(theme.muted)
             .frame(maxWidth: .infinity, alignment: .leading)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .accessibilityLabel(item.task.title)
-        .help(item.task.title)
+        .accessibilityLabel("\(item.task.title), in \(destination)")
+        .help("\(item.task.title) — filed in \(destination)")
+        Button {
+          model.selectBoardLinkedCard(rowLink.childID)
+        } label: {
+          WorkspaceBoardLinkLabel(
+            arrow: rowLink.pointsForward ? "→" : "←", text: destination, colour: linkColour([rowLink.childID]))
+        }
+        .buttonStyle(.plain)
+        .layoutPriority(1)
+        .padding(.leading, theme.space.xs)
+        .help("Go to its card in \(destination)")
       } else {
         Button(item.task.title) {
           if isRowSelected && model.keyboardFocusArea == .tasks {
@@ -822,11 +811,21 @@ struct WorkspaceKanbanCard: View {
         .help(item.task.title)
         WorkspacePriorityBadge(taskID: item.task.id)
       }
-      // Trailing, as the card's own fold is.
-      if let isFolded {
+      // Trailing, as the card's own fold is. Not on a row whose subtasks are
+      // drawn on its own card in another column. Held to its glyph's height:
+      // the button fills whatever height it is offered, and beside a selected
+      // row's wrapped title, aligned on the first line's baseline, that
+      // pushed the row's frame up off its text, so the last line spilled
+      // under the next row and out of the selection.
+      if let isFolded, rowLink == nil {
         WorkspaceFoldButton(isFolded: isFolded, title: item.task.title) { model.toggleFold(of: item.task) }
+          .fixedSize(horizontal: false, vertical: true)
       }
     }
+    // Where a link's line leaves for the subtask's own card: the row's
+    // trailing edge — past the column it names — or, for a card further
+    // back, its leading one, so the line never crosses the title.
+    .boardLinkEnds(rowLink.map { [.source($0.childID)] } ?? [], inColumn: column.id, geometry: linkGeometry)
     // A blocked subtask on a card that is not: the row steps back as a
     // blocked card does. On a blocked card it already has.
     .opacity(model.isBlocked(item.task) && !model.isBlocked(task) ? Theme.disabledOpacity : 1)

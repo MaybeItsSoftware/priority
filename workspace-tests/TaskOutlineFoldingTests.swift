@@ -59,6 +59,15 @@ final class TaskOutlineFoldingTests: XCTestCase {
       titles(TaskOutlineFolding.visible(tree, folded: folded("project", "step"))), ["project", "solo"])
   }
 
+  /// A board card closes the subtree of a subtask that is a card of its own
+  /// in another column, as well as its folds: that card draws those rows.
+  func testClosingARowLikeAFoldHidesItsSubtreeOnly() {
+    let closed = folded("step")
+    XCTAssertEqual(
+      titles(TaskOutlineFolding.visible(tree) { closed.contains($0) }), ["project", "step", "other", "solo"])
+    XCTAssertEqual(titles(TaskOutlineFolding.visible(tree) { _ in false }), titles(tree))
+  }
+
   func testParentsAreTheRowsWithSomethingBeneathThem() {
     XCTAssertEqual(TaskOutlineFolding.parentIDs(tree), folded("project", "step"))
   }
