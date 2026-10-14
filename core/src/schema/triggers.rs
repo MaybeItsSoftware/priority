@@ -48,7 +48,17 @@ pub const SYNCED_TABLES: &[(&str, &str)] = &[
     ("agent_instructions", "scope"),
     ("themes", "id"),
     ("preferences", "key"),
+    // `v28_synced_focus_context`: one row per workspace, after `workspaces`.
+    ("focus_contexts", "workspaceId"),
 ];
+
+/// Synced tables whose every change pushes the whole row rather than the
+/// columns that moved, so the server's per-column merge settles the row as
+/// one: the last device to write it wins every column. What holds now is
+/// one answer — the conditions, when they were said, the window and the
+/// expiry go together — and half of one device's answer under half of
+/// another's would be neither.
+pub const WHOLE_ROW_TABLES: &[&str] = &["focus_contexts"];
 
 /// Drops and recreates every journal and outbox trigger for the tables that
 /// exist, from their columns as they are now.

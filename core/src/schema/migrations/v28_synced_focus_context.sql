@@ -1,0 +1,6 @@
+-- v28_synced_focus_context: what holds now (`focus_contexts`, v27) follows
+-- the account across devices. No change to the table: the outbox triggers
+-- are reinstalled after it, now naming `focus_contexts`, and a paired
+-- device queues the context it already holds (`schema::data`). Pushed whole
+-- (`triggers::WHOLE_ROW_TABLES`), so the last device to say it wins.
+-- Written for the Rust core; the journal and outbox triggers are reinstalled after it.

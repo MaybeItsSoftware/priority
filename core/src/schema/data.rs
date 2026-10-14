@@ -44,6 +44,10 @@ pub(super) fn finish(transaction: &Transaction, identifier: &str) -> Result<(), 
             super::triggers::reinstall(transaction)?;
             quietly(transaction, crate::conditions::number_every_workspace)
         }
+        "v28_synced_focus_context" => {
+            super::triggers::reinstall(transaction)?;
+            queue_focus_contexts(transaction)
+        }
         _ => Ok(()),
     }
 }
@@ -61,6 +65,22 @@ fn file_places_under_location(transaction: &Transaction) -> Result<(), CoreError
         )?;
         Ok(())
     })
+}
+
+/// v28: on a paired device, the context it already holds goes out on the
+/// next push, as the snapshot would have sent it had the table been synced
+/// when the device paired. Stamped when it was last saved, so the newest of
+/// two devices' contexts is the one the server keeps.
+fn queue_focus_contexts(transaction: &Transaction) -> Result<(), CoreError> {
+    transaction.execute(
+        "INSERT INTO sync_outbox (tableName, rowId, operation, changedJSON, changedAtMs)
+         SELECT 'focus_contexts', workspaceId, 'insert', NULL,
+                CAST((julianday(updatedAt) - 2440587.5) * 86400000 AS INTEGER)
+         FROM focus_contexts
+         WHERE (SELECT recording FROM sync_control WHERE id = 0) = 1",
+        [],
+    )?;
+    Ok(())
 }
 
 /// Runs `work` with the undo journal and the sync outbox switched off: for a

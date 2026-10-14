@@ -40,6 +40,7 @@ Every row of these tables, keyed by the column shown:
 | `agent_instructions` | `scope` |
 | `themes` | `id` |
 | `preferences` | `key` |
+| `focus_contexts` | `workspaceId` |
 
 `themes` and `preferences` arrive in `v18_themes_and_preferences`:
 `themes(id TEXT PRIMARY KEY, json TEXT NOT NULL, updatedAt DATETIME NOT NULL)`
@@ -153,6 +154,34 @@ contribution, and `dailies::log_contribution` records a completion against
 the oldest such day rather than today. Only the commitment form sets it
 (`commitments::save_commitment`). A client older than v26 drops the column on
 pull and treats the habit as vanishing.
+
+`v28_synced_focus_context` syncs `focus_contexts`, the table v27 added for
+what holds now: which conditions are on (`conditionIdsJSON`), when they were
+said (`conditionsSetAt`), the time available (`availableUntil`), the goal
+(`mode`), when the answer lapses (`expiresAt`) and what an expired answer set
+aside to offer back (`suggestedIdsJSON`) — one row per workspace, keyed by the
+workspace's id, which every paired device shares once adoption has run
+(`core/src/focus_context.rs`). The table does not change: the migration
+reinstalls the outbox triggers, which now name it, and on a device that is
+already paired queues the row it holds, so the next push sends it. It is not
+journalled — saying where you are is not an undo step.
+
+It is one answer, so it merges as one: the table is in
+`triggers::WHOLE_ROW_TABLES`, and every change to it pushes every column
+rather than the ones that moved. The server's per-column merge then gives
+each column the same clock, and the last device to say where you are wins
+the whole row; half of one device's answer under half of another's would be
+neither. `conditionsSetAt` travels with the row, so a context said yesterday
+on the phone counts as stale on the Mac (`focus_context_is_stale`). When
+workspace adoption folds a device's own workspace into the canonical one,
+its context comes along if the canonical workspace has none or it was saved
+more recently, its conditions renamed to the canonical workspace's
+conditions of the same name; otherwise it goes. The Mac, the iPhone and
+Android read and write the row through the core, and each phone moved the
+context its own settings held into it once, when the workspace had none.
+The server needed nothing: it stores whatever tables it is sent. A client
+older than v28 skips the table's rows on pull, as it skips any table it does
+not know.
 
 The following are not synced: the undo journal (`undo_control`, `change_log`), the FTS index
 (rebuilt by its own triggers as synced rows land), `grdb_migrations`, and the
@@ -353,6 +382,8 @@ Returns `200 {"ok":true}`.
    - For any other local workspace:
      - Move the tasks in its Inbox into the canonical Inbox, then delete its Inbox.
      - Re-point its folders, lists and conditions to the canonical workspace.
+     - Keep its `focus_contexts` row, under the canonical id, if the canonical
+       workspace has none or this one was saved more recently; then drop it.
      - Delete it.
    - These writes run with recording on, so they sync.
 

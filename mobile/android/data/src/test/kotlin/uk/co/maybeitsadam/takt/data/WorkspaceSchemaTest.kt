@@ -61,7 +61,7 @@ class WorkspaceSchemaTest {
             assertTrue("missing: ${expected - present}", present.containsAll(expected))
 
             val migrations = workspace.database.read { it.strings("SELECT identifier FROM grdb_migrations") }
-            assertEquals(27, migrations.size)
+            assertEquals(28, migrations.size)
             assertTrue("v17_sync" in migrations)
             assertTrue("v18_themes_and_preferences" in migrations)
             assertTrue("v19_habit_options" in migrations)
@@ -73,6 +73,7 @@ class WorkspaceSchemaTest {
             assertTrue("v25_agent_instructions" in migrations)
             assertTrue("v26_commitment_missed_stack" in migrations)
             assertTrue("v27_condition_order_and_context" in migrations)
+            assertTrue("v28_synced_focus_context" in migrations)
             assertEquals(listOf(0L to 0L), workspace.database.read { db ->
                 db.query("SELECT recording, applying FROM sync_control") { it.long("recording") to it.long("applying") }
             })
@@ -89,7 +90,7 @@ class WorkspaceSchemaTest {
         val count = reopened.read { it.long("SELECT COUNT(*) FROM grdb_migrations WHERE identifier = 'v17_sync'") }
         assertEquals(1L, count)
         // The sync triggers are the core's, installed once each.
-        assertEquals(54L, reopened.read {
+        assertEquals(57L, reopened.read {
             it.long("SELECT COUNT(*) FROM sqlite_master WHERE name LIKE 'sync_outbox_%' AND type = 'trigger'")
         })
         reopened.close()
@@ -100,7 +101,16 @@ class WorkspaceSchemaTest {
     // install that lacks one migration lacks every later one too, since they
     // only ever apply in order, so each rewind takes the later ones off first.
 
+    private fun rewindV28(connection: SQLiteConnection) {
+        // The table stays; only its outbox triggers are v28's.
+        for (op in listOf("insert", "update", "delete")) {
+            connection.execSQL("DROP TRIGGER sync_outbox_focus_contexts_$op")
+        }
+        connection.execSQL("DELETE FROM grdb_migrations WHERE identifier = 'v28_synced_focus_context'")
+    }
+
     private fun rewindV27(connection: SQLiteConnection) {
+        rewindV28(connection)
         // The condition triggers name the new column, so they come off first;
         // v27 reinstalls them, and v24's rewind finds them gone.
         for (op in listOf("insert", "update", "delete")) {
@@ -223,8 +233,8 @@ class WorkspaceSchemaTest {
         try {
             assertEquals(expected, upgraded.read { schema(it) })
             val migrations = upgraded.read { it.strings("SELECT identifier FROM grdb_migrations") }
-            assertEquals(27, migrations.size)
-            assertEquals(27, migrations.toSet().size)
+            assertEquals(28, migrations.size)
+            assertEquals(28, migrations.toSet().size)
         } finally {
             upgraded.close()
             dir.deleteRecursively()
@@ -234,6 +244,10 @@ class WorkspaceSchemaTest {
     /** A v25 database takes `stacksMissedFrom` on `dailies`. */
     @Test
     fun aV25DatabaseUpgradesToTheFixture() = assertUpgradesToTheFixture("v25", ::rewindV26)
+
+    /** A v27 database takes the context's outbox triggers. */
+    @Test
+    fun aV27DatabaseUpgradesToTheFixture() = assertUpgradesToTheFixture("v27", ::rewindV28)
 
     /** A v26 database takes the conditions' `sortOrder` and `focus_contexts`. */
     @Test

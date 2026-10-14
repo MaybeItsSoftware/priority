@@ -72,7 +72,7 @@ workspace's uppercase UUIDs, not Checkvist's integers:
 | `workspace_task_blocker_remove` | Stop `task_id` waiting on `blocked_by_task_id` | write |
 | `workspace_conditions` | Conditions under their categories in the app's order, each with its open-task count; the context (what holds now, when it was said and whether that was an earlier day, the time available, goal, expiry, last context); with `condition`, the open tasks needing it | read |
 | `workspace_task_conditions_set` | What a task requires: each item a condition or an array of alternatives, by name or id; `create_missing` makes new ones | write |
-| `workspace_context_set` | What holds now: `set`, `clear`, `on`, `off` (a place replaces the last place), `mode`, `available_minutes`, `expires_in_minutes`. Not an undo step; the app picks it up at once | write |
+| `workspace_context_set` | What holds now: `set`, `clear`, `on`, `off` (a place replaces the last place), `mode`, `available_minutes`, `expires_in_minutes`. Not an undo step; the app picks it up at once, and sync carries it to the other devices | write |
 | `workspace_filter_lists` | Filter lists (saved rule sets over every task): built-in Today and Everything first, then the user's, each with id, name, icon, a one-line summary, `match`, `show` and `rules` | read |
 | `workspace_filter_list_tasks` | The tasks a filter list (by id, `builtin:today` included, or name) shows now, evaluated by the Rust core in this machine's time zone, list by list | read |
 | `workspace_filter_list_create` | Create a filter list from a name, optional icon, `match` (all/any), `show` (open/done/all) and `rules` (`{field, op, value}`; the description lists the vocabulary) | write |

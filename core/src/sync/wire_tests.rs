@@ -408,3 +408,107 @@ fn the_account_and_its_timestamps_read_as_the_server_writes_them() {
     assert!(sync_body_is_json_object(r#"{"external":{}}"#.into()));
     assert!(!sync_body_is_json_object("[]".into()));
 }
+
+impl Device {
+    /// Saves what holds now, as the apps do, with the edit made at `at_ms`.
+    fn say(
+        &mut self,
+        workspace: &str,
+        context: crate::focus_context::StoredFocusContext,
+        at_ms: i64,
+    ) {
+        let tx = self.connection.transaction().unwrap();
+        crate::focus_context::save(&tx, workspace, &context, at_ms).unwrap();
+        tx.execute(
+            "UPDATE sync_outbox SET changedAtMs = ?1 WHERE tableName = 'focus_contexts'",
+            [at_ms],
+        )
+        .unwrap();
+        tx.commit().unwrap();
+    }
+
+    fn context(&self, workspace: &str) -> Option<crate::focus_context::StoredFocusContext> {
+        crate::focus_context::load(&self.connection, workspace).unwrap()
+    }
+}
+
+fn holding(ids: &[&str]) -> crate::focus_context::StoredFocusContext {
+    crate::focus_context::StoredFocusContext {
+        condition_ids: ids.iter().map(|id| id.to_string()).collect(),
+        ..Default::default()
+    }
+}
+
+/// What holds now is one answer per account: the last device to say it
+/// wins the whole row, the time window and mode included, and the stamp of
+/// when it was said travels with it so every device can call it stale.
+#[test]
+fn what_holds_now_follows_the_last_device_to_say_it() {
+    let mut server = Server::default();
+    let mut mac = Device::with_workspace("mac");
+    mac.sync(&mut server, 1_000);
+    let mut phone = Device::new("phone");
+    phone.sync(&mut server, 1_000);
+
+    let mut at_campus = holding(&["campus"]);
+    at_campus.available_until_ms = Some(60_000);
+    mac.say("w", at_campus, 10_000);
+    let mut at_home = holding(&["home"]);
+    at_home.mode = "finish".into();
+    phone.say("w", at_home, 20_000);
+    mac.sync(&mut server, 30_000);
+    phone.sync(&mut server, 31_000);
+    mac.sync(&mut server, 32_000);
+    for device in [&mac, &phone] {
+        let context = device.context("w").unwrap();
+        assert_eq!(context.condition_ids, vec!["home"]);
+        assert_eq!(context.available_until_ms, None, "the whole row, not a mix");
+        assert_eq!(context.mode, "finish");
+        assert_eq!(context.conditions_set_at_ms, Some(20_000));
+    }
+
+    // And back: the Mac says it next, and the phone follows.
+    mac.say("w", holding(&["campus", "mat"]), 40_000);
+    mac.sync(&mut server, 41_000);
+    phone.sync(&mut server, 42_000);
+    let context = phone.context("w").unwrap();
+    assert_eq!(context.condition_ids, vec!["campus", "mat"]);
+    assert_eq!(context.conditions_set_at_ms, Some(40_000));
+    assert_eq!(context.mode, "progress");
+}
+
+/// A device that kept its own workspace before it paired brings its context
+/// into the account's when it is newer, in the account's conditions.
+#[test]
+fn a_joining_device_brings_a_newer_context_into_the_accounts_workspace() {
+    let condition = |id: &str, workspace: &str| {
+        format!(
+            "INSERT INTO task_conditions (id, workspaceId, name, isLocation, isArchived, createdAt, updatedAt, category)
+               VALUES ('{id}', '{workspace}', 'Campus', 1, 0, '{T}', '{T}', 'Location');"
+        )
+    };
+    let mut server = Server::default();
+    let mut mac = Device::with_workspace("mac");
+    mac.run(&condition("mac-campus", "w"));
+    mac.say("w", holding(&[]), 1_000);
+    mac.run("UPDATE focus_contexts SET updatedAt = '2024-01-01 00:00:00.000'");
+    mac.sync(&mut server, 2_000);
+
+    let mut phone = Device::new("phone");
+    phone.run(&format!(
+        "INSERT INTO workspaces (id, name, createdAt, updatedAt) VALUES ('p', 'Phone', '2024-02-01 00:00:00.000', '{T}');
+         {}",
+        condition("phone-campus", "p")
+    ));
+    phone.say("p", holding(&["phone-campus"]), 3_000);
+    phone.run("UPDATE focus_contexts SET updatedAt = '2024-03-01 00:00:00.000'");
+    phone.sync(&mut server, 4_000);
+    assert_eq!(phone.context("p"), None);
+    assert_eq!(
+        phone.context("w").unwrap().condition_ids,
+        vec!["mac-campus"],
+        "the phone's Campus is the account's"
+    );
+    mac.sync(&mut server, 5_000);
+    assert_eq!(mac.context("w").unwrap().condition_ids, vec!["mac-campus"]);
+}

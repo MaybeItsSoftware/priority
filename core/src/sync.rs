@@ -15,7 +15,7 @@ use rusqlite::types::ValueRef;
 use rusqlite::{Connection, OptionalExtension, Transaction, params, params_from_iter};
 
 use crate::CoreError;
-use crate::schema::triggers::SYNCED_TABLES;
+use crate::schema::triggers::{SYNCED_TABLES, WHOLE_ROW_TABLES};
 use crate::time::stored;
 
 /// One SQLite value as it travels: null, a number or text, as the column
@@ -257,6 +257,7 @@ pub fn pending_changes(connection: &Connection, limit: u32) -> Result<PendingCha
         item.changed_at_ms = item.changed_at_ms.max(changed_at_ms);
         match operation.as_str() {
             "insert" => item.every_column = true,
+            _ if WHOLE_ROW_TABLES.contains(&table.as_str()) => item.every_column = true,
             "update" => {
                 if let Some(names) = changed_json
                     .as_deref()
@@ -703,6 +704,9 @@ fn adopt_workspaces(transaction: &Transaction, now_ms: i64) -> Result<bool, Core
                 params![canonical, now, other],
             )?;
         }
+        // Before its duplicate conditions go, so the context can be put in
+        // terms of the canonical workspace's.
+        crate::focus_context::adopt(transaction, other, &canonical)?;
         transaction.execute(
             "DELETE FROM task_conditions WHERE workspaceId = ?1
                AND name IN (SELECT name FROM task_conditions WHERE workspaceId = ?2)",

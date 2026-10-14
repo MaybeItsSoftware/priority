@@ -37,6 +37,8 @@ extension WorkspaceStore {
     // `v18_themes_and_preferences`. No foreign keys, so their place is free.
     ("themes", "id"),
     ("preferences", "key"),
+    // `v28_synced_focus_context`: what holds now, one row per workspace.
+    ("focus_contexts", "workspaceId"),
   ]
 
 }

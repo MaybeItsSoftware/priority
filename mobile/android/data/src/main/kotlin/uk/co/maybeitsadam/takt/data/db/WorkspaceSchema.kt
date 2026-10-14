@@ -50,6 +50,8 @@ object WorkspaceSchema {
         // `v18_themes_and_preferences`. No foreign keys, so their place is free.
         "themes" to "id",
         "preferences" to "key",
+        // `v28_synced_focus_context`: what holds now, one row per workspace.
+        "focus_contexts" to "workspaceId",
     )
 
     fun syncKey(table: String): String? = syncedTables.firstOrNull { it.first == table }?.second

@@ -53,10 +53,10 @@ fn a_new_database_has_exactly_the_fixtures_schema() {
 fn every_migration_is_recorded_in_order_under_grdbs_identifiers() {
     let connection = migrated();
     assert_eq!(ledger(&connection), workspace_migrations());
-    assert_eq!(workspace_migrations().len(), 27);
+    assert_eq!(workspace_migrations().len(), 28);
     assert_eq!(
         workspace_migrations().last().map(String::as_str),
-        Some("v27_condition_order_and_context")
+        Some("v28_synced_focus_context")
     );
 }
 
@@ -71,7 +71,7 @@ fn migrating_again_applies_nothing_and_keeps_the_work() {
     let before = dump_schema(&connection).unwrap();
     assert_eq!(
         migrate(&mut connection).unwrap(),
-        "v27_condition_order_and_context"
+        "v28_synced_focus_context"
     );
     assert_eq!(dump_schema(&connection).unwrap(), before);
     let count: i64 = connection
@@ -99,9 +99,9 @@ fn a_file_database_is_created_and_closed_again() {
     std::fs::create_dir_all(&directory).unwrap();
     let path = directory.join("workspace.sqlite");
     let latest = migrate_workspace(path.to_string_lossy().into_owned()).unwrap();
-    assert_eq!(latest, "v27_condition_order_and_context");
+    assert_eq!(latest, "v28_synced_focus_context");
     let reopened = Connection::open(&path).unwrap();
-    assert_eq!(ledger(&reopened).len(), 27);
+    assert_eq!(ledger(&reopened).len(), 28);
     std::fs::remove_dir_all(directory).unwrap();
 }
 
@@ -431,7 +431,7 @@ fn triggers_match_the_fixture() {
         assert_eq!(statement, stored(&name), "trigger {name}");
         checked += 1;
     }
-    assert_eq!(checked, 11 * 3 + 18 * 3);
+    assert_eq!(checked, 11 * 3 + 19 * 3);
     let before = dump_schema(&connection).unwrap();
     super::triggers::reinstall(&connection).unwrap();
     let after = dump_schema(&connection).unwrap();
@@ -513,9 +513,9 @@ fn v26_adds_stacks_missed_from_to_dailies_journalled_and_synced() {
 /// they were shown — Location, the other categories alphabetically, then
 /// the uncategorised — without journalling or queueing the numbering, and a
 /// later move is journalled and synced like the rest of the row. The context
-/// table is neither.
+/// table is not journalled (v28 syncs it).
 #[test]
-fn v27_numbers_conditions_quietly_and_keeps_the_context_local() {
+fn v27_numbers_conditions_quietly_and_does_not_journal_the_context() {
     let mut connection = migrated_through("v26_commitment_missed_stack");
     seed_workspace(&connection);
     connection
@@ -571,11 +571,69 @@ fn v27_numbers_conditions_quietly_and_keeps_the_context_local() {
         ),
         0
     );
+}
+
+/// v28: a paired device queues the context it already holds, stamped when
+/// it was saved, and from then on a change to it is queued like any synced
+/// row's — whole, whatever columns moved — while staying out of the journal.
+/// An unpaired device queues nothing.
+#[test]
+fn v28_queues_the_context_a_paired_device_holds_and_syncs_it_whole() {
+    let mut paired = migrated_through("v27_condition_order_and_context");
+    seed_workspace(&paired);
+    paired
+        .execute_batch(&format!(
+            "INSERT INTO focus_contexts (workspaceId, conditionIdsJSON, conditionsSetAt, updatedAt)
+               VALUES ('w', '[\"campus\"]', '{T1}', '{T1}');
+             UPDATE sync_control SET recording = 1 WHERE id = 0;"
+        ))
+        .unwrap();
+    migrate(&mut paired).unwrap();
+    let queued: (String, String, i64) = paired
+        .query_row(
+            "SELECT rowId, operation, changedAtMs FROM sync_outbox WHERE tableName = 'focus_contexts'",
+            [],
+            |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
+        )
+        .unwrap();
+    let saved = crate::time::parse_stored(T1).unwrap().timestamp_millis();
+    assert_eq!(queued, ("w".to_string(), "insert".to_string(), saved));
+
+    paired
+        .execute_batch(
+            "DELETE FROM sync_outbox;
+             UPDATE undo_control SET suppressed = 0, groupId = 'g', label = 'x' WHERE id = 0;
+             UPDATE focus_contexts SET mode = 'finish' WHERE workspaceId = 'w';",
+        )
+        .unwrap();
+    let pending = crate::sync::pending_changes(&paired, 500).unwrap();
+    let change = &pending.changes[0];
     assert_eq!(
-        count(
-            &connection,
-            "SELECT COUNT(*) FROM sync_outbox WHERE tableName = 'focus_contexts'"
-        ),
-        0
+        (change.table.as_str(), change.operation.as_str()),
+        ("focus_contexts", "upsert")
     );
+    for column in ["conditionIdsJSON", "conditionsSetAt", "mode", "updatedAt"] {
+        assert!(change.values.contains_key(column), "{column} goes too");
+    }
+    let journalled: i64 = paired
+        .query_row(
+            "SELECT COUNT(*) FROM change_log WHERE tableName = 'focus_contexts'",
+            [],
+            |row| row.get(0),
+        )
+        .unwrap();
+    assert_eq!(journalled, 0);
+
+    let mut unpaired = migrated_through("v27_condition_order_and_context");
+    seed_workspace(&unpaired);
+    unpaired
+        .execute_batch(&format!(
+            "INSERT INTO focus_contexts (workspaceId, updatedAt) VALUES ('w', '{T1}');"
+        ))
+        .unwrap();
+    migrate(&mut unpaired).unwrap();
+    let queued: i64 = unpaired
+        .query_row("SELECT COUNT(*) FROM sync_outbox", [], |row| row.get(0))
+        .unwrap();
+    assert_eq!(queued, 0);
 }

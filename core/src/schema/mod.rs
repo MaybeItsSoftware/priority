@@ -130,6 +130,10 @@ pub const MIGRATIONS: &[(&str, &str)] = &[
         "v27_condition_order_and_context",
         include_str!("migrations/v27_condition_order_and_context.sql"),
     ),
+    (
+        "v28_synced_focus_context",
+        include_str!("migrations/v28_synced_focus_context.sql"),
+    ),
 ];
 
 /// Brings the database at `path` up to date, creating it if it does not

@@ -4,9 +4,12 @@
 //! It used to live in each app's preferences, where nothing else could see
 //! it. As a row, the CLI and the agent read and set it like any other part
 //! of the workspace, and the app sees their change the way it sees any other
-//! external write. The table is local and neither journalled nor synced:
-//! where you are is where this machine is, and saying so is not an edit to
-//! undo.
+//! external write. Since v28 the row syncs: it is one answer per account, so
+//! saying you are at Campus on the phone tells the Mac. It is pushed whole
+//! (`schema::triggers::WHOLE_ROW_TABLES`), so the last device to say what
+//! holds wins every column of it, and `conditionsSetAt` travels with it,
+//! which is what lets every device call an answer from yesterday stale. It
+//! is not journalled: saying where you are is not an edit to undo.
 
 use std::collections::BTreeSet;
 
@@ -52,10 +55,10 @@ fn sorted(ids: Vec<String>) -> Vec<String> {
         .collect()
 }
 
-fn table_exists(connection: &Connection) -> Result<bool, CoreError> {
+fn table_exists(connection: &Connection, name: &str) -> Result<bool, CoreError> {
     Ok(connection.query_row(
-        "SELECT EXISTS(SELECT 1 FROM sqlite_master WHERE name = 'focus_contexts')",
-        [],
+        "SELECT EXISTS(SELECT 1 FROM sqlite_master WHERE name = ?1)",
+        [name],
         |row| row.get(0),
     )?)
 }
@@ -72,7 +75,7 @@ pub fn load(
     connection: &Connection,
     workspace_id: &str,
 ) -> Result<Option<StoredFocusContext>, CoreError> {
-    if !table_exists(connection)? {
+    if !table_exists(connection, "focus_contexts")? {
         return Ok(None);
     }
     Ok(connection
@@ -182,6 +185,75 @@ pub(crate) fn replace_condition(
             params![set_at.map(stored), workspace_id],
         )?;
     }
+    Ok(())
+}
+
+/// Folds `from`'s context into `into`'s while sync folds a second
+/// workspace into the canonical one: the more recently saved of the two
+/// stays, under `into`, with `from`'s conditions renamed to the canonical
+/// workspace's conditions of the same name (which are about to replace
+/// them). Runs with recording on, so what it writes syncs.
+pub(crate) fn adopt(transaction: &Transaction, from: &str, into: &str) -> Result<(), CoreError> {
+    if !table_exists(transaction, "focus_contexts")? {
+        return Ok(());
+    }
+    let Some(mut theirs) = load(transaction, from)? else {
+        return Ok(());
+    };
+    let updated = |workspace: &str| -> Result<Option<String>, CoreError> {
+        Ok(transaction
+            .query_row(
+                "SELECT updatedAt FROM focus_contexts WHERE workspaceId = ?1",
+                [workspace],
+                |row| row.get(0),
+            )
+            .optional()?)
+    };
+    let from_updated = updated(from)?;
+    let keep_theirs = match updated(into)? {
+        None => true,
+        Some(canonical) => from_updated.as_ref().is_some_and(|from| *from > canonical),
+    };
+    if keep_theirs {
+        let rename = |ids: &mut Vec<String>| -> Result<(), CoreError> {
+            for id in ids.iter_mut() {
+                let same: Option<String> = transaction
+                    .query_row(
+                        "SELECT canonical.id FROM task_conditions mine
+                         JOIN task_conditions canonical
+                           ON canonical.name = mine.name AND canonical.workspaceId = ?2
+                         WHERE mine.id = ?1 AND mine.workspaceId = ?3",
+                        params![id.as_str(), into, from],
+                        |row| row.get(0),
+                    )
+                    .optional()?;
+                if let Some(same) = same {
+                    *id = same;
+                }
+            }
+            *ids = sorted(std::mem::take(ids));
+            Ok(())
+        };
+        rename(&mut theirs.condition_ids)?;
+        rename(&mut theirs.suggested_ids)?;
+        transaction.execute("DELETE FROM focus_contexts WHERE workspaceId = ?1", [into])?;
+        transaction.execute(
+            "INSERT INTO focus_contexts
+               (workspaceId, conditionIdsJSON, conditionsSetAt, availableUntil, expiresAt, mode, suggestedIdsJSON, updatedAt)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
+            params![
+                into,
+                swift_json_strings(&theirs.condition_ids),
+                theirs.conditions_set_at_ms.map(stored),
+                theirs.available_until_ms.map(stored),
+                theirs.expires_at_ms.map(stored),
+                theirs.mode,
+                swift_json_strings(&theirs.suggested_ids),
+                from_updated,
+            ],
+        )?;
+    }
+    transaction.execute("DELETE FROM focus_contexts WHERE workspaceId = ?1", [from])?;
     Ok(())
 }
 

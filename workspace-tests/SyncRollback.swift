@@ -2,7 +2,7 @@ import TestSQLite
 
 extension Database {
   /// Takes `v17_sync` back off a database, and `v18_themes_and_preferences`
-  /// and `v19_habit_options`, `v20_waiting_follow_ups`, `v21_task_dependencies`, `v22_matrix_order`, `v23_filter_lists`, `v24_condition_categories`, `v25_agent_instructions`, `v26_commitment_missed_stack` and `v27_condition_order_and_context` with it since they come later, so a test can rewind to an older schema. Its triggers name every column of the synced tables, so like the
+  /// and `v19_habit_options`, `v20_waiting_follow_ups`, `v21_task_dependencies`, `v22_matrix_order`, `v23_filter_lists`, `v24_condition_categories`, `v25_agent_instructions`, `v26_commitment_missed_stack`, `v27_condition_order_and_context` and `v28_synced_focus_context` with it since they come later, so a test can rewind to an older schema. Its triggers name every column of the synced tables, so like the
   /// undo journal's they have to come off before a column can be taken away.
   /// Reopening the store runs the migration again.
   func rollBackSyncMigration() throws {
@@ -43,6 +43,6 @@ extension Database {
       sql: "DELETE FROM grdb_migrations WHERE identifier IN ('v17_sync', 'v18_themes_and_preferences', "
         + "'v19_habit_options', 'v20_waiting_follow_ups', 'v21_task_dependencies', 'v22_matrix_order', "
         + "'v23_filter_lists', 'v24_condition_categories', 'v25_agent_instructions', "
-        + "'v26_commitment_missed_stack', 'v27_condition_order_and_context')")
+        + "'v26_commitment_missed_stack', 'v27_condition_order_and_context', 'v28_synced_focus_context')")
   }
 }
