@@ -294,6 +294,18 @@ keeps its own: a bar of estimated against logged under the same finish time, a l
 the week, a list of the day's logged blocks, and a field that searches every
 task's title and notes and offers to add what you typed to today.
 
+A card with open subtasks has a chevron beside its number, and opens where it
+stands, as a branch does in Checkvist's outline: `→` (or `l`) shows its open
+subtasks indented beneath it, hung from the same guides and `└` as the outline's,
+and a second press steps into them; `←` (or `h`) folds them away again, or from
+a subtask steps back up to its task. The arrow keys walk the subtasks like any
+other row, and everything a card answers to — `Space`, `ee`, the inspector,
+`gf` — works on them too. `Return` on a subtask adds the next one under the
+same task, typed in place. The subtasks are the task's open ones in its list's
+order, whether or not they are on today themselves; one that is on today is
+drawn once, under its task, while that task is open. Which cards are open is
+remembered between launches.
+
 Anything already done is ticked off from here rather than somewhere else: each
 card's number becomes a tick when the pointer is over it, and `Space`
 does the same to the card you are on. Finishing plays whichever celebration is
@@ -321,13 +333,14 @@ dock under them — so none of it is reachable only by a key you have to already
 | `Cmd+0` | Everything, across all active lists |
 | `Ctrl+1` / `Ctrl+2` / `Ctrl+3` | Focus the sidebar, the task surface, the inspector |
 | `Cmd+B` | Show or hide the sidebar (Zed's left dock) |
-| `Up` / `Down` | Move between cards |
+| `Up` / `Down` (or `j` / `k`) | Move between cards, and through the subtasks of an open one |
+| `Right` / `l` | Open a card to show its subtasks, then step into them — on one with none, go to the inspector |
+| `Left` / `h` | Fold an open card, or step from a subtask up to its card — at the top of the day, back to the list in the sidebar |
 | `gf` (window) / `Tab` (panel) | Start the card you are on, or queue it behind the one running |
 | `Space` / `x` | Tick the card off without running a block — on the running card, finish it |
-| `Return` | Add a task (in the panel, from what you typed) |
+| `Return` | Add a task — on a subtask, the next subtask under the same card (in the panel, from what you typed) |
 | `Ctrl+T` | Plan the card for today, or take it off — an overdue or dated card becomes one you placed |
 | `Alt+↑` / `Alt+↓` | Arrange the day: move a planned card earlier or later, whichever lists they came from |
-| `Left` | Back to the list in the sidebar (the window) |
 | `Cmd+Return` | Open the card in the main window (the panel) |
 
 The digit row used to move the caret between the window's three panes. Changing

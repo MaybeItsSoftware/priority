@@ -19,6 +19,11 @@ struct DayRowChrome: Equatable {
   let isActive: Bool
   /// How the row is celebrated when it is finished; nil for the create row.
   let completion: CompletionKind?
+  /// How far in it is drawn: 0 for the day's own tasks, one more for each
+  /// level of subtask unfolded beneath one.
+  var depth = 0
+  /// Whether its subtasks are folded away; nil when it has none open.
+  var fold: Bool?
 }
 
 /// One row shape for every row, so a row that gains controls is visibly the
@@ -70,9 +75,16 @@ struct DayRowCard<Content: View>: View {
       : chrome.isActive ? theme.primary.opacity(Theme.statusFillOpacity)
       : chrome.isHovered ? theme.hover : Color.clear
     content
+      // Stepped in and hung from guides as the outline's subtasks are, so a
+      // task opened on the day reads as the same tree.
+      .padding(.leading, CGFloat(chrome.depth) * WorkspaceRowMetrics.indent(theme))
       .padding(.horizontal, rowGutter)
       .padding(.vertical, rowPadding)
       .frame(maxWidth: .infinity, alignment: .leading)
+      .workspaceIndentGuides(
+        depth: chrome.depth,
+        origin: rowGutter + WorkspaceRowMetrics.iconWidth / 2,
+        step: WorkspaceRowMetrics.indent(theme))
       .scaleEffect(treatment.rowScale(for: phase))
       .background(fill)
       // The running row keeps a primary edge even under the cursor, so the
@@ -220,6 +232,10 @@ struct DayTaskRow: View, Equatable {
           Image(systemName: "checkmark.circle")
             .font(theme.bodyFont())
             .foregroundStyle(theme.success)
+        } else if chrome.depth > 0 {
+          // A subtask hangs from its parent, as in the outline.
+          WorkspaceSubtaskElbow()
+            .frame(width: WorkspaceRowMetrics.iconWidth)
         } else if let index = facts.index {
           Text("\(index)")
             .font(theme.numeralFont(theme.scale.caption))
@@ -239,5 +255,13 @@ struct DayTaskRow: View, Equatable {
     .focusable(false)
     .help("Tick off without running a block (Space)")
     .accessibilityLabel("Tick off \(task.title)")
+    // In the gutter left of the mark, as in the outline, so a row with
+    // subtasks is no wider than one without.
+    .overlay(alignment: .leading) {
+      if let isFolded = chrome.fold {
+        WorkspaceFoldButton(isFolded: isFolded, title: task.title) { model.toggleDayFold(task.id) }
+          .offset(x: -WorkspaceFoldButton.width)
+      }
+    }
   }
 }

@@ -236,6 +236,9 @@ enum WorkspaceSidebarItem: Identifiable {
   @ObservationIgnored var taskCache: [String: WorkspaceTask] = [:]
   @ObservationIgnored var missingTaskIDs: Set<String> = []
   @ObservationIgnored var descendantCache: [String: [TaskOutlineItem]] = [:]
+  /// Each task's open subtasks, as Today draws them beneath it. Cleared with
+  /// `descendantCache`.
+  @ObservationIgnored var dayChildrenCache: [String: [WorkspaceTask]] = [:]
   /// The board's cards and everything beneath them, as the last refresh read
   /// them. Held so the task cache can be rebuilt without reading them again.
   @ObservationIgnored var boardTreeTasks: [WorkspaceTask] = []
@@ -956,6 +959,20 @@ enum WorkspaceSidebarItem: Identifiable {
   /// every render of the day and of the menu bar, and resolving it used to
   /// cost a query per row. Rebuilt by `rebuildDayItems()`.
   var dayItems: [DayItem] = []
+  /// The day as it is drawn: `dayItems` with the subtasks of every task you
+  /// have unfolded beneath it. Rebuilt with `dayItems`; see `DayOutline`.
+  var dayTree: [DayTreeItem] = []
+  /// Today's tasks whose subtasks are showing. Folded is the default, so the
+  /// day reads as a flat list until you open a task; kept across launches,
+  /// as the outline keeps its folds.
+  var todayUnfoldedTaskIDs = Set(
+    UserDefaults.standard.stringArray(forKey: WorkspaceViewModel.todayUnfoldedTasksKey) ?? []) {
+    didSet {
+      guard todayUnfoldedTaskIDs != oldValue else { return }
+      UserDefaults.standard.set(Array(todayUnfoldedTaskIDs).sorted(), forKey: Self.todayUnfoldedTasksKey)
+      rebuildDayTree()
+    }
+  }
   /// Tasks finished and time logged today, against the same for the week so
   /// far. Refreshed alongside the day rather than on a ticker — it only moves
   /// when work is finished or logged, which is exactly when the day reloads.

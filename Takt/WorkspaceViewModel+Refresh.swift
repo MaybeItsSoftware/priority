@@ -183,6 +183,7 @@ extension WorkspaceViewModel {
     reloadWaitingDetails()
     missingTaskIDs.removeAll(keepingCapacity: true)
     descendantCache.removeAll(keepingCapacity: true)
+    dayChildrenCache.removeAll(keepingCapacity: true)
     if taskContentMayHaveChanged(afterWrite: wrote) { taskContentRevision += 1 }
     rebuildDayItems()
   }
@@ -211,6 +212,7 @@ extension WorkspaceViewModel {
         .compactMap { resolve($0.candidate.id) }.map { DayItem(task: $0, reason: nil) }
       : planned
     if dayItems != items { dayItems = items }
+    rebuildDayTree()
   }
 
   // MARK: - Next up

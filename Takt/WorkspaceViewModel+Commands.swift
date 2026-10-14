@@ -303,7 +303,8 @@ extension WorkspaceViewModel {
     case .motionDoneSelect: if let key { moveDoneCursor(key) }
     case .motionTimelineSelect: if let key { moveTimelineCursor(key) }
     case .todayStart: startSelectedDayTask()
-    case .motionTodayLeave: if key != nil { returnToCurrentListInSidebar() }
+    case .motionTodayUnfold: if key != nil { unfoldOrDescendDaySelection() }
+    case .motionTodayLeave: if key != nil { foldOrAscendDaySelection() }
     }
   }
 

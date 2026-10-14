@@ -83,9 +83,12 @@ extension WorkspaceViewModel {
   func requestRelativeTaskComposerFocus(
     above: Bool = false, child: Bool = false, reference: WorkspaceTask? = nil
   ) {
-    // Today draws its draft only at the foot of the day, so a draft beside
-    // a task there would be open with no row on screen to type in.
-    let reference = viewMode == .today ? nil : reference ?? selectedTask
+    // Today draws its draft at the foot of the day, or beside a subtask
+    // drawn under an unfolded task — a new task there is another of its
+    // parent's subtasks, as Return in Checkvist adds a sibling.
+    let reference = viewMode == .today
+      ? selectedTask.flatMap { !child && dayTreeParentID(of: $0.id) != nil ? $0 : nil }
+      : reference ?? selectedTask
     requestTaskComposerFocus()
     taskInsertionReference = reference
     taskInsertionAbove = above
@@ -139,7 +142,7 @@ extension WorkspaceViewModel {
     // on screen wants the answer after it, not before.
     if !pendingRefresh.isEmpty { flushPendingRefresh() }
     return switch viewMode {
-    case .today: dayItems.map(\.task)
+    case .today: dayTree.map(\.task)
     case .outline: outlineRows.map(\.task)
     case .board: boardColumns.flatMap { tasks(in: $0) }
     // As it is drawn: the unplaced column, then the quadrants in reading order.

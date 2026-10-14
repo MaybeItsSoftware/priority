@@ -788,14 +788,19 @@ fn motions() -> Vec<Spec> {
         // Today's list is walked with the ordinary selection keys, the way every
         // other pane's is — it used to keep a selection of its own behind a search
         // field, and these keys only handed that field the caret back. What is
-        // left of its own is f, which queues behind a running block rather than
-        // replacing it, and ←, which has no hierarchy to leave and so goes to the
-        // sidebar.
+        // left of its own is gf, which queues behind a running block rather than
+        // replacing it, and the arrows across, which open a task where it stands
+        // to show its subtasks, as Checkvist does, and fold it again.
         c("todayStart", "Start the task, or finish the running one", "Today", &["gf"])
             .on(Today)
             .note("Or add it to the queue behind a running block"),
-        c("motionTodayLeave", "Back to the sidebar", "Moving around", &["left"])
+        c("motionTodayUnfold", "Show the subtasks, step into them, or go to the inspector", "Moving around", &["right", "l"])
             .on(Today)
-            .motion(),
+            .motion()
+            .note("On a task with no subtasks it moves to the inspector; ] still opens the task"),
+        c("motionTodayLeave", "Hide the subtasks, step out to the parent, or back to the sidebar", "Moving around", &["left", "h"])
+            .on(Today)
+            .motion()
+            .note("At the top of the day it goes back to the list in the sidebar"),
     ]
 }

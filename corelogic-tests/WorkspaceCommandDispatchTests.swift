@@ -66,6 +66,18 @@ final class WorkspaceCommandDispatchTests: XCTestCase {
     XCTAssertEqual(WorkspaceCommandCatalog.command(forKey: "za", on: .board)?.id, .planToggleFold)
   }
 
+  /// Today opens a task where it stands, as Checkvist does, with the arrows
+  /// and with h and l; `]` still opens the task itself.
+  func testTodaysArrowsAndHLFoldTheDay() {
+    for key in ["right", "l"] {
+      XCTAssertEqual(WorkspaceCommandCatalog.command(forKey: key, on: .today)?.id, .motionTodayUnfold, key)
+    }
+    for key in ["left", "h"] {
+      XCTAssertEqual(WorkspaceCommandCatalog.command(forKey: key, on: .today)?.id, .motionTodayLeave, key)
+    }
+    XCTAssertEqual(WorkspaceCommandCatalog.command(forKey: "]", on: .today)?.id, .planEnterTask)
+  }
+
   /// ⌘R shows and hides the right dock from every pane, the dock's own tabs
   /// included; renaming the list is F2 and ⇧R in the sidebar, and F2 stays
   /// the task's rename on a task pane.

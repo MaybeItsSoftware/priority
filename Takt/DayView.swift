@@ -114,7 +114,7 @@ struct DayView: View {
       results = trimmed.isEmpty ? [] : model.searchResults(matching: trimmed)
       selectDefault()
     }
-    .onChange(of: rows.map(\.id)) { old, _ in selectDefault(previous: old) }
+    .onChange(of: rows.map(\.outline)) { old, _ in selectDefault(previous: old) }
   }
 
   // MARK: - Chrome
@@ -358,6 +358,12 @@ struct DayView: View {
             ForEach(rows) { row in
               view(for: row)
                 .id(row.id)
+              // Return on a subtask drawn under an unfolded task adds the
+              // next of its parent's subtasks, typed in place beneath it.
+              if !surface.isPanel && row.outline.depth > 0 && model.draftsBeside(row.id, above: false) {
+                WorkspaceTaskDraftRow(depth: row.outline.depth)
+                  .id("takt:draft")
+              }
             }
             if isDrafting {
               // Where the new task will be: the foot of the day.
@@ -421,7 +427,9 @@ struct DayView: View {
       } else {
         DayTaskRow(
           facts: facts, listName: row.listName, detail: row.detail,
-          chrome: chrome(id: row.id, completion: facts.completion),
+          chrome: chrome(
+            id: row.id, completion: facts.completion, depth: row.outline.depth,
+            fold: row.outline.hasChildren ? !row.outline.isUnfolded : nil),
           onHover: { hover(row.id, $0) },
           onTap: { setCursor(row.id); start(facts.task) },
           onTick: { tickOff(facts.task) })
@@ -432,12 +440,14 @@ struct DayView: View {
 
   /// The row's shell, from the list's state. `hasKeyboard` reads the focus
   /// area only for the cursor row, as the row used to.
-  private func chrome(id: String, isActive: Bool = false, completion: CompletionKind?) -> DayRowChrome {
+  private func chrome(
+    id: String, isActive: Bool = false, completion: CompletionKind?, depth: Int = 0, fold: Bool? = nil
+  ) -> DayRowChrome {
     let isSelected = id == cursorID
     return DayRowChrome(
       id: id, isPanel: surface.isPanel, isSelected: isSelected,
       hasKeyboard: isSelected && !surface.isPanel && model.keyboardFocusArea == .tasks,
-      isHovered: hoveredID == id, isActive: isActive, completion: completion)
+      isHovered: hoveredID == id, isActive: isActive, completion: completion, depth: depth, fold: fold)
   }
 
   private func hover(_ id: String, _ inside: Bool) {
@@ -710,14 +720,21 @@ struct DayView: View {
     }
     if trimmed.isEmpty {
       let listNames = Dictionary(model.lists.map { ($0.id, $0.name) }, uniquingKeysWith: { first, _ in first })
-      return day.enumerated().map { index, entry in
-        DayRow(
+      // Numbered by the day's own tasks; a subtask drawn under one is not a
+      // place in the day, so it takes no number, and no list name either —
+      // it is in its parent's.
+      var position = 0
+      return model.dayTree.map { entry in
+        let isSubtask = entry.row.depth > 0
+        if !isSubtask { position += 1 }
+        return DayRow(
           id: entry.task.id, title: entry.task.title,
-          listName: listNames[entry.task.listId],
+          listName: isSubtask ? nil : listNames[entry.task.listId],
           // Why it is in the day beats when it is due: "overdue" is the thing
           // worth reading, and the deadline is what made it say that.
           detail: detail(for: entry.task, reason: entry.reason),
-          kind: .task(facts(entry.task, index: index + 1)))
+          kind: .task(facts(entry.task, index: isSubtask ? nil : position)),
+          outline: entry.row)
       }
     }
     var found: [DayRow] = results.prefix(10).map { result in
@@ -777,16 +794,15 @@ extension DayView {
   ///   under the cursor rather than a new query replacing it. A card ticked
   ///   off leaves the day, and the cursor goes to the card that took its
   ///   place rather than back to the top.
-  private func selectDefault(previous: [String] = []) {
+  private func selectDefault(previous: [DayOutlineRow] = []) {
     let ids = rows.map(\.id)
     if let cursorID, ids.contains(cursorID) { return }
     // In the window only while the pane has the keyboard: a task selected in
     // the sidebar's list, or left by another mode, is not the day's to take.
     if !surface.isPanel && model.keyboardFocusArea != .tasks { return }
-    let successor = cursorID.flatMap { id in
-      // The day is one level: its cards are each other's siblings.
-      SelectionSuccessor.successor(of: id, previousOrder: previous, remaining: Set(ids), parentOf: { _ in nil })
-    }
+    // A ticked-off subtask hands the cursor to its next sibling, then its
+    // parent; one of the day's own tasks, to the task after it.
+    let successor = cursorID.flatMap { DayOutline.successor(of: $0, previous: previous, remaining: ids) }
     setCursor(successor ?? ids.first)
   }
 
@@ -950,4 +966,16 @@ private struct DayRow: Identifiable {
   let listName: String?
   let detail: String?
   let kind: Kind
+  /// Where it hangs in the day; a search result or the create row is a
+  /// top-level row with nothing beneath it.
+  var outline: DayOutlineRow
+
+  init(id: String, title: String, listName: String?, detail: String?, kind: Kind, outline: DayOutlineRow? = nil) {
+    self.id = id
+    self.title = title
+    self.listName = listName
+    self.detail = detail
+    self.kind = kind
+    self.outline = outline ?? DayOutlineRow(id: id, depth: 0, parentID: nil, hasChildren: false, isUnfolded: false)
+  }
 }

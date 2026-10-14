@@ -380,10 +380,11 @@ final class WorkspaceCommandCollisionTests: XCTestCase {
       "conditions:left", "conditions:cmd+shift+{", "conditions:cmd+shift+}", "conditions:[", "conditions:]",
       // ⌥↑ ⌥↓ move the condition, and with ⇧ its category, as they move a task.
       "conditions:option+up", "conditions:option+down", "conditions:option+shift+up", "conditions:option+shift+down",
-      // Today is walked with the ordinary keys, but f queues behind a running
-      // block rather than replacing it, and ← has no task to leave so goes to
-      // the sidebar.
-      "today:left", "today:gf",
+      // Today is walked with the ordinary keys, but gf queues behind a
+      // running block rather than replacing it, and → and ← open and fold a
+      // task where it stands, as the outline's do, rather than entering and
+      // leaving it.
+      "today:right", "today:left", "today:gf",
     ]
     XCTAssertEqual(
       overrides, expected,
