@@ -23,10 +23,24 @@
 //! and each completion pays off the oldest (`dailies::log_contribution`),
 //! so every missed one takes a completion of its own.
 //!
+//! A commitment's subtask is only there when there is something to do.
+//! Completing it (Space, a checkbox, the agent's `task_complete`) ticks the
+//! day's appearance rather than closing it (`tick_instead_of_completing`,
+//! from `tasks::set_status`), and once nothing is due today — today's is
+//! ticked, or today is not one of its days and nothing is carried or owed —
+//! it is *resting* ([`resting_task_ids`]): the outline, every board and the
+//! filter lists leave it out, and next-up already passes over a met or
+//! unscheduled daily. It comes back on its own on its next day, or at once
+//! if the tick is undone, since resting is read from the schedule and the
+//! ticks rather than stored. While it rests it is still in Dailies (ticked,
+//! on its days) and in its parent's Repeat summary.
+//!
 //! The schedule is written in the recurrence syntax a repeating task uses
 //! ("daily", "weekdays", "every friday", "every 2 weeks"), plus a list of
 //! days ("mon, wed, fri"), and stored as the daily's weekday mask and
 //! interval, which every client already reads.
+
+use std::collections::HashSet;
 
 use rusqlite::{OptionalExtension, Transaction};
 
@@ -345,6 +359,78 @@ pub fn missed(
     Ok(u32::try_from(owed.iter().filter(|day| **day < today).count()).unwrap_or(u32::MAX))
 }
 
+/// The commitment subtasks resting on the local day `now_ms` falls on, with
+/// everything beneath them: those with nothing due today (see the module
+/// notes). The outline, the boards and the filter lists leave these out.
+pub fn resting_task_ids(
+    connection: &rusqlite::Connection,
+    now_ms: i64,
+    zone: &str,
+) -> Result<HashSet<String>, CoreError> {
+    let tz = periodic::zone(zone);
+    let mut resting = HashSet::new();
+    for commitment in all_commitments(connection)? {
+        if habits::rests(connection, &commitment.daily_id, now_ms, tz)? {
+            resting.insert(commitment.task_id);
+        }
+    }
+    // Anything filed beneath one rests with it, rather than losing its parent.
+    let mut statement =
+        connection.prepare_cached("SELECT id FROM tasks WHERE parentTaskId = ?1")?;
+    let mut frontier: Vec<String> = resting.iter().cloned().collect();
+    while let Some(id) = frontier.pop() {
+        for child in statement.query_map([&id], |row| row.get::<_, String>(0))? {
+            let child = child?;
+            if resting.insert(child.clone()) {
+                frontier.push(child);
+            }
+        }
+    }
+    Ok(resting)
+}
+
+/// [`resting_task_ids`] as of this moment in the device's time zone, for the
+/// reads that are not handed a clock: a list's rows, its outline, and the
+/// combined boards.
+pub fn resting_task_ids_now(
+    connection: &rusqlite::Connection,
+) -> Result<HashSet<String>, CoreError> {
+    if !habits::any_live(connection)? {
+        return Ok(HashSet::new());
+    }
+    let now_ms = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map_or(0, |since| {
+            i64::try_from(since.as_millis()).unwrap_or(i64::MAX)
+        });
+    let zone = iana_time_zone::get_timezone().unwrap_or_else(|_| "UTC".to_string());
+    resting_task_ids(connection, now_ms, &zone)
+}
+
+/// Ticks today's appearance of the commitment `task_id` carries, in place of
+/// completing it, and says whether it did. Completing a commitment's subtask
+/// (Space, a checkbox, the agent) is doing it for the day: the subtask stays
+/// open and rests until its next day. Only completing its parent, or
+/// stopping it, ends it.
+pub(crate) fn tick_instead_of_completing(
+    transaction: &Transaction,
+    task_id: &str,
+    now_ms: i64,
+    zone: &str,
+) -> Result<bool, CoreError> {
+    let Some(commitment) = commitment(transaction, task_id)? else {
+        return Ok(false);
+    };
+    crate::dailies::log_contribution(transaction, &commitment.daily_id, 0, true, now_ms, zone)?;
+    habits::reconcile_habit(
+        transaction,
+        &commitment.daily_id,
+        now_ms,
+        periodic::zone(zone),
+    )?;
+    Ok(true)
+}
+
 /// Stops a commitment: its daily is archived, keeping what was logged, its
 /// card leaves Today, and the subtask is closed as done. Nothing to stop is
 /// not an error.
@@ -357,13 +443,24 @@ pub fn stop_commitment(
     if commitment(transaction, commitment_task_id)?.is_none() {
         return Ok(());
     }
+    end_commitment(transaction, commitment_task_id, now_ms)?;
+    tasks::set_status(transaction, commitment_task_id, "completed", now_ms, zone)
+}
+
+/// Archives the daily `commitment_task_id` carries and takes its card out of
+/// Today, so it is a commitment no longer and closing it closes it.
+pub(crate) fn end_commitment(
+    transaction: &Transaction,
+    commitment_task_id: &str,
+    now_ms: i64,
+) -> Result<(), CoreError> {
     crate::dailies::archive_daily(transaction, commitment_task_id, now_ms)?;
     if habits::kanban_column(transaction, commitment_task_id)?.as_deref()
         == Some(COMMITMENT_PLACEMENT)
     {
         habits::write_column(transaction, commitment_task_id, None, now_ms)?;
     }
-    tasks::set_status(transaction, commitment_task_id, "completed", now_ms, zone)
+    Ok(())
 }
 
 const COMMITMENT_COLUMNS: &str =

@@ -747,6 +747,24 @@ pub fn set_status(
     let Some(completed_at) = completed_at else {
         return Ok(());
     };
+    // A commitment's subtask is done for the day, not for good; cancelling
+    // it ends the commitment (`commitments.rs`).
+    match status {
+        "completed"
+            if crate::commitments::tick_instead_of_completing(
+                transaction,
+                task_id,
+                now_ms,
+                zone,
+            )? =>
+        {
+            return Ok(());
+        }
+        "cancelled" if crate::commitments::commitment(transaction, task_id)?.is_some() => {
+            crate::commitments::end_commitment(transaction, task_id, now_ms)?;
+        }
+        _ => {}
+    }
     let was_open = completed_at.is_none();
     let now = stored(now_ms);
     let completed_at = if status == "open" {

@@ -106,7 +106,7 @@ fn everything_built_in_is_the_combined_boards_cards() {
         .find(|row| row.id == BUILTIN_EVERYTHING_ID)
         .unwrap();
     let lists = scope_list_ids(&connection, "w").unwrap();
-    let cards: Vec<String> = board::cards_of(&connection, &lists, None)
+    let cards: Vec<String> = board::cards_of(&connection, &lists, None, &HashSet::new())
         .unwrap()
         .into_iter()
         .map(|task| task.id)

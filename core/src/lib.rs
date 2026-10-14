@@ -154,4 +154,91 @@ mod tests {
             let _ = std::fs::remove_file(format!("{path_text}{suffix}"));
         }
     }
+
+    #[test]
+    fn a_list_read_leaves_out_a_commitment_ticked_today_until_the_tick_is_undone() {
+        let path = std::env::temp_dir().join(format!(
+            "takt-resting-{}-{}.sqlite",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        let path_text = path.to_string_lossy().to_string();
+        schema::migrate_workspace(path_text.clone()).unwrap();
+        let core = workspace::CoreWorkspace::open(path_text.clone()).unwrap();
+        // The list reads take the device's clock and zone, so this does too.
+        let now = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_millis() as i64;
+        let zone = iana_time_zone::get_timezone().unwrap_or_else(|_| "UTC".into());
+        let workspace_id = core.bootstrap(now).unwrap();
+        let inbox = core.inbox(workspace_id).unwrap().unwrap().id;
+        let parent = core
+            .create_task(
+                tasks::NewTask {
+                    list_id: inbox.clone(),
+                    title: "Play the drums".into(),
+                    parent_task_id: None,
+                    kind: "task".into(),
+                    notes: String::new(),
+                    kanban_column: None,
+                    start_at_ms: None,
+                    due_at_ms: None,
+                    estimate_seconds: None,
+                    tags: vec![],
+                    priority: None,
+                    waiting_on: None,
+                    external_links: vec![],
+                    at_top: false,
+                    adjacent_task_id: None,
+                    above: false,
+                },
+                now,
+            )
+            .unwrap();
+        let practice = core
+            .save_commitment(
+                parent.clone(),
+                commitments::CommitmentDraft {
+                    title: "Practice".into(),
+                    rule: "daily".into(),
+                    expires_at_ms: None,
+                    stacks_missed: false,
+                },
+                None,
+                now,
+                zone.clone(),
+            )
+            .unwrap();
+        let ids = |rows: Vec<records::TaskRow>| rows.into_iter().map(|t| t.id).collect::<Vec<_>>();
+        assert!(ids(core.tasks_in_lists(vec![inbox.clone()]).unwrap()).contains(&practice));
+
+        core.set_status(practice.clone(), "completed".into(), now, zone)
+            .unwrap();
+        assert!(!ids(core.tasks_in_lists(vec![inbox.clone()]).unwrap()).contains(&practice));
+        assert!(
+            !ids(core
+                .child_tasks(inbox.clone(), Some(parent.clone()))
+                .unwrap())
+            .contains(&practice)
+        );
+        assert!(
+            core.outline(inbox.clone(), None)
+                .unwrap()
+                .iter()
+                .all(|item| item.task.id != practice)
+        );
+        // Its parent still says it is committed to.
+        assert_eq!(core.commitments(parent).unwrap().len(), 1);
+
+        core.undo().unwrap();
+        assert!(ids(core.tasks_in_lists(vec![inbox]).unwrap()).contains(&practice));
+        drop(core);
+        for suffix in ["", "-wal", "-shm"] {
+            let _ = std::fs::remove_file(format!("{path_text}{suffix}"));
+        }
+    }
 }

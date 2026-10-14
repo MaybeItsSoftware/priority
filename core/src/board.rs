@@ -94,7 +94,14 @@ pub fn combined_board(
     list_ids: &[String],
     hide_completed_before_ms: Option<i64>,
 ) -> Result<BoardRead, CoreError> {
-    combined_board_of(connection, list_ids, hide_completed_before_ms, None)
+    let resting = crate::commitments::resting_task_ids_now(connection)?;
+    combined_board_of(
+        connection,
+        list_ids,
+        hide_completed_before_ms,
+        None,
+        &resting,
+    )
 }
 
 /// [`combined_board`], its cards limited to `only` when given: a filter
@@ -102,13 +109,17 @@ pub fn combined_board(
 /// status, so a filter that shows finished work draws it; it must still be
 /// one the board could draw — not a list item, not the list's visible root,
 /// not inside a closed or archived list item.
+///
+/// The tasks in `resting` (a commitment with nothing due today, and what is
+/// beneath it; `commitments::resting_task_ids`) are left out altogether.
 pub fn combined_board_of(
     connection: &Connection,
     list_ids: &[String],
     hide_completed_before_ms: Option<i64>,
     only: Option<&HashSet<String>>,
+    resting: &HashSet<String>,
 ) -> Result<BoardRead, CoreError> {
-    let (tasks, visible_roots) = read_tasks(connection, list_ids)?;
+    let (tasks, visible_roots) = read_tasks(connection, list_ids, resting)?;
     let Selection { outlines, cards } = select(&tasks, &visible_roots, list_ids, only);
     let is_list = |task: &TaskRow| task.item_kind.as_deref() == Some("list");
     let is_open = |task: &TaskRow| !matches!(task.status.as_str(), "completed" | "cancelled");
@@ -347,7 +358,8 @@ pub fn actionable_tasks(
     connection: &Connection,
     list_ids: &[String],
 ) -> Result<Vec<u8>, CoreError> {
-    let (tasks, visible_roots) = read_tasks(connection, list_ids)?;
+    let resting = crate::commitments::resting_task_ids_now(connection)?;
+    let (tasks, visible_roots) = read_tasks(connection, list_ids, &resting)?;
     let selection = select(&tasks, &visible_roots, list_ids, None);
     Ok(pack_task_rows(
         selection.cards.iter().map(|&index| &tasks[index]),
@@ -355,13 +367,14 @@ pub fn actionable_tasks(
 }
 
 /// The cards of `list_ids` in board order — the open ones, or those in
-/// `only` — as rows.
+/// `only` — as rows, none of them `resting`.
 pub(crate) fn cards_of(
     connection: &Connection,
     list_ids: &[String],
     only: Option<&HashSet<String>>,
+    resting: &HashSet<String>,
 ) -> Result<Vec<TaskRow>, CoreError> {
-    let (tasks, visible_roots) = read_tasks(connection, list_ids)?;
+    let (tasks, visible_roots) = read_tasks(connection, list_ids, resting)?;
     let selection = select(&tasks, &visible_roots, list_ids, only);
     Ok(selection
         .cards
@@ -370,12 +383,13 @@ pub(crate) fn cards_of(
         .collect())
 }
 
-/// Every task in the lists, in `tasks_in_lists`' order, and each list's
-/// visible root.
+/// Every task in the lists but the `resting` ones, in `tasks_in_lists`'
+/// order, and each list's visible root.
 #[allow(clippy::type_complexity)]
 fn read_tasks(
     connection: &Connection,
     list_ids: &[String],
+    resting: &HashSet<String>,
 ) -> Result<(Vec<TaskRow>, HashMap<String, Option<String>>), CoreError> {
     let mut unique: Vec<&String> = list_ids.iter().collect();
     unique.sort();
@@ -400,7 +414,10 @@ fn read_tasks(
         let columns = TaskColumns::of(&statement)?;
         let mut rows = statement.query(rusqlite::params_from_iter(chunk))?;
         while let Some(row) = rows.next()? {
-            tasks.push(columns.read(row)?);
+            let task = columns.read(row)?;
+            if !resting.contains(&task.id) {
+                tasks.push(task);
+            }
         }
     }
     Ok((tasks, visible_roots))

@@ -394,6 +394,30 @@ pub(crate) fn habit_shows(
         .is_some())
 }
 
+/// Whether a live habit has nothing due on the local day `now_ms` falls on:
+/// today's appearance is done, or today is not one of its days and nothing is
+/// carried or owed from an earlier one. An expired habit, or one that is not
+/// placed, is not resting; the habit pass ends the first, and the second has
+/// no appearances to rest between. What `commitments::resting_task_ids` asks.
+pub(crate) fn rests(
+    connection: &rusqlite::Connection,
+    daily_id: &str,
+    now_ms: i64,
+    zone: Tz,
+) -> Result<bool, CoreError> {
+    let Some(stored) = stored_rule(connection, daily_id, zone)? else {
+        return Ok(false);
+    };
+    let source_completed = source_is_completed(connection, stored.source_task_id.as_deref())?;
+    let today = local_day(now_ms, zone);
+    if stored.is_expired(today, source_completed) {
+        return Ok(false);
+    }
+    Ok(stored
+        .appearance(connection, daily_id, today, source_completed)?
+        .is_none())
+}
+
 /// The scheduled days a habit whose missed appearances stack still owes on
 /// the local day `now_ms` falls on, oldest first, today's included if it is
 /// one. Empty for a habit whose missed appearances vanish.

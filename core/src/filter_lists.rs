@@ -1077,7 +1077,8 @@ pub fn tasks(
 ) -> Result<Vec<TaskRow>, CoreError> {
     let only = matching_ids(connection, definition, now_ms, zone)?;
     let lists = scope_list_ids(connection, workspace_id)?;
-    board::cards_of(connection, &lists, Some(&only))
+    let resting = crate::commitments::resting_task_ids(connection, now_ms, zone)?;
+    board::cards_of(connection, &lists, Some(&only), &resting)
 }
 
 /// A filter list's board over `list_ids` (the client's open lists in sidebar
@@ -1091,7 +1092,14 @@ pub fn board(
     zone: &str,
 ) -> Result<BoardRead, CoreError> {
     let only = matching_ids(connection, definition, now_ms, zone)?;
-    board::combined_board_of(connection, list_ids, hide_completed_before_ms, Some(&only))
+    let resting = crate::commitments::resting_task_ids(connection, now_ms, zone)?;
+    board::combined_board_of(
+        connection,
+        list_ids,
+        hide_completed_before_ms,
+        Some(&only),
+        &resting,
+    )
 }
 
 // MARK: - The handle

@@ -1346,24 +1346,33 @@ impl CoreWorkspace {
         records::tasks_by_id(&self.read(), &ids)
     }
 
-    /// The children of a task in a list, or its roots, in outline order.
+    /// The children of a task in a list, or its roots, in outline order;
+    /// none resting (`commitments::resting_task_ids`).
     pub fn child_tasks(
         &self,
         list_id: String,
         parent_task_id: Option<String>,
     ) -> Result<Vec<TaskRow>, CoreError> {
-        records::children(&self.lock(), &list_id, parent_task_id.as_deref())
+        let connection = self.lock();
+        let rows = records::children(&connection, &list_id, parent_task_id.as_deref())?;
+        without_resting(&connection, rows, |row| &row.id)
     }
 
-    /// Every task in the given lists, each list in outline order.
+    /// Every task in the given lists, each list in outline order, but a
+    /// commitment resting today (`commitments::resting_task_ids`): what every
+    /// client's outline and list board is built from.
     pub fn tasks_in_lists(&self, list_ids: Vec<String>) -> Result<Vec<TaskRow>, CoreError> {
-        records::tasks_in_lists(&self.lock(), &list_ids)
+        let connection = self.lock();
+        let rows = records::tasks_in_lists(&connection, &list_ids)?;
+        without_resting(&connection, rows, |row| &row.id)
     }
 
     /// `tasks_in_lists`, packed by `packed_rows::pack_task_rows` so the
     /// rows cross as one buffer rather than field by field.
     pub fn tasks_in_lists_packed(&self, list_ids: Vec<String>) -> Result<Vec<u8>, CoreError> {
-        let rows = records::tasks_in_lists(&self.lock(), &list_ids)?;
+        let connection = self.lock();
+        let rows = records::tasks_in_lists(&connection, &list_ids)?;
+        let rows = without_resting(&connection, rows, |row| &row.id)?;
         Ok(crate::packed_rows::pack_task_rows(rows.iter()))
     }
 
@@ -1404,7 +1413,9 @@ impl CoreWorkspace {
         list_id: String,
         parent_task_id: Option<String>,
     ) -> Result<Vec<OutlineItem>, CoreError> {
-        records::outline(&self.lock(), &list_id, parent_task_id.as_deref())
+        let connection = self.lock();
+        let items = records::outline(&connection, &list_id, parent_task_id.as_deref())?;
+        without_resting(&connection, items, |item| &item.task.id)
     }
 
     /// The imported wrapper a list shows its children in place of, if any.
@@ -1579,6 +1590,20 @@ impl CoreWorkspace {
             None => self.lock(),
         }
     }
+}
+
+/// `rows` without the commitments resting at this moment, and what is
+/// beneath them (`commitments::resting_task_ids_now`).
+fn without_resting<T>(
+    connection: &Connection,
+    mut rows: Vec<T>,
+    id: impl Fn(&T) -> &String,
+) -> Result<Vec<T>, CoreError> {
+    let resting = commitments::resting_task_ids_now(connection)?;
+    if !resting.is_empty() {
+        rows.retain(|row| !resting.contains(id(row)));
+    }
+    Ok(rows)
 }
 
 /// Orders next-up candidates for `now` in `context`: a pure function, no

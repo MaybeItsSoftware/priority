@@ -28,6 +28,9 @@ uniffi = "0.32"
 takt-sync-rules = { path = "../sync-server/rules" }
 chrono = "0.4"
 chrono-tz = "0.10"
+# The device's zone, for the reads no client hands a clock (the resting
+# commitments a list's rows leave out). Already in the tree through chrono.
+iana-time-zone = "0.1"
 regex-lite = "0.1"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
