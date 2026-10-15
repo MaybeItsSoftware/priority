@@ -216,6 +216,34 @@ pub fn candidates(
         }
     }
 
+    // A task filed nowhere stands in its nearest filed ancestor's column, as
+    // the board draws it, so a subtask under a card planned for today is on
+    // today too.
+    let mut filing: HashMap<String, (Option<String>, Option<String>)> = HashMap::new();
+    {
+        let mut statement = connection.prepare(
+            "SELECT t.id, t.parentTaskId, m.kanbanColumn FROM tasks t
+             LEFT JOIN task_metadata m ON m.taskId = t.id",
+        )?;
+        for row in statement.query_map([], |row| {
+            Ok((row.get::<_, String>(0)?, row.get(1)?, row.get(2)?))
+        })? {
+            let (id, parent, column) = row?;
+            filing.insert(id, (parent, column));
+        }
+    }
+    let inherited = |id: &str| -> Option<String> {
+        let mut current = filing.get(id).and_then(|(parent, _)| parent.clone());
+        for _ in 0..filing.len() {
+            let (parent, column) = filing.get(current.as_deref()?)?;
+            if column.is_some() {
+                return column.clone();
+            }
+            current = parent.clone();
+        }
+        None
+    };
+
     let mut statement = connection.prepare(
         "SELECT t.id, t.title, t.listId, t.dueAt, t.estimateSeconds, t.sortOrder, t.createdAt,
                 COALESCE(t.itemKind, 'task'),
@@ -311,7 +339,7 @@ pub fn candidates(
             matrix_importance: row.importance,
             priority: row.priority,
             estimate_seconds: row.estimate,
-            kanban_column: row.column,
+            kanban_column: row.column.or_else(|| inherited(&row.id)),
             focus_rank: row.rank,
             sort_order: row.sort_order,
             created_at_ms: millis(Some(&row.created_at)).unwrap_or(0),

@@ -279,3 +279,32 @@ fn the_clock_banks_time_on_pause_and_checkpoint() {
     assert_eq!(banked(&connection), Some(40));
     assert_eq!(session(&connection, &id).0, "finished");
 }
+
+#[test]
+fn a_subtask_filed_nowhere_stands_in_its_nearest_filed_ancestors_column() {
+    let connection = workspace();
+    connection
+        .execute_batch(&format!(
+            "INSERT INTO tasks (id, listId, parentTaskId, title, sortOrder, createdAt, updatedAt) VALUES
+               ('card', 'l', NULL, 'Card', 3, '{T}', '{T}'),
+               ('step', 'l', 'card', 'Step', 0, '{T}', '{T}'),
+               ('own', 'l', 'card', 'Own', 1, '{T}', '{T}'),
+               ('leaf', 'l', 'step', 'Leaf', 0, '{T}', '{T}');
+             INSERT INTO task_metadata (taskId, kanbanColumn, updatedAt) VALUES
+               ('card', 'today', '{T}'), ('own', 'this-week', '{T}');"
+        ))
+        .unwrap();
+    let found = candidates(&connection, NOW, "UTC").unwrap();
+    let column = |id: &str| {
+        found
+            .iter()
+            .find(|candidate| candidate.id == id)
+            .map(|candidate| candidate.kanban_column.clone())
+    };
+    // Parents of open work are not candidates; their leaves inherit.
+    assert_eq!(column("card"), None);
+    assert_eq!(column("step"), None);
+    assert_eq!(column("leaf"), Some(Some("today".into())));
+    assert_eq!(column("own"), Some(Some("this-week".into())));
+    assert_eq!(column("write"), Some(None));
+}
