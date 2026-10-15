@@ -349,3 +349,64 @@ fn saving_nothing_onto_a_task_without_metadata_writes_nothing() {
         .unwrap();
     assert_eq!(rows, 0);
 }
+
+#[test]
+fn a_start_moved_off_today_moves_the_task_out_of_today() {
+    // NOW is Tuesday 14 November 2023, 22:13 UTC.
+    const DAY: i64 = 24 * HOUR;
+    let mut connection = workspace();
+    connection
+        .execute_batch(&format!(
+            "INSERT INTO task_metadata (taskId, kanbanColumn, focusRank, updatedAt) VALUES
+               ('p', 'today', 2, '{T}'), ('c', 'in-progress', NULL, '{T}'), ('g', NULL, NULL, '{T}');"
+        ))
+        .unwrap();
+    let column = |c: &Connection, id: &str| -> (Option<String>, Option<i64>) {
+        c.query_row(
+            "SELECT kanbanColumn, focusRank FROM task_metadata WHERE taskId = ?1",
+            [id],
+            |row| Ok((row.get(0)?, row.get(1)?)),
+        )
+        .unwrap()
+    };
+    let schedule = |c: &mut Connection, id: &str, start: Option<i64>| {
+        journalled(c, "Schedule Task", |tx| {
+            schedule_task(tx, id, start, NOW, "UTC")
+        })
+        .unwrap();
+    };
+
+    // Later today keeps its place in the day.
+    schedule(&mut connection, "p", Some(NOW + HOUR / 2));
+    assert_eq!(column(&connection, "p"), (Some("today".into()), Some(2)));
+    // Thursday is this week, and leaving Today drops the rank.
+    schedule(&mut connection, "p", Some(NOW + 2 * DAY));
+    assert_eq!(column(&connection, "p"), (Some("this-week".into()), None));
+    // Back to today from This week.
+    schedule(&mut connection, "p", Some(NOW - DAY));
+    assert_eq!(column(&connection, "p"), (Some("today".into()), None));
+    // Next Monday is beyond this week: filed nowhere.
+    schedule(&mut connection, "p", Some(NOW + 6 * DAY));
+    assert_eq!(column(&connection, "p"), (None, None));
+    assert_eq!(
+        undo(&mut connection).unwrap().as_deref(),
+        Some("Schedule Task")
+    );
+    assert_eq!(column(&connection, "p"), (Some("today".into()), None));
+
+    // Other columns, and the backlog, are left where they are.
+    schedule(&mut connection, "c", Some(NOW + 2 * DAY));
+    assert_eq!(column(&connection, "c"), (Some("in-progress".into()), None));
+    schedule(&mut connection, "g", Some(NOW));
+    assert_eq!(column(&connection, "g"), (None, None));
+
+    // A board with no This week column sends a later start to the backlog.
+    connection
+        .execute_batch(
+            r#"INSERT INTO kanban_boards (id, columnsJSON)
+               VALUES ('l/root', '[{"id":"backlog","title":"Backlog"},{"id":"today","title":"Today"}]');"#,
+        )
+        .unwrap();
+    schedule(&mut connection, "p", Some(NOW + 2 * DAY));
+    assert_eq!(column(&connection, "p"), (None, None));
+}

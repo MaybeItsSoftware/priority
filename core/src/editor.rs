@@ -9,11 +9,13 @@
 
 use std::collections::BTreeSet;
 
-use chrono::{Duration, NaiveDate};
+use chrono::{Datelike, Duration, NaiveDate};
 use rusqlite::{OptionalExtension, Transaction, params};
 
 use crate::CoreError;
+use crate::board_columns::{self, THIS_WEEK_COLUMN_ID, TODAY_COLUMN_ID};
 use crate::dailies;
+use crate::habits;
 use crate::periodic;
 pub use crate::planning::Planning;
 use crate::tasks::normalized_strings;
@@ -459,7 +461,66 @@ fn update_planning(
            startAt = excluded.startAt, planningJSON = excluded.planningJSON, updatedAt = excluded.updatedAt",
         params![edit.task_id, start, json, stored(now_ms)],
     )?;
+    let previous_start = current_planning.and_then(|p| p.start_at_ms);
+    if let Some(start) = planning.start_at_ms
+        && Some(start) != previous_start
+    {
+        refile_by_start(transaction, &edit.task_id, start, now_ms, zone)?;
+    }
     Ok(())
+}
+
+/// Moves a task between Today and This week when its start moves to a day
+/// the column it stands in no longer means: a start on or before today is
+/// Today's, one later this week (weeks start on Monday, as capture's
+/// `nextweek` does) This week's, and anything later files it nowhere, back
+/// in the first column. Only a task in one of those two columns moves; one
+/// in progress, waiting or filed anywhere else stays put, and so does one
+/// in the backlog, which a start does not plan. Leaving Today drops the
+/// task's place in the day. This week is used only if the task's list board
+/// draws it; otherwise the task is filed nowhere.
+fn refile_by_start(
+    transaction: &Transaction,
+    task_id: &str,
+    start_ms: i64,
+    now_ms: i64,
+    zone: chrono_tz::Tz,
+) -> Result<(), CoreError> {
+    let column = habits::kanban_column(transaction, task_id)?;
+    let Some(column) = column.filter(|c| c == TODAY_COLUMN_ID || c == THIS_WEEK_COLUMN_ID) else {
+        return Ok(());
+    };
+    let today = habits::local_day(now_ms, zone);
+    let day = habits::local_day(start_ms, zone);
+    let next_monday = today + Duration::days(7 - i64::from(today.weekday().num_days_from_monday()));
+    let target = if day <= today {
+        Some(TODAY_COLUMN_ID)
+    } else if day < next_monday && draws_this_week(transaction, task_id)? {
+        Some(THIS_WEEK_COLUMN_ID)
+    } else {
+        None
+    };
+    if target == Some(column.as_str()) {
+        return Ok(());
+    }
+    transaction.execute(
+        "UPDATE task_metadata SET kanbanColumn = ?1,
+           focusRank = CASE WHEN ?1 = 'today' THEN focusRank ELSE NULL END,
+           updatedAt = ?2
+         WHERE taskId = ?3",
+        params![target, stored(now_ms), task_id],
+    )?;
+    Ok(())
+}
+
+/// Whether the board of the task's list has a This week column.
+fn draws_this_week(transaction: &Transaction, task_id: &str) -> Result<bool, CoreError> {
+    let list: String =
+        transaction.query_row("SELECT listId FROM tasks WHERE id = ?1", [task_id], |row| {
+            row.get(0)
+        })?;
+    let (layout, _) = board_columns::layout(transaction, &format!("{list}/root"))?;
+    Ok(layout.iter().any(|column| column.id == THIS_WEEK_COLUMN_ID))
 }
 
 /// `WorkspaceStore.updateTaskRecord`: the task row's own fields, written

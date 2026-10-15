@@ -55,6 +55,8 @@ pub const EVERYTHING_BOARD_KEY: &str = "everything/root";
 pub const WAITING_COLUMN_ID: &str = "waiting-on";
 /// The column Today plans by.
 pub const TODAY_COLUMN_ID: &str = "today";
+/// The column a task starting later this week moves to from Today.
+pub const THIS_WEEK_COLUMN_ID: &str = "this-week";
 /// Where a task filed nowhere stands.
 pub const FIRST_STOCK_COLUMN_ID: &str = "backlog";
 
@@ -104,7 +106,7 @@ fn stock() -> Vec<BoardColumn> {
     [
         ("backlog", "Backlog"),
         ("in-progress", "In progress"),
-        ("this-week", "This week"),
+        (THIS_WEEK_COLUMN_ID, "This week"),
         (WAITING_COLUMN_ID, "Waiting on"),
         (TODAY_COLUMN_ID, "Today"),
     ]
