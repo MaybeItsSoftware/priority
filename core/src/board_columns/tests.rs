@@ -202,11 +202,20 @@ fn moving_the_entered_card_moves_what_it_hides() {
     })
     .unwrap();
     let board = read(&connection, "comp/week", &["comp"]);
-    // Waiting on is not a stage, so it stays.
+    // Waiting on is not a stage: it stays while `d` waits in it.
     assert_eq!(ids(&board.columns), ["waiting-on", "today"]);
     assert_eq!(placed(&board, "c").as_deref(), Some("today"));
     assert_eq!(placed(&board, "b").as_deref(), Some("today"));
     assert_eq!(placed(&board, "d"), None);
+    // With nothing waiting beneath the card, it goes too.
+    connection
+        .execute("UPDATE tasks SET status = 'completed' WHERE id = 'd'", [])
+        .unwrap();
+    let board = read(&connection, "comp/week", &["comp"]);
+    assert_eq!(ids(&board.columns), ["today"]);
+    connection
+        .execute("UPDATE tasks SET status = 'open' WHERE id = 'd'", [])
+        .unwrap();
 
     // In Waiting on or in Backlog, it hides nothing.
     for at in ["waiting-on", "backlog"] {
@@ -237,7 +246,8 @@ fn entering_twice_takes_the_floor_the_middle_card_is_drawn_at() {
     .unwrap();
     let board = read(&connection, "comp/sub", &["comp"]);
     assert_eq!(board.floor_column_id.as_deref(), Some("today"));
-    assert_eq!(placed(&board, "deep").as_deref(), Some("today"));
+    assert_eq!(ids(&board.columns), ["today"]);
+    assert_eq!(at(&connection, &board, "deep"), "today");
 
     // And when Week 1 moves to Backlog, `sub` is drawn where it is filed.
     journalled(&mut connection, "Move Task", |tx| {

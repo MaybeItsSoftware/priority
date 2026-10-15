@@ -25,8 +25,10 @@
 //! the task stands in on its parent's board are hidden, and a child filed in
 //! one of them is drawn in the task's column. Nothing is rewritten; leaving
 //! the task, or moving it back, shows everything where it was filed. Waiting
-//! on and rule columns are not stages, so they are never hidden, and a task
-//! standing in one hides nothing.
+//! on and rule columns are not stages, so a task standing in one hides
+//! nothing, and rule columns are never hidden. Waiting on to the left is
+//! hidden too unless a task beneath is filed in it, so nothing waiting is
+//! drawn as though it were at the task's stage.
 //!
 //! **Built in.** `today` and `waiting-on` are ids other features read (the
 //! Today view plans by the first, waiting follow-ups by the second). They can
@@ -264,9 +266,13 @@ fn resolve(
             .iter()
             .position(|column| column.id == parent_column && is_stage(column))
     {
+        let waiting_used = layout[..index]
+            .iter()
+            .any(|column| column.id == WAITING_COLUMN_ID)
+            && waits_beneath(connection, key)?;
         hidden = layout[..index]
             .iter()
-            .filter(|column| is_stage(column))
+            .filter(|column| is_stage(column) || (column.id == WAITING_COLUMN_ID && !waiting_used))
             .map(|column| column.id.clone())
             .collect();
         if !hidden.is_empty() {
@@ -279,6 +285,26 @@ fn resolve(
         hidden,
         floor,
     })
+}
+
+/// Whether an open task beneath an entered board's task is filed in Waiting
+/// on, which keeps that column drawn to the left of the task's own.
+fn waits_beneath(connection: &Connection, key: &str) -> Result<bool, CoreError> {
+    let Some((_, scope)) = scoped(key) else {
+        return Ok(false);
+    };
+    Ok(connection.query_row(
+        "WITH RECURSIVE subtree(id) AS (
+           SELECT id FROM tasks WHERE parentTaskId = ?1
+           UNION
+           SELECT tasks.id FROM tasks JOIN subtree ON tasks.parentTaskId = subtree.id
+         )
+         SELECT EXISTS(SELECT 1 FROM subtree JOIN tasks t ON t.id = subtree.id
+                       JOIN task_metadata m ON m.taskId = t.id
+                       WHERE t.status = 'open' AND m.kanbanColumn = ?2)",
+        params![scope, WAITING_COLUMN_ID],
+        |row| row.get(0),
+    )?)
 }
 
 /// The column an entered board's task stands in on its parent's board: the
