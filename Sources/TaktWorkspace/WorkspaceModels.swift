@@ -454,8 +454,12 @@ public struct DailyContribution: Codable, Identifiable, Sendable, Equatable {
   public var secondsLogged: Int
   public var completedAt: Date?
   public let createdAt: Date
+  /// When the day was set aside without being done: cancelling a
+  /// commitment's subtask skips its day. Neither done nor owed.
+  public var skippedAt: Date?
 
   public var isComplete: Bool { completedAt != nil }
+  public var isSkipped: Bool { skippedAt != nil }
 
   private static let dayKeyFormatter: DateFormatter = {
     let formatter = DateFormatter()
@@ -481,6 +485,8 @@ public struct DailyItem: Identifiable, Sendable, Equatable {
 
   public var id: String { daily.id }
   public var isDoneToday: Bool { contribution?.isComplete ?? false }
+  /// Set aside today without being done.
+  public var isSkippedToday: Bool { !isDoneToday && (contribution?.isSkipped ?? false) }
   public var secondsLoggedToday: Int { contribution?.secondsLogged ?? 0 }
 
   public init(daily: WorkspaceDaily, task: WorkspaceTask, contribution: DailyContribution?) {

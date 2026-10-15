@@ -277,7 +277,44 @@ pub fn log_contribution(
     Ok(id)
 }
 
-/// Un-ticks the day `day_ms` falls on in `zone`, keeping the time logged.
+/// Sets the local day `day` aside without doing it: the contribution keyed
+/// by it is marked skipped, made if there is none, and nothing is logged. A
+/// skipped day is neither done nor owed (`habits.rs` reads it as settled).
+pub(crate) fn skip_day(
+    transaction: &Transaction,
+    daily_id: &str,
+    day: NaiveDate,
+    now_ms: i64,
+) -> Result<(), CoreError> {
+    let task_id: String = transaction
+        .query_row(
+            "SELECT taskId FROM dailies WHERE id = ?1",
+            [daily_id],
+            |row| row.get(0),
+        )
+        .optional()?
+        .ok_or_else(|| CoreError::MissingDaily {
+            id: daily_id.to_string(),
+        })?;
+    let key = day.format("%Y-%m-%d").to_string();
+    let now = stored(now_ms);
+    let updated = transaction.execute(
+        "UPDATE daily_contributions SET skippedAt = COALESCE(skippedAt, ?1)
+         WHERE dailyId = ?2 AND dayKey = ?3",
+        params![now, daily_id, key],
+    )?;
+    if updated == 0 {
+        transaction.execute(
+            "INSERT INTO daily_contributions (id, dailyId, taskId, dayKey, secondsLogged, completedAt, createdAt, skippedAt)
+             VALUES (?1, ?2, ?3, ?4, 0, NULL, ?5, ?5)",
+            params![new_id(), daily_id, task_id, key, now],
+        )?;
+    }
+    Ok(())
+}
+
+/// Un-ticks the day `day_ms` falls on in `zone`, keeping the time logged,
+/// and un-skips it if it was skipped.
 /// Replaces `WorkspaceStore.clearContribution` and its Kotlin copy.
 pub fn clear_contribution(
     transaction: &Transaction,
@@ -286,7 +323,7 @@ pub fn clear_contribution(
     zone: &str,
 ) -> Result<(), CoreError> {
     transaction.execute(
-        "UPDATE daily_contributions SET completedAt = NULL WHERE dailyId = ?1 AND dayKey = ?2",
+        "UPDATE daily_contributions SET completedAt = NULL, skippedAt = NULL WHERE dailyId = ?1 AND dayKey = ?2",
         params![daily_id, day_key(day_ms, zone)],
     )?;
     Ok(())

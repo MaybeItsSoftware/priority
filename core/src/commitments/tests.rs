@@ -606,7 +606,7 @@ fn what_is_filed_beneath_a_resting_commitment_rests_with_it_and_the_boards_leave
 }
 
 #[test]
-fn completing_the_parent_still_ends_it_and_cancelling_the_subtask_stops_it() {
+fn completing_the_parent_or_stopping_it_still_ends_it() {
     let mut connection = workspace();
     let subtask = commit(&mut connection, &draft("daily"), WEDNESDAY);
     complete(&mut connection, "thesis", WEDNESDAY);
@@ -614,23 +614,140 @@ fn completing_the_parent_still_ends_it_and_cancelling_the_subtask_stops_it() {
     assert!(commitments(&connection, "thesis").unwrap().is_empty());
     assert!(resting(&connection, WEDNESDAY).is_empty());
 
+    // Stopping it closes it for good, as it always has, even after a skip.
     let mut connection = workspace();
     let subtask = commit(&mut connection, &draft("daily"), WEDNESDAY);
-    let daily = commitment(&connection, &subtask).unwrap().unwrap().daily_id;
-    journalled(&mut connection, "Change Status", |tx| {
-        tasks::set_status(tx, &subtask, "cancelled", WEDNESDAY, "UTC")
-    })
-    .unwrap();
-    assert_eq!(status(&connection, &subtask), "cancelled");
-    assert!(done_days(&connection, &daily).is_empty());
-    assert!(commitments(&connection, "thesis").unwrap().is_empty());
-    assert_eq!(column(&connection, &subtask), None);
-    // Stopping it closes it for good, as it always has.
-    let mut connection = workspace();
-    let subtask = commit(&mut connection, &draft("daily"), WEDNESDAY);
+    cancel(&mut connection, &subtask, WEDNESDAY);
     journalled(&mut connection, "Stop Commitment", |tx| {
         stop_commitment(tx, &subtask, WEDNESDAY, "UTC")
     })
     .unwrap();
     assert_eq!(status(&connection, &subtask), "completed");
+    assert!(commitments(&connection, "thesis").unwrap().is_empty());
+}
+
+fn cancel(connection: &mut Connection, task_id: &str, now: i64) {
+    journalled(connection, "Change Status", |tx| {
+        tasks::set_status(tx, task_id, "cancelled", now, "UTC")
+    })
+    .unwrap();
+}
+
+fn skipped_days(connection: &Connection, daily: &str) -> Vec<String> {
+    let mut statement = connection
+        .prepare(
+            "SELECT dayKey FROM daily_contributions WHERE dailyId = ?1 AND skippedAt IS NOT NULL ORDER BY dayKey",
+        )
+        .unwrap();
+    statement
+        .query_map([daily], |row| row.get(0))
+        .unwrap()
+        .collect::<Result<_, _>>()
+        .unwrap()
+}
+
+#[test]
+fn cancelling_a_commitments_subtask_skips_today_and_the_commitment_stays_live() {
+    let mut connection = workspace();
+    let subtask = commit(&mut connection, &draft("daily"), WEDNESDAY);
+    let daily = commitment(&connection, &subtask).unwrap().unwrap().daily_id;
+    let is_candidate = |connection: &Connection| {
+        crate::focus::candidates(connection, WEDNESDAY, "UTC")
+            .unwrap()
+            .iter()
+            .any(|candidate| candidate.id == subtask)
+    };
+    assert!(is_candidate(&connection));
+
+    cancel(&mut connection, &subtask, WEDNESDAY);
+    // Set aside without a tick: the subtask stays open, the commitment live,
+    // its card leaves Today and it rests.
+    assert_eq!(status(&connection, &subtask), "open");
+    assert!(done_days(&connection, &daily).is_empty());
+    assert_eq!(skipped_days(&connection, &daily), vec!["2026-03-11"]);
+    assert!(commitment(&connection, &subtask).unwrap().is_some());
+    assert_eq!(commitments(&connection, "thesis").unwrap().len(), 1);
+    assert_eq!(column(&connection, &subtask), None);
+    assert!(resting(&connection, WEDNESDAY).contains(&subtask));
+    // Next-up passes over it as it does a ticked one.
+    assert!(!is_candidate(&connection));
+
+    // Its next day it is back, on its own.
+    assert!(resting(&connection, WEDNESDAY + DAY).is_empty());
+    reconcile(&mut connection, WEDNESDAY + DAY);
+    assert_eq!(column(&connection, &subtask).as_deref(), Some("today"));
+}
+
+#[test]
+fn a_skipped_day_comes_back_on_the_next_scheduled_one() {
+    let mut connection = workspace();
+    let subtask = commit(&mut connection, &draft("mon, wed, fri"), WEDNESDAY);
+    cancel(&mut connection, &subtask, WEDNESDAY);
+    // Thursday is not one of its days, and the skipped Wednesday is not
+    // carried: it rests until Friday.
+    assert!(resting(&connection, WEDNESDAY + DAY).contains(&subtask));
+    assert!(resting(&connection, WEDNESDAY + 2 * DAY).is_empty());
+
+    // A weekly one would carry a missed day; a skipped one it does not.
+    let mut connection = workspace();
+    let subtask = commit(&mut connection, &draft("every wednesday"), WEDNESDAY);
+    cancel(&mut connection, &subtask, WEDNESDAY);
+    assert!(resting(&connection, WEDNESDAY + DAY).contains(&subtask));
+    assert!(resting(&connection, WEDNESDAY + 7 * DAY).is_empty());
+}
+
+#[test]
+fn a_skipped_day_is_not_owed_when_missed_appearances_stack() {
+    let mut connection = workspace();
+    let stacking = CommitmentDraft {
+        stacks_missed: true,
+        ..draft("daily")
+    };
+    let subtask = commit(&mut connection, &stacking, WEDNESDAY);
+    let daily = commitment(&connection, &subtask).unwrap().unwrap().daily_id;
+    cancel(&mut connection, &subtask, WEDNESDAY);
+    assert!(resting(&connection, WEDNESDAY).contains(&subtask));
+    // Thursday: Wednesday was skipped, not missed, so nothing is owed.
+    assert_eq!(
+        missed(&connection, &subtask, WEDNESDAY + DAY, "UTC").unwrap(),
+        0
+    );
+    // One completion is Thursday's own and clears it.
+    complete(&mut connection, &subtask, WEDNESDAY + DAY);
+    assert_eq!(done_days(&connection, &daily), vec!["2026-03-12"]);
+    assert!(resting(&connection, WEDNESDAY + DAY).contains(&subtask));
+
+    // With a missed day owed, a skip sets aside the oldest, as a tick pays it.
+    let mut connection = workspace();
+    let subtask = commit(&mut connection, &stacking, WEDNESDAY);
+    let daily = commitment(&connection, &subtask).unwrap().unwrap().daily_id;
+    let thursday = WEDNESDAY + DAY;
+    cancel(&mut connection, &subtask, thursday);
+    assert_eq!(skipped_days(&connection, &daily), vec!["2026-03-11"]);
+    assert_eq!(missed(&connection, &subtask, thursday, "UTC").unwrap(), 0);
+    assert!(!resting(&connection, thursday).contains(&subtask));
+    cancel(&mut connection, &subtask, thursday);
+    assert_eq!(
+        skipped_days(&connection, &daily),
+        vec!["2026-03-11", "2026-03-12"]
+    );
+    assert!(resting(&connection, thursday).contains(&subtask));
+    assert_eq!(status(&connection, &subtask), "open");
+}
+
+#[test]
+fn undoing_the_skip_brings_a_resting_commitment_straight_back() {
+    let mut connection = workspace();
+    let subtask = commit(&mut connection, &draft("daily"), WEDNESDAY);
+    let daily = commitment(&connection, &subtask).unwrap().unwrap().daily_id;
+    cancel(&mut connection, &subtask, WEDNESDAY);
+    assert!(resting(&connection, WEDNESDAY).contains(&subtask));
+    assert_eq!(
+        undo(&mut connection).unwrap().as_deref(),
+        Some("Change Status")
+    );
+    assert!(resting(&connection, WEDNESDAY).is_empty());
+    assert!(skipped_days(&connection, &daily).is_empty());
+    assert_eq!(column(&connection, &subtask).as_deref(), Some("today"));
+    assert_eq!(status(&connection, &subtask), "open");
 }

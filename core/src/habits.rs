@@ -442,13 +442,41 @@ pub(crate) fn owed(
     ))
 }
 
+/// The scheduled day the appearance showing on the local day `now_ms` falls
+/// on belongs to: today's, one carried from a missed day, or for a habit
+/// whose missed appearances stack the oldest owed. `None` when nothing is
+/// showing. What a tick pays off and a skip sets aside.
+pub(crate) fn showing_day(
+    connection: &rusqlite::Connection,
+    daily_id: &str,
+    now_ms: i64,
+    zone: Tz,
+) -> Result<Option<NaiveDate>, CoreError> {
+    let Some(stored) = stored_rule(connection, daily_id, zone)? else {
+        return Ok(None);
+    };
+    let source_completed = source_is_completed(connection, stored.source_task_id.as_deref())?;
+    Ok(stored
+        .appearance(
+            connection,
+            daily_id,
+            local_day(now_ms, zone),
+            source_completed,
+        )?
+        .map(|appearance| appearance.due_day))
+}
+
+/// The days a habit has settled: done, or skipped. A skipped day is not
+/// owed and not missed, so the habit's rules read it as they read a done one.
+const SETTLED: &str = "(completedAt IS NOT NULL OR skippedAt IS NOT NULL)";
+
 fn done_days(
     connection: &rusqlite::Connection,
     daily_id: &str,
 ) -> Result<BTreeSet<NaiveDate>, CoreError> {
-    let mut statement = connection.prepare(
-        "SELECT dayKey FROM daily_contributions WHERE dailyId = ?1 AND completedAt IS NOT NULL",
-    )?;
+    let mut statement = connection.prepare(&format!(
+        "SELECT dayKey FROM daily_contributions WHERE dailyId = ?1 AND {SETTLED}"
+    ))?;
     let keys: Vec<String> = statement
         .query_map([daily_id], |row| row.get(0))?
         .collect::<Result<_, _>>()?;
@@ -478,7 +506,7 @@ fn last_done_day(
     daily_id: &str,
 ) -> Result<Option<NaiveDate>, CoreError> {
     let key: Option<String> = connection.query_row(
-        "SELECT MAX(dayKey) FROM daily_contributions WHERE dailyId = ?1 AND completedAt IS NOT NULL",
+        &format!("SELECT MAX(dayKey) FROM daily_contributions WHERE dailyId = ?1 AND {SETTLED}"),
         [daily_id],
         |row| row.get(0),
     )?;

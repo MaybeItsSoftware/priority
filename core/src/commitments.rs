@@ -26,14 +26,19 @@
 //! A commitment's subtask is only there when there is something to do.
 //! Completing it (Space, a checkbox, the agent's `task_complete`) ticks the
 //! day's appearance rather than closing it (`tick_instead_of_completing`,
-//! from `tasks::set_status`), and once nothing is due today — today's is
-//! ticked, or today is not one of its days and nothing is carried or owed —
-//! it is *resting* ([`resting_task_ids`]): the outline, every board and the
-//! filter lists leave it out, and next-up already passes over a met or
-//! unscheduled daily. It comes back on its own on its next day, or at once
-//! if the tick is undone, since resting is read from the schedule and the
-//! ticks rather than stored. While it rests it is still in Dailies (ticked,
-//! on its days) and in its parent's Repeat summary.
+//! from `tasks::set_status`), and cancelling it (⇧Space, an agent setting
+//! it `cancelled`) skips the appearance instead
+//! (`skip_instead_of_cancelling`): it is set aside without a tick, marked on
+//! its contribution's `skippedAt`, and a skipped day is neither done nor
+//! owed, so a stacking commitment does not bill for it. Either way the
+//! subtask stays open and the commitment live. Once nothing is due today —
+//! today's is ticked or skipped, or today is not one of its days and nothing
+//! is carried or owed — it is *resting* ([`resting_task_ids`]): the outline,
+//! every board and the filter lists leave it out, and next-up passes over a
+//! met, skipped or unscheduled daily. It comes back on its own on its next
+//! day, or at once if the tick or skip is undone, since resting is read from
+//! the schedule and the contributions rather than stored. While it rests it
+//! is still in Dailies (on its days) and in its parent's Repeat summary.
 //!
 //! The schedule is written in the recurrence syntax a repeating task uses
 //! ("daily", "weekdays", "every friday", "every 2 weeks"), plus a list of
@@ -431,6 +436,29 @@ pub(crate) fn tick_instead_of_completing(
     Ok(true)
 }
 
+/// Skips the appearance of the commitment `task_id` carries that is showing
+/// now, in place of cancelling it, and says whether it was a commitment.
+/// Cancelling a commitment's subtask (⇧Space, the agent) is letting the day
+/// go: the appearance is set aside without a tick, is not owed, and the
+/// subtask stays open and rests until its next day. Nothing showing is
+/// nothing to skip. Only completing its parent, or stopping it, ends it.
+pub(crate) fn skip_instead_of_cancelling(
+    transaction: &Transaction,
+    task_id: &str,
+    now_ms: i64,
+    zone: &str,
+) -> Result<bool, CoreError> {
+    let Some(commitment) = commitment(transaction, task_id)? else {
+        return Ok(false);
+    };
+    let tz = periodic::zone(zone);
+    if let Some(day) = habits::showing_day(transaction, &commitment.daily_id, now_ms, tz)? {
+        crate::dailies::skip_day(transaction, &commitment.daily_id, day, now_ms)?;
+        habits::reconcile_habit(transaction, &commitment.daily_id, now_ms, tz)?;
+    }
+    Ok(true)
+}
+
 /// Stops a commitment: its daily is archived, keeping what was logged, its
 /// card leaves Today, and the subtask is closed as done. Nothing to stop is
 /// not an error.
@@ -449,7 +477,7 @@ pub fn stop_commitment(
 
 /// Archives the daily `commitment_task_id` carries and takes its card out of
 /// Today, so it is a commitment no longer and closing it closes it.
-pub(crate) fn end_commitment(
+fn end_commitment(
     transaction: &Transaction,
     commitment_task_id: &str,
     now_ms: i64,

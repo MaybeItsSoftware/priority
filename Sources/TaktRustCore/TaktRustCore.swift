@@ -7589,10 +7589,19 @@ public struct ContributionRow: Equatable, Hashable {
     public var secondsLogged: Int64
     public var completedAtMs: Int64?
     public var createdAtMs: Int64
+    /**
+     * When the day was set aside without being done; a skipped day is not
+     * owed (`v29_daily_contribution_skips`).
+     */
+    public var skippedAtMs: Int64?
 
     // Default memberwise initializers are never public by default, so we
     // declare one manually.
-    public init(id: String, dailyId: String, taskId: String, dayKey: String, secondsLogged: Int64, completedAtMs: Int64?, createdAtMs: Int64) {
+    public init(id: String, dailyId: String, taskId: String, dayKey: String, secondsLogged: Int64, completedAtMs: Int64?, createdAtMs: Int64, 
+        /**
+         * When the day was set aside without being done; a skipped day is not
+         * owed (`v29_daily_contribution_skips`).
+         */skippedAtMs: Int64?) {
         self.id = id
         self.dailyId = dailyId
         self.taskId = taskId
@@ -7600,6 +7609,7 @@ public struct ContributionRow: Equatable, Hashable {
         self.secondsLogged = secondsLogged
         self.completedAtMs = completedAtMs
         self.createdAtMs = createdAtMs
+        self.skippedAtMs = skippedAtMs
     }
 
     
@@ -7624,7 +7634,8 @@ public struct FfiConverterTypeContributionRow: FfiConverterRustBuffer {
                 dayKey: FfiConverterString.read(from: &buf), 
                 secondsLogged: FfiConverterInt64.read(from: &buf), 
                 completedAtMs: FfiConverterOptionInt64.read(from: &buf), 
-                createdAtMs: FfiConverterInt64.read(from: &buf)
+                createdAtMs: FfiConverterInt64.read(from: &buf), 
+                skippedAtMs: FfiConverterOptionInt64.read(from: &buf)
         )
     }
 
@@ -7636,6 +7647,7 @@ public struct FfiConverterTypeContributionRow: FfiConverterRustBuffer {
         FfiConverterInt64.write(value.secondsLogged, into: &buf)
         FfiConverterOptionInt64.write(value.completedAtMs, into: &buf)
         FfiConverterInt64.write(value.createdAtMs, into: &buf)
+        FfiConverterOptionInt64.write(value.skippedAtMs, into: &buf)
     }
 }
 

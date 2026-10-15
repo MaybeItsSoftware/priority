@@ -134,6 +134,10 @@ pub const MIGRATIONS: &[(&str, &str)] = &[
         "v28_synced_focus_context",
         include_str!("migrations/v28_synced_focus_context.sql"),
     ),
+    (
+        "v29_daily_contribution_skips",
+        include_str!("migrations/v29_daily_contribution_skips.sql"),
+    ),
 ];
 
 /// Brings the database at `path` up to date, creating it if it does not

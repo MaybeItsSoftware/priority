@@ -312,6 +312,12 @@ extension WorkspaceViewModel {
       try store.setStatus(task.status == .cancelled ? .open : .cancelled, for: task.id)
       reloadOutline(refreshSidebar: task.isList)
       reloadNextUp()
+      // Cancelling a commitment's subtask skips its day rather than closing
+      // it: it rests, so the dailies and boards are reread too.
+      if isHabitTask(task) {
+        reloadDailies()
+        refresh([.board])
+      }
     }
   }
 

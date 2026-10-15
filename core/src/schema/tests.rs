@@ -53,10 +53,10 @@ fn a_new_database_has_exactly_the_fixtures_schema() {
 fn every_migration_is_recorded_in_order_under_grdbs_identifiers() {
     let connection = migrated();
     assert_eq!(ledger(&connection), workspace_migrations());
-    assert_eq!(workspace_migrations().len(), 28);
+    assert_eq!(workspace_migrations().len(), 29);
     assert_eq!(
         workspace_migrations().last().map(String::as_str),
-        Some("v28_synced_focus_context")
+        Some("v29_daily_contribution_skips")
     );
 }
 
@@ -71,7 +71,7 @@ fn migrating_again_applies_nothing_and_keeps_the_work() {
     let before = dump_schema(&connection).unwrap();
     assert_eq!(
         migrate(&mut connection).unwrap(),
-        "v28_synced_focus_context"
+        "v29_daily_contribution_skips"
     );
     assert_eq!(dump_schema(&connection).unwrap(), before);
     let count: i64 = connection
@@ -99,9 +99,9 @@ fn a_file_database_is_created_and_closed_again() {
     std::fs::create_dir_all(&directory).unwrap();
     let path = directory.join("workspace.sqlite");
     let latest = migrate_workspace(path.to_string_lossy().into_owned()).unwrap();
-    assert_eq!(latest, "v28_synced_focus_context");
+    assert_eq!(latest, "v29_daily_contribution_skips");
     let reopened = Connection::open(&path).unwrap();
-    assert_eq!(ledger(&reopened).len(), 28);
+    assert_eq!(ledger(&reopened).len(), 29);
     std::fs::remove_dir_all(directory).unwrap();
 }
 
@@ -636,4 +636,44 @@ fn v28_queues_the_context_a_paired_device_holds_and_syncs_it_whole() {
         .query_row("SELECT COUNT(*) FROM sync_outbox", [], |row| row.get(0))
         .unwrap();
     assert_eq!(queued, 0);
+}
+
+/// v29: a skipped day is a column on `daily_contributions`, so skipping one
+/// is journalled and queued for sync like the rest of the row.
+#[test]
+fn v29_adds_skipped_at_to_contributions_journalled_and_synced() {
+    let mut connection = migrated_through("v28_synced_focus_context");
+    seed_workspace(&connection);
+    seed_list(&connection, "l", "Inbox", T0);
+    connection
+        .execute_batch(&format!(
+            "INSERT INTO tasks (id, listId, title, sortOrder, createdAt, updatedAt)
+               VALUES ('t', 'l', 'Write', 0, '{T0}', '{T0}');
+             INSERT INTO dailies (id, taskId, sortOrder, createdAt, updatedAt)
+               VALUES ('d', 't', 0, '{T0}', '{T0}');
+             INSERT INTO daily_contributions (id, dailyId, taskId, dayKey, createdAt)
+               VALUES ('c', 'd', 't', '2024-01-01', '{T0}');"
+        ))
+        .unwrap();
+    migrate_through(&mut connection, Some("v29_daily_contribution_skips")).unwrap();
+    connection
+        .execute_batch(&format!(
+            "UPDATE undo_control SET suppressed = 0, groupId = 'g', label = 'x' WHERE id = 0;
+             UPDATE sync_control SET recording = 1 WHERE id = 0;
+             UPDATE daily_contributions SET skippedAt = '{T1}' WHERE id = 'c';"
+        ))
+        .unwrap();
+    let count = |sql: &str| -> i64 { connection.query_row(sql, [], |row| row.get(0)).unwrap() };
+    assert_eq!(
+        count(
+            "SELECT COUNT(*) FROM change_log WHERE tableName = 'daily_contributions' AND rowId = 'c' AND afterJSON LIKE '%skippedAt%'"
+        ),
+        1
+    );
+    assert_eq!(
+        count(
+            "SELECT COUNT(*) FROM sync_outbox WHERE tableName = 'daily_contributions' AND rowId = 'c' AND changedJSON LIKE '%skippedAt%'"
+        ),
+        1
+    );
 }

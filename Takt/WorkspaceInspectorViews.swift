@@ -442,6 +442,12 @@ struct LocalTaskInspector: View {
     }
   }
 
+  private func commitmentTodayMarker(_ commitment: WorkspaceCommitment) -> String {
+    if model.isCommitmentDoneToday(commitment) { return " · ✓ today" }
+    if model.isCommitmentSkippedToday(commitment) { return " · skipped today" }
+    return ""
+  }
+
   private func commitmentRow(_ commitment: WorkspaceCommitment, committedTo parent: WorkspaceTask?) -> some View {
     HStack(alignment: .firstTextBaseline, spacing: theme.space.xs) {
       VStack(alignment: .leading, spacing: 0) {
@@ -449,11 +455,10 @@ struct LocalTaskInspector: View {
           .font(theme.bodyFont())
           .foregroundStyle(theme.ink)
           .lineLimit(1)
-        // "✓ today" once today's is ticked: its subtask is resting, out of
-        // the outline and the boards until its next day.
-        Text(
-          Self.commitmentSummary(commitment)
-            + (model.isCommitmentDoneToday(commitment) ? " · ✓ today" : ""))
+        // "✓ today" once today's is ticked, "skipped today" once it is set
+        // aside: either way its subtask is resting, out of the outline and
+        // the boards until its next day.
+        Text(Self.commitmentSummary(commitment) + commitmentTodayMarker(commitment))
           .font(theme.captionFont)
           .foregroundStyle(theme.muted)
       }

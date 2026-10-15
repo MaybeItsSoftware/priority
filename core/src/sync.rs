@@ -547,11 +547,17 @@ fn resolve_unique_rival(
             }
             let mut loser = None;
             if row.table == "daily_contributions"
-                && let Some((seconds, completed)) = transaction
+                && let Some((seconds, completed, skipped)) = transaction
                     .query_row(
-                        "SELECT secondsLogged, completedAt FROM daily_contributions WHERE id = ?1",
+                        "SELECT secondsLogged, completedAt, skippedAt FROM daily_contributions WHERE id = ?1",
                         [&rival],
-                        |r| Ok((r.get::<_, i64>(0)?, r.get::<_, Option<String>>(1)?)),
+                        |r| {
+                            Ok((
+                                r.get::<_, i64>(0)?,
+                                r.get::<_, Option<String>>(1)?,
+                                r.get::<_, Option<String>>(2)?,
+                            ))
+                        },
                     )
                     .optional()?
             {
@@ -561,6 +567,9 @@ fn resolve_unique_rival(
                 )]);
                 if let Some(completed) = completed {
                     values.insert("completedAt".into(), SyncValue::Text { value: completed });
+                }
+                if let Some(skipped) = skipped {
+                    values.insert("skippedAt".into(), SyncValue::Text { value: skipped });
                 }
                 loser = Some(IncomingRow {
                     table: row.table.clone(),
@@ -614,15 +623,23 @@ fn merge_contribution(
         .get("completedAt")
         .and_then(SyncValue::text)
         .map(str::to_string);
+    let skipped = row
+        .values
+        .get("skippedAt")
+        .and_then(SyncValue::text)
+        .map(str::to_string);
     set_applying(transaction, false)?;
     let result = transaction.execute(
         "UPDATE daily_contributions SET
            secondsLogged = MAX(secondsLogged, COALESCE(?1, 0)),
            completedAt = CASE WHEN completedAt IS NULL THEN ?2 WHEN ?2 IS NULL THEN completedAt
-             ELSE MIN(completedAt, ?2) END
+             ELSE MIN(completedAt, ?2) END,
+           skippedAt = CASE WHEN skippedAt IS NULL THEN ?4 WHEN ?4 IS NULL THEN skippedAt
+             ELSE MIN(skippedAt, ?4) END
          WHERE id = ?3
-           AND (secondsLogged < COALESCE(?1, 0) OR (?2 IS NOT NULL AND (completedAt IS NULL OR completedAt > ?2)))",
-        params![seconds, completed, into],
+           AND (secondsLogged < COALESCE(?1, 0) OR (?2 IS NOT NULL AND (completedAt IS NULL OR completedAt > ?2))
+                OR (?4 IS NOT NULL AND (skippedAt IS NULL OR skippedAt > ?4)))",
+        params![seconds, completed, into, skipped],
     );
     set_applying(transaction, true)?;
     result?;

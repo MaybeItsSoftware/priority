@@ -1090,7 +1090,15 @@ weekdays commitment is gone on Saturday). With **Stacks** it stays while
 anything is still owed. Undoing the tick brings it back straight away. A
 resting commitment is still listed in its parent's Repeat row, marked
 **✓ today** once today's is ticked, and in Dailies on its days, ticked.
-Cancelling the subtask (`Shift+Space`) stops the commitment, as **Stop** does.
+
+Cancelling the subtask — `Shift+Space`, or an agent setting it `cancelled` —
+skips today instead. The day is set aside without a tick, the subtask stays
+open and the commitment live, and it rests until its next scheduled day as a
+ticked one does; its parent's Repeat row says **skipped today**. A skipped day
+is not a missed one, so with **Stacks** it is not owed (with a missed day
+still owed, a skip sets aside the oldest, as a tick pays it off). Undo brings
+it back straight away. Only **Stop** and completing the parent end a
+commitment.
 
 The task's inspector lists its commitments with **Edit** and **Stop**; stopping
 keeps what was logged and closes the subtask. Completing the task ends every

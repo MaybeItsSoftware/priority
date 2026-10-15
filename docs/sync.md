@@ -183,6 +183,18 @@ The server needed nothing: it stores whatever tables it is sent. A client
 older than v28 skips the table's rows on pull, as it skips any table it does
 not know.
 
+`v29_daily_contribution_skips` adds `skippedAt DATETIME` to
+`daily_contributions`: when a day's appearance of a habit was set aside
+without being done, NULL (every existing row) for not skipped. It reinstalls
+every journal and outbox trigger. Cancelling a commitment's subtask writes it
+(`commitments::skip_instead_of_cancelling`) on the day its showing appearance
+belongs to. The habit pass reads a skipped day as settled, like a completed
+one, so it is neither carried nor owed when missed appearances stack, but it
+is not a completion: streaks, counts and `completedAt` are untouched. Two
+devices' rows for the same day merge by keeping the earlier `skippedAt`, as
+they keep the earlier `completedAt`. A client older than v29 drops the
+column on pull and sees the day as not done.
+
 The following are not synced: the undo journal (`undo_control`, `change_log`), the FTS index
 (rebuilt by its own triggers as synced rows land), `grdb_migrations`, and the
 sync tables themselves. Day-log files stay per device. Theme *files* do

@@ -43,6 +43,9 @@ pub struct ContributionRow {
     pub seconds_logged: i64,
     pub completed_at_ms: Option<i64>,
     pub created_at_ms: i64,
+    /// When the day was set aside without being done; a skipped day is not
+    /// owed (`v29_daily_contribution_skips`).
+    pub skipped_at_ms: Option<i64>,
 }
 
 /// A daily shown on a day, with its task and that day's contribution.
@@ -227,6 +230,7 @@ impl ContributionRow {
             seconds_logged: row.get("secondsLogged")?,
             completed_at_ms: optional_ms(row, "completedAt")?,
             created_at_ms: required_ms(row, "createdAt")?,
+            skipped_at_ms: optional_ms(row, "skippedAt")?,
         })
     }
 }

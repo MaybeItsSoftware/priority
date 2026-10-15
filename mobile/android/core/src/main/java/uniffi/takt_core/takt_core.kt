@@ -11890,6 +11890,12 @@ data class ContributionRow (
     var `completedAtMs`: kotlin.Long?
     , 
     var `createdAtMs`: kotlin.Long
+    , 
+    /**
+     * When the day was set aside without being done; a skipped day is not
+     * owed (`v29_daily_contribution_skips`).
+     */
+    var `skippedAtMs`: kotlin.Long?
     
 ){
     
@@ -11913,6 +11919,7 @@ public object FfiConverterTypeContributionRow: FfiConverterRustBuffer<Contributi
             FfiConverterLong.read(buf),
             FfiConverterOptionalLong.read(buf),
             FfiConverterLong.read(buf),
+            FfiConverterOptionalLong.read(buf),
         )
     }
 
@@ -11923,7 +11930,8 @@ public object FfiConverterTypeContributionRow: FfiConverterRustBuffer<Contributi
             FfiConverterString.allocationSize(value.`dayKey`) +
             FfiConverterLong.allocationSize(value.`secondsLogged`) +
             FfiConverterOptionalLong.allocationSize(value.`completedAtMs`) +
-            FfiConverterLong.allocationSize(value.`createdAtMs`)
+            FfiConverterLong.allocationSize(value.`createdAtMs`) +
+            FfiConverterOptionalLong.allocationSize(value.`skippedAtMs`)
     )
 
     override fun write(value: ContributionRow, buf: ByteBuffer) {
@@ -11934,6 +11942,7 @@ public object FfiConverterTypeContributionRow: FfiConverterRustBuffer<Contributi
             FfiConverterLong.write(value.`secondsLogged`, buf)
             FfiConverterOptionalLong.write(value.`completedAtMs`, buf)
             FfiConverterLong.write(value.`createdAtMs`, buf)
+            FfiConverterOptionalLong.write(value.`skippedAtMs`, buf)
     }
 }
 

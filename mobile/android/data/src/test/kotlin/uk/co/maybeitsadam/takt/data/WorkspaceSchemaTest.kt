@@ -61,7 +61,7 @@ class WorkspaceSchemaTest {
             assertTrue("missing: ${expected - present}", present.containsAll(expected))
 
             val migrations = workspace.database.read { it.strings("SELECT identifier FROM grdb_migrations") }
-            assertEquals(28, migrations.size)
+            assertEquals(29, migrations.size)
             assertTrue("v17_sync" in migrations)
             assertTrue("v18_themes_and_preferences" in migrations)
             assertTrue("v19_habit_options" in migrations)
@@ -74,6 +74,7 @@ class WorkspaceSchemaTest {
             assertTrue("v26_commitment_missed_stack" in migrations)
             assertTrue("v27_condition_order_and_context" in migrations)
             assertTrue("v28_synced_focus_context" in migrations)
+            assertTrue("v29_daily_contribution_skips" in migrations)
             assertEquals(listOf(0L to 0L), workspace.database.read { db ->
                 db.query("SELECT recording, applying FROM sync_control") { it.long("recording") to it.long("applying") }
             })
@@ -101,7 +102,19 @@ class WorkspaceSchemaTest {
     // install that lacks one migration lacks every later one too, since they
     // only ever apply in order, so each rewind takes the later ones off first.
 
+    private fun rewindV29(connection: SQLiteConnection) {
+        // The journal's and the outbox's contribution triggers name the new
+        // column, so they come off first; v29 reinstalls them.
+        for (op in listOf("insert", "update", "delete")) {
+            connection.execSQL("DROP TRIGGER change_log_daily_contributions_$op")
+            connection.execSQL("DROP TRIGGER sync_outbox_daily_contributions_$op")
+        }
+        connection.execSQL("ALTER TABLE daily_contributions DROP COLUMN skippedAt")
+        connection.execSQL("DELETE FROM grdb_migrations WHERE identifier = 'v29_daily_contribution_skips'")
+    }
+
     private fun rewindV28(connection: SQLiteConnection) {
+        rewindV29(connection)
         // The table stays; only its outbox triggers are v28's.
         for (op in listOf("insert", "update", "delete")) {
             connection.execSQL("DROP TRIGGER sync_outbox_focus_contexts_$op")
@@ -233,8 +246,8 @@ class WorkspaceSchemaTest {
         try {
             assertEquals(expected, upgraded.read { schema(it) })
             val migrations = upgraded.read { it.strings("SELECT identifier FROM grdb_migrations") }
-            assertEquals(28, migrations.size)
-            assertEquals(28, migrations.toSet().size)
+            assertEquals(29, migrations.size)
+            assertEquals(29, migrations.toSet().size)
         } finally {
             upgraded.close()
             dir.deleteRecursively()
@@ -244,6 +257,10 @@ class WorkspaceSchemaTest {
     /** A v25 database takes `stacksMissedFrom` on `dailies`. */
     @Test
     fun aV25DatabaseUpgradesToTheFixture() = assertUpgradesToTheFixture("v25", ::rewindV26)
+
+    /** A v28 database takes `skippedAt` on `daily_contributions`. */
+    @Test
+    fun aV28DatabaseUpgradesToTheFixture() = assertUpgradesToTheFixture("v28", ::rewindV29)
 
     /** A v27 database takes the context's outbox triggers. */
     @Test

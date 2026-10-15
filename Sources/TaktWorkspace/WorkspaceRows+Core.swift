@@ -41,6 +41,7 @@ extension DailyContribution {
     secondsLogged = Int(row.secondsLogged)
     completedAt = row.completedAtMs.date
     createdAt = Date(coreMilliseconds: row.createdAtMs)
+    skippedAt = row.skippedAtMs.date
   }
 }
 

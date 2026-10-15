@@ -200,6 +200,12 @@ extension WorkspaceViewModel {
     dailyItems.contains { $0.daily.id == commitment.dailyId && $0.isDoneToday }
   }
 
+  /// Whether today's appearance of `commitment` was skipped (⇧Space on its
+  /// subtask): it rests until its next day, and nothing is owed for today.
+  func isCommitmentSkippedToday(_ commitment: WorkspaceCommitment) -> Bool {
+    dailyItems.contains { $0.daily.id == commitment.dailyId && $0.isSkippedToday }
+  }
+
   // MARK: - Next up
 
   /// Marks the day and the ladder stale. They are ranked off the main thread

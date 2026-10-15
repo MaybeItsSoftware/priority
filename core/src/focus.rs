@@ -221,7 +221,7 @@ pub fn candidates(
                 COALESCE(t.itemKind, 'task'),
                 m.startAt, m.matrixUrgency, m.matrixImportance, m.priority, m.kanbanColumn, m.focusRank, m.planningJSON,
                 d.id, d.targetSeconds, d.placementColumn, d.intervalDays, d.intervalAnchor, d.createdAt,
-                d.activeWeekdaysMask, c.secondsLogged, c.completedAt
+                d.activeWeekdaysMask, c.secondsLogged, COALESCE(c.completedAt, c.skippedAt)
          FROM tasks t
          LEFT JOIN task_metadata m ON m.taskId = t.id
          LEFT JOIN dailies d ON d.id = (SELECT id FROM dailies WHERE taskId = t.id AND archivedAt IS NULL ORDER BY rowid LIMIT 1)
