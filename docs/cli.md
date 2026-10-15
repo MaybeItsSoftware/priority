@@ -281,6 +281,7 @@ takt ws move <TASK_ID> --list <LIST_ID> --position 1
 takt ws to-list <TASK_ID> --folder <FOLDER_ID>  # promote to its own list
 takt ws block <TASK_ID> <BLOCKER_ID>          # TASK waits on BLOCKER until it is done
 takt ws unblock <TASK_ID> <BLOCKER_ID>
+takt ws commit <TASK_ID> [-t TITLE] [-r daily|weekdays|"mon, wed"] [--stacks]   # a subtask in Today on its days
 takt ws deps <TASK_ID>                        # what it waits on, what waits on it
 takt ws conditions [NAME]                     # conditions, open-task counts, what holds now; NAME's tasks
 takt ws require <TASK_ID> 'Home|Campus' Mat   # needs Home or Campus, and Mat; none clears

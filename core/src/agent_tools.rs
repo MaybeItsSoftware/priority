@@ -58,6 +58,7 @@ pub const WRITE_TOOLS: &[&str] = &[
     "workspace_task_delete",
     "workspace_task_blocker_add",
     "workspace_task_blocker_remove",
+    "workspace_task_commit",
     "workspace_filter_list_create",
     "workspace_filter_list_update",
     "workspace_filter_list_delete",

@@ -432,6 +432,20 @@ pub enum WsCommand {
         #[arg(value_name = "BLOCKED_BY_TASK_ID")]
         blocked_by: String,
     },
+    /// Commit to a task periodically: a subtask that lands in Today on its
+    /// schedule until the task is done.
+    Commit {
+        task_id: String,
+        /// The subtask's title; defaults to "Work on <task>".
+        #[arg(short, long)]
+        title: Option<String>,
+        /// When it appears: daily, "every 3 days", weekdays, "mon, wed, fri".
+        #[arg(short, long, default_value = "daily")]
+        rule: String,
+        /// Keep a missed appearance owed until done.
+        #[arg(long)]
+        stacks: bool,
+    },
     /// Stop a task waiting on another.
     Unblock {
         task_id: String,
@@ -1125,6 +1139,20 @@ fn resolve_workspace(
             } else {
                 "workspace_task_blocker_remove"
             }
+        }
+        WsCommand::Commit {
+            task_id,
+            title,
+            rule,
+            stacks,
+        } => {
+            arguments.insert("task_id".into(), json!(task_id));
+            if let Some(title) = title {
+                arguments.insert("title".into(), json!(title));
+            }
+            arguments.insert("rule".into(), json!(rule));
+            arguments.insert("stacks_missed".into(), json!(stacks));
+            "workspace_task_commit"
         }
         WsCommand::Conditions { condition } => {
             if !condition.is_empty() {

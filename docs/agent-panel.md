@@ -215,7 +215,7 @@ Undo; with "Ask before changing tasks" on, each waits for Approve:
 `task_delete`, `list_create`, `task_matrix_set`, `daily_add`, `daily_update`,
 `daily_tick`, `workspace_task_add`, `workspace_task_update`,
 `workspace_task_move`, `workspace_task_to_list`, `workspace_task_delete`,
-`workspace_task_blocker_add`, `workspace_task_blocker_remove`,
+`workspace_task_blocker_add`, `workspace_task_blocker_remove`, `workspace_task_commit`,
 `workspace_filter_list_create`, `workspace_filter_list_update`,
 `workspace_filter_list_delete`, `workspace_folder_create`, `workspace_list_create`, `workspace_list_move`,
 `workspace_list_delete`, `workspace_board_column_set`, `workspace_board_column_delete`,
@@ -309,6 +309,7 @@ What maps, by tool:
 | `workspace_task_delete`, `task_delete` | `⌫` |
 | `workspace_task_to_list` | `X X` |
 | `workspace_task_blocker_add` | `B B` then find the task it waits on |
+| `workspace_task_commit` | `⌘⇧D` then choose the days |
 | `task_note_add` | `N N` then type the note |
 | `task_matrix_set` (one task in a quadrant) | `⌘3` then `⌥1`–`⌥4` |
 | `workspace_list_create`, `list_create`, `workspace_folder_create` | `⇧⌘N`; `⌥⌘N`, then type the name |

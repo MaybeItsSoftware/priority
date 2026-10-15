@@ -524,6 +524,22 @@ impl Tools {
                 Ok(outcome(title, payload))
             }
 
+            "workspace_task_commit" => {
+                let task_id = required_string(arguments, "task_id")?;
+                let title = as_string(arguments.get("title")).filter(|t| !t.trim().is_empty());
+                let rule = as_string(arguments.get("rule")).unwrap_or_else(|| "daily".into());
+                let stacks = as_bool(arguments.get("stacks_missed"), false)?;
+                let payload =
+                    self.workspace
+                        .commit_to_task(&task_id, title.as_deref(), &rule, stacks)?;
+                let title = format!(
+                    "Committed: \"{}\", {}",
+                    payload["title"].as_str().unwrap_or_default(),
+                    payload["rule"].as_str().unwrap_or_default()
+                );
+                Ok(outcome(title, payload))
+            }
+
             "workspace_filter_lists" => {
                 let payload = self.workspace.filter_lists()?;
                 Ok(outcome(

@@ -14,7 +14,7 @@ Takt ships an MCP stdio server so an AI assistant can work directly with your Ch
 
 ## What It Can Do
 
-The server exposes 50 MCP tools, in three groups.
+The server exposes 51 MCP tools, in three groups.
 
 **Checkvist tools** — these reach the Checkvist API directly, so they work
 whether or not the app is running:
@@ -70,6 +70,7 @@ workspace's uppercase UUIDs, not Checkvist's integers:
 | `workspace_task_delete` | Delete a task and its subtree | write |
 | `workspace_task_blocker_add` | Make `task_id` wait on `blocked_by_task_id` (any list) until it is done; a cycle is refused | write |
 | `workspace_task_blocker_remove` | Stop `task_id` waiting on `blocked_by_task_id` | write |
+| `workspace_task_commit` | Commit to `task_id` on a `rule` (`daily` by default): a subtask carrying a habit, in Today on its days until the task is done; `title` defaults to "Work on …", `stacks_missed` keeps a missed day owed | write |
 | `workspace_conditions` | Conditions under their categories in the app's order, each with its open-task count; the context (what holds now, when it was said and whether that was an earlier day, the time available, goal, expiry, last context); with `condition`, the open tasks needing it | read |
 | `workspace_task_conditions_set` | What a task requires: each item a condition or an array of alternatives, by name or id; `create_missing` makes new ones | write |
 | `workspace_context_set` | What holds now: `set`, `clear`, `on`, `off` (a place replaces the last place), `mode`, `available_minutes`, `expires_in_minutes`. Not an undo step; the app picks it up at once, and sync carries it to the other devices | write |
@@ -274,7 +275,7 @@ python3 scripts/mcp_smoke_check.py   # needs a Debug app build
 ```
 
 It drives both spellings above and checks they answer `initialize` and expose
-the same 50 tools — in particular that an old-style invocation, with
+the same 51 tools — in particular that an old-style invocation, with
 credentials in `env`, still reaches a working server. It reads no real data and
 needs no Checkvist credentials.
 

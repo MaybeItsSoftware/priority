@@ -867,6 +867,21 @@ fn workspace_tool_definitions() -> Vec<Value> {
             },
         }),
         json!({
+            "name": "workspace_task_commit",
+            "description": "Commit to a local task periodically: adds a subtask carrying a habit, which lands in Today on its schedule (and rests on other days) until the task is done. Use it for steady work towards a large goal — \"5 minutes of sonnets a day\" on \"Memorise the sonnets\". Set the subtask's estimate afterwards with workspace_task_update.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "task_id": id("The task it advances. From workspace_tasks."),
+                    "title": { "type": "string", "description": "The subtask's title. Defaults to \"Work on <task>\"." },
+                    "rule": { "type": "string", "description": "When it appears: \"daily\" (the default), \"every 3 days\", \"weekly\", \"weekdays\", \"friday\", or days like \"mon, wed, fri\"." },
+                    "stacks_missed": { "type": "boolean", "description": "Keep a missed appearance owed until done, rather than letting it vanish. Default false." },
+                },
+                "required": ["task_id"],
+                "additionalProperties": false,
+            },
+        }),
+        json!({
             "name": "workspace_filter_lists",
             "description": "Takt's filter lists (smart lists): saved rule sets asked of every task rather than places tasks live. The built-in Today (open tasks planned for today or due by today) and Everything (every open task) come first, then the user's own in sidebar order, each with id, name, icon, a one-line summary, match, show and rules.",
             "inputSchema": {

@@ -1034,6 +1034,48 @@ impl Workspace {
         })
     }
 
+    /// `commitments::save_commitment`, as one "Commit to Task" step: a
+    /// subtask of `task_id` carrying a habit, which lands in Today on its
+    /// schedule until the task is done. The title defaults as the app's
+    /// form does ("Work on …"), and a missed appearance vanishes unless
+    /// `stacks_missed`.
+    pub fn commit_to_task(
+        &self,
+        task_id: &str,
+        title: Option<&str>,
+        rule: &str,
+        stacks_missed: bool,
+    ) -> Result<Value> {
+        self.journalled("Commit to Task", |tx, _now| {
+            let task = task_row(tx, task_id)?;
+            let now_ms = Utc::now().timestamp_millis();
+            let zone = iana_time_zone::get_timezone().unwrap_or_else(|_| "UTC".into());
+            let draft = takt_core::commitments::CommitmentDraft {
+                title: title
+                    .map(str::to_string)
+                    .unwrap_or_else(|| takt_core::commitments::default_title(&task.title)),
+                rule: rule.to_string(),
+                expires_at_ms: None,
+                stacks_missed,
+            };
+            // The write is the Rust core's, shared with the apps.
+            let id =
+                takt_core::commitments::save_commitment(tx, &task.id, &draft, None, now_ms, &zone)
+                    .map_err(map_core_error)?;
+            let commitment = takt_core::commitments::commitment(tx, &id)
+                .map_err(map_core_error)?
+                .ok_or_else(|| ToolError::new("The commitment was not saved."))?;
+            Ok(json!({
+                "task_id": commitment.task_id,
+                "parent_task_id": commitment.parent_task_id,
+                "daily_id": commitment.daily_id,
+                "title": commitment.title,
+                "rule": commitment.rule,
+                "stacks_missed": commitment.stacks_missed,
+            }))
+        })
+    }
+
     // -- the journal ---------------------------------------------------------
 
     /// Runs one write as one undoable step: `journalledWrite` in

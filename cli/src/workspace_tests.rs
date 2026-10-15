@@ -601,6 +601,36 @@ fn completing_a_source_task_ends_the_habits_made_from_it() {
 }
 
 #[test]
+fn committing_to_a_task_adds_a_subtask_with_a_habit_on_it() {
+    let fixture = Fixture::new();
+    let goal = fixture.add(PROJECTS, "Memorise the sonnets", None);
+
+    let payload = fixture.call(
+        "workspace_task_commit",
+        json!({ "task_id": goal, "title": "Memorise sonnets for 5 minutes" }),
+    );
+    assert_eq!(payload["parent_task_id"], json!(goal));
+    assert_eq!(payload["title"], json!("Memorise sonnets for 5 minutes"));
+    assert_eq!(payload["stacks_missed"], json!(false));
+    let subtask = payload["task_id"].as_str().unwrap().to_string();
+    let parent: Option<String> =
+        fixture.scalar("SELECT parentTaskId FROM tasks WHERE id = ?1", &subtask);
+    assert_eq!(parent.as_deref(), Some(goal.as_str()));
+    let source: Option<String> = fixture.scalar(
+        "SELECT sourceTaskId FROM dailies WHERE taskId = ?1",
+        &subtask,
+    );
+    assert_eq!(source.as_deref(), Some(goal.as_str()));
+
+    // With no title it is named after the task, as the app's form does.
+    let named = fixture.call(
+        "workspace_task_commit",
+        json!({ "task_id": goal, "rule": "weekdays" }),
+    );
+    assert_eq!(named["title"], json!("Work on Memorise the sonnets"));
+}
+
+#[test]
 fn completing_a_repeating_task_writes_its_next_occurrence() {
     let fixture = Fixture::new();
     let id = fixture.add(PROJECTS, "Water the plants", None);

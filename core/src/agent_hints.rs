@@ -215,6 +215,9 @@ fn build(tool: &str, input: &Map<String, Value>, hint: &mut Hint) -> Option<()> 
             hint.key("taskAddBlocker")
                 .words("then find the task it waits on");
         }
+        "workspace_task_commit" => {
+            hint.key("taskToggleDaily").words("then choose the days");
+        }
         "workspace_filter_list_create" => {
             hint.key("filterListNew");
         }
