@@ -1,0 +1,3 @@
+# Auth is an App Store Connect API key (see the Fastfile), so no Apple ID here.
+app_identifier("uk.co.maybeitssoftware.takt")
+team_id("6NQNU5YSC2")

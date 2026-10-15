@@ -1,0 +1,10 @@
+# Signing comes from the shared, encrypted match repo (MATCH_GIT_URL, decrypted
+# with MATCH_PASSWORD; MATCH_GIT_SSH_KEY deploy key on CI).
+storage_mode("git")
+git_url(ENV["MATCH_GIT_URL"] || "git@github.com:MaybeItsSoftware/match-certs.git")
+type("appstore")
+team_id("6NQNU5YSC2")
+app_identifier([
+  "uk.co.maybeitssoftware.takt",
+  "uk.co.maybeitssoftware.takt.widgets",
+])

@@ -10,12 +10,13 @@
 #
 # versionCode must rise with every upload. It is the number of commits on
 # HEAD, which only ever grows on main, so nobody has to remember to bump it.
+# TAKT_VERSION_CODE overrides that (Tramline assigns its own build numbers).
 set -euo pipefail
 
 root="$(cd "$(dirname "$0")/.." && pwd)"
 android="$root/mobile/android"
 version_name="${1:-$(grep -m1 'versionName' "$android/app/build.gradle.kts" | sed -E 's/.*"(.*)".*/\1/')}"
-version_code="$(git -C "$root" rev-list --count HEAD)"
+version_code="${TAKT_VERSION_CODE:-$(git -C "$root" rev-list --count HEAD)}"
 
 if [[ ! -f "$android/keystore.properties" ]]; then
   echo "error: mobile/android/keystore.properties is missing, so the bundle would be signed with the debug key, which Play rejects." >&2
