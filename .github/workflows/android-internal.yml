@@ -34,6 +34,10 @@ jobs:
 
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
+        with:
+          # The default also asks for the legacy "tools" package, which current
+          # command-line tools no longer provide, and sdkmanager then fails.
+          packages: platform-tools
 
       # The Rust core (core/) is built by scripts/build_core_android.sh, which
       # Gradle runs before preBuild: cargo-ndk cross-compiles it for each ABI
