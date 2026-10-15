@@ -410,3 +410,83 @@ fn a_start_moved_off_today_moves_the_task_out_of_today() {
     schedule(&mut connection, "p", Some(NOW + 2 * DAY));
     assert_eq!(column(&connection, "p"), (None, None));
 }
+
+#[test]
+fn a_deadline_follows_its_start_until_it_is_changed_on_its_own() {
+    const DAY: i64 = 24 * HOUR;
+    let mut connection = workspace();
+    let due = |c: &Connection| -> (Option<i64>, Option<String>) {
+        let saved = snapshot(c, "p").unwrap();
+        (saved.due_at_ms, saved.planning.and_then(|p| p.due_date))
+    };
+    // A start and a due time set when the task was made: the deadline follows.
+    connection
+        .execute_batch(&format!(
+            "UPDATE tasks SET dueAt = '{}' WHERE id = 'p';
+             INSERT INTO task_metadata (taskId, startAt, updatedAt) VALUES ('p', '{}', '{T}');",
+            stored(NOW + 3 * DAY),
+            stored(NOW + DAY)
+        ))
+        .unwrap();
+    journalled(&mut connection, "Schedule", |tx| {
+        schedule_task(tx, "p", Some(NOW + 2 * DAY), NOW, "Europe/London")
+    })
+    .unwrap();
+    assert_eq!(due(&connection).0, Some(NOW + 4 * DAY));
+
+    // Moving the deadline itself pins it: the next start move leaves it.
+    let baseline = snapshot(&connection, "p").unwrap();
+    let mut edit = baseline.clone();
+    edit.due_at_ms = Some(NOW + 6 * DAY);
+    save(&mut connection, &edit, &baseline).unwrap();
+    journalled(&mut connection, "Schedule", |tx| {
+        schedule_task(tx, "p", Some(NOW + 3 * DAY), NOW, "Europe/London")
+    })
+    .unwrap();
+    assert_eq!(due(&connection).0, Some(NOW + 6 * DAY));
+    // And the pin survives a save that does not know about it.
+    let baseline = snapshot(&connection, "p").unwrap();
+    let mut edit = baseline.clone();
+    edit.title = "Plan it".into();
+    save(&mut connection, &edit, &baseline).unwrap();
+    journalled(&mut connection, "Schedule", |tx| {
+        schedule_task(tx, "p", Some(NOW + 4 * DAY), NOW, "Europe/London")
+    })
+    .unwrap();
+    assert_eq!(due(&connection).0, Some(NOW + 6 * DAY));
+
+    // Clearing the deadline drops the pin; a due day then set by hand pins
+    // again, so only a deadline set with the task follows.
+    let baseline = snapshot(&connection, "p").unwrap();
+    let mut edit = baseline.clone();
+    edit.due_at_ms = None;
+    save(&mut connection, &edit, &baseline).unwrap();
+    assert!(
+        !planning_json(&connection, "p")
+            .unwrap_or_default()
+            .contains("duePinned")
+    );
+}
+
+#[test]
+fn a_due_day_moves_by_whole_days_with_its_start() {
+    const DAY: i64 = 24 * HOUR;
+    let mut connection = workspace();
+    // NOW is Tuesday 14 November 2023, 22:13 UTC; due Friday the 17th.
+    connection
+        .execute_batch(&format!(
+            "INSERT INTO task_metadata (taskId, startAt, planningJSON, updatedAt)
+               VALUES ('p', '{}', '{{\"dueDate\":\"2023-11-17\"}}', '{T}');",
+            stored(NOW + DAY)
+        ))
+        .unwrap();
+    journalled(&mut connection, "Schedule", |tx| {
+        schedule_task(tx, "p", Some(NOW + 3 * DAY), NOW, "UTC")
+    })
+    .unwrap();
+    let saved = snapshot(&connection, "p").unwrap();
+    assert_eq!(
+        saved.planning.and_then(|p| p.due_date).as_deref(),
+        Some("2023-11-19")
+    );
+}

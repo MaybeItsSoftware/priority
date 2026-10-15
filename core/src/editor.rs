@@ -124,7 +124,22 @@ impl StoredMetadata {
             .map(|at| at.timestamp_millis());
         Ok(planning.normalized())
     }
+
+    /// Whether the deadline was changed after the task was made, which stops
+    /// it following the start ([`follow_start`]).
+    fn due_pinned(&self) -> bool {
+        self.planning_json
+            .as_deref()
+            .and_then(|json| serde_json::from_str::<serde_json::Value>(json).ok())
+            .and_then(|value| value.get(DUE_PINNED_KEY)?.as_bool())
+            .unwrap_or(false)
+    }
 }
+
+/// The key in `planningJSON` that pins a deadline against its start. Kept
+/// out of [`Planning`], which every client round-trips, so that a client
+/// saving its planning cannot drop it; the decoders ignore it.
+const DUE_PINNED_KEY: &str = "duePinned";
 
 fn stored_metadata(
     connection: &rusqlite::Connection,
@@ -165,6 +180,7 @@ pub fn save_editor(
     if &current != baseline {
         return Err(CoreError::EditorConflict);
     }
+    let edit = &mut edit.clone();
     update_planning(
         transaction,
         edit,
@@ -213,7 +229,7 @@ pub fn update_task(
     }
     update_planning(
         transaction,
-        &edit,
+        &mut edit,
         previous.planning.as_ref(),
         previous.due_at_ms,
         now_ms,
@@ -300,7 +316,7 @@ pub fn set_due_day(
     edit.planning = planning.normalized();
     update_planning(
         transaction,
-        &edit,
+        &mut edit,
         previous.planning.as_ref(),
         previous.due_at_ms,
         now_ms,
@@ -324,12 +340,14 @@ pub fn schedule_task(
     edit.planning = planning.normalized();
     update_planning(
         transaction,
-        &edit,
+        &mut edit,
         previous.planning.as_ref(),
         previous.due_at_ms,
         now_ms,
         zone,
-    )
+    )?;
+    // A deadline that followed the start is the task row's to write.
+    update_task_record(transaction, &edit, now_ms)
 }
 
 /// Copies a task's requirements, start and block rules (not its due date,
@@ -351,7 +369,7 @@ pub fn apply_planning_to_descendants(
             planning.due_date = own_due_date;
             planning
         });
-        update_planning(transaction, &saved, None, None, now_ms, zone)?;
+        update_planning(transaction, &mut saved, None, None, now_ms, zone)?;
     }
     Ok(())
 }
@@ -366,14 +384,22 @@ pub fn apply_planning_to_descendants(
 /// was already required.
 fn update_planning(
     transaction: &Transaction,
-    edit: &EditorSnapshot,
+    edit: &mut EditorSnapshot,
     previous: Option<&Planning>,
     previous_due_at_ms: Option<i64>,
     now_ms: i64,
     zone: &str,
 ) -> Result<(), CoreError> {
-    let planning = edit.planning.clone().unwrap_or_default();
     let zone = periodic::zone(zone);
+    let current = stored_metadata(transaction, &edit.task_id)?;
+    let was_pinned = current.as_ref().is_some_and(StoredMetadata::due_pinned);
+    // Copying planning down to subtasks (no `previous`) moves no deadline.
+    let pinned = match previous {
+        Some(_) => follow_start(edit, previous, previous_due_at_ms, was_pinned, zone),
+        None => was_pinned,
+    } && (edit.due_at_ms.is_some()
+        || edit.planning.as_ref().is_some_and(|p| p.due_date.is_some()));
+    let planning = edit.planning.clone().unwrap_or_default();
     let deadline_ms = match &planning.due_date {
         Some(date) => {
             let midnight = calendar_date(date).ok_or(CoreError::InvalidDate)?;
@@ -442,17 +468,23 @@ fn update_planning(
             }
         }
     }
-    let current = stored_metadata(transaction, &edit.task_id)?;
     let current_planning = match &current {
         Some(stored) => stored.planning()?,
         None => None,
     };
-    if current_planning == edit.planning {
+    if current_planning == edit.planning && was_pinned == pinned {
         return Ok(());
     }
     let mut kept = planning.clone();
     kept.start_at_ms = None;
-    let json = kept.normalized().map(|p| p.to_json());
+    let json = match (kept.normalized().map(|p| p.to_json()), pinned) {
+        (json, false) => json,
+        (Some(json), true) => Some(format!(
+            "{},\"{DUE_PINNED_KEY}\":true}}",
+            json.strip_suffix('}').unwrap_or(&json)
+        )),
+        (None, true) => Some(format!("{{\"{DUE_PINNED_KEY}\":true}}")),
+    };
     let start = planning.start_at_ms.map(stored);
     transaction.execute(
         "INSERT INTO task_metadata (taskId, tagsJSON, externalLinksJSON, startAt, planningJSON, updatedAt)
@@ -468,6 +500,48 @@ fn update_planning(
         refile_by_start(transaction, &edit.task_id, start, now_ms, zone)?;
     }
     Ok(())
+}
+
+/// A deadline moves with its start, by as much — a due time by the same
+/// span, a due date by the same number of days — until the deadline is
+/// changed after the task was made, which pins it; clearing it drops the
+/// pin. A deadline set when the task was added, by the app, quick add or the
+/// assistant, follows. Returns whether the deadline is pinned now.
+fn follow_start(
+    edit: &mut EditorSnapshot,
+    previous: Option<&Planning>,
+    previous_due_at_ms: Option<i64>,
+    pinned: bool,
+    zone: chrono_tz::Tz,
+) -> bool {
+    let previous_due_date = previous.and_then(|p| p.due_date.clone());
+    let due_date = edit.planning.as_ref().and_then(|p| p.due_date.clone());
+    if edit.due_at_ms != previous_due_at_ms || due_date != previous_due_date {
+        return true;
+    }
+    if pinned {
+        return true;
+    }
+    let from = previous.and_then(|p| p.start_at_ms);
+    let to = edit.planning.as_ref().and_then(|p| p.start_at_ms);
+    let (Some(from), Some(to)) = (from, to) else {
+        return false;
+    };
+    if from == to {
+        return false;
+    }
+    if let Some(at) = edit.due_at_ms {
+        edit.due_at_ms = Some(at + (to - from));
+    }
+    if let Some(date) = due_date
+        .as_deref()
+        .and_then(|date| NaiveDate::parse_from_str(date, "%Y-%m-%d").ok())
+        && let Some(planning) = edit.planning.as_mut()
+    {
+        let days = (habits::local_day(to, zone) - habits::local_day(from, zone)).num_days();
+        planning.due_date = Some((date + Duration::days(days)).format("%Y-%m-%d").to_string());
+    }
+    false
 }
 
 /// Moves a task between Today and This week when its start moves to a day
