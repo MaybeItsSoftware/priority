@@ -11,13 +11,13 @@ final class ConditionsPaneLayoutTests: XCTestCase {
   func testRowsWalkBothHalvesAndFoldHeadings() {
     let rows = ConditionsPaneLayout.rows(
       available: ["campus"], sections: sections, folded: ["location"], archived: ["old"], showsArchived: false)
-    XCTAssertEqual(rows, [.available("campus"), .add, .folded("location"), .condition("mat"), .archived])
+    XCTAssertEqual(rows, [.available("campus"), .time, .expiry, .add, .folded("location"), .condition("mat"), .archived])
     let shown = ConditionsPaneLayout.rows(
       available: [], sections: sections, folded: [], archived: ["old"], showsArchived: true)
     XCTAssertEqual(
-      shown, [.add, .condition("home"), .condition("campus"), .condition("mat"), .archived, .condition("old")])
+      shown, [.time, .expiry, .add, .condition("home"), .condition("campus"), .condition("mat"), .archived, .condition("old")])
     XCTAssertEqual(
-      ConditionsPaneLayout.rows(available: [], sections: [], folded: [], archived: [], showsArchived: true), [.add])
+      ConditionsPaneLayout.rows(available: [], sections: [], folded: [], archived: [], showsArchived: true), [.time, .expiry, .add])
   }
 
   func testACursorWhoseRowWentLandsOnTheSameCondition() {
@@ -33,7 +33,7 @@ final class ConditionsPaneLayoutTests: XCTestCase {
     let open = ConditionsPaneLayout.rows(
       available: [], sections: sections, folded: [], archived: [], showsArchived: false)
     XCTAssertEqual(ConditionsPaneLayout.landing(.folded("location"), in: open, sections: sections), .condition("home"))
-    XCTAssertEqual(ConditionsPaneLayout.landing(nil, in: open, sections: sections), .add)
+    XCTAssertEqual(ConditionsPaneLayout.landing(nil, in: open, sections: sections), .time)
   }
 
   func testARowKnowsItsSection() {

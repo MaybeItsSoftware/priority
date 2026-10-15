@@ -66,7 +66,8 @@ public enum WorkspaceCommandID: String, CaseIterable, Sendable {
   case doneReveal, doneReopen, doneClose, motionDoneSelect
 
   // Conditions tab
-  case conditionsToggle, conditionsEdit, conditionsNew, conditionsCategory, conditionsArchive
+  case conditionsToggle, conditionsAdjust, conditionsTypeTime, conditionsEdit, conditionsNew, conditionsCategory
+  case conditionsArchive
   case conditionsClear, conditionsUseAgain, conditionsClose, motionConditionsSelect
   case conditionsMoveUp, conditionsMoveDown, conditionsMoveCategoryUp, conditionsMoveCategoryDown
   case conditionsRenameCategory, conditionsMerge, conditionsShowTasks, conditionsFold, conditionsFoldAll

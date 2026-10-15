@@ -574,6 +574,22 @@ fn conditions() -> Vec<Spec> {
         .on(Conditions)
         .note("Location replaces the last place; anything else combines"),
         c(
+            "conditionsAdjust",
+            "Change where you are, the time you have, or when it expires",
+            "Conditions",
+            &["left", "right", "h", "l"],
+        )
+        .on(Conditions)
+        .note("On Location the place, on Time a quarter of an hour less or more, on Finish and Forget the choice"),
+        c(
+            "conditionsTypeTime",
+            "Type the time you have",
+            "Conditions",
+            &["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"],
+        )
+        .on(Conditions)
+        .note("On the Time row: 45, 1h30, 17:00 or 5pm, then Return. Return there types one too"),
+        c(
             "conditionsEdit",
             "Rename the condition",
             "Conditions",
@@ -693,7 +709,7 @@ fn conditions() -> Vec<Spec> {
             "conditionsClose",
             "Leave the conditions",
             "Conditions",
-            &["escape", "left"],
+            &["escape"],
         )
         .on(Conditions)
         .note("Back to the work, leaving the dock open; r puts it away"),

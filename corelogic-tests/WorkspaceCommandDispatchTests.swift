@@ -144,7 +144,8 @@ final class WorkspaceCommandDispatchTests: XCTestCase {
     let expected: [String: WorkspaceCommandID] = [
       "space": .conditionsToggle, "enter": .conditionsEdit, "f2": .conditionsEdit, "a": .conditionsNew,
       "cmd+n": .conditionsNew, "t": .conditionsCategory, "e": .conditionsArchive, "c": .conditionsClear,
-      "shift+u": .conditionsUseAgain, "escape": .conditionsClose, "left": .conditionsClose,
+      "shift+u": .conditionsUseAgain, "escape": .conditionsClose, "left": .conditionsAdjust,
+      "right": .conditionsAdjust, "h": .conditionsAdjust, "l": .conditionsAdjust, "4": .conditionsTypeTime,
     ]
     for (key, id) in expected {
       XCTAssertEqual(WorkspaceCommandCatalog.command(forKey: key, on: .conditions)?.id, id, key)

@@ -5,8 +5,17 @@ import Foundation
 /// The tab has two halves — what is available now, and the conditions
 /// themselves — and one cursor walks down through both.
 public enum ConditionsPaneRow: Hashable, Sendable {
+  /// Where you are, as one row: `←`/`→` step through the places.
+  case location
   /// A condition in the "Available now" half: Space turns it on or off.
   case available(String)
+  /// How much time you have: `←`/`→` take or give a quarter of an hour,
+  /// typing sets it.
+  case time
+  /// Whether only what fits in that time is offered. Only with a time.
+  case finishOnly
+  /// When what you have said stops counting.
+  case expiry
   /// The new-condition row: Return puts the caret in its field.
   case add
   /// A condition in the "Conditions" half: rename, file, move, merge.
@@ -20,7 +29,7 @@ public enum ConditionsPaneRow: Hashable, Sendable {
   public var conditionID: String? {
     switch self {
     case .available(let id), .condition(let id): id
-    case .add, .folded, .archived: nil
+    case .location, .time, .finishOnly, .expiry, .add, .folded, .archived: nil
     }
   }
 
@@ -35,6 +44,10 @@ public enum ConditionsPaneRow: Hashable, Sendable {
   /// The scroll anchor for the row.
   public var anchor: String {
     switch self {
+    case .location: "location"
+    case .time: "time"
+    case .finishOnly: "finishOnly"
+    case .expiry: "expiry"
     case .available(let id): "available.\(id)"
     case .add: "add"
     case .condition(let id): "condition.\(id)"
@@ -59,15 +72,20 @@ public enum ConditionsPaneLayout {
     }
   }
 
-  /// Top to bottom: the conditions you can say hold, the new-condition row,
+  /// Top to bottom: where you are (with `hasPlaces`), the other conditions
+  /// you can say hold, the time you have, whether to finish within it (only
+  /// with `hasTimeLimit`) and when it all expires, the new-condition row,
   /// then each heading's conditions — or, folded, the heading alone — and
   /// last the archived heading (when there are any) and, shown, the archived
   /// conditions under it.
   public static func rows(
     available: [String], sections: [Section], folded: Set<String>,
-    archived: [String], showsArchived: Bool
+    archived: [String], showsArchived: Bool, hasPlaces: Bool = false, hasTimeLimit: Bool = false
   ) -> [ConditionsPaneRow] {
-    var rows = available.map(ConditionsPaneRow.available) + [.add]
+    var rows: [ConditionsPaneRow] = hasPlaces ? [.location] : []
+    rows += available.map(ConditionsPaneRow.available)
+    rows += hasTimeLimit ? [.time, .finishOnly, .expiry] : [.time, .expiry]
+    rows.append(.add)
     for section in sections where !section.conditionIDs.isEmpty {
       if folded.contains(section.id) {
         rows.append(.folded(section.id))
@@ -90,6 +108,8 @@ public enum ConditionsPaneLayout {
   ) -> ConditionsPaneRow {
     guard let cursor else { return rows.first ?? .add }
     if rows.contains(cursor) { return cursor }
+    // Clearing the time takes its finish row with it.
+    if cursor == .finishOnly, rows.contains(.time) { return .time }
     if let id = cursor.conditionID {
       if rows.contains(.condition(id)) { return .condition(id) }
       if let section = sections.first(where: { $0.conditionIDs.contains(id) }), rows.contains(.folded(section.id)) {
@@ -111,7 +131,7 @@ public enum ConditionsPaneLayout {
     switch row {
     case .folded(let id): sections.first { $0.id == id }
     case .condition(let id), .available(let id): sections.first { $0.conditionIDs.contains(id) }
-    case .add, .archived: nil
+    case .location, .time, .finishOnly, .expiry, .add, .archived: nil
     }
   }
 }

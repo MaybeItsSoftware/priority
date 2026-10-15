@@ -259,7 +259,8 @@ extension WorkspaceViewModel {
     case .doneClose: leaveDoneRail()
 
     // MARK: Conditions tab
-    case .conditionsToggle, .conditionsEdit, .conditionsNew, .conditionsCategory, .conditionsArchive,
+    case .conditionsToggle, .conditionsAdjust, .conditionsTypeTime, .conditionsEdit, .conditionsNew,
+      .conditionsCategory, .conditionsArchive,
       .conditionsClear, .conditionsUseAgain, .conditionsClose, .motionConditionsSelect,
       .conditionsMoveUp, .conditionsMoveDown, .conditionsMoveCategoryUp, .conditionsMoveCategoryDown,
       .conditionsRenameCategory, .conditionsMerge, .conditionsShowTasks, .conditionsFold, .conditionsFoldAll:

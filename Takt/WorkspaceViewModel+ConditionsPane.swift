@@ -32,9 +32,85 @@ extension WorkspaceViewModel {
   /// Every row the cursor can stand on, top to bottom.
   var conditionsStops: [WorkspaceConditionsStop] {
     ConditionsPaneLayout.rows(
-      available: selectableFocusConditions.map(\.id), sections: conditionsLayoutSections,
+      available: selectableFocusConditions.filter { !$0.isLocation }.map(\.id), sections: conditionsLayoutSections,
       folded: foldedConditionSections, archived: archivedConditions.map(\.id),
-      showsArchived: showsArchivedConditions)
+      showsArchived: showsArchivedConditions, hasPlaces: !availablePlaces.isEmpty,
+      hasTimeLimit: availableUntil != nil)
+  }
+
+  /// The places "Available now" steps through on its Location row.
+  var availablePlaces: [TaskCondition] {
+    selectableFocusConditions.filter(\.isLocation)
+  }
+
+  /// The place said to hold now, if one is.
+  var currentPlace: TaskCondition? {
+    availablePlaces.first { focusContext.conditionIDs.contains($0.id) }
+  }
+
+  /// The whole minutes left before the available time runs out, nil with no
+  /// limit.
+  func availableMinutesLeft(now: Date = .now) -> Int? {
+    availableUntil.map { max(0, Int(($0.timeIntervalSince(now) / 60).rounded(.up))) }
+  }
+
+  /// `←`/`→` on "Available now": the place, a quarter of an hour of time,
+  /// finishing or not, when it expires, and a condition off or on.
+  private func adjustConditionsStop(by step: Int, now: Date = .now) {
+    switch conditionsCursorStop {
+    case .location:
+      let id = ConditionsPaneSteps.place(from: currentPlace?.id, in: availablePlaces.map(\.id), by: step)
+      setFocusPlace(id.flatMap { id in availablePlaces.first { $0.id == id } })
+    case .time:
+      let minutes = ConditionsPaneSteps.minutes(from: availableMinutesLeft(now: now), by: step)
+      availableUntil = minutes.map { now.addingTimeInterval(Double($0) * 60) }
+      focusContextChanged()
+    case .finishOnly:
+      let mode: FocusTimeMode = step > 0 ? .finish : .progress
+      guard focusContext.mode != mode else { return }
+      focusContext.mode = mode
+      focusContextChanged()
+    case .expiry:
+      let stop = ConditionsPaneSteps.Expiry.nearest(to: contextExpiresAt, now: now).stepped(by: step)
+      contextExpiresAt = stop.date(now: now)
+      focusContextChanged()
+    case .available(let id):
+      // → turns it on, ← off, as a switch would.
+      guard let condition = selectableFocusConditions.first(where: { $0.id == id }),
+        focusContext.conditionIDs.contains(id) != (step > 0)
+      else { return }
+      toggleFocusCondition(condition)
+    case .add, .condition, .folded, .archived: break
+    }
+  }
+
+  /// Starts typing the time you have, on its row, with what was typed so far.
+  func beginTypingAvailableTime(_ text: String = "") {
+    conditionsCursor = .time
+    conditionsTimeEntry = text
+  }
+
+  /// Sets the time typed on the Time row: nothing typed is no limit, and an
+  /// entry it cannot read is said so and left to fix.
+  func commitTypedAvailableTime(now: Date = .now) {
+    guard let entry = conditionsTimeEntry else { return }
+    let trimmed = entry.trimmingCharacters(in: .whitespaces)
+    if trimmed.isEmpty {
+      availableUntil = nil
+    } else if let end = ConditionsPaneSteps.time(typed: trimmed, now: now) {
+      availableUntil = end
+    } else {
+      onStatusMessage?("“\(trimmed)” is not a time: try 45, 1h30 or 5pm.")
+      return
+    }
+    conditionsTimeEntry = nil
+    focusContextChanged()
+    finishConditionsEditing()
+  }
+
+  func cancelTypedAvailableTime() {
+    conditionsTimeEntry = nil
+    finishConditionsEditing()
   }
 
   /// The row the keyboard is on. A cursor whose row has gone — a condition
@@ -73,6 +149,20 @@ extension WorkspaceViewModel {
   func runConditionsCommand(_ id: WorkspaceCommandID, key: String? = nil) {
     switch id {
     case .motionConditionsSelect: if let key { moveConditionsCursor(key) }
+    case .conditionsAdjust:
+      adjustConditionsStop(by: key == "left" || key == "h" ? -1 : 1)
+    case .conditionsTypeTime:
+      // Typing a number anywhere in the tab is saying how long you have.
+      beginTypingAvailableTime(key ?? "")
+    case .conditionsToggle where conditionsCursorStop == .finishOnly:
+      adjustConditionsStop(by: focusContext.mode == .finish ? -1 : 1)
+    case .conditionsToggle where conditionsCursorStop == .location:
+      // Space steps on to the next place, round to nowhere after the last.
+      if currentPlace?.id == availablePlaces.last?.id {
+        setFocusPlace(nil)
+      } else {
+        adjustConditionsStop(by: 1)
+      }
     case .conditionsToggle where conditionsCursorStop.isFolded:
       // On a folded heading, Space opens it, as Return does.
       runConditionsOrganiseCommand(.conditionsFold)
@@ -109,6 +199,8 @@ extension WorkspaceViewModel {
   /// renamed in its row in the lower half, where its name is a field.
   private func editConditionsStop() {
     switch conditionsCursorStop {
+    case .time: beginTypingAvailableTime()
+    case .location, .finishOnly, .expiry: break
     case .add: conditionsAddFieldRequest += 1
     case .available(let id), .condition(let id):
       conditionsCursor = .condition(id)

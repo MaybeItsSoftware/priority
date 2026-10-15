@@ -1,3 +1,4 @@
+import AppKit
 import TaktCore
 import TaktWorkspace
 import SwiftUI
@@ -12,7 +13,9 @@ import SwiftUI
 /// add one, rename it in its row, file it under a category, archive it, and
 /// see how many open tasks need it.
 ///
-/// `↑` `↓` walk both halves, Space turns a condition on or off, Return or F2
+/// `↑` `↓` walk both halves; `←` `→` step where you are, the time you have
+/// and when it is forgotten, and typing a number sets the time. Space turns
+/// a condition on or off, Return or F2
 /// renames (on the new-condition row, puts the caret in its field), `t`
 /// files it under a category and `⇧T` renames the category, `⌥↑`/`⌥↓` move
 /// it and `⌥⇧↑`/`⌥⇧↓` its category, `m` merges it into another, `o` lists
@@ -76,9 +79,14 @@ struct WorkspaceConditionsPane: View {
       staleNotice
     }
     let waiting = model.conditionWaitingCounts
-    ForEach(sections) { section in
+    if !model.availablePlaces.isEmpty {
+      WorkspaceLocationRow(
+        waiting: waiting, isCursor: cursor == .location, hasKeyboard: hasKeyboard && cursor == .location)
+        .id(WorkspaceConditionsStop.location.anchor)
+    }
+    ForEach(sections.filter { $0.conditions.contains { !$0.isLocation } }) { section in
       WorkspaceConditionsCategoryHeading(title: section.title)
-      ForEach(section.conditions) { condition in
+      ForEach(section.conditions.filter { !$0.isLocation }) { condition in
         let stop = WorkspaceConditionsStop.available(condition.id)
         WorkspaceAvailableConditionRow(
           condition: condition,
@@ -91,7 +99,7 @@ struct WorkspaceConditionsPane: View {
     if !model.suggestedContextIDs.isEmpty {
       lastContext
     }
-    timeControls
+    timeRows(cursor: cursor, hasKeyboard: hasKeyboard)
   }
 
   /// Said on an earlier day: probably not where you are now.
@@ -138,56 +146,58 @@ struct WorkspaceConditionsPane: View {
     .padding(.vertical, theme.space.xs)
   }
 
-  /// The time you have, what you want from it, and when the answer lapses.
-  private var timeControls: some View {
-    VStack(alignment: .leading, spacing: theme.space.sm) {
-      ThemedControlRow("Available time") {
-        HStack(spacing: theme.space.xs) {
-          ThemedMenu(model.availableUntil.map { "Until \($0.formatted(date: .omitted, time: .shortened))" } ?? "No limit") {
-            Button("No time limit") { setAvailableUntil(nil) }
-            ForEach([15, 30, 60, 90], id: \.self) { minutes in
-              Button("\(minutes) minutes") { setAvailableUntil(Date.now.addingTimeInterval(Double(minutes * 60))) }
-            }
-            Button("Choose end time") { setAvailableUntil(Date.now.addingTimeInterval(1800)) }
-          }
-          if let end = model.availableUntil {
-            ThemedDateField(
-              selection: Binding(get: { model.availableUntil ?? end }, set: { setAvailableUntil($0) }),
-              includesTime: true)
-          }
-        }
-      }
-      ThemedControlRow("Goal") {
-        ThemedSegmentedPicker(
-          selection: Binding(get: { model.focusContext.mode }, set: { model.focusContext.mode = $0; model.focusContextChanged() }),
-          options: [
-            ThemedPickerOption("Progress", value: FocusTimeMode.progress),
-            ThemedPickerOption("Finish", value: FocusTimeMode.finish),
-          ])
-        .accessibilityLabel("Goal: make progress or finish something")
-        .help("Make progress on something, or finish something in the time you have")
-      }
-      HStack(spacing: theme.space.sm) {
-        Toggle("Context expires", isOn: Binding(get: { model.contextExpiresAt != nil }, set: {
-          model.contextExpiresAt = $0 ? Date.now.addingTimeInterval(3600) : nil; model.focusContextChanged()
+  /// The time you have, whether to offer only what fits in it, and when what
+  /// you have said is forgotten: rows the cursor stands on, `←` `→` to change.
+  @ViewBuilder
+  private func timeRows(cursor: WorkspaceConditionsStop, hasKeyboard: Bool) -> some View {
+    WorkspaceTimeRow(isCursor: cursor == .time, hasKeyboard: hasKeyboard && cursor == .time)
+      .id(WorkspaceConditionsStop.time.anchor)
+    if model.availableUntil != nil {
+      WorkspaceConditionsSettingRow(
+        title: "Only what I can finish", stop: .finishOnly, isCursor: cursor == .finishOnly,
+        hasKeyboard: hasKeyboard && cursor == .finishOnly,
+        note: "Offers only the tasks whose remaining work fits in the time you have"
+      ) {
+        Toggle("", isOn: Binding(get: { model.focusContext.mode == .finish }, set: {
+          model.focusContext.mode = $0 ? .finish : .progress
+          model.focusContextChanged()
         }))
+        .labelsHidden()
         .toggleStyle(.themedSwitch)
-        .help("When it lapses the conditions are set aside and offered back with Use again")
-        if let end = model.contextExpiresAt {
-          ThemedDateField(
-            selection: Binding(get: { model.contextExpiresAt ?? end }, set: { model.contextExpiresAt = $0; model.focusContextChanged() }),
-            includesTime: true)
+      }
+      .id(WorkspaceConditionsStop.finishOnly.anchor)
+    }
+    WorkspaceConditionsSettingRow(
+      title: "Forget this", stop: .expiry, isCursor: cursor == .expiry, hasKeyboard: hasKeyboard && cursor == .expiry,
+      note: "When where you are and the time you have stop counting; Shift+U offers them back"
+    ) {
+      ThemedMenu(Self.expiryText(model.contextExpiresAt)) {
+        ForEach(ConditionsPaneSteps.Expiry.allCases, id: \.self) { stop in
+          Button(Self.expiryChoice(stop)) {
+            model.contextExpiresAt = stop.date(now: .now)
+            model.focusContextChanged()
+          }
         }
       }
     }
-    .font(theme.captionFont)
-    .focusSurfaceGutter()
-    .padding(.vertical, theme.space.md)
+    .id(WorkspaceConditionsStop.expiry.anchor)
+    .padding(.bottom, theme.space.sm)
   }
 
-  private func setAvailableUntil(_ date: Date?) {
-    model.availableUntil = date
-    model.focusContextChanged()
+  private static func expiryText(_ date: Date?) -> String {
+    guard let date else { return "Never" }
+    let time = date.formatted(date: .omitted, time: .shortened)
+    return Calendar.current.isDateInToday(date) ? "At \(time)" : "Tomorrow \(time)"
+  }
+
+  private static func expiryChoice(_ stop: ConditionsPaneSteps.Expiry) -> String {
+    switch stop {
+    case .never: "Never"
+    case .oneHour: "In an hour"
+    case .twoHours: "In two hours"
+    case .fourHours: "In four hours"
+    case .endOfDay: "At midnight"
+    }
   }
 
   // MARK: - Conditions
@@ -436,6 +446,123 @@ private struct WorkspaceAvailableConditionRow: View {
     .accessibilityElement(children: .combine)
     .accessibilityLabel(condition.name)
     .accessibilityAddTraits(isOn ? [.isButton, .isSelected] : [.isButton])
+  }
+}
+
+/// A setting in "Available now": its name, then its value, with arrows on
+/// the cursor's row saying `←` `→` change it. A click puts the cursor on it.
+private struct WorkspaceConditionsSettingRow<Value: View>: View {
+  @Environment(WorkspaceViewModel.self) private var model
+  @Environment(\.theme) private var theme
+  let title: String
+  let stop: WorkspaceConditionsStop
+  let isCursor: Bool
+  let hasKeyboard: Bool
+  let note: String
+  @ViewBuilder var value: Value
+
+  var body: some View {
+    HStack(spacing: theme.space.sm) {
+      Text(title)
+        .font(theme.bodyFont())
+        .foregroundStyle(theme.ink)
+        .lineLimit(1)
+      Spacer(minLength: theme.space.sm)
+      if isCursor { Image(systemName: "chevron.left").foregroundStyle(theme.dim) }
+      value
+      if isCursor { Image(systemName: "chevron.right").foregroundStyle(theme.dim) }
+    }
+    .font(theme.captionFont)
+    .frame(maxWidth: .infinity, alignment: .leading)
+    .padding(.vertical, theme.rowVerticalPadding)
+    .padding(.horizontal, theme.paneGutter)
+    .contentShape(Rectangle())
+    .workspaceSelection(isSelected: isCursor, hasKeyboard: hasKeyboard)
+    .onTapGesture {
+      model.conditionsCursor = stop
+      model.reportKeyboardFocus(.conditions)
+    }
+    .commandHelp(.conditionsAdjust, note: note)
+  }
+}
+
+/// Where you are, as one row: `←` `→` step through the places an open task
+/// needs, from nowhere in particular; the menu picks one with the mouse.
+private struct WorkspaceLocationRow: View {
+  @Environment(WorkspaceViewModel.self) private var model
+  @Environment(\.theme) private var theme
+  let waiting: [String: Int]
+  let isCursor: Bool
+  let hasKeyboard: Bool
+
+  var body: some View {
+    WorkspaceConditionsSettingRow(
+      title: "Where you are", stop: .location, isCursor: isCursor, hasKeyboard: hasKeyboard,
+      note: "One place at a time; tasks that need another wait"
+    ) {
+      ThemedMenu(model.currentPlace?.name ?? "Anywhere") {
+        Button("Anywhere") { model.setFocusPlace(nil) }
+        ForEach(model.availablePlaces) { place in
+          let count = waiting[place.id] ?? 0
+          Button(count > 0 ? "\(place.name) — \(count) waiting" : place.name) { model.setFocusPlace(place) }
+        }
+      }
+    }
+  }
+}
+
+/// The time you have: how long is left and when it runs out. `←` `→` take or
+/// give a quarter of an hour; typing a number, Return or a click opens the
+/// field, which reads 45, 1h30, 17:00 or 5pm.
+private struct WorkspaceTimeRow: View {
+  @Environment(WorkspaceViewModel.self) private var model
+  @Environment(\.theme) private var theme
+  let isCursor: Bool
+  let hasKeyboard: Bool
+  @FocusState private var isFieldFocused: Bool
+
+  var body: some View {
+    WorkspaceConditionsSettingRow(
+      title: "Time you have", stop: .time, isCursor: isCursor, hasKeyboard: hasKeyboard,
+      note: "A quarter of an hour less or more; type 45, 1h30 or 5pm to set it"
+    ) {
+      if model.conditionsTimeEntry != nil {
+        TextField("", text: Binding(get: { model.conditionsTimeEntry ?? "" }, set: { model.conditionsTimeEntry = $0 }),
+          prompt: Text("45, 1h30, 5pm"))
+          .themedTextField()
+          .frame(width: 110)
+          .focused($isFieldFocused)
+          .onSubmit { model.commitTypedAvailableTime() }
+          .onExitCommand { model.cancelTypedAvailableTime() }
+          .onAppear {
+            // SwiftUI selects a field's text on focus, so the digit that
+            // opened it would be typed over: the caret goes after it.
+            DispatchQueue.main.async {
+              isFieldFocused = true
+              DispatchQueue.main.async {
+                guard let editor = NSApp.keyWindow?.firstResponder as? NSTextView else { return }
+                editor.setSelectedRange(NSRange(location: (editor.string as NSString).length, length: 0))
+              }
+            }
+          }
+      } else {
+        // Redrawn each minute, so the minutes left count down.
+        TimelineView(.periodic(from: .now, by: 60)) { context in
+          Text(Self.text(until: model.availableUntil, minutesLeft: model.availableMinutesLeft(now: context.date)))
+            .foregroundStyle(model.availableUntil == nil ? theme.muted : theme.ink)
+            .monospacedDigit()
+            .onTapGesture { model.beginTypingAvailableTime() }
+        }
+      }
+    }
+  }
+
+  private static func text(until end: Date?, minutesLeft: Int?) -> String {
+    guard let end, let minutes = minutesLeft else { return "No limit" }
+    let left = minutes >= 60
+      ? "\(minutes / 60)h" + (minutes % 60 == 0 ? "" : " \(minutes % 60)m")
+      : "\(minutes) min"
+    return "\(left) · until \(end.formatted(date: .omitted, time: .shortened))"
   }
 }
 

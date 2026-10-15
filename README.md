@@ -442,10 +442,16 @@ the status bar's indicator and the tab show it in the warning colour, with
   asked about, and a category with none of those is left out. One that is on
   always stays, so it can be turned off. Each one off says how many tasks are
   **waiting** on it. With nothing needing a condition it
-  says *No open tasks need a condition*. `Space` (or a click) turns one on or
-  off. A **Location** replaces the last one, since you are in one place at a
-  time; other conditions combine. `c` clears them all. Under the rows are an available-time window, a
-  goal (make progress or finish something) and an expiry. What you set is kept
+  says *No open tasks need a condition*. **Where you are** is one row at the
+  top: `←`/`→` step through the places, from *Anywhere*, since you are in one
+  place at a time. The other conditions combine: `Space` (or a click) turns
+  one on or off, and `→`/`←` turn it on and off too. `c` clears them all.
+  Under them, **Time you have**: `←`/`→` give or take a quarter of an hour,
+  and typing a number anywhere in the tab sets it — `45`, `1h30`, `17:00`,
+  `5pm`, then `Return` (an empty field is no limit). With a time set, **Only
+  what I can finish** offers only the tasks whose remaining work fits in it.
+  **Forget this** (`←`/`→`: never, in one, two or four hours, at midnight)
+  is when where you are and the time you have stop counting. What you set is kept
   across relaunches and follows you across your devices: say you are at
   Campus on the phone and the Mac knows, and the last device to say where
   you are wins. A context said on an earlier day is flagged as possibly

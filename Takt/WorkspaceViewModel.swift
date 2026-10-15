@@ -1022,6 +1022,9 @@ enum WorkspaceSidebarItem: Identifiable {
   var renamingConditionID: String?
   /// Moves to put the caret in the Conditions tab's new-condition field.
   var conditionsAddFieldRequest = 0
+  /// What is being typed on the Conditions tab's Time row; nil while it is
+  /// not being typed in.
+  var conditionsTimeEntry: String?
   /// The category the Conditions tab's new-condition row files under; nil
   /// is none.
   var newConditionCategory: String?

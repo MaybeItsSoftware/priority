@@ -380,6 +380,10 @@ final class WorkspaceCommandCollisionTests: XCTestCase {
       "conditions:left", "conditions:cmd+shift+{", "conditions:cmd+shift+}", "conditions:[", "conditions:]",
       // ⌥↑ ⌥↓ move the condition, and with ⇧ its category, as they move a task.
       "conditions:option+up", "conditions:option+down", "conditions:option+shift+up", "conditions:option+shift+down",
+      // ← → change the setting under the cursor — where you are, the time you
+      // have — and typing a number sets the time, rather than a task's
+      // priority behind the tab.
+      "conditions:right", "conditions:0", "conditions:1", "conditions:2", "conditions:3", "conditions:4",
       // Today is walked with the ordinary keys, but gf queues behind a
       // running block rather than replacing it, and → and ← open and fold a
       // task where it stands, as the outline's do, rather than entering and
