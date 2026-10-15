@@ -4,13 +4,13 @@ import XCTest
 
 final class AgentToolPolicyTests: XCTestCase {
 
-  /// The two lists together are the CLI's whole tool table (50 tools, per
+  /// The two lists together are the CLI's whole tool table (51 tools, per
   /// `docs/mcp-server.md`), with nothing in both.
   func testReadAndWriteToolsPartitionTheServer() {
     let read = Set(AgentToolPolicy.readOnlyTools)
     let write = Set(AgentToolPolicy.writeTools)
     XCTAssertTrue(read.isDisjoint(with: write))
-    XCTAssertEqual(read.count + write.count, 50)
+    XCTAssertEqual(read.count + write.count, 51)
     XCTAssertTrue(read.contains("agent_instructions_get"))
     XCTAssertTrue(write.contains("agent_instructions_set"), "saving instructions is a change")
   }
