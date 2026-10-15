@@ -35,4 +35,16 @@ final class FocusTimerDisplayTests: XCTestCase {
   func testTimeBeforeTheStartIsTreatedAsNoneElapsed() {
     XCTAssertEqual(text(elapsed: -500, planned: 60), "1:00")
   }
+
+  func testABreakCountsDownToItsEndThenUpPastIt() {
+    let now = Date(timeIntervalSince1970: 1_000_000)
+    XCTAssertEqual(
+      FocusTimerDisplay.breakReading(endsAt: now.addingTimeInterval(299.4), now: now),
+      .init(text: "5:00", isOverrun: false))
+    XCTAssertEqual(
+      FocusTimerDisplay.breakReading(endsAt: now, now: now), .init(text: "0:00", isOverrun: false))
+    XCTAssertEqual(
+      FocusTimerDisplay.breakReading(endsAt: now.addingTimeInterval(-90), now: now),
+      .init(text: "+1:30", isOverrun: true))
+  }
 }

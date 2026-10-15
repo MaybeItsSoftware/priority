@@ -1095,6 +1095,42 @@ impl CoreWorkspace {
         })
     }
 
+    /// Logs the block in hand as progress and starts a break on it, as one
+    /// step.
+    #[allow(clippy::too_many_arguments)]
+    pub fn take_focus_break(
+        &self,
+        session_id: String,
+        elapsed_seconds: i64,
+        quality_multiplier: Option<f64>,
+        expected_block_id: Option<String>,
+        now_ms: i64,
+        zone: String,
+    ) -> Result<BlockFinished, CoreError> {
+        journal::journalled(&mut self.lock(), "Log Daily Progress", |tx| {
+            focus::take_break(
+                tx,
+                &session_id,
+                elapsed_seconds,
+                quality_multiplier,
+                expected_block_id.as_deref(),
+                now_ms,
+                &zone,
+            )
+        })
+    }
+
+    /// Back from a break to the task in hand, or on through the queue.
+    pub fn end_focus_break(
+        &self,
+        session_id: String,
+        context: FocusContext,
+        now_ms: i64,
+        zone: String,
+    ) -> Result<(), CoreError> {
+        self.unjournalled(|tx| focus::end_break(tx, &session_id, &context, now_ms, &zone))
+    }
+
     /// Ends a focus session.
     pub fn finish_focus_session(&self, id: String, now_ms: i64) -> Result<(), CoreError> {
         self.unjournalled(|tx| focus::finish_session(tx, &id, now_ms))

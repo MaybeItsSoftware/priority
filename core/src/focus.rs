@@ -618,6 +618,119 @@ pub fn finish_block(
     now_ms: i64,
     zone: &str,
 ) -> Result<BlockFinished, CoreError> {
+    finish(
+        transaction,
+        session_id,
+        elapsed_seconds,
+        quality_multiplier,
+        complete_task,
+        expected_block_id,
+        Then::HandOff(context),
+        now_ms,
+        zone,
+    )
+}
+
+/// Logs the block in hand as progress, exactly as [`finish_block`] does
+/// without completing the task, then rests: the task stays in hand with a
+/// fresh block whose clock is stopped at nothing, and the session is on a
+/// break until the session's break length from now. [`end_break`] goes back
+/// to it. `WorkspaceStore.takeFocusBreak`.
+pub fn take_break(
+    transaction: &Transaction,
+    session_id: &str,
+    elapsed_seconds: i64,
+    quality_multiplier: Option<f64>,
+    expected_block_id: Option<&str>,
+    now_ms: i64,
+    zone: &str,
+) -> Result<BlockFinished, CoreError> {
+    finish(
+        transaction,
+        session_id,
+        elapsed_seconds,
+        quality_multiplier,
+        false,
+        expected_block_id,
+        Then::Break,
+        now_ms,
+        zone,
+    )
+}
+
+/// Back from a break: the task that was in hand starts a fresh block, or,
+/// when it was finished or deleted meanwhile, the queue moves on as after
+/// any block. A session not on a break is left alone.
+/// `WorkspaceStore.endFocusBreak`.
+pub fn end_break(
+    transaction: &Transaction,
+    session_id: &str,
+    context: &FocusContext,
+    now_ms: i64,
+    zone: &str,
+) -> Result<(), CoreError> {
+    let row: Option<(String, Option<String>)> = transaction
+        .query_row(
+            "SELECT phase, activeTaskId FROM focus_sessions WHERE id = ?1",
+            [session_id],
+            |row| Ok((row.get(0)?, row.get(1)?)),
+        )
+        .optional()?;
+    let Some((phase, active_id)) = row else {
+        return Ok(());
+    };
+    if phase != "onBreak" {
+        return Ok(());
+    }
+    let now = stored(now_ms);
+    let still_open = match &active_id {
+        Some(id) => transaction.query_row(
+            "SELECT EXISTS(SELECT 1 FROM tasks WHERE id = ?1 AND status = 'open')",
+            [id],
+            |row| row.get(0),
+        )?,
+        None => false,
+    };
+    transaction.execute(
+        "UPDATE focus_sessions SET phase = 'running', breakEndsAt = NULL, accumulatedSeconds = 0,
+                                   pausedAt = NULL, activeTaskStartedAt = ?1, checkpointAt = ?1
+         WHERE id = ?2",
+        params![now, session_id],
+    )?;
+    if !still_open {
+        if let Some(id) = active_id {
+            transaction.execute(
+                "UPDATE focus_queue_items SET state = 'completed', completedAt = ?1
+                 WHERE id = (SELECT id FROM focus_queue_items WHERE sessionId = ?2 AND taskId = ?3
+                             AND state = 'queued' ORDER BY rowid LIMIT 1)",
+                params![now, session_id, id],
+            )?;
+        }
+        hand_off(transaction, session_id, context, now_ms, zone, false)?;
+    }
+    Ok(())
+}
+
+/// What follows a recorded block.
+enum Then<'a> {
+    /// The queue moves on in this context.
+    HandOff(&'a FocusContext),
+    /// The task stays in hand and the session rests.
+    Break,
+}
+
+#[allow(clippy::too_many_arguments)]
+fn finish(
+    transaction: &Transaction,
+    session_id: &str,
+    elapsed_seconds: i64,
+    quality_multiplier: Option<f64>,
+    complete_task: bool,
+    expected_block_id: Option<&str>,
+    then: Then,
+    now_ms: i64,
+    zone: &str,
+) -> Result<BlockFinished, CoreError> {
     let session: Option<(Option<String>, Option<String>)> = transaction
         .query_row(
             "SELECT activeTaskId, activeBlockId FROM focus_sessions WHERE id = ?1",
@@ -743,13 +856,36 @@ pub fn finish_block(
         )?;
         award_id = Some(block_id.clone());
     }
-    transaction.execute(
-        "UPDATE focus_queue_items SET state = 'completed', completedAt = ?1
-         WHERE id = (SELECT id FROM focus_queue_items WHERE sessionId = ?2 AND taskId = ?3 AND state = 'queued'
-                     ORDER BY rowid LIMIT 1)",
-        params![now, session_id, active_id],
-    )?;
-    hand_off(transaction, session_id, context, now_ms, zone, false)?;
+    match then {
+        Then::HandOff(context) => {
+            transaction.execute(
+                "UPDATE focus_queue_items SET state = 'completed', completedAt = ?1
+                 WHERE id = (SELECT id FROM focus_queue_items WHERE sessionId = ?2 AND taskId = ?3 AND state = 'queued'
+                             ORDER BY rowid LIMIT 1)",
+                params![now, session_id, active_id],
+            )?;
+            hand_off(transaction, session_id, context, now_ms, zone, false)?;
+        }
+        Then::Break => {
+            let break_seconds: i64 = transaction.query_row(
+                "SELECT breakDurationSeconds FROM focus_sessions WHERE id = ?1",
+                [session_id],
+                |row| row.get(0),
+            )?;
+            transaction.execute(
+                "UPDATE focus_sessions SET phase = 'onBreak', breakEndsAt = ?1, accumulatedSeconds = 0,
+                                           pausedAt = ?2, activeTaskStartedAt = ?2, checkpointAt = ?2,
+                                           activeBlockId = ?3
+                 WHERE id = ?4",
+                params![
+                    stored(now_ms + break_seconds.max(60) * 1000),
+                    now,
+                    new_id(),
+                    session_id
+                ],
+            )?;
+        }
+    }
     Ok(BlockFinished {
         session_id: session_id.to_string(),
         outcome: outcome.into(),

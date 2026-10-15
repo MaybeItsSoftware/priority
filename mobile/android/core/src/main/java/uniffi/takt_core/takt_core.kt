@@ -1267,6 +1267,8 @@ internal object IntegrityCheckingUniffiLib {
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_editor_snapshot(
     ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_end_focus_break(
+    ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_end_sync(
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_enqueue_sync_snapshot(
@@ -1434,6 +1436,8 @@ internal object IntegrityCheckingUniffiLib {
     external fun uniffi_takt_core_checksum_method_coreworkspace_stop_commitment(
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_sync_state(
+    ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_take_focus_break(
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_task(
     ): Int
@@ -1741,6 +1745,8 @@ internal object UniffiLib {
     ): Byte
     external fun uniffi_takt_core_fn_method_coreworkspace_editor_snapshot(`ptr`: Long,`taskId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_method_coreworkspace_end_focus_break(`ptr`: Long,`sessionId`: RustBuffer.ByValue,`context`: RustBuffer.ByValue,`nowMs`: Long,`zone`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): Unit
     external fun uniffi_takt_core_fn_method_coreworkspace_end_sync(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
     external fun uniffi_takt_core_fn_method_coreworkspace_enqueue_sync_snapshot(`ptr`: Long,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
@@ -1908,6 +1914,8 @@ internal object UniffiLib {
     external fun uniffi_takt_core_fn_method_coreworkspace_stop_commitment(`ptr`: Long,`commitmentTaskId`: RustBuffer.ByValue,`nowMs`: Long,`zone`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
     external fun uniffi_takt_core_fn_method_coreworkspace_sync_state(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_method_coreworkspace_take_focus_break(`ptr`: Long,`sessionId`: RustBuffer.ByValue,`elapsedSeconds`: Long,`qualityMultiplier`: RustBuffer.ByValue,`expectedBlockId`: RustBuffer.ByValue,`nowMs`: Long,`zone`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_method_coreworkspace_task(`ptr`: Long,`id`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
@@ -3322,6 +3330,9 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_editor_snapshot() and 0xFFFF) != 20106) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_end_focus_break() and 0xFFFF) != 37861) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_end_sync() and 0xFFFF) != 18002) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
@@ -3572,6 +3583,9 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_sync_state() and 0xFFFF) != 5326) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_take_focus_break() and 0xFFFF) != 4166) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_task() and 0xFFFF) != 3486) {
@@ -5128,6 +5142,11 @@ public interface CoreWorkspaceInterface {
     fun `editorSnapshot`(`taskId`: kotlin.String): EditorSnapshot
     
     /**
+     * Back from a break to the task in hand, or on through the queue.
+     */
+    fun `endFocusBreak`(`sessionId`: kotlin.String, `context`: FocusContext, `nowMs`: kotlin.Long, `zone`: kotlin.String)
+    
+    /**
      * Unpairs: stops recording and forgets what was waiting to be sent.
      */
     fun `endSync`()
@@ -5572,6 +5591,12 @@ public interface CoreWorkspaceInterface {
      * The device's sync state, or nothing while it has never been paired.
      */
     fun `syncState`(): LocalSyncState?
+    
+    /**
+     * Logs the block in hand as progress and starts a break on it, as one
+     * step.
+     */
+    fun `takeFocusBreak`(`sessionId`: kotlin.String, `elapsedSeconds`: kotlin.Long, `qualityMultiplier`: kotlin.Double?, `expectedBlockId`: kotlin.String?, `nowMs`: kotlin.Long, `zone`: kotlin.String): BlockFinished
     
     /**
      * One task, if it exists.
@@ -7666,6 +7691,26 @@ open class CoreWorkspace: Disposable, AutoCloseable, CoreWorkspaceInterface
 
     
     /**
+     * Back from a break to the task in hand, or on through the queue.
+     */
+    @Throws(CoreException::class)override fun `endFocusBreak`(`sessionId`: kotlin.String, `context`: FocusContext, `nowMs`: kotlin.Long, `zone`: kotlin.String)
+        = 
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_end_focus_break(
+        it,
+        
+        FfiConverterString.lower(`sessionId`),
+        FfiConverterTypeFocusContext.lower(`context`),
+        FfiConverterLong.lower(`nowMs`),
+        FfiConverterString.lower(`zone`),_status)
+}
+    }
+    
+    
+
+    
+    /**
      * Unpairs: stops recording and forgets what was waiting to be sent.
      */
     @Throws(CoreException::class)override fun `endSync`()
@@ -9310,6 +9355,30 @@ open class CoreWorkspace: Disposable, AutoCloseable, CoreWorkspaceInterface
     UniffiLib.uniffi_takt_core_fn_method_coreworkspace_sync_state(
         it,
         _status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * Logs the block in hand as progress and starts a break on it, as one
+     * step.
+     */
+    @Throws(CoreException::class)override fun `takeFocusBreak`(`sessionId`: kotlin.String, `elapsedSeconds`: kotlin.Long, `qualityMultiplier`: kotlin.Double?, `expectedBlockId`: kotlin.String?, `nowMs`: kotlin.Long, `zone`: kotlin.String): BlockFinished {
+            return FfiConverterTypeBlockFinished.lift(
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_take_focus_break(
+        it,
+        
+        FfiConverterString.lower(`sessionId`),
+        FfiConverterLong.lower(`elapsedSeconds`),
+        FfiConverterOptionalDouble.lower(`qualityMultiplier`),
+        FfiConverterOptionalString.lower(`expectedBlockId`),
+        FfiConverterLong.lower(`nowMs`),
+        FfiConverterString.lower(`zone`),_status)
 }
     }
     )

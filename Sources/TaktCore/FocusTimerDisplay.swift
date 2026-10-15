@@ -35,6 +35,14 @@ public enum FocusTimerDisplay {
     return Reading(text: "+" + clock(-remaining), isOverrun: true)
   }
 
+  /// A break reads the way a block does: down to its end, then up past it
+  /// with a `+`, `isOverrun` once it is over. Nothing goes back to work on its
+  /// own, so an overrun break is the clock saying it is time, not a failure.
+  public static func breakReading(endsAt: Date?, now: Date) -> Reading {
+    let left = (endsAt ?? now).timeIntervalSince(now)
+    return reading(elapsed: max(0, -left), planned: max(0, left).rounded(.up))
+  }
+
   /// `m:ss` under an hour, `h:mm:ss` beyond it — the menu bar is too narrow to
   /// spend two characters on a leading zero that is almost always there.
   private static func clock(_ seconds: Int) -> String {

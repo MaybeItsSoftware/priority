@@ -308,3 +308,97 @@ fn a_subtask_filed_nowhere_stands_in_its_nearest_filed_ancestors_column() {
     assert_eq!(column("own"), Some(Some("this-week".into())));
     assert_eq!(column("write"), Some(None));
 }
+
+#[test]
+fn a_break_logs_the_block_keeps_the_task_and_going_back_starts_a_fresh_one() {
+    let mut connection = workspace();
+    let id = start(&mut connection, "write", None).unwrap();
+    let first_block = session(&connection, &id).3;
+    let logged = journalled(&mut connection, "Log Daily Progress", |tx| {
+        take_break(
+            tx,
+            &id,
+            1_500,
+            Some(1.0),
+            first_block.as_deref(),
+            NOW,
+            "UTC",
+        )
+    })
+    .unwrap();
+    assert_eq!(
+        (logged.outcome.as_str(), logged.seconds),
+        ("progressLogged", 1_500)
+    );
+    let status: String = connection
+        .query_row("SELECT status FROM tasks WHERE id = 'write'", [], |row| {
+            row.get(0)
+        })
+        .unwrap();
+    assert_eq!(status, "open", "a break is not the task done");
+    let (phase, active, paused, block) = session(&connection, &id);
+    assert_eq!(
+        (phase.as_str(), active.as_deref()),
+        ("onBreak", Some("write"))
+    );
+    assert!(paused.is_some(), "nothing is on the clock during a break");
+    assert_ne!(block, first_block, "the next sitting is a block of its own");
+    let ends: String = connection
+        .query_row(
+            "SELECT breakEndsAt FROM focus_sessions WHERE id = ?1",
+            [&id],
+            |row| row.get(0),
+        )
+        .unwrap();
+    assert_eq!(ends, stored(NOW + 300_000));
+
+    // Resuming does not end a break: only going back to work does.
+    {
+        let tx = connection.transaction().unwrap();
+        resume(&tx, &id, NOW + 60_000).unwrap();
+        tx.commit().unwrap();
+    }
+    assert_eq!(session(&connection, &id).0, "onBreak");
+
+    {
+        let tx = connection.transaction().unwrap();
+        end_break(&tx, &id, &FocusContext::default(), NOW + 300_000, "UTC").unwrap();
+        tx.commit().unwrap();
+    }
+    let (phase, active, paused, _) = session(&connection, &id);
+    assert_eq!(
+        (phase.as_str(), active.as_deref(), paused),
+        ("running", Some("write"), None)
+    );
+    let started: String = connection
+        .query_row(
+            "SELECT activeTaskStartedAt FROM focus_sessions WHERE id = ?1",
+            [&id],
+            |row| row.get(0),
+        )
+        .unwrap();
+    assert_eq!(
+        started,
+        stored(NOW + 300_000),
+        "the break is not counted as work"
+    );
+}
+
+#[test]
+fn going_back_after_the_task_was_finished_on_the_break_moves_the_queue_on() {
+    let mut connection = workspace();
+    let id = start(&mut connection, "write", None).unwrap();
+    {
+        let tx = connection.transaction().unwrap();
+        add_to_queue(&tx, &id, "read", Some(600), NOW).unwrap();
+        take_break(&tx, &id, 1_500, None, None, NOW, "UTC").unwrap();
+        crate::tasks::set_status(&tx, "write", "completed", NOW + 60_000, "UTC").unwrap();
+        end_break(&tx, &id, &FocusContext::default(), NOW + 300_000, "UTC").unwrap();
+        tx.commit().unwrap();
+    }
+    let (phase, active, paused, _) = session(&connection, &id);
+    assert_eq!(
+        (phase.as_str(), active.as_deref(), paused),
+        ("running", Some("read"), None)
+    );
+}

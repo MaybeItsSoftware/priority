@@ -240,6 +240,9 @@ extension WorkspaceViewModel {
   func toggleFocusPause() {
     synchroniseFocusClock(now: .now)
     guard let session = activeFocusSession else { return }
+    // On a break the play key means back to work, not resuming the stopped
+    // clock under a break that is still running.
+    if session.phase == .onBreak { return endFocusBreak() }
     perform(mirrors: false) {
       if session.pausedAt == nil { try store?.pauseFocusSession(id: session.id) } else { try store?.resumeFocusSession(id: session.id) }
       reloadFocus()

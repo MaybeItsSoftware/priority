@@ -537,6 +537,9 @@ struct DayView: View {
             MicroLabel(list.name).lineLimit(1).fixedSize(horizontal: isExpanded, vertical: false)
           }
         }
+        if session.phase == .onBreak {
+          breakClock(session: session)
+        } else {
         HStack(alignment: .firstTextBaseline, spacing: theme.space.sm) {
           TimelineView(.periodic(from: .now, by: 1)) { context in
             let reading = FocusTimerDisplay.reading(
@@ -554,9 +557,31 @@ struct DayView: View {
             tint: session.pausedAt == nil ? nil : theme.warning)
           Spacer(minLength: 0)
         }
+        }
         controlStrip(session: session)
       }
     })
+  }
+
+  /// A break in place of the block's clock: the time left on it in the
+  /// success colour, then counting up past it in the warning colour. Going
+  /// back is never automatic — a clock that restarted unattended would log a
+  /// sitting nobody was at.
+  private func breakClock(session: FocusSession) -> some View {
+    TimelineView(.periodic(from: .now, by: 1)) { context in
+      let reading = FocusTimerDisplay.breakReading(endsAt: session.breakEndsAt, now: context.date)
+      HStack(alignment: .firstTextBaseline, spacing: theme.space.sm) {
+        Text(reading.text)
+          .font(theme.numeralFont(theme.scale.display, weight: .medium))
+          .monospacedDigit()
+          .foregroundStyle(reading.isOverrun ? theme.warning : theme.success)
+          .contentTransition(.numericText())
+        MicroLabel(
+          reading.isOverrun ? "break's over · p back to work" : "break · p back to work",
+          tint: reading.isOverrun ? theme.warning : nil)
+        Spacer(minLength: 0)
+      }
+    }
   }
 
   /// Blitzit's strip, in Priority's vocabulary: pause, skip to the next queued
@@ -564,11 +589,16 @@ struct DayView: View {
   /// it off.
   private func controlStrip(session: FocusSession) -> some View {
     HStack(spacing: theme.space.xs) {
-      control(session.pausedAt == nil ? "pause.fill" : "play.fill",
-        session.pausedAt == nil ? "Pause" : "Resume") { model.toggleFocusPause() }
+      if session.phase == .onBreak {
+        control("play.fill", "Back to work (p)") { model.endFocusBreak() }
+      } else {
+        control(session.pausedAt == nil ? "pause.fill" : "play.fill",
+          session.pausedAt == nil ? "Pause" : "Resume") { model.toggleFocusPause() }
+      }
       control("forward.end.fill", "Skip to the next task in the queue") { skip() }
-        .disabled(!hasQueuedSuccessor)
+        .disabled(!hasQueuedSuccessor || session.phase == .onBreak)
       control("clock.arrow.circlepath", "Log the time so far and leave the task open") { logProgress() }
+        .disabled(session.phase == .onBreak)
       if let onMinimise {
         control("arrow.down.right.and.arrow.up.left", "Minimise to the task and its clock (esc)") { onMinimise() }
       }

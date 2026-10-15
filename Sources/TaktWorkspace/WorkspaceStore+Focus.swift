@@ -92,18 +92,60 @@ extension WorkspaceStore {
         completeTask: completeTask, expectedBlockId: expectedBlockId, context: context.core,
         nowMs: now.coreMilliseconds, zone: calendar.timeZone.identifier)
     }
-    return try Self.mappingCoreErrors {
+    return try completion(
+      outcome: finished.outcome, seconds: finished.seconds, awardId: finished.awardId, in: sessionId)
+  }
+
+  /// Logs the block in hand as progress, as `completeActiveFocusTask` does
+  /// with `completeTask: false`, then rests: the task stays in hand on a
+  /// stopped clock and the session is on a break for its break length.
+  @discardableResult
+  public func takeFocusBreak(
+    sessionId: String,
+    elapsedSeconds: Int,
+    qualityMultiplier: Double? = nil,
+    expectedBlockId: String? = nil,
+    now: Date = .now,
+    calendar: Calendar = .current
+  ) throws -> FocusCompletion {
+    // The Rust core's `focus::take_break`.
+    let finished = try coreWrite {
+      try core.takeFocusBreak(
+        sessionId: sessionId, elapsedSeconds: Int64(elapsedSeconds), qualityMultiplier: qualityMultiplier,
+        expectedBlockId: expectedBlockId, nowMs: now.coreMilliseconds, zone: calendar.timeZone.identifier)
+    }
+    return try completion(
+      outcome: finished.outcome, seconds: finished.seconds, awardId: finished.awardId, in: sessionId)
+  }
+
+  /// Back from a break: the task in hand starts a fresh block, or the queue
+  /// moves on if it was finished meanwhile. The Rust core's `focus::end_break`.
+  public func endFocusBreak(sessionId: String, context: FocusContext = FocusContext(), now: Date = .now) throws {
+    try coreWrite {
+      try core.endFocusBreak(
+        sessionId: sessionId, context: context.core, nowMs: now.coreMilliseconds,
+        zone: TimeZone.current.identifier)
+    }
+  }
+
+  /// What a recorded block did, read back as the app's types. Takes the
+  /// core's `BlockFinished` field by field: naming it here would mean
+  /// importing the bindings, whose `FocusContext` shadows the app's.
+  private func completion(
+    outcome: String, seconds: Int64, awardId: String?, in sessionId: String
+  ) throws -> FocusCompletion {
+    try Self.mappingCoreErrors {
       guard let session = try core.focusSession(id: sessionId).map(FocusSession.init) else {
         throw WorkspaceStoreError.noActiveFocusTask
       }
-      let award = try finished.awardId.flatMap { try core.focusAward(id: $0) }.map(FocusAward.init)
-      let seconds = Int(finished.seconds)
-      let outcome: FocusCompletionOutcome = switch finished.outcome {
+      let award = try awardId.flatMap { try core.focusAward(id: $0) }.map(FocusAward.init)
+      let seconds = Int(seconds)
+      let result: FocusCompletionOutcome = switch outcome {
       case "taskCompleted": .taskCompleted
       case "contributionLogged": .contributionLogged(seconds: seconds)
       default: .progressLogged(seconds: seconds)
       }
-      return FocusCompletion(session: session, outcome: outcome, award: award)
+      return FocusCompletion(session: session, outcome: result, award: award)
     }
   }
 

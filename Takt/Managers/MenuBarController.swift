@@ -179,34 +179,45 @@ class MenuBarController: NSObject {
       return
     }
 
-    let reading = FocusTimerDisplay.reading(
-      elapsed: TimeInterval(session.elapsedSeconds(now: .now)),
-      planned: TimeInterval(session.workDurationSeconds))
-    let clock = NSMenuItem(
-      title: reading.isOverrun ? "\(reading.text) over" : "\(reading.text) left",
-      action: nil, keyEquivalent: "")
+    let onBreak = session.phase == .onBreak
+    let reading = onBreak
+      ? FocusTimerDisplay.breakReading(endsAt: session.breakEndsAt, now: .now)
+      : FocusTimerDisplay.reading(
+        elapsed: TimeInterval(session.elapsedSeconds(now: .now)),
+        planned: TimeInterval(session.workDurationSeconds))
+    let clockTitle = switch (onBreak, reading.isOverrun) {
+    case (true, false): "Break: \(reading.text) left"
+    case (true, true): "Break over by \(reading.text.dropFirst())"
+    case (false, true): "\(reading.text) over"
+    case (false, false): "\(reading.text) left"
+    }
+    let clock = NSMenuItem(title: clockTitle, action: nil, keyEquivalent: "")
     clock.isEnabled = false
     clock.indentationLevel = 1
     menu.addItem(clock)
 
     let isPaused = session.pausedAt != nil
     let pause = NSMenuItem(
-      title: isPaused ? "Resume" : "Pause", action: #selector(menuTogglePause), keyEquivalent: "")
+      title: onBreak ? "Back to work" : isPaused ? "Resume" : "Pause",
+      action: #selector(menuTogglePause), keyEquivalent: "")
     pause.target = self
     pause.indentationLevel = 1
     menu.addItem(pause)
 
-    let done = NSMenuItem(title: "Done", action: #selector(menuFinishTask), keyEquivalent: "")
-    done.target = self
-    done.indentationLevel = 1
-    done.toolTip = "Complete the task and close the block"
-    menu.addItem(done)
+    // On a break there is no block in hand to close.
+    if !onBreak {
+      let done = NSMenuItem(title: "Done", action: #selector(menuFinishTask), keyEquivalent: "")
+      done.target = self
+      done.indentationLevel = 1
+      done.toolTip = "Complete the task and close the block"
+      menu.addItem(done)
 
-    let stop = NSMenuItem(title: "End Block", action: #selector(menuEndBlock), keyEquivalent: "")
-    stop.target = self
-    stop.indentationLevel = 1
-    stop.toolTip = "Close the block and keep the task"
-    menu.addItem(stop)
+      let stop = NSMenuItem(title: "End Block", action: #selector(menuEndBlock), keyEquivalent: "")
+      stop.target = self
+      stop.indentationLevel = 1
+      stop.toolTip = "Close the block and keep the task"
+      menu.addItem(stop)
+    }
     menu.addItem(stopItem())
     menu.addItem(.separator())
   }
@@ -331,21 +342,25 @@ class MenuBarController: NSObject {
       let task = workspace.activeFocusTask
     else { return false }
 
-    let isPaused = session.pausedAt != nil
+    let onBreak = session.phase == .onBreak
+    let isPaused = session.pausedAt != nil && !onBreak
     // Nothing to redraw while it is paused, and the ticker is the only reason
-    // this runs once a second.
+    // this runs once a second. A break's block is stopped too, but the break
+    // itself is counting.
     if isPaused { stopFocusTicker() } else { startFocusTickerIfNeeded() }
 
     // Elapsed comes from the session rather than from wall clock since
     // `startedAt`, which got two things wrong: a paused block went on accruing,
     // and the queue moving to a second task credited it with the first one's
     // sitting. Left paused overnight, that reported nineteen hours of reading.
-    let reading = FocusTimerDisplay.reading(
-      elapsed: TimeInterval(session.elapsedSeconds(now: .now)),
-      planned: TimeInterval(session.workDurationSeconds))
+    let reading = onBreak
+      ? FocusTimerDisplay.breakReading(endsAt: session.breakEndsAt, now: .now)
+      : FocusTimerDisplay.reading(
+        elapsed: TimeInterval(session.elapsedSeconds(now: .now)),
+        planned: TimeInterval(session.workDurationSeconds))
     // Paused says so on its face: a stopped clock and a block that simply has
-    // not moved yet read identically otherwise.
-    let clock = isPaused ? "\u{23F8} \(reading.text)" : reading.text
+    // not moved yet read identically otherwise. So does a break.
+    let clock = onBreak ? "Break \(reading.text)" : isPaused ? "\u{23F8} \(reading.text)" : reading.text
     let title = "\(Self.truncatedFocusTitle(task.title))  \(clock)"
 
     let font = NSFont.monospacedDigitSystemFont(ofSize: NSFont.menuBarFont(ofSize: 0).pointSize, weight: .regular)
@@ -359,6 +374,8 @@ class MenuBarController: NSObject {
     statusItem?.button?.attributedTitle = NSAttributedString(string: title, attributes: attributes)
     if workspace.pendingFocusCompletion != nil {
       statusItem?.button?.toolTip = "Waiting on how that block went: \(task.title)"
+    } else if onBreak {
+      statusItem?.button?.toolTip = "On a break from: \(task.title)"
     } else {
       statusItem?.button?.toolTip = isPaused ? "Paused: \(task.title)" : "Focusing: \(task.title)"
     }

@@ -10,6 +10,11 @@ import SwiftUI
 /// answer is a small adjustment from "it was fine" rather than a pick from a
 /// menu of adjectives. The running total is shown while choosing, so the cost
 /// of flattering yourself is visible at the moment you would do it.
+///
+/// When the clock had run out the block was a pomodoro, not a finished task,
+/// so the prompt leads with a break and asks whether the task is done rather
+/// than assuming it. It is asked even with the scoring question turned off,
+/// without the dial.
 struct WorkspaceFocusQualityPrompt: View {
   @Environment(WorkspaceViewModel.self) private var model
   @Environment(\.theme) private var theme
@@ -34,12 +39,25 @@ struct WorkspaceFocusQualityPrompt: View {
     FocusPoints.score(seconds: pending.seconds, multiplier: multiplier)
   }
 
+  /// Whether the dial is drawn: always, unless this is the time-up question
+  /// asked of someone who turned the scoring off.
+  private var scores: Bool { !pending.timeIsUp || model.asksHowEachBlockWent() }
+
+  /// Scored at the dial when it is drawn, at the neutral ×1.0 when not.
+  private var answer: Double { scores ? multiplier : 1 }
+
+  private var breakMinutes: Int {
+    max(1, (model.activeFocusSession?.breakDurationSeconds ?? 300) / 60)
+  }
+
   var body: some View {
     VStack(alignment: .leading, spacing: theme.space.lg) {
       header
-      dial
-      FocusRule()
-      tally
+      if scores {
+        dial
+        FocusRule()
+        tally
+      }
       actions
     }
     .padding(theme.space.xl)
@@ -56,7 +74,12 @@ struct WorkspaceFocusQualityPrompt: View {
     // A menial task, or a block that should not count for some other reason:
     // one key logs it at nothing, without stepping the dial down ten times.
     .onKeyPress(characters: ["\\"]) { _ in
-      model.confirmFocusCompletion(multiplier: 0)
+      if pending.timeIsUp { model.takeFocusBreak(multiplier: 0) } else { model.confirmFocusCompletion(multiplier: 0) }
+      return .handled
+    }
+    .onKeyPress(characters: ["d"]) { _ in
+      guard pending.timeIsUp else { return .ignored }
+      model.confirmFocusCompletion(multiplier: answer, completeTask: true)
       return .handled
     }
     .onAppear { hasKeyboard = true }
@@ -70,7 +93,7 @@ struct WorkspaceFocusQualityPrompt: View {
 
   private var header: some View {
     VStack(alignment: .leading, spacing: theme.space.xs) {
-      MicroLabel(pending.completeTask ? "Complete task · how did that go?" : "Log progress · how did that go?")
+      MicroLabel(headline)
       Text(pending.title)
         .font(theme.titleFont)
         .foregroundStyle(theme.ink)
@@ -82,6 +105,11 @@ struct WorkspaceFocusQualityPrompt: View {
         .monospacedDigit()
         .foregroundStyle(theme.muted)
     }
+  }
+
+  private var headline: String {
+    if pending.timeIsUp { return scores ? "Time's up · how did that go?" : "Time's up" }
+    return pending.completeTask ? "Complete task · how did that go?" : "Log progress · how did that go?"
   }
 
   /// The multiplier, large, between the two buttons that move it. Always one
@@ -155,7 +183,34 @@ struct WorkspaceFocusQualityPrompt: View {
     }
   }
 
-  private var actions: some View {
+  @ViewBuilder private var actions: some View {
+    if pending.timeIsUp { timeUpActions } else { logActions }
+  }
+
+  /// A pomodoro's end: rest first, and say whether the task is done.
+  private var timeUpActions: some View {
+    HStack(spacing: theme.space.sm) {
+      Text(scores ? "↑ ↓ adjust · ↩ break · d done · esc keep working" : "↩ break · d done · esc keep working")
+        .font(theme.captionFont)
+        .foregroundStyle(theme.dim)
+      Spacer()
+      Button("Keep working") { model.cancelFocusCompletion() }
+        .buttonStyle(FocusActionButtonStyle())
+        .focusable(false)
+        .keyboardShortcut(.cancelAction)
+      Button("Done") { model.confirmFocusCompletion(multiplier: answer, completeTask: true) }
+        .buttonStyle(FocusActionButtonStyle())
+        .focusable(false)
+        .help("The task is finished (d)")
+      Button("Take a \(breakMinutes)-minute break") { model.takeFocusBreak(multiplier: answer) }
+        .buttonStyle(FocusActionButtonStyle(prominent: true))
+        .focusable(false)
+        .keyboardShortcut(.defaultAction)
+        .help("Log the time, keep the task, and rest")
+    }
+  }
+
+  private var logActions: some View {
     HStack(spacing: theme.space.sm) {
       Text("↑ ↓ adjust by 0.1 · ↩ log it · \\ log at ×0 · esc keep working")
         .font(theme.captionFont)

@@ -197,6 +197,10 @@ extension WorkspaceViewModel {
     let completeTask: Bool
     let blockID: String?
     let wasPaused: Bool
+    /// Whether the clock had run past the block's length — a pomodoro that
+    /// ended, rather than a task finished early. Then the prompt offers a
+    /// break first and asks whether the task is done, instead of assuming it.
+    var timeIsUp = false
 
     var id: String { "\(sessionID)/\(taskID)" }
     var minutes: Double { FocusPoints.minutes(seconds: seconds) }
@@ -209,16 +213,22 @@ extension WorkspaceViewModel {
   ) {
     synchroniseFocusClock(now: now)
     guard pendingFocusCompletion == nil, let session = activeFocusSession, let task = activeFocusTask else { return }
+    guard session.phase != .onBreak else {
+      onStatusMessage?("On a break. P goes back to work.")
+      return
+    }
     focusCompletionSurface = surface
     pendingFocusCompletion = PendingFocusCompletion(
       sessionID: session.id, taskID: task.id, title: task.title,
       seconds: session.elapsedSeconds(now: now), completeTask: completeTask,
-      blockID: session.activeBlockId, wasPaused: session.pausedAt != nil)
+      blockID: session.activeBlockId, wasPaused: session.pausedAt != nil,
+      timeIsUp: session.elapsedSeconds(now: now) >= session.workDurationSeconds)
     perform(mirrors: false) { try store?.pauseFocusSession(id: session.id, now: now); reloadFocus() }
     // Someone who has said they only want the minutes gets them: the block
     // closes at the neutral multiplier and nothing is put in the way of the
-    // next one.
-    if !asksHowEachBlockWent() { confirmFocusCompletion(multiplier: 1) }
+    // next one. Not when the time is up, though — then there is a real
+    // question, break or done, that no default answers.
+    if !asksHowEachBlockWent(), pendingFocusCompletion?.timeIsUp != true { confirmFocusCompletion(multiplier: 1) }
   }
 
   /// Drops the prompt and resumes a previously running block, excluding the
@@ -232,14 +242,17 @@ extension WorkspaceViewModel {
 
   /// Credits the time actually spent, so a daily's contribution reflects the
   /// sitting rather than the estimate, and scores it by the multiplier given.
-  func confirmFocusCompletion(multiplier: Double) {
+  /// `completeTask` overrides what the key that finished the block said —
+  /// the time-up prompt asks it again.
+  func confirmFocusCompletion(multiplier: Double, completeTask: Bool? = nil) {
     guard let store, let pending = pendingFocusCompletion else { return }
+    let completesTask = completeTask ?? pending.completeTask
     perform {
       let completion: WorkspaceStore.FocusCompletion
       do {
         completion = try store.completeActiveFocusTask(
           sessionId: pending.sessionID, elapsedSeconds: pending.seconds, qualityMultiplier: multiplier,
-          completeTask: pending.completeTask, expectedBlockId: pending.blockID, context: effectiveFocusContext)
+          completeTask: completesTask, expectedBlockId: pending.blockID, context: effectiveFocusContext)
       } catch WorkspaceStoreError.noActiveFocusTask {
         // The block the question was about has gone — advanced or ended by
         // the CLI, or settled as stale — so there is nothing left to score.
@@ -250,7 +263,7 @@ extension WorkspaceViewModel {
         return
       }
       pendingFocusCompletion = nil
-      if pending.completeTask, let task = task(withID: pending.taskID) {
+      if completesTask, let task = task(withID: pending.taskID) {
         celebrateCompletion(of: task)
       }
       activeFocusSession = completion.session
@@ -259,6 +272,44 @@ extension WorkspaceViewModel {
       reloadFocus()
       reloadOutline()
       reloadDailies()
+      reloadNextUp()
+    }
+  }
+
+  /// Logs the block as progress, scored by `multiplier`, and rests: the task
+  /// stays in hand and the session is on a break for its break length.
+  func takeFocusBreak(multiplier: Double) {
+    guard let store, let pending = pendingFocusCompletion else { return }
+    perform {
+      let completion: WorkspaceStore.FocusCompletion
+      do {
+        completion = try store.takeFocusBreak(
+          sessionId: pending.sessionID, elapsedSeconds: pending.seconds, qualityMultiplier: multiplier,
+          expectedBlockId: pending.blockID)
+      } catch WorkspaceStoreError.noActiveFocusTask {
+        pendingFocusCompletion = nil
+        reloadFocus()
+        onStatusMessage?("That block had already ended.")
+        return
+      }
+      pendingFocusCompletion = nil
+      activeFocusSession = completion.session
+      lastFocusOutcome = completion.outcome
+      lastFocusAward = completion.award
+      reloadFocus()
+      reloadOutline()
+      reloadDailies()
+      reloadNextUp()
+    }
+  }
+
+  /// Back to work from a break: a fresh block on the task in hand, or the
+  /// next queued one if it was finished meanwhile.
+  func endFocusBreak(now: Date = .now) {
+    guard let store, let session = activeFocusSession, session.phase == .onBreak else { return }
+    perform(mirrors: false) {
+      try store.endFocusBreak(sessionId: session.id, context: effectiveFocusContext, now: now)
+      reloadFocus()
       reloadNextUp()
     }
   }
@@ -276,6 +327,7 @@ extension WorkspaceViewModel {
   /// question already asked about it.
   var hasFocusBlockToFinish: Bool {
     hasFocusSessionToEnd && activeFocusTask != nil && pendingFocusCompletion == nil
+      && activeFocusSession?.phase != .onBreak
   }
 
   /// "Finish the focus block": what Done does, from wherever the key was
@@ -311,7 +363,8 @@ extension WorkspaceViewModel {
           try store.completeActiveFocusTask(
             sessionId: pending.sessionID, elapsedSeconds: pending.seconds, completeTask: false,
             expectedBlockId: pending.blockID, context: effectiveFocusContext, now: now)
-        } else if session.activeTaskId != nil {
+        } else if session.activeTaskId != nil, session.phase != .onBreak {
+          // On a break the block in hand has not started: nothing to log.
           try store.completeActiveFocusTask(
             sessionId: session.id, elapsedSeconds: session.elapsedSeconds(now: now), completeTask: false,
             expectedBlockId: session.activeBlockId, context: effectiveFocusContext, now: now)

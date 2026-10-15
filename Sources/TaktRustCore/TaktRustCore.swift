@@ -1463,6 +1463,11 @@ public protocol CoreWorkspaceProtocol: AnyObject, Sendable {
     func editorSnapshot(taskId: String) throws  -> EditorSnapshot
     
     /**
+     * Back from a break to the task in hand, or on through the queue.
+     */
+    func endFocusBreak(sessionId: String, context: FocusContext, nowMs: Int64, zone: String) throws 
+    
+    /**
      * Unpairs: stops recording and forgets what was waiting to be sent.
      */
     func endSync() throws 
@@ -1907,6 +1912,12 @@ public protocol CoreWorkspaceProtocol: AnyObject, Sendable {
      * The device's sync state, or nothing while it has never been paired.
      */
     func syncState() throws  -> LocalSyncState?
+    
+    /**
+     * Logs the block in hand as progress and starts a break on it, as one
+     * step.
+     */
+    func takeFocusBreak(sessionId: String, elapsedSeconds: Int64, qualityMultiplier: Double?, expectedBlockId: String?, nowMs: Int64, zone: String) throws  -> BlockFinished
     
     /**
      * One task, if it exists.
@@ -3468,6 +3479,21 @@ open func editorSnapshot(taskId: String)throws  -> EditorSnapshot  {
 }
     
     /**
+     * Back from a break to the task in hand, or on through the queue.
+     */
+open func endFocusBreak(sessionId: String, context: FocusContext, nowMs: Int64, zone: String)throws   {try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_end_focus_break(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(sessionId),
+        FfiConverterTypeFocusContext_lower(context),
+        FfiConverterInt64.lower(nowMs),
+        FfiConverterString.lower(zone),uniffiCallStatus
+    )
+}
+}
+    
+    /**
      * Unpairs: stops recording and forgets what was waiting to be sent.
      */
 open func endSync()throws   {try rustCallWithError(FfiConverterTypeCoreError_lift) {
@@ -4695,6 +4721,25 @@ open func syncState()throws  -> LocalSyncState?  {
         uniffiCallStatus in
     uniffi_takt_core_fn_method_coreworkspace_sync_state(
             self.uniffiCloneHandle(),uniffiCallStatus
+    )
+})
+}
+    
+    /**
+     * Logs the block in hand as progress and starts a break on it, as one
+     * step.
+     */
+open func takeFocusBreak(sessionId: String, elapsedSeconds: Int64, qualityMultiplier: Double?, expectedBlockId: String?, nowMs: Int64, zone: String)throws  -> BlockFinished  {
+    return try  FfiConverterTypeBlockFinished_lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_take_focus_break(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(sessionId),
+        FfiConverterInt64.lower(elapsedSeconds),
+        FfiConverterOptionDouble.lower(qualityMultiplier),
+        FfiConverterOptionString.lower(expectedBlockId),
+        FfiConverterInt64.lower(nowMs),
+        FfiConverterString.lower(zone),uniffiCallStatus
     )
 })
 }
@@ -29603,6 +29648,9 @@ private let initializationResult: InitializationResult = {
     if (uniffi_takt_core_checksum_method_coreworkspace_editor_snapshot() != 20106) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_takt_core_checksum_method_coreworkspace_end_focus_break() != 37861) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_takt_core_checksum_method_coreworkspace_end_sync() != 18002) {
         return InitializationResult.apiChecksumMismatch
     }
@@ -29853,6 +29901,9 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_method_coreworkspace_sync_state() != 5326) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_take_focus_break() != 4166) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_method_coreworkspace_task() != 3486) {

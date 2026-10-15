@@ -203,17 +203,19 @@ private struct WorkspaceStatusTrailing: View {
       model.openFocusPanel()
     } label: {
       HStack(spacing: theme.space.xs) {
-        Image(systemName: session.pausedAt == nil ? "timer" : "pause.fill")
-          .foregroundStyle(session.pausedAt == nil ? theme.primary : theme.warning)
+        Image(systemName: session.phase == .onBreak ? "cup.and.saucer" : session.pausedAt == nil ? "timer" : "pause.fill")
+          .foregroundStyle(session.phase == .onBreak ? theme.success : session.pausedAt == nil ? theme.primary : theme.warning)
         Text(task.title)
           .truncationMode(.tail)
           .frame(maxWidth: Self.focusTitleWidth, alignment: .leading)
           .fixedSize(horizontal: true, vertical: false)
         TimelineView(.periodic(from: .now, by: 1)) { context in
-          let reading = FocusTimerDisplay.reading(
-            elapsed: TimeInterval(session.elapsedSeconds(now: context.date)),
-            planned: TimeInterval(session.workDurationSeconds))
-          Text(reading.isOverrun ? "+\(reading.text)" : reading.text)
+          let reading = session.phase == .onBreak
+            ? FocusTimerDisplay.breakReading(endsAt: session.breakEndsAt, now: context.date)
+            : FocusTimerDisplay.reading(
+              elapsed: TimeInterval(session.elapsedSeconds(now: context.date)),
+              planned: TimeInterval(session.workDurationSeconds))
+          Text(reading.text)
             .monospacedDigit()
             .foregroundStyle(reading.isOverrun ? theme.warning : theme.ink)
         }
