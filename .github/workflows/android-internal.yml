@@ -35,6 +35,28 @@ jobs:
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
 
+      # The Rust core (core/) is built by scripts/build_core_android.sh, which
+      # Gradle runs before preBuild: cargo-ndk cross-compiles it for each ABI
+      # below against the NDK, then a host build feeds the JVM tests and bindgen.
+      - name: Install the NDK
+        run: |
+          sdkmanager --install "ndk;28.2.13676358" > /dev/null
+          echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/28.2.13676358" >> "$GITHUB_ENV"
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android,armv7-linux-androideabi,x86_64-linux-android
+
+      - name: Cache Rust
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: core
+          cache-bin: true
+
+      - name: Install cargo-ndk
+        run: command -v cargo-ndk >/dev/null || cargo install --locked cargo-ndk
+
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
 
@@ -75,6 +97,7 @@ jobs:
           else
             ./scripts/build_play_bundle.sh
           fi
+          # shellcheck disable=SC2012 # build/play holds only takt-<name>-<code>.aab files
           aab="$(ls -t build/play/*.aab | head -1)"
           echo "AAB=$aab" >> "$GITHUB_ENV"
 
