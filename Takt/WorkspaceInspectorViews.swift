@@ -626,6 +626,7 @@ extension LocalTaskInspector {
     case .last: cursor.moveToLast()
     case .edit: cursor.activate().map(perform)
     case .clear: cursor.clear().map(perform)
+    case .copy: copyField(under: cursor.current)
     case .leave(let byArrow): perform(cursor.leave(byArrow: byArrow))
     case .editing(.commit): cursor.finishEditing(commit: true)
     case .editing(.cancel): cursor.finishEditing(commit: false).map(perform)
@@ -678,6 +679,26 @@ extension LocalTaskInspector {
       model.taskEditor.edit(task.id) { Self.restore(id, from: start, into: &$0) }
     case .leave: model.requestKeyboardFocus(.tasks)
     }
+  }
+
+  /// ⌘C on a ringed row: the field's whole text, as selecting it all and
+  /// copying would. A row with no text to give copies nothing.
+  private func copyField(under stop: String?) {
+    guard let stop, let values = model.taskEditor.draft(for: task.id)?.values else { return }
+    let text: String
+    let name: String
+    switch stop {
+    case Self.titleStop: (text, name) = (values.title, "title")
+    case "notes": (text, name) = (values.notes, "notes")
+    case "links": (text, name) = (values.links, "links")
+    case "tags": (text, name) = (values.tags, "tags")
+    case "repeat": (text, name) = (values.recurrenceRule, "repeat rule")
+    default: return
+    }
+    guard !text.isEmpty else { return }
+    NSPasteboard.general.clearContents()
+    NSPasteboard.general.setString(text, forType: .string)
+    model.onStatusMessage?("Copied the \(name).")
   }
 
   /// `x` on a row with no × of its own. The title is left alone: a task

@@ -215,6 +215,14 @@ final class MainWindowController: NSObject, NSWindowDelegate {
         if case .commit(passKey: true) = meaning { return event }
         return nil
       }
+      // ⌘C on an inspector row whose field has no caret copies the field:
+      // with the caret in, the field's own copy takes the selection.
+      if self.workspace.commandSurface == .inspector, !self.isEditingText(in: window),
+        event.modifierFlags.intersection([.command, .option, .control, .shift]) == .command,
+        event.charactersIgnoringModifiers?.lowercased() == "c" {
+        self.workspace.sendInspectorKey(.copy)
+        return nil
+      }
       if self.isEditingText(in: window) || self.workspace.agentHoldsKeyboard {
         self.workspace.desktopShortcutSequence.reset()
         // Only the chords that are how you leave a field to do something else

@@ -228,6 +228,8 @@ enum InspectorKeyAction: Equatable {
   case edit
   /// `x`, Delete.
   case clear
+  /// ⌘C on a row whose field has no caret: its whole text.
+  case copy
   /// `h`, `←`.
   case leave(byArrow: Bool)
   /// A key typed inside one of its fields.
