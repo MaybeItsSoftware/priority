@@ -8,7 +8,7 @@
 //! ranked without leaving the core, and the ladder is cut to what a client
 //! draws.
 
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
 use chrono::{DateTime, Duration, Utc};
 use chrono_tz::Tz;
@@ -57,7 +57,7 @@ pub fn next_up(
     let candidates = focus::candidates(connection, now_ms, zone)?;
     // The day is gathered from every candidate rather than from the ranked
     // ones: a task due today that a condition rules out is still today's.
-    let day_plan = plan(&candidates, running_id, now_ms, zone);
+    let day_plan = roll_up_cards(connection, plan(&candidates, running_id, now_ms, zone))?;
     let ranking = ranking::evaluate(&candidates, now_ms, zone, context);
     let ranked_count = ranking.ranked.len() as u64;
     let ranked = match ladder_limit {
@@ -164,6 +164,70 @@ pub fn plan<'a>(
         claim(candidate, "startsToday");
     }
     entries
+}
+
+/// A task beneath a card planned for today is drawn under that card, as the
+/// board draws it, so the day holds the card instead: the topmost open
+/// ancestor filed in Today, once, where its first task stood. A parent of
+/// open work is never a candidate, so without this a card with subtasks
+/// showed only as its loose subtasks. The running task keeps its own row.
+fn roll_up_cards(
+    connection: &Connection,
+    entries: Vec<DayEntry>,
+) -> Result<Vec<DayEntry>, CoreError> {
+    let mut tree: HashMap<String, (Option<String>, bool, bool)> = HashMap::new();
+    let mut statement = connection.prepare(
+        "SELECT t.id, t.parentTaskId, t.status = 'open', COALESCE(m.kanbanColumn = ?1, 0)
+         FROM tasks t LEFT JOIN task_metadata m ON m.taskId = t.id",
+    )?;
+    for row in statement.query_map([TODAY_COLUMN], |row| {
+        Ok((
+            row.get::<_, String>(0)?,
+            row.get(1)?,
+            row.get(2)?,
+            row.get(3)?,
+        ))
+    })? {
+        let (id, parent, open, today) = row?;
+        tree.insert(id, (parent, open, today));
+    }
+    let card = |id: &str| -> Option<String> {
+        let mut found = None;
+        let mut current = tree.get(id).and_then(|(parent, _, _)| parent.clone());
+        // Bounded, so a corrupt cycle ends rather than loops.
+        for _ in 0..tree.len() {
+            let Some(ancestor) = current else { break };
+            let Some((parent, open, today)) = tree.get(&ancestor) else {
+                break;
+            };
+            if !open {
+                break;
+            }
+            if *today {
+                found = Some(ancestor.clone());
+            }
+            current = parent.clone();
+        }
+        found
+    };
+    let mut seen: HashSet<String> = HashSet::new();
+    let mut rolled = Vec::with_capacity(entries.len());
+    for entry in entries {
+        let entry = match (entry.reason != "running")
+            .then(|| card(&entry.id))
+            .flatten()
+        {
+            Some(card) => DayEntry {
+                id: card,
+                reason: "planned".into(),
+            },
+            None => entry,
+        };
+        if seen.insert(entry.id.clone()) {
+            rolled.push(entry);
+        }
+    }
+    Ok(rolled)
 }
 
 fn local(ms: i64, zone: Tz) -> DateTime<Tz> {

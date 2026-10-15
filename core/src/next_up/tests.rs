@@ -177,3 +177,35 @@ fn a_limited_ladder_keeps_its_head_and_the_days_tasks() {
         assert!(full.ranked.contains(scored));
     }
 }
+
+#[test]
+fn a_card_in_today_with_subtasks_stands_in_the_day_once_in_their_place() {
+    let connection = workspace();
+    // t10 becomes a card under a this-week task, with two subtasks: one filed
+    // in Today itself, one filed nowhere. t11 stays a task of its own.
+    connection
+        .execute_batch(&format!(
+            "INSERT INTO tasks (id, listId, title, status, sortOrder, itemKind, createdAt, updatedAt)
+               VALUES ('week', 'l', 'Week', 'open', 20, 'task', '{T}', '{T}');
+             INSERT INTO task_metadata (taskId, kanbanColumn, updatedAt) VALUES ('week', 'this-week', '{T}');
+             UPDATE tasks SET parentTaskId = 'week' WHERE id = 't10';
+             INSERT INTO tasks (id, listId, parentTaskId, title, status, sortOrder, itemKind, createdAt, updatedAt)
+               VALUES ('a', 'l', 't10', 'A', 'open', 0, 'task', '{T}', '{T}'),
+                      ('b', 'l', 't10', 'B', 'open', 1, 'task', '{T}', '{T}');
+             INSERT INTO task_metadata (taskId, kanbanColumn, updatedAt) VALUES ('a', 'today', '{T}');"
+        ))
+        .unwrap();
+    let context = FocusContext::default();
+    let read = next_up(&connection, NOW, "UTC", &context, None, None).unwrap();
+    assert_eq!(
+        entries(&read.day_plan),
+        [("t10", "planned"), ("t11", "planned")]
+    );
+
+    // A running subtask keeps its own row, ahead of its card.
+    let running = next_up(&connection, NOW, "UTC", &context, Some("b"), None).unwrap();
+    assert_eq!(
+        entries(&running.day_plan),
+        [("b", "running"), ("t10", "planned"), ("t11", "planned")]
+    );
+}
