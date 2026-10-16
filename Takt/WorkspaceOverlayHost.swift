@@ -526,7 +526,10 @@ struct WorkspaceMoveOverlay: View {
       taskMatches = Self.taskDestinations(matching: text, for: request, excluding: excluded, in: model)
     }
     .overlayKeys(model, id: overlayID) { key in
-      let rows = rows
+      // `self.rows`, not the `rows` above: this handler is installed once,
+      // when the picker opens, and that one is the rows before it had read
+      // anywhere to go — so Return found nothing to choose.
+      let rows = self.rows
       if let step = WorkspaceOverlayStep.offset(for: key) {
         selection = WorkspaceOverlayStep.index(from: selection ?? 0, by: step, count: rows.count)
         return true
