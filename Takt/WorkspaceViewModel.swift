@@ -710,6 +710,10 @@ enum WorkspaceSidebarItem: Identifiable {
   /// `completedLingerInterval`, then leaves the pane — the Done rail is where
   /// finished work is kept. `tc` turns it off and shows every completion.
   var hidesCompletedTasks = true
+  /// On by default: a task whose start is still to come is buried — left off
+  /// the outline, the board and the matrix, with its subtasks, until it
+  /// starts and Today takes it. `tl` shows them.
+  var hidesLaterTasks = true
   /// When the soonest lingering completion is due to go, and the reload that
   /// takes it away. Not observed: nothing draws them.
   @ObservationIgnored var nextCompletionExpiry: Date?

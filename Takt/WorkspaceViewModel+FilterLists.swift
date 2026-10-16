@@ -38,6 +38,11 @@ extension WorkspaceViewModel {
     return filter.definition.hidesCompleted(whenToggled: hidesCompletedTasks)
   }
 
+  var scopeHidesLaterTasks: Bool {
+    guard let filter = selectedFilterList else { return hidesLaterTasks }
+    return filter.definition.hidesLater(whenToggled: hidesLaterTasks)
+  }
+
   /// Puts a filter list in scope and draws it. The mode follows
   /// Everything's: the board unless you are already in one that can show
   /// where a task came from.

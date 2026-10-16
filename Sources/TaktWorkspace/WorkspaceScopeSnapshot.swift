@@ -30,9 +30,11 @@ public enum WorkspaceScope: Hashable, Sendable {
 /// Everything the main pane is shaped from, as one read of the store. A
 /// value, so it can be read off the main thread and kept between switches.
 public enum WorkspaceScopeRead: Sendable, Equatable {
-  /// One list's whole tree, with the column and matrix place of every task
-  /// in it, so any task the list opens onto finds its placement here.
-  case list(tree: WorkspaceListTree, columns: [String: String], positions: [String: TaskMatrixPosition])
+  /// One list's whole tree, with the column, matrix place and start of every
+  /// task in it, so any task the list opens onto finds its placement here.
+  case list(
+    tree: WorkspaceListTree, columns: [String: String], positions: [String: TaskMatrixPosition],
+    starts: [String: Date])
   /// A combined scope's board, walked in the core.
   case combined(WorkspaceBoardRead)
 }
@@ -54,7 +56,10 @@ extension WorkspaceStore {
     case .list(let id):
       let tree = try listTree(in: id, using: handle)
       let metadata = try boardMetadata(for: tree.tasks.map(\.id), using: handle)
-      return .list(tree: tree, columns: metadata.columns, positions: metadata.positions)
+      let open = Set(tree.tasks.lazy.filter { $0.status == .open }.map(\.id))
+      return .list(
+        tree: tree, columns: metadata.columns, positions: metadata.positions,
+        starts: metadata.starts.filter { open.contains($0.key) })
     case .combined(let ids):
       return .combined(try combinedBoard(listIds: ids, hidingCompletedBefore: cutoff, using: handle))
     case .filter(let id, let ids):
@@ -71,11 +76,17 @@ public struct WorkspaceScopeShapeOptions: Hashable, Sendable {
   /// imported wrapper whose children stand in for the list's roots.
   public var registeredRootTaskID: String?
   public var hidesCompletedTasks: Bool
+  /// Whether an open task whose start is still to come — a buried one — is
+  /// left off, with everything beneath it, until it starts.
+  public var hidesLaterTasks: Bool
 
-  public init(scopeTaskID: String?, registeredRootTaskID: String?, hidesCompletedTasks: Bool) {
+  public init(
+    scopeTaskID: String?, registeredRootTaskID: String?, hidesCompletedTasks: Bool, hidesLaterTasks: Bool = false
+  ) {
     self.scopeTaskID = scopeTaskID
     self.registeredRootTaskID = registeredRootTaskID
     self.hidesCompletedTasks = hidesCompletedTasks
+    self.hidesLaterTasks = hidesLaterTasks
   }
 }
 
@@ -176,6 +187,67 @@ public enum WorkspaceScopeShaping {
     }
   }
 
+  /// Tracks which open tasks are buried at `now` — their start, or an
+  /// ancestor's, still to come — and the soonest one comes back.
+  struct Later {
+    let hides: Bool
+    let now: Date
+    let starts: [String: Date]
+    /// Each task to its parent, for a buried ancestor; empty where the rows
+    /// are pruned as a tree instead (`pruned(_:)`).
+    let parents: [String: String]
+    var expiry: Date?
+
+    init(hides: Bool, now: Date, read: WorkspaceScopeRead, parents: [String: String] = [:]) {
+      self.hides = hides
+      self.now = now
+      switch read {
+      case .list(_, _, _, let starts): self.starts = starts
+      case .combined(let board): self.starts = board.starts
+      }
+      self.parents = parents
+    }
+
+    mutating func hides(_ task: WorkspaceTask) -> Bool {
+      guard hides, !starts.isEmpty else { return false }
+      var id: String? = task.id
+      var seen = 0
+      while let current = id, seen < 64 {
+        if let start = starts[current], start > now {
+          expiry = min(expiry ?? start, start)
+          return true
+        }
+        id = parents[current]
+        seen += 1
+      }
+      return false
+    }
+
+    /// Rows in outline order, less each buried one and the rows beneath it.
+    mutating func pruned(_ rows: [TaskOutlineItem]) -> [TaskOutlineItem] {
+      guard hides, !starts.isEmpty else { return rows }
+      var kept: [TaskOutlineItem] = []
+      kept.reserveCapacity(rows.count)
+      var buriedDepth: Int?
+      for row in rows {
+        if let depth = buriedDepth, row.depth > depth { continue }
+        buriedDepth = nil
+        if hides(row.task) {
+          buriedDepth = row.depth
+          continue
+        }
+        kept.append(row)
+      }
+      return kept
+    }
+  }
+
+  static func soonest(_ first: Date?, _ second: Date?) -> Date? {
+    guard let first else { return second }
+    guard let second else { return first }
+    return min(first, second)
+  }
+
   /// The parent whose children the pane shows in a single list.
   static func parentTaskID(tree: WorkspaceListTree, options: WorkspaceScopeShapeOptions) -> String? {
     options.scopeTaskID ?? tree.visibleRootParentTaskID(registeredRootId: options.registeredRootTaskID)
@@ -188,14 +260,17 @@ public enum WorkspaceScopeShaping {
   ) -> (items: [TaskOutlineItem], expiry: Date?) {
     var completions = Completions(hides: options.hidesCompletedTasks, now: now)
     var items: [TaskOutlineItem]
+    var later: Later
     switch read {
-    case .list(let tree, _, _):
-      items = tree.visibleOutline(under: parentTaskID(tree: tree, options: options))
+    case .list(let tree, _, _, _):
+      later = Later(hides: options.hidesLaterTasks, now: now, read: read)
+      items = later.pruned(tree.visibleOutline(under: parentTaskID(tree: tree, options: options)))
     case .combined(let board):
-      items = board.cards.map { TaskOutlineItem(task: $0, depth: 0) }
+      later = Later(hides: options.hidesLaterTasks, now: now, read: read, parents: board.parentIDs)
+      items = board.cards.filter { !later.hides($0) }.map { TaskOutlineItem(task: $0, depth: 0) }
     }
     items.removeAll { completions.hides($0.task) }
-    return (items, completions.expiry)
+    return (items, soonest(completions.expiry, later.expiry))
   }
 
   /// The board, and the matrix, which places the same cards.
@@ -203,6 +278,7 @@ public enum WorkspaceScopeShaping {
     _ read: WorkspaceScopeRead, options: WorkspaceScopeShapeOptions, now: Date
   ) -> (board: WorkspaceBoardShape, expiry: Date?) {
     var completions = Completions(hides: options.hidesCompletedTasks, now: now)
+    var later = Later(hides: options.hidesLaterTasks, now: now, read: read)
     var cards: [WorkspaceTask]
     let parentTaskID: String?
     let allDescendants: [String: [TaskOutlineItem]]
@@ -210,10 +286,10 @@ public enum WorkspaceScopeShaping {
     let allColumns: [String: String]
     let allPositions: [String: TaskMatrixPosition]
     switch read {
-    case .list(let tree, let columns, let positions):
+    case .list(let tree, let columns, let positions, _):
       parentTaskID = Self.parentTaskID(tree: tree, options: options)
       cards = tree.children(of: parentTaskID)
-      cards.removeAll { ($0.isList && $0.archivedAt != nil) || completions.hides($0) }
+      cards.removeAll { ($0.isList && $0.archivedAt != nil) || later.hides($0) || completions.hides($0) }
       if cards.isEmpty {
         allDescendants = [:]
         parents = [:]
@@ -229,7 +305,8 @@ public enum WorkspaceScopeShaping {
     case .combined(let board):
       parentTaskID = nil
       cards = board.cards
-      cards.removeAll { ($0.isList && $0.archivedAt != nil) || completions.hides($0) }
+      later = Later(hides: options.hidesLaterTasks, now: now, read: read, parents: board.parentIDs)
+      cards.removeAll { ($0.isList && $0.archivedAt != nil) || later.hides($0) || completions.hides($0) }
       allDescendants = board.descendants
       parents = board.parentIDs
       allColumns = board.columns
@@ -238,7 +315,10 @@ public enum WorkspaceScopeShaping {
     let cardIDs = Set(cards.map(\.id))
     // A card's tree loses its finished rows as the outline does, once their
     // few seconds are up. Row by row: an open task under a closed one stays.
-    let descendants = allDescendants.mapValues { rows in rows.filter { !completions.hides($0.task) } }
+    // A buried row goes with everything beneath it, whatever it holds.
+    let descendants = allDescendants.mapValues { rows in
+      later.pruned(rows).filter { !completions.hides($0.task) }
+    }
     var treeIDs = Set<String>()
     let treeTasks = (cards + cards.flatMap { descendants[$0.id, default: []].map(\.task) })
       .filter { treeIDs.insert($0.id).inserted }
@@ -281,7 +361,7 @@ public enum WorkspaceScopeShaping {
     let shape = WorkspaceBoardShape(
       parentTaskID: parentTaskID, cards: cards, descendants: descendants, parents: parents, treeTasks: treeTasks,
       columns: columnsByTask, positions: positions, crossColumnTasks: crossColumn)
-    return (shape, completions.expiry)
+    return (shape, soonest(completions.expiry, later.expiry))
   }
 }
 

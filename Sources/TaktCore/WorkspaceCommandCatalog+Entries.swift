@@ -38,7 +38,7 @@ public enum WorkspaceCommandCatalog {
       .taskRename, .taskRenameAppend, .taskRenameInsert, .taskEditDue, .taskEditStart, .taskEditEstimate, .taskEditNotes,
       .taskEditTags, .taskEditRecurrence,
     ],
-    [.taskDueToday, .taskDueTomorrow, .taskClearDue, .taskClearNotes, .taskClearTags],
+    [.taskDueToday, .taskDueTomorrow, .taskBury, .taskClearDue, .taskClearNotes, .taskClearTags],
     [.taskIndent, .taskOutdent, .taskMoveUp, .taskMoveDown],
     [.taskMoveToPreviousList, .taskMoveToNextList, .taskMove],
     [.taskConvertToList, .taskPromoteList, .taskExtractBranch],

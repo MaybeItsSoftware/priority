@@ -96,6 +96,8 @@ something you already have to know.
 | `Shift+Space` | Cancel the task, or reinstate it — it stopped mattering, rather than got done |
 | `1`–`4` / `0` | Set the task's priority at once (1 is the most urgent), as `!1`–`!4` does when you type a task, or clear it — on the outline, the board, the matrix and Today. The number shows in a small box beside the title; one undo step each |
 | `tc` | Hide or show completed tasks — a completed task stays put for three seconds and then leaves the list; `tc` shows them all again |
+| `bu` | Bury the task: it starts tomorrow, so it leaves the outline, the board and the matrix, subtasks and all, until then — and Today picks it up the morning it arrives. `start <value>` buries it until any other time; `clear start` digs it up |
+| `tl` | Hide or show buried tasks — anything whose start is still to come. Hidden by default; a filter list with a start-date rule always shows what it matches, and jumping to a buried task from search shows them |
 | `gf` | Start a focus block on the task — on Today, queue it behind a running block |
 | `Cmd+Shift+Return` | Finish the running focus block — completes its task and asks how it went, as Done does. Works from anywhere in the window, inside a field too |
 | `Cmd+Shift+.` | Stop the running focus block — the time so far is logged unscored, the task stays open and the queue is dropped. Works from anywhere, the focus panel included |
@@ -248,6 +250,12 @@ cards (folded cards are skipped over); `Space` completes the row you are on and
 A task you tick off stays where it was for three seconds — long enough to see
 it go and to take it back — and then leaves the list; the Done rail keeps it.
 `tc` shows every completed task again, and toggles back.
+
+A task whose start date is still to come is **buried**: off the outline, the
+board and the matrix, with everything beneath it, until the moment it starts,
+when it comes back by itself. `bu` buries the selected task until tomorrow;
+`tl` shows buried tasks, and toggles back. Today and the focus suggestions
+already left future starts alone and still do.
 
 Subtasks fold where they stand, as they do in Checkvist, so you can look
 inside a task without opening it: in the outline `→` unfolds a task and steps

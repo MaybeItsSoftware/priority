@@ -23,16 +23,19 @@ public struct WorkspaceBoardRead: Sendable, Equatable {
   public var columns: [String: String]
   /// Every drawn task's matrix place, unplaced where it has none.
   public var positions: [String: TaskMatrixPosition]
+  /// When each open drawn task with a start starts.
+  public var starts: [String: Date]
 
   public init(
     cards: [WorkspaceTask], descendants: [String: [TaskOutlineItem]], parentIDs: [String: String],
-    columns: [String: String], positions: [String: TaskMatrixPosition]
+    columns: [String: String], positions: [String: TaskMatrixPosition], starts: [String: Date] = [:]
   ) {
     self.cards = cards
     self.descendants = descendants
     self.parentIDs = parentIDs
     self.columns = columns
     self.positions = positions
+    self.starts = starts
   }
 
   public static let empty = WorkspaceBoardRead(cards: [], descendants: [:], parentIDs: [:], columns: [:], positions: [:])
@@ -98,18 +101,20 @@ extension WorkspaceStore {
       parentIDs[id(node)] = id(Int(parent))
     }
     var columns: [String: String] = [:]
+    var starts: [String: Date] = [:]
     var positions = Dictionary(uniqueKeysWithValues: rows.map {
       ($0.id, TaskMatrixPosition(urgency: nil, importance: nil))
     })
     for placement in read.placements {
       let task = rows[Int(placement.row)]
       if let column = placement.kanbanColumn { columns[task.id] = column }
+      if task.status == .open, let start = placement.startAtMs { starts[task.id] = Date(coreMilliseconds: start) }
       positions[task.id] = TaskMatrixPosition(
         urgency: placement.matrixUrgency.map { Int($0) }, importance: placement.matrixImportance.map { Int($0) },
         rank: placement.matrixRank.map { Int($0) })
     }
     return WorkspaceBoardRead(
       cards: Self.unpacked(read.cards).map { rows[Int($0)] }, descendants: descendants, parentIDs: parentIDs,
-      columns: columns, positions: positions)
+      columns: columns, positions: positions, starts: starts)
   }
 }

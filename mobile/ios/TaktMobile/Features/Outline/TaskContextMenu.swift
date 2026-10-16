@@ -110,6 +110,7 @@ struct TaskContextMenu: View {
       model.navigation.inspect(taskID, isPad: isPad)
     case .taskDueToday: model.setDue(taskID, daysFromToday: 0)
     case .taskDueTomorrow: model.setDue(taskID, daysFromToday: 1)
+    case .taskBury: model.bury(taskID)
     case .taskClearDue: model.clearDue(taskID)
     case .taskClearNotes: model.editValues(taskID) { $0.notes = "" }
     case .taskClearTags: model.editValues(taskID) { $0.tags = "" }
@@ -149,6 +150,7 @@ struct TaskContextMenu: View {
     case .taskEditRecurrence: "repeat"
     case .taskDueToday: "sun.max"
     case .taskDueTomorrow: "sunrise"
+    case .taskBury: "moon.zzz"
     case .taskClearDue: "calendar.badge.minus"
     case .taskClearNotes: "text.badge.minus"
     case .taskClearTags: "tag.slash"

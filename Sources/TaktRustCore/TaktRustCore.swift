@@ -5949,6 +5949,11 @@ public struct BoardPlacement: Equatable, Hashable {
      * Its place within its quadrant, lowest first.
      */
     public var matrixRank: Int64?
+    /**
+     * When it starts, in milliseconds: until then a list leaves it out
+     * unless asked to show later tasks.
+     */
+    public var startAtMs: Int64?
 
     // Default memberwise initializers are never public by default, so we
     // declare one manually.
@@ -5958,12 +5963,17 @@ public struct BoardPlacement: Equatable, Hashable {
          */row: UInt32, kanbanColumn: String?, matrixUrgency: Int64?, matrixImportance: Int64?, 
         /**
          * Its place within its quadrant, lowest first.
-         */matrixRank: Int64?) {
+         */matrixRank: Int64?, 
+        /**
+         * When it starts, in milliseconds: until then a list leaves it out
+         * unless asked to show later tasks.
+         */startAtMs: Int64?) {
         self.row = row
         self.kanbanColumn = kanbanColumn
         self.matrixUrgency = matrixUrgency
         self.matrixImportance = matrixImportance
         self.matrixRank = matrixRank
+        self.startAtMs = startAtMs
     }
 
     
@@ -5986,7 +5996,8 @@ public struct FfiConverterTypeBoardPlacement: FfiConverterRustBuffer {
                 kanbanColumn: FfiConverterOptionString.read(from: &buf), 
                 matrixUrgency: FfiConverterOptionInt64.read(from: &buf), 
                 matrixImportance: FfiConverterOptionInt64.read(from: &buf), 
-                matrixRank: FfiConverterOptionInt64.read(from: &buf)
+                matrixRank: FfiConverterOptionInt64.read(from: &buf), 
+                startAtMs: FfiConverterOptionInt64.read(from: &buf)
         )
     }
 
@@ -5996,6 +6007,7 @@ public struct FfiConverterTypeBoardPlacement: FfiConverterRustBuffer {
         FfiConverterOptionInt64.write(value.matrixUrgency, into: &buf)
         FfiConverterOptionInt64.write(value.matrixImportance, into: &buf)
         FfiConverterOptionInt64.write(value.matrixRank, into: &buf)
+        FfiConverterOptionInt64.write(value.startAtMs, into: &buf)
     }
 }
 

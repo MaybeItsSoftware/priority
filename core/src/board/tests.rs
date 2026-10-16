@@ -204,6 +204,22 @@ fn only_rows_with_a_placement_carry_one() {
 }
 
 #[test]
+fn a_start_is_a_placement_of_its_own() {
+    let connection = workspace();
+    connection
+        .execute(
+            "INSERT INTO task_metadata (taskId, startAt, updatedAt) VALUES ('paper', '2024-01-02 09:00:00.000', ?1)",
+            [T],
+        )
+        .unwrap();
+    let read = combined_board(&connection, &ids(), None).unwrap();
+    let paper = placement(&read, "paper").unwrap();
+    assert_eq!(paper.kanban_column, None);
+    assert_eq!(paper.start_at_ms, Some(T_MS + 33 * 3_600_000));
+    assert_eq!(placement(&read, "chore").unwrap().start_at_ms, None);
+}
+
+#[test]
 fn a_scope_of_one_list_and_an_empty_scope() {
     let read = combined_board(&workspace(), &["o".to_string()], None).unwrap();
     assert_eq!(cards(&read), ["chore"]);

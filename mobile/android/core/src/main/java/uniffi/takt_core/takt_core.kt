@@ -10658,6 +10658,12 @@ data class BoardPlacement (
      * Its place within its quadrant, lowest first.
      */
     var `matrixRank`: kotlin.Long?
+    , 
+    /**
+     * When it starts, in milliseconds: until then a list leaves it out
+     * unless asked to show later tasks.
+     */
+    var `startAtMs`: kotlin.Long?
     
 ){
     
@@ -10679,6 +10685,7 @@ public object FfiConverterTypeBoardPlacement: FfiConverterRustBuffer<BoardPlacem
             FfiConverterOptionalLong.read(buf),
             FfiConverterOptionalLong.read(buf),
             FfiConverterOptionalLong.read(buf),
+            FfiConverterOptionalLong.read(buf),
         )
     }
 
@@ -10687,7 +10694,8 @@ public object FfiConverterTypeBoardPlacement: FfiConverterRustBuffer<BoardPlacem
             FfiConverterOptionalString.allocationSize(value.`kanbanColumn`) +
             FfiConverterOptionalLong.allocationSize(value.`matrixUrgency`) +
             FfiConverterOptionalLong.allocationSize(value.`matrixImportance`) +
-            FfiConverterOptionalLong.allocationSize(value.`matrixRank`)
+            FfiConverterOptionalLong.allocationSize(value.`matrixRank`) +
+            FfiConverterOptionalLong.allocationSize(value.`startAtMs`)
     )
 
     override fun write(value: BoardPlacement, buf: ByteBuffer) {
@@ -10696,6 +10704,7 @@ public object FfiConverterTypeBoardPlacement: FfiConverterRustBuffer<BoardPlacem
             FfiConverterOptionalLong.write(value.`matrixUrgency`, buf)
             FfiConverterOptionalLong.write(value.`matrixImportance`, buf)
             FfiConverterOptionalLong.write(value.`matrixRank`, buf)
+            FfiConverterOptionalLong.write(value.`startAtMs`, buf)
     }
 }
 

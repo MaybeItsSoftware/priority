@@ -134,6 +134,12 @@ extension WorkspaceModel {
     editValues(taskID) { $0.dueAt = day; $0.dueDate = nil }
   }
 
+  /// Starts the task at the beginning of tomorrow: the Mac's bury.
+  func bury(_ taskID: String) {
+    let tomorrow = Calendar.current.date(byAdding: .day, value: 1, to: Calendar.current.startOfDay(for: .now))
+    editValues(taskID) { $0.startAt = tomorrow }
+  }
+
   func clearDue(_ taskID: String) {
     editValues(taskID) { $0.dueAt = nil; $0.dueDate = nil }
   }

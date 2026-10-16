@@ -49,10 +49,11 @@ extension WorkspaceViewModel {
     // are kept under one key whatever was last entered elsewhere.
     isMultiListScope
       ? WorkspaceScopeShapeOptions(
-        scopeTaskID: nil, registeredRootTaskID: nil, hidesCompletedTasks: scopeHidesCompletedTasks)
+        scopeTaskID: nil, registeredRootTaskID: nil, hidesCompletedTasks: scopeHidesCompletedTasks,
+        hidesLaterTasks: scopeHidesLaterTasks)
       : WorkspaceScopeShapeOptions(
         scopeTaskID: scopeTaskID, registeredRootTaskID: selectedList?.visibleRootTaskId,
-        hidesCompletedTasks: hidesCompletedTasks)
+        hidesCompletedTasks: hidesCompletedTasks, hidesLaterTasks: hidesLaterTasks)
   }
 
   /// The cutoff a combined read leaves finished work out before.

@@ -338,26 +338,28 @@ public final class WorkspaceStore: @unchecked Sendable {
   /// Loads board placement in batches rather than opening a read per card.
   /// Missing metadata retains the same unplaced/default-column behaviour.
   public func boardMetadata(for taskIDs: [String]) throws -> (
-    columns: [String: String], positions: [String: TaskMatrixPosition]
+    columns: [String: String], positions: [String: TaskMatrixPosition], starts: [String: Date]
   ) {
     try boardMetadata(for: taskIDs, using: core)
   }
 
   func boardMetadata(for taskIDs: [String], using handle: CoreWorkspace) throws -> (
-    columns: [String: String], positions: [String: TaskMatrixPosition]
+    columns: [String: String], positions: [String: TaskMatrixPosition], starts: [String: Date]
   ) {
-    guard !taskIDs.isEmpty else { return ([:], [:]) }
+    guard !taskIDs.isEmpty else { return ([:], [:], [:]) }
     var columns: [String: String] = [:]
+    var starts: [String: Date] = [:]
     var positions = Dictionary(uniqueKeysWithValues: Set(taskIDs).map {
       ($0, TaskMatrixPosition(urgency: nil, importance: nil))
     })
     for record in try Self.mappingCoreErrors({ try handle.metadataForTasks(taskIds: taskIDs) }) {
       columns[record.taskId] = record.kanbanColumn
+      starts[record.taskId] = record.startAtMs.map { Date(coreMilliseconds: $0) }
       positions[record.taskId] = TaskMatrixPosition(
         urgency: record.matrixUrgency.map { Int($0) }, importance: record.matrixImportance.map { Int($0) },
         rank: record.matrixRank.map { Int($0) })
     }
-    return (columns, positions)
+    return (columns, positions, starts)
   }
 
   public func setKanbanColumn(_ column: String?, for taskId: String, now: Date = .now) throws {

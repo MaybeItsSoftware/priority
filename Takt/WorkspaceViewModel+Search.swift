@@ -71,6 +71,19 @@ extension WorkspaceViewModel {
   func showInPlace(_ task: WorkspaceTask) {
     // Something ticked off is invisible in a view that hides completions.
     if task.status != .open { hidesCompletedTasks = false }
+    // And something buried, or under a buried task, in one hiding them.
+    if hidesLaterTasks, let store {
+      var chain = [task.id]
+      var parentID = task.parentTaskId
+      while let id = parentID, !chain.contains(id) {
+        chain.append(id)
+        parentID = self.task(withID: id)?.parentTaskId
+      }
+      let now = Date()
+      if let starts = try? store.boardMetadata(for: chain).starts, starts.values.contains(where: { $0 > now }) {
+        hidesLaterTasks = false
+      }
+    }
     unfoldAncestors(of: task)
     if !isShowing(task.id) {
       let mode = viewMode

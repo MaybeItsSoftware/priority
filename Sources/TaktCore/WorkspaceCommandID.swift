@@ -24,7 +24,7 @@ public enum WorkspaceCommandID: String, CaseIterable, Sendable {
   case taskNew, taskNewAbove, taskNewChild, taskComplete, taskInvalidate, taskDelete
   case taskRename, taskRenameAppend, taskRenameInsert, taskEditDue, taskEditNotes, taskEditTags, taskEditRecurrence
   case taskEditStart, taskEditEstimate
-  case taskDueToday, taskDueTomorrow, taskClearDue, taskClearNotes, taskClearTags
+  case taskDueToday, taskDueTomorrow, taskBury, taskClearDue, taskClearNotes, taskClearTags
   case taskClearPriority, taskToggleDaily, taskHabit, taskWaiting, taskAddBlocker, taskConditions
   case taskAskAgent
   case taskTogglePlannedToday, taskStartFocus, taskMove
@@ -37,7 +37,7 @@ public enum WorkspaceCommandID: String, CaseIterable, Sendable {
   case focusFinish, focusStop, focusSetAvailable, focusSetPlace, focusManageConditions
 
   // Plan
-  case planEnterTask, planLeaveTask, planHideCompleted
+  case planEnterTask, planLeaveTask, planHideCompleted, planHideLater
   case planBoardNewColumn, planBoardMoveCardLeft, planBoardMoveCardRight
   case planBoardRemoveColumn, planMatrixPlace
   case planBoardRenameColumn, planBoardMoveColumnLeft, planBoardMoveColumnRight

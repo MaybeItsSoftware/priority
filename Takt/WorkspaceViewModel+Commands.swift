@@ -152,6 +152,7 @@ extension WorkspaceViewModel {
     case .taskEditEstimate: quickEdit(.estimate)
     case .taskDueToday: setDue(daysFromToday: 0)
     case .taskDueTomorrow: setDue(daysFromToday: 1)
+    case .taskBury: burySelectedTask()
     case .taskClearDue: editTaskValues { $0.dueAt = nil; $0.dueDate = nil }
     case .taskClearNotes: editTaskValues { $0.notes = "" }
     case .taskClearTags: editTaskValues { $0.tags = "" }
@@ -183,6 +184,7 @@ extension WorkspaceViewModel {
     case .planEnterTask: enterSelectedTask(fromKey: key)
     case .planLeaveTask: leaveSelectedTask(fromKey: key)
     case .planHideCompleted: toggleHiddenCompletedTasks()
+    case .planHideLater: toggleHiddenLaterTasks()
     case .planToggleFold: if let task = selectedTask { toggleFold(of: task) }
     case .planGrowTask: growSelectedTask()
     case .planShrinkTask: shrinkSelectedTask()
@@ -362,6 +364,22 @@ extension WorkspaceViewModel {
     if let selectedTaskID, !visibleNavigationTasks.contains(where: { $0.id == selectedTaskID }) {
       self.selectedTaskID = nil
     }
+  }
+
+  private func toggleHiddenLaterTasks() {
+    hidesLaterTasks.toggle()
+    reloadOutline()
+    if let selectedTaskID, !visibleNavigationTasks.contains(where: { $0.id == selectedTaskID }) {
+      self.selectedTaskID = nil
+    }
+  }
+
+  /// Starts the task at the beginning of tomorrow, which buries it: it leaves
+  /// the lists, and the selection goes to its neighbour, until Today takes
+  /// it then. Another day is the start date's own editor.
+  private func burySelectedTask() {
+    let tomorrow = Calendar.current.date(byAdding: .day, value: 1, to: Calendar.current.startOfDay(for: .now))
+    editTaskValues { $0.startAt = tomorrow }
   }
 
   private func openFirstLinkOnSelection() {

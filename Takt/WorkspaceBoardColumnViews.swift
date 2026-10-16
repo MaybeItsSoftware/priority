@@ -80,6 +80,10 @@ struct WorkspacePaneContextMenu: View {
       model.run(.planHideCompleted)
     }
     .menuKey(.planHideCompleted, on: surface)
+    Button(model.hidesLaterTasks ? "Show Buried Tasks" : "Hide Buried Tasks") {
+      model.run(.planHideLater)
+    }
+    .menuKey(.planHideLater, on: surface)
   }
 }
 

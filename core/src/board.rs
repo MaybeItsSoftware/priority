@@ -27,7 +27,7 @@ use rusqlite::Connection;
 
 use crate::CoreError;
 use crate::packed_rows::pack_task_rows;
-use crate::records::{TaskColumns, TaskRow};
+use crate::records::{TaskColumns, TaskRow, optional_ms};
 
 /// A drawn row's column and matrix place, for a row that has either.
 #[derive(Debug, Clone, PartialEq, uniffi::Record)]
@@ -39,6 +39,9 @@ pub struct BoardPlacement {
     pub matrix_importance: Option<i64>,
     /// Its place within its quadrant, lowest first.
     pub matrix_rank: Option<i64>,
+    /// When it starts, in milliseconds: until then a list leaves it out
+    /// unless asked to show later tasks.
+    pub start_at_ms: Option<i64>,
 }
 
 /// A combined scope's board.
@@ -245,7 +248,7 @@ pub fn combined_board_of(
         .iter()
         .enumerate()
         .filter_map(|(row, &index)| {
-            let (kanban_column, matrix_urgency, matrix_importance, matrix_rank) =
+            let (kanban_column, matrix_urgency, matrix_importance, matrix_rank, start_at_ms) =
                 placements.remove(&tasks[index].id)?;
             Some(BoardPlacement {
                 row: row as u32,
@@ -253,6 +256,7 @@ pub fn combined_board_of(
                 matrix_urgency,
                 matrix_importance,
                 matrix_rank,
+                start_at_ms,
             })
         })
         .collect();
@@ -423,20 +427,33 @@ fn read_tasks(
     Ok((tasks, visible_roots))
 }
 
-type Placement = (Option<String>, Option<i64>, Option<i64>, Option<i64>);
+type Placement = (
+    Option<String>,
+    Option<i64>,
+    Option<i64>,
+    Option<i64>,
+    Option<i64>,
+);
 
-/// The column and matrix place of every task that has either.
+/// The column, matrix place and start of every task that has any of them.
 fn placements(connection: &Connection) -> Result<HashMap<String, Placement>, CoreError> {
     let mut statement = connection.prepare_cached(
-        "SELECT taskId, kanbanColumn, matrixUrgency, matrixImportance, matrixRank FROM task_metadata
-         WHERE kanbanColumn IS NOT NULL OR matrixUrgency IS NOT NULL OR matrixImportance IS NOT NULL",
+        "SELECT taskId, kanbanColumn, matrixUrgency, matrixImportance, matrixRank, startAt FROM task_metadata
+         WHERE kanbanColumn IS NOT NULL OR matrixUrgency IS NOT NULL OR matrixImportance IS NOT NULL
+            OR startAt IS NOT NULL",
     )?;
     let mut rows = statement.query([])?;
     let mut result = HashMap::new();
     while let Some(row) = rows.next()? {
         result.insert(
             row.get(0)?,
-            (row.get(1)?, row.get(2)?, row.get(3)?, row.get(4)?),
+            (
+                row.get(1)?,
+                row.get(2)?,
+                row.get(3)?,
+                row.get(4)?,
+                optional_ms(row, 5)?,
+            ),
         );
     }
     Ok(result)

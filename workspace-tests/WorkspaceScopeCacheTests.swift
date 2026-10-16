@@ -86,6 +86,42 @@ final class WorkspaceScopeCacheTests: XCTestCase {
       .items.contains { $0.id == card.id })
   }
 
+  func testABuriedTaskIsLeftOffWithItsSubtasksUntilItStarts() throws {
+    let work = try makeList("Work")
+    let home = try makeList("Home")
+    let buried = try store.listTree(in: work.id).children(of: nil)[0]
+    let child = try store.listTree(in: work.id).children(of: buried.id)[0]
+    let now = Date(timeIntervalSince1970: Date().timeIntervalSince1970.rounded(.down))
+    let start = now.addingTimeInterval(3600)
+    try store.scheduleTask(id: buried.id, startAt: start, now: now)
+    let hiding = WorkspaceScopeShapeOptions(
+      scopeTaskID: nil, registeredRootTaskID: nil, hidesCompletedTasks: true, hidesLaterTasks: true)
+    let gone: Set<String> = [buried.id, child.id]
+
+    for scope in [WorkspaceScope.list(work.id), .combined([work.id, home.id])] {
+      let read = try store.scopeRead(scope, hidingCompletedBefore: nil)
+      let outline = WorkspaceScopeShaping.outline(read, options: hiding, now: now)
+      XCTAssertTrue(gone.isDisjoint(with: outline.items.map(\.id)), "\(scope)")
+      XCTAssertEqual(outline.expiry, start, "\(scope)")
+      let board = WorkspaceScopeShaping.board(read, options: hiding, now: now)
+      XCTAssertTrue(gone.isDisjoint(with: board.board.treeTasks.map(\.id)), "\(scope)")
+      XCTAssertEqual(board.expiry, start, "\(scope)")
+      // Back once it starts, and whenever later tasks are shown.
+      let started = WorkspaceScopeShaping.board(read, options: hiding, now: start.addingTimeInterval(1))
+      XCTAssertTrue(gone.isSubset(of: started.board.treeTasks.map(\.id)), "\(scope)")
+      XCTAssertTrue(gone.isSubset(of: WorkspaceScopeShaping.board(read, options: options, now: now).board.treeTasks
+        .map(\.id)), "\(scope)")
+    }
+  }
+
+  func testAFilterListOnStartDatesShowsWhatItMatches() {
+    let plain = WorkspaceFilterDefinition(rules: [WorkspaceFilterRule(field: "tag", op: "is", value: "work")])
+    let starts = WorkspaceFilterDefinition(rules: [WorkspaceFilterRule(field: "start", op: "later", value: "")])
+    XCTAssertTrue(plain.hidesLater(whenToggled: true))
+    XCTAssertFalse(starts.hidesLater(whenToggled: true))
+    XCTAssertFalse(plain.hidesLater(whenToggled: false))
+  }
+
   func testTheBackgroundHandleReadsWhatTheMainOneDoes() throws {
     let work = try makeList("Work")
     let home = try makeList("Home")
@@ -96,7 +132,7 @@ final class WorkspaceScopeCacheTests: XCTestCase {
     }
     // And sees a write the main handle has just made.
     _ = try store.createTask(listId: work.id, title: "Written")
-    guard case .list(let tree, _, _) = try store.scopeRead(.list(work.id), hidingCompletedBefore: nil, inBackground: true)
+    guard case .list(let tree, _, _, _) = try store.scopeRead(.list(work.id), hidingCompletedBefore: nil, inBackground: true)
     else { return XCTFail("a list's read") }
     XCTAssertTrue(tree.tasks.contains { $0.title == "Written" })
   }
