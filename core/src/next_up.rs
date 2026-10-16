@@ -168,66 +168,120 @@ pub fn plan<'a>(
 
 /// A task beneath a card planned for today is drawn under that card, as the
 /// board draws it, so the day holds the card instead: the topmost open
-/// ancestor filed in Today, once, where its first task stood. A parent of
-/// open work is never a candidate, so without this a card with subtasks
-/// showed only as its loose subtasks. The running task keeps its own row.
+/// ancestor filed in Today, once. A parent of open work is never a candidate,
+/// so without this a card with subtasks showed only as its loose subtasks.
+/// The running task keeps its own row.
+///
+/// The card stands where its own rank puts it among the planned tasks, when
+/// it has one — the rank arranging the day gave it — and otherwise where its
+/// first task stood. Taking its subtasks' place regardless meant a card
+/// moved by hand went straight back: its subtasks, filed in Today with no
+/// rank, still sorted after everything ranked.
 fn roll_up_cards(
     connection: &Connection,
     entries: Vec<DayEntry>,
 ) -> Result<Vec<DayEntry>, CoreError> {
-    let mut tree: HashMap<String, (Option<String>, bool, bool)> = HashMap::new();
+    struct Node {
+        parent: Option<String>,
+        open: bool,
+        today: bool,
+        rank: Option<i64>,
+        sort_order: i64,
+    }
+    let mut tree: HashMap<String, Node> = HashMap::new();
     let mut statement = connection.prepare(
-        "SELECT t.id, t.parentTaskId, t.status = 'open', COALESCE(m.kanbanColumn = ?1, 0)
+        "SELECT t.id, t.parentTaskId, t.status = 'open', COALESCE(m.kanbanColumn = ?1, 0),
+                m.focusRank, t.sortOrder
          FROM tasks t LEFT JOIN task_metadata m ON m.taskId = t.id",
     )?;
     for row in statement.query_map([TODAY_COLUMN], |row| {
         Ok((
             row.get::<_, String>(0)?,
-            row.get(1)?,
-            row.get(2)?,
-            row.get(3)?,
+            Node {
+                parent: row.get(1)?,
+                open: row.get(2)?,
+                today: row.get(3)?,
+                rank: row.get(4)?,
+                sort_order: row.get(5)?,
+            },
         ))
     })? {
-        let (id, parent, open, today) = row?;
-        tree.insert(id, (parent, open, today));
+        let (id, node) = row?;
+        tree.insert(id, node);
     }
     let card = |id: &str| -> Option<String> {
         let mut found = None;
-        let mut current = tree.get(id).and_then(|(parent, _, _)| parent.clone());
+        let mut current = tree.get(id).and_then(|node| node.parent.clone());
         // Bounded, so a corrupt cycle ends rather than loops.
         for _ in 0..tree.len() {
             let Some(ancestor) = current else { break };
-            let Some((parent, open, today)) = tree.get(&ancestor) else {
+            let Some(node) = tree.get(&ancestor) else {
                 break;
             };
-            if !open {
+            if !node.open {
                 break;
             }
-            if *today {
+            if node.today {
                 found = Some(ancestor.clone());
             }
-            current = parent.clone();
+            current = node.parent.clone();
         }
         found
     };
+    // `plan`'s order for the column: a rank, then the list's order, then the id.
+    let key = |id: &str| {
+        let node = tree.get(id);
+        (
+            node.and_then(|n| n.rank).is_none(),
+            node.and_then(|n| n.rank),
+            node.map_or(0, |n| n.sort_order),
+            id.to_string(),
+        )
+    };
     let mut seen: HashSet<String> = HashSet::new();
-    let mut rolled = Vec::with_capacity(entries.len());
+    let mut running = Vec::new();
+    let mut planned = Vec::new();
+    let mut rest = Vec::new();
     for entry in entries {
-        let entry = match (entry.reason != "running")
+        let rolled = (entry.reason != "running")
             .then(|| card(&entry.id))
-            .flatten()
-        {
-            Some(card) => DayEntry {
-                id: card,
-                reason: "planned".into(),
-            },
-            None => entry,
+            .flatten();
+        let (entry, sort_key) = match rolled {
+            Some(card) => {
+                let ranked = tree.get(&card).and_then(|n| n.rank).is_some();
+                let sort_key = if ranked {
+                    Some(key(&card))
+                } else {
+                    (entry.reason == "planned").then(|| key(&entry.id))
+                };
+                (
+                    DayEntry {
+                        id: card,
+                        reason: "planned".into(),
+                    },
+                    sort_key,
+                )
+            }
+            None => {
+                let sort_key = (entry.reason == "planned").then(|| key(&entry.id));
+                (entry, sort_key)
+            }
         };
-        if seen.insert(entry.id.clone()) {
-            rolled.push(entry);
+        if !seen.insert(entry.id.clone()) {
+            continue;
+        }
+        match sort_key {
+            Some(sort_key) => planned.push((sort_key, entry)),
+            None if entry.reason == "running" => running.push(entry),
+            None => rest.push(entry),
         }
     }
-    Ok(rolled)
+    planned.sort_by(|a, b| a.0.cmp(&b.0));
+    Ok(running
+        .into_iter()
+        .chain(planned.into_iter().map(|(_, entry)| entry))
+        .chain(rest)
+        .collect())
 }
 
 fn local(ms: i64, zone: Tz) -> DateTime<Tz> {

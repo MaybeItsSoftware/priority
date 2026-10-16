@@ -209,3 +209,39 @@ fn a_card_in_today_with_subtasks_stands_in_the_day_once_in_their_place() {
         [("b", "running"), ("t10", "planned"), ("t11", "planned")]
     );
 }
+
+#[test]
+fn a_card_arranged_by_hand_keeps_its_place_rather_than_its_subtasks() {
+    let connection = workspace();
+    // t10 is a card with a subtask filed in Today and given no rank, as a
+    // subtask planned before its card was. Arranging the day ranked the card
+    // after t11; the unranked subtask must not drag it back ahead.
+    connection
+        .execute_batch(&format!(
+            "INSERT INTO tasks (id, listId, parentTaskId, title, status, sortOrder, itemKind, createdAt, updatedAt)
+               VALUES ('a', 'l', 't10', 'A', 'open', 0, 'task', '{T}', '{T}');
+             INSERT INTO task_metadata (taskId, kanbanColumn, updatedAt) VALUES ('a', 'today', '{T}');
+             UPDATE task_metadata SET focusRank = 1 WHERE taskId = 't10';
+             UPDATE task_metadata SET focusRank = 0 WHERE taskId = 't11';"
+        ))
+        .unwrap();
+    let context = FocusContext::default();
+    let read = next_up(&connection, NOW, "UTC", &context, None, None).unwrap();
+    assert_eq!(
+        entries(&read.day_plan),
+        [("t11", "planned"), ("t10", "planned")]
+    );
+
+    // And moved back up, it comes back up.
+    connection
+        .execute_batch(
+            "UPDATE task_metadata SET focusRank = 0 WHERE taskId = 't10';
+             UPDATE task_metadata SET focusRank = 1 WHERE taskId = 't11';",
+        )
+        .unwrap();
+    let read = next_up(&connection, NOW, "UTC", &context, None, None).unwrap();
+    assert_eq!(
+        entries(&read.day_plan),
+        [("t10", "planned"), ("t11", "planned")]
+    );
+}
