@@ -340,6 +340,9 @@ final class WorkspaceCommandCollisionTests: XCTestCase {
       // In the sidebar ⌥⌘↑/↓ reorder the folder; elsewhere they change list.
       "sidebar:cmd+option+up", "sidebar:cmd+option+down",
       "sidebar:home", "sidebar:end", "sidebar:pageup", "sidebar:pagedown",
+      // : is the palette in the sidebar, as in Zed's vim project panel, and
+      // vim's go-to-line over the rows everywhere else.
+      "sidebar::",
       // The sidebar is Zed's project panel: ⌘N and ⌫ act on the row,
       // and so do the vim panel's h, l and gg, never on a task behind it.
       "sidebar:cmd+n", "sidebar:delete", "sidebar:cmd+delete", 

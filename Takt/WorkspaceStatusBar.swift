@@ -131,7 +131,14 @@ private struct WorkspaceStatusMessage: View {
   @Environment(\.theme) private var theme
 
   var body: some View {
-    if !model.pendingKeyPrefix.isEmpty {
+    if let digits = model.numberJump {
+      HStack(spacing: theme.space.xs) {
+        KeyCap(":\(digits)")
+        Text(digits.isEmpty ? "type a row's number" : "↩ goes to row \(digits)")
+          .font(theme.monoCaptionFont)
+          .foregroundStyle(theme.dim)
+      }
+    } else if !model.pendingKeyPrefix.isEmpty {
       HStack(spacing: theme.space.xs) {
         KeyCap("\(model.pendingKeyPrefix)…")
         Text("waiting for the second key")

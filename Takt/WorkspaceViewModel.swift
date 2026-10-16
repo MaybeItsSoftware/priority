@@ -733,6 +733,12 @@ enum WorkspaceSidebarItem: Identifiable {
   @ObservationIgnored var pendingFindForward: Bool?
   /// What `;` repeats.
   @ObservationIgnored var lastFind: (character: Character, forward: Bool)?
+  /// The digits typed after `:`, drawn in the status bar; nil when `:` is not
+  /// waiting for a number.
+  var numberJump: String?
+  /// Each row's number while `:` waits, for the rows to draw. Today's rows
+  /// number themselves, so they need nothing from here.
+  var numberJumpNumbers: [String: Int] = [:]
   /// The last key sent to the inspector's cursor, which the inspector owns
   /// (`InspectorCursor`); a new serial each time, so the same key twice is
   /// two requests.

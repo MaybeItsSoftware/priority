@@ -287,6 +287,7 @@ extension WorkspaceViewModel {
     case .motionFindForward: beginFind(forward: true)
     case .motionFindBackward: beginFind(forward: false)
     case .motionFindRepeat: repeatFind()
+    case .motionGoToNumber: beginNumberJump()
     case .motionSidebarSelect: if let key { moveSidebarCursor(key) }
     case .motionSidebarExpand:
       if let key { activateSidebarCursor(expandOnly: key == "right" || key == "l", enters: key == "enter") }

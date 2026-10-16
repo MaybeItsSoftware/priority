@@ -102,6 +102,7 @@ something you already have to know.
 | `Cmd+Shift+Return` | Finish the running focus block — completes its task and asks how it went, as Done does. Works from anywhere in the window, inside a field too |
 | `Cmd+Shift+.` | Stop the running focus block — the time so far is logged unscored, the task stays open and the queue is dropped. Works from anywhere, the focus panel included |
 | `Cmd+Alt+8` / `ga` | Set what's available now — the right dock's Conditions tab, with the keyboard in it: the conditions (Home, Campus, Floor space…) that hold here, which decide what the day offers. Again from inside it puts the dock away. See [Conditions](#conditions) |
+| `:` then a number, `Return` | Vim's `:12`: go to that row. Today's rows show their numbers; elsewhere they show while you type. Past the last row is the last row |
 | `f` / `Shift+F` then a letter, `;` | Vim's find: the next / previous task (in the sidebar, list) whose title starts with that letter; `;` repeats it |
 | `gg` / `Shift+G`, `Ctrl+D` / `Ctrl+U` | First / last task, eight down / up (vim) |
 | `gx` / `Cmd+O` | Open the task's first link (vim's open-the-URL-under-the-cursor) |

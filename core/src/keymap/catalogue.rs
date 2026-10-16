@@ -751,6 +751,11 @@ fn motions() -> Vec<Spec> {
             .also(Sidebar, &[";"])
             .motion()
             .note("Vim's ;, the same letter in the same direction"),
+        // Vim's :12, over rows. In the sidebar : is still the palette, as in
+        // Zed's vim project panel, because a list has no number.
+        c("motionGoToNumber", "Go to a task by its number", "Moving around", &[":"])
+            .motion()
+            .note("Vim's :12 — type the number, then Return. Today numbers its rows; elsewhere the numbers show while you type"),
         c("motionSidebarSelect", "Move through the sidebar", "Moving around", &["down", "up", "j", "k", "home", "end", "cmd+up", "cmd+down", "gg", "shift+g", "pageup", "pagedown", "ctrl+u", "ctrl+d"])
             .on(Sidebar)
             .motion()

@@ -109,7 +109,9 @@ struct WorkspaceTaskMarker: View {
 
   var body: some View {
     Group {
-      if task.isList {
+      if let number = model.numberJumpNumbers[task.id] {
+        WorkspaceRowNumber(number: number)
+      } else if task.isList {
         WorkspaceIconImage(name: model.itemSymbol(for: task)).foregroundStyle(theme.muted)
       } else if isHovered {
         Image(systemName: "circle").foregroundStyle(theme.muted)
@@ -124,6 +126,34 @@ struct WorkspaceTaskMarker: View {
     .frame(maxWidth: .infinity)
     .contentShape(Rectangle())
     .onHover { isHovered = $0 }
+  }
+}
+
+/// A row's number while `:` waits for one, in the place Today draws its
+/// numbers: where the row's mark is, or where it would be.
+struct WorkspaceRowNumber: View {
+  @Environment(\.theme) private var theme
+  let number: Int
+
+  var body: some View {
+    Text("\(number)")
+      .font(theme.numeralFont(theme.scale.caption))
+      .monospacedDigit()
+      .foregroundStyle(theme.muted)
+      .fixedSize()
+  }
+}
+
+/// A row with no mark of its own — a card, a matrix row — gets its number
+/// ahead of its title while `:` waits, and nothing at all otherwise.
+struct WorkspaceRowNumberSlot: View {
+  @Environment(WorkspaceViewModel.self) private var model
+  let taskID: String
+
+  var body: some View {
+    if let number = model.numberJumpNumbers[taskID] {
+      WorkspaceRowNumber(number: number)
+    }
   }
 }
 

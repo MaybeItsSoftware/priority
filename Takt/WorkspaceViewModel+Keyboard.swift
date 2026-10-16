@@ -51,6 +51,12 @@ extension WorkspaceViewModel {
       }
       return true
     }
+    // `:` owns the keys until Return, as vim's command line does: digits,
+    // ⌫ to take one back, Esc — or anything else — to give up.
+    if numberJump != nil {
+      handleNumberJumpKey(key)
+      return true
+    }
     // Sequences are bare letters. Anything chorded — Shift included, so `⇧X`
     // is the way to run `x` without waiting — releases a held key first, so
     // the two run in the order they were pressed.
@@ -365,6 +371,54 @@ extension WorkspaceViewModel {
     case .folder(let id): folders.first { $0.id == id }?.name ?? ""
     case .filterList(let id): filterLists.first { $0.id == id }?.name ?? ""
     }
+  }
+
+  // MARK: - Going to a row by its number
+
+  /// The rows `:` numbers, in order: Today's own tasks, as its rows number
+  /// them — a subtask drawn under one is not a place in the day — and on
+  /// every other surface the rows the cursor walks.
+  func numberJumpRowIDs() -> [String] {
+    viewMode == .today
+      ? dayTree.filter { $0.row.depth == 0 }.map(\.task.id)
+      : navigationRowIDs()
+  }
+
+  /// `:`: the next keys are a row's number.
+  func beginNumberJump() {
+    guard keyboardFocusArea == .tasks else { return }
+    desktopShortcutSequence.reset()
+    numberJump = ""
+    numberJumpNumbers = viewMode == .today ? [:] : Dictionary(
+      numberJumpRowIDs().enumerated().map { ($1, $0 + 1) }, uniquingKeysWith: { first, _ in first })
+  }
+
+  private func handleNumberJumpKey(_ key: String) {
+    guard let digits = numberJump else { return }
+    switch key {
+    case _ where key.count == 1 && key.first?.isNumber == true:
+      // Five digits is more rows than any list has; more is a held key.
+      if digits.count < 5 { numberJump = digits + key }
+    case "delete":
+      if digits.isEmpty { endNumberJump() } else { numberJump = String(digits.dropLast()) }
+    case "enter":
+      endNumberJump()
+      if let number = Int(digits) { selectRow(numbered: number) }
+    default:
+      endNumberJump()
+    }
+  }
+
+  private func endNumberJump() {
+    numberJump = nil
+    numberJumpNumbers = [:]
+  }
+
+  /// Vim's `:n`: past the last row is the last row, and `:0` the first.
+  func selectRow(numbered number: Int) {
+    let rows = numberJumpRowIDs()
+    guard !rows.isEmpty else { return }
+    selectedTaskID = rows[min(max(number, 1), rows.count) - 1]
   }
 
   func selectTaskAtEnd(first: Bool) {

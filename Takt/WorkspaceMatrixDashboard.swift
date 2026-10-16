@@ -368,6 +368,7 @@ struct WorkspaceMatrixTaskRow: View {
     // The selected row grows to show its whole title and list name.
     let isSelected = task.id == model.selectedTaskID
     HStack(alignment: isSelected ? .firstTextBaseline : .center, spacing: theme.space.sm) {
+      WorkspaceRowNumberSlot(taskID: task.id)
       if model.editingTaskTitleID == task.id {
         WorkspaceTaskTitleField(
           initialTitle: task.title,

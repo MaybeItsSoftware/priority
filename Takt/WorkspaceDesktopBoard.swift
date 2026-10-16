@@ -597,6 +597,8 @@ struct WorkspaceKanbanCard: View {
         .buttonStyle(.plain)
         .focusable()
         .commandHelp(.planEnterTask, note: "Open the list")
+      } else {
+        WorkspaceRowNumberSlot(taskID: task.id)
       }
       if model.editingTaskTitleID == task.id {
         // Edited in place, as the outline's rows are: Return saves with the
