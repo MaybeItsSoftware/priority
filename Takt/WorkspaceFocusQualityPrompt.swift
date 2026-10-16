@@ -15,6 +15,12 @@ import SwiftUI
 /// so the prompt leads with a break and asks whether the task is done rather
 /// than assuming it. It is asked even with the scoring question turned off,
 /// without the dial.
+///
+/// Below the dial is a note — where it got to, what is left — which goes on
+/// the end of the task's notes. Everything is reachable from the keyboard:
+/// ↑ ↓ move the dial, ← → choose among the actions, ↩ takes the chosen one,
+/// tab or n moves into the note and tab or esc back out, and each action has
+/// a letter of its own.
 struct WorkspaceFocusQualityPrompt: View {
   @Environment(WorkspaceViewModel.self) private var model
   @Environment(\.theme) private var theme
@@ -26,7 +32,17 @@ struct WorkspaceFocusQualityPrompt: View {
   /// Tenths, so that ten presses of ↑ land on exactly ×2.0 rather than on
   /// whatever ten additions of 0.1 come to in binary.
   @State private var tenths = 10
-  @FocusState private var hasKeyboard: Bool
+  @State private var note = ""
+  /// The action ↩ takes. Nil until moved, which means the last in the row.
+  @State private var chosen: Choice?
+  @FocusState private var focus: Field?
+
+  private enum Field: Hashable { case dial, note }
+
+  /// The ways out of the prompt, which the action row is drawn from.
+  private enum Choice: Hashable {
+    case keepWorking, progress, done, takeBreak
+  }
 
   private static let step = 1
   private static var tenthsRange: ClosedRange<Int> {
@@ -50,15 +66,29 @@ struct WorkspaceFocusQualityPrompt: View {
     max(1, (model.activeFocusSession?.breakDurationSeconds ?? 300) / 60)
   }
 
+  /// Left to right, with what the key that ended the block asked for last —
+  /// the rightmost, chosen to begin with, and the one ↩ takes untouched.
+  private var choices: [Choice] {
+    if pending.timeIsUp { return [.keepWorking, .done, .takeBreak] }
+    return pending.completeTask ? [.keepWorking, .progress, .done] : [.keepWorking, .done, .progress]
+  }
+
+  private var selected: Choice { chosen ?? choices[choices.count - 1] }
+
+  private var editingNote: Bool { focus == .note }
+
   var body: some View {
     VStack(alignment: .leading, spacing: theme.space.lg) {
       header
       if scores {
         dial
-        FocusRule()
         tally
       }
+      FocusRule()
+      noteField
       actions
+      FocusRule(muted: true)
+      hints
     }
     .padding(theme.space.xl)
     .frame(width: fixedWidth)
@@ -68,22 +98,56 @@ struct WorkspaceFocusQualityPrompt: View {
     .interactiveDismissDisabled()
     .focusable()
     .focusEffectDisabled()
-    .focused($hasKeyboard)
-    .onKeyPress(.upArrow) { nudge(by: Self.step); return .handled }
-    .onKeyPress(.downArrow) { nudge(by: -Self.step); return .handled }
+    .focused($focus, equals: .dial)
+    // Every key below is the prompt's only while the note is not being
+    // written: a "d" typed into the note is a letter, not Done.
+    .onKeyPress(.upArrow) { key { nudge(by: Self.step) } }
+    .onKeyPress(.downArrow) { key { nudge(by: -Self.step) } }
+    .onKeyPress(.leftArrow) { key { move(by: -1) } }
+    .onKeyPress(.rightArrow) { key { move(by: 1) } }
+    .onKeyPress(.return) { key { run(selected) } }
+    .onKeyPress(.tab) { key { focus = .note } }
+    .onKeyPress(characters: ["n"]) { _ in key { focus = .note } }
+    .onKeyPress(characters: ["r"]) { _ in key { tenths = 10 } }
+    .onKeyPress(characters: ["d"]) { _ in key { run(.done) } }
+    .onKeyPress(characters: ["b"]) { _ in
+      key(when: pending.timeIsUp) { run(.takeBreak) }
+    }
+    .onKeyPress(characters: ["p"]) { _ in
+      key(when: !pending.timeIsUp) { run(.progress) }
+    }
     // A menial task, or a block that should not count for some other reason:
     // one key logs it at nothing, without stepping the dial down ten times.
     .onKeyPress(characters: ["\\"]) { _ in
-      if pending.timeIsUp { model.takeFocusBreak(multiplier: 0) } else { model.confirmFocusCompletion(multiplier: 0) }
-      return .handled
+      key { run(choices[choices.count - 1], multiplier: 0) }
     }
-    .onKeyPress(characters: ["d"]) { _ in
-      guard pending.timeIsUp else { return .ignored }
-      model.confirmFocusCompletion(multiplier: answer, completeTask: true)
-      return .handled
+    .onAppear { focus = .dial }
+    .onExitCommand {
+      if editingNote { focus = .dial } else { model.cancelFocusCompletion() }
     }
-    .onAppear { hasKeyboard = true }
-    .onExitCommand { model.cancelFocusCompletion() }
+  }
+
+  /// Runs `action` for a key pressed on the prompt, and lets the key through
+  /// to the note when the note has the keyboard.
+  private func key(when applies: Bool = true, _ action: () -> Void) -> KeyPress.Result {
+    guard !editingNote, applies else { return .ignored }
+    action()
+    return .handled
+  }
+
+  private func move(by delta: Int) {
+    guard let index = choices.firstIndex(of: selected) else { return }
+    chosen = choices[min(max(index + delta, 0), choices.count - 1)]
+  }
+
+  private func run(_ choice: Choice, multiplier: Double? = nil) {
+    let score = multiplier ?? answer
+    switch choice {
+    case .keepWorking: model.cancelFocusCompletion()
+    case .progress: model.confirmFocusCompletion(multiplier: score, completeTask: false, note: note)
+    case .done: model.confirmFocusCompletion(multiplier: score, completeTask: true, note: note)
+    case .takeBreak: model.takeFocusBreak(multiplier: score, note: note)
+    }
   }
 
   private func nudge(by delta: Int) {
@@ -183,47 +247,100 @@ struct WorkspaceFocusQualityPrompt: View {
     }
   }
 
-  @ViewBuilder private var actions: some View {
-    if pending.timeIsUp { timeUpActions } else { logActions }
-  }
-
-  /// A pomodoro's end: rest first, and say whether the task is done.
-  private var timeUpActions: some View {
-    HStack(spacing: theme.space.sm) {
-      Text(scores ? "↑ ↓ adjust · ↩ break · d done · esc keep working" : "↩ break · d done · esc keep working")
-        .font(theme.captionFont)
-        .foregroundStyle(theme.dim)
-      Spacer()
-      Button("Keep working") { model.cancelFocusCompletion() }
-        .buttonStyle(FocusActionButtonStyle())
-        .focusable(false)
-        .keyboardShortcut(.cancelAction)
-      Button("Done") { model.confirmFocusCompletion(multiplier: answer, completeTask: true) }
-        .buttonStyle(FocusActionButtonStyle())
-        .focusable(false)
-        .help("The task is finished (d)")
-      Button("Take a \(breakMinutes)-minute break") { model.takeFocusBreak(multiplier: answer) }
-        .buttonStyle(FocusActionButtonStyle(prominent: true))
-        .focusable(false)
-        .keyboardShortcut(.defaultAction)
-        .help("Log the time, keep the task, and rest")
+  /// What was done and what is left, kept on the task. ↩ in it still takes
+  /// the chosen action, so a note costs no extra keystroke to leave by.
+  private var noteField: some View {
+    VStack(alignment: .leading, spacing: theme.space.xs) {
+      HStack {
+        MicroLabel("Note")
+        Spacer()
+        Text("Added to the task's notes")
+          .font(theme.captionFont)
+          .foregroundStyle(theme.dim)
+      }
+      TextField("Note", text: $note, prompt: Text(notePrompt), axis: .vertical)
+        .lineLimit(2...6)
+        .themedTextField()
+        .focused($focus, equals: .note)
+        .onSubmit { run(selected) }
+        .onKeyPress(.tab) {
+          focus = .dial
+          return .handled
+        }
+        .help("⌥↩ new line · ↩ \(title(of: selected).lowercased()) · tab or esc back to the dial")
     }
   }
 
-  private var logActions: some View {
+  private var notePrompt: String {
+    pending.completeTask && !pending.timeIsUp
+      ? "What got done, anything worth remembering"
+      : "Where you got to, what's next"
+  }
+
+  /// One button per way out, each with its key. The chosen one is drawn as
+  /// the prominent one, so the colour says what ↩ will do.
+  private var actions: some View {
     HStack(spacing: theme.space.sm) {
-      Text("↑ ↓ adjust by 0.1 · ↩ log it · \\ log at ×0 · esc keep working")
-        .font(theme.captionFont)
-        .foregroundStyle(theme.dim)
-      Spacer()
-      Button("Keep working") { model.cancelFocusCompletion() }
-        .buttonStyle(FocusActionButtonStyle())
+      ForEach(choices, id: \.self) { choice in
+        Button { run(choice) } label: {
+          HStack(spacing: theme.space.xs) {
+            Text(title(of: choice))
+            KeyCap(keyName(of: choice))
+          }
+        }
+        .buttonStyle(FocusActionButtonStyle(prominent: choice == selected))
         .focusable(false)
-        .keyboardShortcut(.cancelAction)
-      Button("Log it") { model.confirmFocusCompletion(multiplier: multiplier) }
-        .buttonStyle(FocusActionButtonStyle(prominent: true))
-        .focusable(false)
-        .keyboardShortcut(.defaultAction)
+        .help(help(of: choice))
+        .accessibilityAddTraits(choice == selected ? .isSelected : [])
+        if choice == .keepWorking { Spacer(minLength: theme.space.sm) }
+      }
+    }
+    .animation(.snappy(duration: 0.15), value: selected)
+  }
+
+  private func title(of choice: Choice) -> String {
+    switch choice {
+    case .keepWorking: "Keep working"
+    case .progress: pending.completeTask ? "Log, keep open" : "Log progress"
+    case .done: pending.timeIsUp || !pending.completeTask ? "Done" : "Complete"
+    case .takeBreak: "\(breakMinutes)-minute break"
+    }
+  }
+
+  private func keyName(of choice: Choice) -> String {
+    switch choice {
+    case .keepWorking: "esc"
+    case .progress: "p"
+    case .done: "d"
+    case .takeBreak: "b"
+    }
+  }
+
+  private func help(of choice: Choice) -> String {
+    switch choice {
+    case .keepWorking: "Back to the block, with the time spent here left out"
+    case .progress: "Log the time and leave the task open"
+    case .done: "Log the time and finish the task"
+    case .takeBreak: "Log the time, keep the task, and rest"
+    }
+  }
+
+  /// The keys that are not on a button. While the note is being written they
+  /// are the note's keys instead.
+  private var hints: some View {
+    HStack(spacing: theme.space.md) {
+      if editingNote {
+        KeyHint("↩", title(of: selected).lowercased())
+        KeyHint("⌥↩", "new line")
+        KeyHint("tab", "back")
+      } else {
+        if scores { KeyHint("↑↓", "adjust") }
+        KeyHint("←→", "choose")
+        KeyHint("↩", "confirm")
+        KeyHint("n", "note")
+        KeyHint("\\", "log at ×0")
+      }
+      Spacer(minLength: 0)
     }
   }
 }

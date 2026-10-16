@@ -243,11 +243,12 @@ extension WorkspaceViewModel {
   /// Credits the time actually spent, so a daily's contribution reflects the
   /// sitting rather than the estimate, and scores it by the multiplier given.
   /// `completeTask` overrides what the key that finished the block said —
-  /// the time-up prompt asks it again.
-  func confirmFocusCompletion(multiplier: Double, completeTask: Bool? = nil) {
+  /// the time-up prompt asks it again. A `note` goes on the task's notes.
+  func confirmFocusCompletion(multiplier: Double, completeTask: Bool? = nil, note: String = "") {
     guard let store, let pending = pendingFocusCompletion else { return }
     let completesTask = completeTask ?? pending.completeTask
     perform {
+      try appendFocusNote(note, to: pending.taskID)
       let completion: WorkspaceStore.FocusCompletion
       do {
         completion = try store.completeActiveFocusTask(
@@ -278,9 +279,10 @@ extension WorkspaceViewModel {
 
   /// Logs the block as progress, scored by `multiplier`, and rests: the task
   /// stays in hand and the session is on a break for its break length.
-  func takeFocusBreak(multiplier: Double) {
+  func takeFocusBreak(multiplier: Double, note: String = "") {
     guard let store, let pending = pendingFocusCompletion else { return }
     perform {
+      try appendFocusNote(note, to: pending.taskID)
       let completion: WorkspaceStore.FocusCompletion
       do {
         completion = try store.takeFocusBreak(
@@ -301,6 +303,17 @@ extension WorkspaceViewModel {
       reloadDailies()
       reloadNextUp()
     }
+  }
+
+  /// Adds what was said about a block to the end of its task's notes. Written
+  /// before the block is settled, so the words survive a block that turns out
+  /// to have ended elsewhere.
+  func appendFocusNote(_ note: String, to taskID: String, now: Date = .now) throws {
+    guard let store, let task = try store.task(id: taskID) else { return }
+    let notes = FocusNote.appending(note, to: task.notes, stamp: FocusNote.stamp(for: now))
+    guard notes != task.notes else { return }
+    try store.updateTask(
+      id: task.id, title: task.title, notes: notes, dueAt: task.dueAt, estimateSeconds: task.estimateSeconds, now: now)
   }
 
   /// Back to work from a break: a fresh block on the task in hand, or the
