@@ -113,7 +113,15 @@ class SyncEngine(
     }
 
     companion object {
-        const val PUSH_BATCH = 500
+        /**
+         * Small enough that one push finishes inside the read timeout even when
+         * the server's database is far away: the server merges a push row by
+         * row, a couple of round trips to Postgres each, and a batch it cannot
+         * finish in time is rolled back whole and sent again for ever. Each
+         * accepted batch empties its part of the outbox, so a first sync of a
+         * big workspace makes progress batch by batch instead.
+         */
+        const val PUSH_BATCH = 100
         const val PULL_PAGE = 1000
     }
 }

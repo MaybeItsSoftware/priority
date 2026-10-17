@@ -363,7 +363,7 @@ Returns `200 {"ok":true}`.
    - Stamp each change with an HLC from its newest `changedAtMs`, in that
      order, starting from the stored clock; the clock is stored again when
      the batch is acknowledged.
-   - Send them in batches of 500. After each accepted batch, delete the outbox
+   - Send them in batches of 100. After each accepted batch, delete the outbox
      entries up to the batch's highest `seq`.
 3. **Pull:**
    - Fetch pages until `hasMore` is false.
