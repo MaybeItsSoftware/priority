@@ -45,11 +45,17 @@ extension WorkspaceViewModel {
     DailyDefinitionsStore(directoryURL: DailyLogService.defaultStoreDirectoryURL()).load().dailies
   }
 
-  /// The remote ids of the Checkvist lists this workspace already holds a copy
-  /// of, so the app fetches only the rest. A mapping whose local list has since
-  /// been deleted does not count: that list is imported again.
-  var importedCheckvistListIDs: Set<String> {
+  /// The remote ids of the Checkvist lists this workspace has already copied,
+  /// so the app fetches only the rest.
+  ///
+  /// A copy that has since been deleted still counts unless
+  /// `includingDeleted` is false: deleting an imported list is how it is got
+  /// rid of, and the import that runs whenever the app comes to the front
+  /// used to bring every such list straight back. Only the settings page's
+  /// Import button, asked for by name, restores them.
+  func importedCheckvistListIDs(includingDeleted: Bool = true) -> Set<String> {
     let localIDs = UserDefaults.standard.dictionary(forKey: Self.checkvistWorkspaceListIDsKey) as? [String: String] ?? [:]
+    guard !includingDeleted else { return Set(localIDs.keys) }
     let present = Set(lists.map(\.id))
     return Set(localIDs.filter { present.contains($0.value) }.keys)
   }

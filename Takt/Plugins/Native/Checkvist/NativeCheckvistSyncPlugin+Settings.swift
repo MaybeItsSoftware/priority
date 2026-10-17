@@ -197,8 +197,8 @@ private struct CheckvistSyncPluginSettingsView: View {
     checkvist.availableLists.contains { String($0.id) == checkvist.defaultListId }
   }
 
-  /// Whether the workspace already holds a copy of `list`; such a list is not
-  /// imported again unless its copy is deleted.
+  /// Whether the workspace has copied `list`. Such a list is not imported
+  /// again, even once its copy is deleted, except by the Import button.
   private func isImported(_ list: CheckvistList) -> Bool {
     let mapping =
       UserDefaults.standard.dictionary(forKey: WorkspaceViewModel.checkvistWorkspaceListIDsKey)

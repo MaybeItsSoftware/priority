@@ -81,7 +81,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
     workspace = WorkspaceViewModel()
     checkvistManager.importCheckvistNow = { [weak self] in
-      await self?.importFromCheckvist()
+      await self?.importFromCheckvist(restoringDeleted: true)
     }
     workspace.googleCalendarEventCreator = { [weak checkvistManager] title, taskID, listTitle, date, isAllDay in
       guard let integrations = checkvistManager?.integrations else { return nil }
@@ -352,15 +352,17 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     }
   }
 
-  /// Loads the account's lists and copies each one the workspace has not got
-  /// yet and the user has not excluded. A list whose fetch fails is left out
-  /// rather than handed over empty: an empty snapshot would become an empty
-  /// local list, mapped to the remote one, and so never imported again.
-  private func importFromCheckvist() async {
+  /// Loads the account's lists and copies each one the workspace has never
+  /// copied and the user has not excluded. A list whose copy was deleted stays
+  /// deleted unless `restoringDeleted` — the Import button, not the import
+  /// that runs on activation. A list whose fetch fails is left out rather than
+  /// handed over empty: an empty snapshot would become an empty local list,
+  /// mapped to the remote one, and so never imported again.
+  private func importFromCheckvist(restoringDeleted: Bool = false) async {
     let checkvist = checkvistManager.checkvist
     guard await checkvist.loadLists() else { return }
     let snapshots = await checkvist.importSnapshots(
-      alreadyImported: workspace.importedCheckvistListIDs
+      alreadyImported: workspace.importedCheckvistListIDs(includingDeleted: !restoringDeleted)
     ) { [weak self] list, error in
       self?.checkvistManager.diagnosticsLog.record(
         category: "Checkvist",
