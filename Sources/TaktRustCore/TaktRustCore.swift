@@ -481,6 +481,22 @@ fileprivate struct FfiConverterUInt8: FfiConverterPrimitive {
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterUInt16: FfiConverterPrimitive {
+    typealias FfiType = UInt16
+    typealias SwiftType = UInt16
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> UInt16 {
+        return try lift(readInt(&buf))
+    }
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        writeInt(&buf, lower(value))
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterUInt32: FfiConverterPrimitive {
     typealias FfiType = UInt32
     typealias SwiftType = UInt32
@@ -1043,6 +1059,50 @@ public protocol CoreWorkspaceProtocol: AnyObject, Sendable {
      * List" step.
      */
     func updateFilterList(id: String, name: String, icon: String?, colorHex: String?, definition: FilterDefinition, nowMs: Int64) throws  -> FilterListRow
+    
+    /**
+     * A window's schedule: `events` (from the agenda calendars) and the
+     * timed tasks overlapping `[from_ms, to_ms)`, all-day events first,
+     * then by start. An event that stands for a task is shown as the task.
+     */
+    func googleCalendarAgenda(events: [GoogleCalendarEvent], fromMs: Int64, toMs: Int64) throws  -> [GoogleCalendarAgendaEntry]
+    
+    /**
+     * Starts a pass: None when two-way sync is off or another device holds
+     * the lease, otherwise the calendar and where its feed was left.
+     */
+    func googleCalendarBeginPass(nowMs: Int64) throws  -> GoogleCalendarPass?
+    
+    /**
+     * Merges a pass's changed events (every event when `full`) with the
+     * workspace. Changes to tasks are one "Google Calendar" undo step;
+     * the writes Google needs come back to be sent, each then handed to
+     * [`Self::google_calendar_record_push`].
+     */
+    func googleCalendarReconcile(calendarId: String, events: [GoogleCalendarEvent], full: Bool, accessToken: String, nowMs: Int64, zone: String) throws  -> GoogleCalendarReconcile
+    
+    /**
+     * Files a sent write's answer: `status` is the HTTP status of the last
+     * request sent for it (`on_conflict`'s, when that was sent), `body`
+     * what came back.
+     */
+    func googleCalendarRecordPush(push: GoogleCalendarPush, status: UInt16, body: String, nowMs: Int64) throws  -> GoogleCalendarPushOutcome
+    
+    /**
+     * The account's calendar choices.
+     */
+    func googleCalendarSettings() throws  -> GoogleCalendarSettings
+    
+    /**
+     * Stores the account's calendar choices. Choosing another two-way
+     * calendar forgets the links to the old one's events, which stay there.
+     */
+    func setGoogleCalendarSettings(settings: GoogleCalendarSettings, nowMs: Int64) throws 
+    
+    /**
+     * Where a calendar's feed carries on from; None starts it again.
+     */
+    func setGoogleCalendarSyncToken(calendarId: String, syncToken: String?, nowMs: Int64) throws 
     
     /**
      * Puts back one step taken back; see [`redo_step`].
@@ -2383,6 +2443,116 @@ open func updateFilterList(id: String, name: String, icon: String?, colorHex: St
         FfiConverterInt64.lower(nowMs),uniffiCallStatus
     )
 })
+}
+    
+    /**
+     * A window's schedule: `events` (from the agenda calendars) and the
+     * timed tasks overlapping `[from_ms, to_ms)`, all-day events first,
+     * then by start. An event that stands for a task is shown as the task.
+     */
+open func googleCalendarAgenda(events: [GoogleCalendarEvent], fromMs: Int64, toMs: Int64)throws  -> [GoogleCalendarAgendaEntry]  {
+    return try  FfiConverterSequenceTypeGoogleCalendarAgendaEntry.lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_google_calendar_agenda(
+            self.uniffiCloneHandle(),
+        FfiConverterSequenceTypeGoogleCalendarEvent.lower(events),
+        FfiConverterInt64.lower(fromMs),
+        FfiConverterInt64.lower(toMs),uniffiCallStatus
+    )
+})
+}
+    
+    /**
+     * Starts a pass: None when two-way sync is off or another device holds
+     * the lease, otherwise the calendar and where its feed was left.
+     */
+open func googleCalendarBeginPass(nowMs: Int64)throws  -> GoogleCalendarPass?  {
+    return try  FfiConverterOptionTypeGoogleCalendarPass.lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_google_calendar_begin_pass(
+            self.uniffiCloneHandle(),
+        FfiConverterInt64.lower(nowMs),uniffiCallStatus
+    )
+})
+}
+    
+    /**
+     * Merges a pass's changed events (every event when `full`) with the
+     * workspace. Changes to tasks are one "Google Calendar" undo step;
+     * the writes Google needs come back to be sent, each then handed to
+     * [`Self::google_calendar_record_push`].
+     */
+open func googleCalendarReconcile(calendarId: String, events: [GoogleCalendarEvent], full: Bool, accessToken: String, nowMs: Int64, zone: String)throws  -> GoogleCalendarReconcile  {
+    return try  FfiConverterTypeGoogleCalendarReconcile_lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_google_calendar_reconcile(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(calendarId),
+        FfiConverterSequenceTypeGoogleCalendarEvent.lower(events),
+        FfiConverterBool.lower(full),
+        FfiConverterString.lower(accessToken),
+        FfiConverterInt64.lower(nowMs),
+        FfiConverterString.lower(zone),uniffiCallStatus
+    )
+})
+}
+    
+    /**
+     * Files a sent write's answer: `status` is the HTTP status of the last
+     * request sent for it (`on_conflict`'s, when that was sent), `body`
+     * what came back.
+     */
+open func googleCalendarRecordPush(push: GoogleCalendarPush, status: UInt16, body: String, nowMs: Int64)throws  -> GoogleCalendarPushOutcome  {
+    return try  FfiConverterTypeGoogleCalendarPushOutcome_lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_google_calendar_record_push(
+            self.uniffiCloneHandle(),
+        FfiConverterTypeGoogleCalendarPush_lower(push),
+        FfiConverterUInt16.lower(status),
+        FfiConverterString.lower(body),
+        FfiConverterInt64.lower(nowMs),uniffiCallStatus
+    )
+})
+}
+    
+    /**
+     * The account's calendar choices.
+     */
+open func googleCalendarSettings()throws  -> GoogleCalendarSettings  {
+    return try  FfiConverterTypeGoogleCalendarSettings_lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_google_calendar_settings(
+            self.uniffiCloneHandle(),uniffiCallStatus
+    )
+})
+}
+    
+    /**
+     * Stores the account's calendar choices. Choosing another two-way
+     * calendar forgets the links to the old one's events, which stay there.
+     */
+open func setGoogleCalendarSettings(settings: GoogleCalendarSettings, nowMs: Int64)throws   {try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_set_google_calendar_settings(
+            self.uniffiCloneHandle(),
+        FfiConverterTypeGoogleCalendarSettings_lower(settings),
+        FfiConverterInt64.lower(nowMs),uniffiCallStatus
+    )
+}
+}
+    
+    /**
+     * Where a calendar's feed carries on from; None starts it again.
+     */
+open func setGoogleCalendarSyncToken(calendarId: String, syncToken: String?, nowMs: Int64)throws   {try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_set_google_calendar_sync_token(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(calendarId),
+        FfiConverterOptionString.lower(syncToken),
+        FfiConverterInt64.lower(nowMs),uniffiCallStatus
+    )
+}
 }
     
     /**
@@ -12101,6 +12271,846 @@ public func FfiConverterTypeFollowUpPlan_lower(_ value: FollowUpPlan) -> RustBuf
 
 
 /**
+ * One line of a day's schedule.
+ */
+public struct GoogleCalendarAgendaEntry: Equatable, Hashable {
+    public var kind: GoogleCalendarAgendaKind
+    /**
+     * The event's or the task's id.
+     */
+    public var id: String
+    public var title: String
+    public var startMs: Int64?
+    public var endMs: Int64?
+    public var allDay: Bool
+    public var calendarId: String?
+    public var isDone: Bool
+    public var htmlLink: String?
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(kind: GoogleCalendarAgendaKind, 
+        /**
+         * The event's or the task's id.
+         */id: String, title: String, startMs: Int64?, endMs: Int64?, allDay: Bool, calendarId: String?, isDone: Bool, htmlLink: String?) {
+        self.kind = kind
+        self.id = id
+        self.title = title
+        self.startMs = startMs
+        self.endMs = endMs
+        self.allDay = allDay
+        self.calendarId = calendarId
+        self.isDone = isDone
+        self.htmlLink = htmlLink
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension GoogleCalendarAgendaEntry: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeGoogleCalendarAgendaEntry: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> GoogleCalendarAgendaEntry {
+        return
+            try GoogleCalendarAgendaEntry(
+                kind: FfiConverterTypeGoogleCalendarAgendaKind.read(from: &buf), 
+                id: FfiConverterString.read(from: &buf), 
+                title: FfiConverterString.read(from: &buf), 
+                startMs: FfiConverterOptionInt64.read(from: &buf), 
+                endMs: FfiConverterOptionInt64.read(from: &buf), 
+                allDay: FfiConverterBool.read(from: &buf), 
+                calendarId: FfiConverterOptionString.read(from: &buf), 
+                isDone: FfiConverterBool.read(from: &buf), 
+                htmlLink: FfiConverterOptionString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: GoogleCalendarAgendaEntry, into buf: inout [UInt8]) {
+        FfiConverterTypeGoogleCalendarAgendaKind.write(value.kind, into: &buf)
+        FfiConverterString.write(value.id, into: &buf)
+        FfiConverterString.write(value.title, into: &buf)
+        FfiConverterOptionInt64.write(value.startMs, into: &buf)
+        FfiConverterOptionInt64.write(value.endMs, into: &buf)
+        FfiConverterBool.write(value.allDay, into: &buf)
+        FfiConverterOptionString.write(value.calendarId, into: &buf)
+        FfiConverterBool.write(value.isDone, into: &buf)
+        FfiConverterOptionString.write(value.htmlLink, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeGoogleCalendarAgendaEntry_lift(_ buf: RustBuffer) throws -> GoogleCalendarAgendaEntry {
+    return try FfiConverterTypeGoogleCalendarAgendaEntry.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeGoogleCalendarAgendaEntry_lower(_ value: GoogleCalendarAgendaEntry) -> RustBuffer {
+    return FfiConverterTypeGoogleCalendarAgendaEntry.lower(value)
+}
+
+
+public struct GoogleCalendarCalendarsPage: Equatable, Hashable {
+    public var calendars: [GoogleCalendarInfo]
+    public var nextPageToken: String?
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(calendars: [GoogleCalendarInfo], nextPageToken: String?) {
+        self.calendars = calendars
+        self.nextPageToken = nextPageToken
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension GoogleCalendarCalendarsPage: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeGoogleCalendarCalendarsPage: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> GoogleCalendarCalendarsPage {
+        return
+            try GoogleCalendarCalendarsPage(
+                calendars: FfiConverterSequenceTypeGoogleCalendarInfo.read(from: &buf), 
+                nextPageToken: FfiConverterOptionString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: GoogleCalendarCalendarsPage, into buf: inout [UInt8]) {
+        FfiConverterSequenceTypeGoogleCalendarInfo.write(value.calendars, into: &buf)
+        FfiConverterOptionString.write(value.nextPageToken, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeGoogleCalendarCalendarsPage_lift(_ buf: RustBuffer) throws -> GoogleCalendarCalendarsPage {
+    return try FfiConverterTypeGoogleCalendarCalendarsPage.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeGoogleCalendarCalendarsPage_lower(_ value: GoogleCalendarCalendarsPage) -> RustBuffer {
+    return FfiConverterTypeGoogleCalendarCalendarsPage.lower(value)
+}
+
+
+/**
+ * An event as the core needs it.
+ */
+public struct GoogleCalendarEvent: Equatable, Hashable {
+    public var id: String
+    public var calendarId: String
+    /**
+     * `confirmed`, `tentative` or `cancelled`.
+     */
+    public var status: String
+    public var summary: String
+    /**
+     * A timed event's start and end.
+     */
+    public var startMs: Int64?
+    public var endMs: Int64?
+    /**
+     * An all-day event's first day and the day after its last, `yyyy-MM-dd`.
+     */
+    public var startDate: String?
+    public var endDate: String?
+    public var updatedMs: Int64?
+    /**
+     * `extendedProperties.private.taktTaskId`.
+     */
+    public var taskId: String?
+    public var htmlLink: String?
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(id: String, calendarId: String, 
+        /**
+         * `confirmed`, `tentative` or `cancelled`.
+         */status: String, summary: String, 
+        /**
+         * A timed event's start and end.
+         */startMs: Int64?, endMs: Int64?, 
+        /**
+         * An all-day event's first day and the day after its last, `yyyy-MM-dd`.
+         */startDate: String?, endDate: String?, updatedMs: Int64?, 
+        /**
+         * `extendedProperties.private.taktTaskId`.
+         */taskId: String?, htmlLink: String?) {
+        self.id = id
+        self.calendarId = calendarId
+        self.status = status
+        self.summary = summary
+        self.startMs = startMs
+        self.endMs = endMs
+        self.startDate = startDate
+        self.endDate = endDate
+        self.updatedMs = updatedMs
+        self.taskId = taskId
+        self.htmlLink = htmlLink
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension GoogleCalendarEvent: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeGoogleCalendarEvent: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> GoogleCalendarEvent {
+        return
+            try GoogleCalendarEvent(
+                id: FfiConverterString.read(from: &buf), 
+                calendarId: FfiConverterString.read(from: &buf), 
+                status: FfiConverterString.read(from: &buf), 
+                summary: FfiConverterString.read(from: &buf), 
+                startMs: FfiConverterOptionInt64.read(from: &buf), 
+                endMs: FfiConverterOptionInt64.read(from: &buf), 
+                startDate: FfiConverterOptionString.read(from: &buf), 
+                endDate: FfiConverterOptionString.read(from: &buf), 
+                updatedMs: FfiConverterOptionInt64.read(from: &buf), 
+                taskId: FfiConverterOptionString.read(from: &buf), 
+                htmlLink: FfiConverterOptionString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: GoogleCalendarEvent, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.id, into: &buf)
+        FfiConverterString.write(value.calendarId, into: &buf)
+        FfiConverterString.write(value.status, into: &buf)
+        FfiConverterString.write(value.summary, into: &buf)
+        FfiConverterOptionInt64.write(value.startMs, into: &buf)
+        FfiConverterOptionInt64.write(value.endMs, into: &buf)
+        FfiConverterOptionString.write(value.startDate, into: &buf)
+        FfiConverterOptionString.write(value.endDate, into: &buf)
+        FfiConverterOptionInt64.write(value.updatedMs, into: &buf)
+        FfiConverterOptionString.write(value.taskId, into: &buf)
+        FfiConverterOptionString.write(value.htmlLink, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeGoogleCalendarEvent_lift(_ buf: RustBuffer) throws -> GoogleCalendarEvent {
+    return try FfiConverterTypeGoogleCalendarEvent.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeGoogleCalendarEvent_lower(_ value: GoogleCalendarEvent) -> RustBuffer {
+    return FfiConverterTypeGoogleCalendarEvent.lower(value)
+}
+
+
+public struct GoogleCalendarEventsPage: Equatable, Hashable {
+    public var events: [GoogleCalendarEvent]
+    public var nextPageToken: String?
+    /**
+     * On the last page of a change feed: where the next pass starts.
+     */
+    public var nextSyncToken: String?
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(events: [GoogleCalendarEvent], nextPageToken: String?, 
+        /**
+         * On the last page of a change feed: where the next pass starts.
+         */nextSyncToken: String?) {
+        self.events = events
+        self.nextPageToken = nextPageToken
+        self.nextSyncToken = nextSyncToken
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension GoogleCalendarEventsPage: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeGoogleCalendarEventsPage: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> GoogleCalendarEventsPage {
+        return
+            try GoogleCalendarEventsPage(
+                events: FfiConverterSequenceTypeGoogleCalendarEvent.read(from: &buf), 
+                nextPageToken: FfiConverterOptionString.read(from: &buf), 
+                nextSyncToken: FfiConverterOptionString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: GoogleCalendarEventsPage, into buf: inout [UInt8]) {
+        FfiConverterSequenceTypeGoogleCalendarEvent.write(value.events, into: &buf)
+        FfiConverterOptionString.write(value.nextPageToken, into: &buf)
+        FfiConverterOptionString.write(value.nextSyncToken, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeGoogleCalendarEventsPage_lift(_ buf: RustBuffer) throws -> GoogleCalendarEventsPage {
+    return try FfiConverterTypeGoogleCalendarEventsPage.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeGoogleCalendarEventsPage_lower(_ value: GoogleCalendarEventsPage) -> RustBuffer {
+    return FfiConverterTypeGoogleCalendarEventsPage.lower(value)
+}
+
+
+public struct GoogleCalendarHeader: Equatable, Hashable {
+    public var name: String
+    public var value: String
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(name: String, value: String) {
+        self.name = name
+        self.value = value
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension GoogleCalendarHeader: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeGoogleCalendarHeader: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> GoogleCalendarHeader {
+        return
+            try GoogleCalendarHeader(
+                name: FfiConverterString.read(from: &buf), 
+                value: FfiConverterString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: GoogleCalendarHeader, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.name, into: &buf)
+        FfiConverterString.write(value.value, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeGoogleCalendarHeader_lift(_ buf: RustBuffer) throws -> GoogleCalendarHeader {
+    return try FfiConverterTypeGoogleCalendarHeader.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeGoogleCalendarHeader_lower(_ value: GoogleCalendarHeader) -> RustBuffer {
+    return FfiConverterTypeGoogleCalendarHeader.lower(value)
+}
+
+
+/**
+ * One request, ready for a client's HTTP stack.
+ */
+public struct GoogleCalendarHttpRequest: Equatable, Hashable {
+    /**
+     * `GET`, `POST`, `PATCH` or `DELETE`.
+     */
+    public var method: String
+    public var url: String
+    public var headers: [GoogleCalendarHeader]
+    /**
+     * JSON, when the call has a body.
+     */
+    public var body: String?
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(
+        /**
+         * `GET`, `POST`, `PATCH` or `DELETE`.
+         */method: String, url: String, headers: [GoogleCalendarHeader], 
+        /**
+         * JSON, when the call has a body.
+         */body: String?) {
+        self.method = method
+        self.url = url
+        self.headers = headers
+        self.body = body
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension GoogleCalendarHttpRequest: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeGoogleCalendarHttpRequest: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> GoogleCalendarHttpRequest {
+        return
+            try GoogleCalendarHttpRequest(
+                method: FfiConverterString.read(from: &buf), 
+                url: FfiConverterString.read(from: &buf), 
+                headers: FfiConverterSequenceTypeGoogleCalendarHeader.read(from: &buf), 
+                body: FfiConverterOptionString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: GoogleCalendarHttpRequest, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.method, into: &buf)
+        FfiConverterString.write(value.url, into: &buf)
+        FfiConverterSequenceTypeGoogleCalendarHeader.write(value.headers, into: &buf)
+        FfiConverterOptionString.write(value.body, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeGoogleCalendarHttpRequest_lift(_ buf: RustBuffer) throws -> GoogleCalendarHttpRequest {
+    return try FfiConverterTypeGoogleCalendarHttpRequest.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeGoogleCalendarHttpRequest_lower(_ value: GoogleCalendarHttpRequest) -> RustBuffer {
+    return FfiConverterTypeGoogleCalendarHttpRequest.lower(value)
+}
+
+
+public struct GoogleCalendarInfo: Equatable, Hashable {
+    public var id: String
+    public var summary: String
+    public var isPrimary: Bool
+    /**
+     * Whether events can be written there (owner or writer).
+     */
+    public var canWrite: Bool
+    /**
+     * `#rrggbb`, as Google colours it for this account.
+     */
+    public var color: String?
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(id: String, summary: String, isPrimary: Bool, 
+        /**
+         * Whether events can be written there (owner or writer).
+         */canWrite: Bool, 
+        /**
+         * `#rrggbb`, as Google colours it for this account.
+         */color: String?) {
+        self.id = id
+        self.summary = summary
+        self.isPrimary = isPrimary
+        self.canWrite = canWrite
+        self.color = color
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension GoogleCalendarInfo: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeGoogleCalendarInfo: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> GoogleCalendarInfo {
+        return
+            try GoogleCalendarInfo(
+                id: FfiConverterString.read(from: &buf), 
+                summary: FfiConverterString.read(from: &buf), 
+                isPrimary: FfiConverterBool.read(from: &buf), 
+                canWrite: FfiConverterBool.read(from: &buf), 
+                color: FfiConverterOptionString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: GoogleCalendarInfo, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.id, into: &buf)
+        FfiConverterString.write(value.summary, into: &buf)
+        FfiConverterBool.write(value.isPrimary, into: &buf)
+        FfiConverterBool.write(value.canWrite, into: &buf)
+        FfiConverterOptionString.write(value.color, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeGoogleCalendarInfo_lift(_ buf: RustBuffer) throws -> GoogleCalendarInfo {
+    return try FfiConverterTypeGoogleCalendarInfo.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeGoogleCalendarInfo_lower(_ value: GoogleCalendarInfo) -> RustBuffer {
+    return FfiConverterTypeGoogleCalendarInfo.lower(value)
+}
+
+
+/**
+ * What a pass works on, once this device holds the lease.
+ */
+public struct GoogleCalendarPass: Equatable, Hashable {
+    public var calendarId: String
+    /**
+     * None: list everything.
+     */
+    public var syncToken: String?
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(calendarId: String, 
+        /**
+         * None: list everything.
+         */syncToken: String?) {
+        self.calendarId = calendarId
+        self.syncToken = syncToken
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension GoogleCalendarPass: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeGoogleCalendarPass: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> GoogleCalendarPass {
+        return
+            try GoogleCalendarPass(
+                calendarId: FfiConverterString.read(from: &buf), 
+                syncToken: FfiConverterOptionString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: GoogleCalendarPass, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.calendarId, into: &buf)
+        FfiConverterOptionString.write(value.syncToken, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeGoogleCalendarPass_lift(_ buf: RustBuffer) throws -> GoogleCalendarPass {
+    return try FfiConverterTypeGoogleCalendarPass.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeGoogleCalendarPass_lower(_ value: GoogleCalendarPass) -> RustBuffer {
+    return FfiConverterTypeGoogleCalendarPass.lower(value)
+}
+
+
+/**
+ * One write for the client to send, then hand back with its answer.
+ */
+public struct GoogleCalendarPush: Equatable, Hashable {
+    public var taskId: String
+    public var calendarId: String
+    public var eventId: String
+    public var kind: GoogleCalendarPushKind
+    public var request: GoogleCalendarHttpRequest
+    /**
+     * Sent instead when `request` answers `409`: the derived id is taken,
+     * by another device's insert or an event deleted earlier, so it is
+     * patched back to life.
+     */
+    public var onConflict: GoogleCalendarHttpRequest?
+    /**
+     * What the link records once it has been sent (`pushedJSON`).
+     */
+    public var agreedJson: String?
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(taskId: String, calendarId: String, eventId: String, kind: GoogleCalendarPushKind, request: GoogleCalendarHttpRequest, 
+        /**
+         * Sent instead when `request` answers `409`: the derived id is taken,
+         * by another device's insert or an event deleted earlier, so it is
+         * patched back to life.
+         */onConflict: GoogleCalendarHttpRequest?, 
+        /**
+         * What the link records once it has been sent (`pushedJSON`).
+         */agreedJson: String?) {
+        self.taskId = taskId
+        self.calendarId = calendarId
+        self.eventId = eventId
+        self.kind = kind
+        self.request = request
+        self.onConflict = onConflict
+        self.agreedJson = agreedJson
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension GoogleCalendarPush: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeGoogleCalendarPush: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> GoogleCalendarPush {
+        return
+            try GoogleCalendarPush(
+                taskId: FfiConverterString.read(from: &buf), 
+                calendarId: FfiConverterString.read(from: &buf), 
+                eventId: FfiConverterString.read(from: &buf), 
+                kind: FfiConverterTypeGoogleCalendarPushKind.read(from: &buf), 
+                request: FfiConverterTypeGoogleCalendarHttpRequest.read(from: &buf), 
+                onConflict: FfiConverterOptionTypeGoogleCalendarHttpRequest.read(from: &buf), 
+                agreedJson: FfiConverterOptionString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: GoogleCalendarPush, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.taskId, into: &buf)
+        FfiConverterString.write(value.calendarId, into: &buf)
+        FfiConverterString.write(value.eventId, into: &buf)
+        FfiConverterTypeGoogleCalendarPushKind.write(value.kind, into: &buf)
+        FfiConverterTypeGoogleCalendarHttpRequest.write(value.request, into: &buf)
+        FfiConverterOptionTypeGoogleCalendarHttpRequest.write(value.onConflict, into: &buf)
+        FfiConverterOptionString.write(value.agreedJson, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeGoogleCalendarPush_lift(_ buf: RustBuffer) throws -> GoogleCalendarPush {
+    return try FfiConverterTypeGoogleCalendarPush.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeGoogleCalendarPush_lower(_ value: GoogleCalendarPush) -> RustBuffer {
+    return FfiConverterTypeGoogleCalendarPush.lower(value)
+}
+
+
+public struct GoogleCalendarReconcile: Equatable, Hashable {
+    public var pushes: [GoogleCalendarPush]
+    /**
+     * Tasks moved or renamed from Google.
+     */
+    public var tasksUpdated: UInt32
+    /**
+     * Tasks made from events (only with import on).
+     */
+    public var tasksImported: UInt32
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(pushes: [GoogleCalendarPush], 
+        /**
+         * Tasks moved or renamed from Google.
+         */tasksUpdated: UInt32, 
+        /**
+         * Tasks made from events (only with import on).
+         */tasksImported: UInt32) {
+        self.pushes = pushes
+        self.tasksUpdated = tasksUpdated
+        self.tasksImported = tasksImported
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension GoogleCalendarReconcile: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeGoogleCalendarReconcile: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> GoogleCalendarReconcile {
+        return
+            try GoogleCalendarReconcile(
+                pushes: FfiConverterSequenceTypeGoogleCalendarPush.read(from: &buf), 
+                tasksUpdated: FfiConverterUInt32.read(from: &buf), 
+                tasksImported: FfiConverterUInt32.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: GoogleCalendarReconcile, into buf: inout [UInt8]) {
+        FfiConverterSequenceTypeGoogleCalendarPush.write(value.pushes, into: &buf)
+        FfiConverterUInt32.write(value.tasksUpdated, into: &buf)
+        FfiConverterUInt32.write(value.tasksImported, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeGoogleCalendarReconcile_lift(_ buf: RustBuffer) throws -> GoogleCalendarReconcile {
+    return try FfiConverterTypeGoogleCalendarReconcile.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeGoogleCalendarReconcile_lower(_ value: GoogleCalendarReconcile) -> RustBuffer {
+    return FfiConverterTypeGoogleCalendarReconcile.lower(value)
+}
+
+
+/**
+ * The account's choices, kept as synced preferences.
+ */
+public struct GoogleCalendarSettings: Equatable, Hashable {
+    /**
+     * The two-way calendar; none switches two-way sync off.
+     */
+    public var calendarId: String?
+    /**
+     * Whether events made in Google become tasks.
+     */
+    public var importEvents: Bool
+    /**
+     * The calendars Today shows.
+     */
+    public var agendaCalendarIds: [String]
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(
+        /**
+         * The two-way calendar; none switches two-way sync off.
+         */calendarId: String?, 
+        /**
+         * Whether events made in Google become tasks.
+         */importEvents: Bool, 
+        /**
+         * The calendars Today shows.
+         */agendaCalendarIds: [String]) {
+        self.calendarId = calendarId
+        self.importEvents = importEvents
+        self.agendaCalendarIds = agendaCalendarIds
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension GoogleCalendarSettings: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeGoogleCalendarSettings: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> GoogleCalendarSettings {
+        return
+            try GoogleCalendarSettings(
+                calendarId: FfiConverterOptionString.read(from: &buf), 
+                importEvents: FfiConverterBool.read(from: &buf), 
+                agendaCalendarIds: FfiConverterSequenceString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: GoogleCalendarSettings, into buf: inout [UInt8]) {
+        FfiConverterOptionString.write(value.calendarId, into: &buf)
+        FfiConverterBool.write(value.importEvents, into: &buf)
+        FfiConverterSequenceString.write(value.agendaCalendarIds, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeGoogleCalendarSettings_lift(_ buf: RustBuffer) throws -> GoogleCalendarSettings {
+    return try FfiConverterTypeGoogleCalendarSettings.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeGoogleCalendarSettings_lower(_ value: GoogleCalendarSettings) -> RustBuffer {
+    return FfiConverterTypeGoogleCalendarSettings.lower(value)
+}
+
+
+/**
  * Something Takt overwrote because it had the final say.
  */
 public struct GoogleTasksConflict: Equatable, Hashable {
@@ -19381,6 +20391,12 @@ enum CoreError: Swift.Error, Equatable, Hashable, Foundation.LocalizedError {
      * one (`editor_draft.rs`).
      */
     case InvalidEstimate
+    /**
+     * A Google Calendar answer the core could not read
+     * (`google_calendar.rs`).
+     */
+    case GoogleCalendar(detail: String
+    )
 
     
 
@@ -19467,6 +20483,9 @@ public struct FfiConverterTypeCoreError: FfiConverterRustBuffer {
             detail: try FfiConverterString.read(from: &buf)
             )
         case 30: return .InvalidEstimate
+        case 31: return .GoogleCalendar(
+            detail: try FfiConverterString.read(from: &buf)
+            )
 
          default: throw UniffiInternalError.unexpectedEnumCase
         }
@@ -19612,6 +20631,11 @@ public struct FfiConverterTypeCoreError: FfiConverterRustBuffer {
         case .InvalidEstimate:
             writeInt(&buf, Int32(30))
         
+        
+        case let .GoogleCalendar(detail):
+            writeInt(&buf, Int32(31))
+            FfiConverterString.write(detail, into: &buf)
+            
         }
     }
 }
@@ -20486,6 +21510,337 @@ public func FfiConverterTypeFocusDeferral_lift(_ buf: RustBuffer) throws -> Focu
 #endif
 public func FfiConverterTypeFocusDeferral_lower(_ value: FocusDeferral) -> RustBuffer {
     return FfiConverterTypeFocusDeferral.lower(value)
+}
+
+
+
+
+public enum GoogleCalendarAgendaKind: Equatable, Hashable {
+    
+    case event
+    case task
+
+
+
+
+
+}
+
+#if compiler(>=6)
+extension GoogleCalendarAgendaKind: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeGoogleCalendarAgendaKind: FfiConverterRustBuffer {
+    typealias SwiftType = GoogleCalendarAgendaKind
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> GoogleCalendarAgendaKind {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .event
+        
+        case 2: return .task
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: GoogleCalendarAgendaKind, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case .event:
+            writeInt(&buf, Int32(1))
+        
+        
+        case .task:
+            writeInt(&buf, Int32(2))
+        
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeGoogleCalendarAgendaKind_lift(_ buf: RustBuffer) throws -> GoogleCalendarAgendaKind {
+    return try FfiConverterTypeGoogleCalendarAgendaKind.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeGoogleCalendarAgendaKind_lower(_ value: GoogleCalendarAgendaKind) -> RustBuffer {
+    return FfiConverterTypeGoogleCalendarAgendaKind.lower(value)
+}
+
+
+
+/**
+ * A read to make. The writes come out of
+ * [`CoreWorkspace::google_calendar_reconcile`] already built.
+ */
+
+public enum GoogleCalendarCall: Equatable, Hashable {
+    
+    /**
+     * The calendars the account can see.
+     */
+    case calendars(pageToken: String?
+    )
+    /**
+     * What changed in a calendar since `sync_token`; everything without one.
+     */
+    case changes(calendarId: String, syncToken: String?, pageToken: String?
+    )
+    /**
+     * The events overlapping a window, recurring ones expanded, in order.
+     */
+    case window(calendarId: String, fromMs: Int64, toMs: Int64, pageToken: String?
+    )
+
+
+
+
+
+}
+
+#if compiler(>=6)
+extension GoogleCalendarCall: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeGoogleCalendarCall: FfiConverterRustBuffer {
+    typealias SwiftType = GoogleCalendarCall
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> GoogleCalendarCall {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .calendars(pageToken: try FfiConverterOptionString.read(from: &buf)
+        )
+        
+        case 2: return .changes(calendarId: try FfiConverterString.read(from: &buf), syncToken: try FfiConverterOptionString.read(from: &buf), pageToken: try FfiConverterOptionString.read(from: &buf)
+        )
+        
+        case 3: return .window(calendarId: try FfiConverterString.read(from: &buf), fromMs: try FfiConverterInt64.read(from: &buf), toMs: try FfiConverterInt64.read(from: &buf), pageToken: try FfiConverterOptionString.read(from: &buf)
+        )
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: GoogleCalendarCall, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case let .calendars(pageToken):
+            writeInt(&buf, Int32(1))
+            FfiConverterOptionString.write(pageToken, into: &buf)
+            
+        
+        case let .changes(calendarId,syncToken,pageToken):
+            writeInt(&buf, Int32(2))
+            FfiConverterString.write(calendarId, into: &buf)
+            FfiConverterOptionString.write(syncToken, into: &buf)
+            FfiConverterOptionString.write(pageToken, into: &buf)
+            
+        
+        case let .window(calendarId,fromMs,toMs,pageToken):
+            writeInt(&buf, Int32(3))
+            FfiConverterString.write(calendarId, into: &buf)
+            FfiConverterInt64.write(fromMs, into: &buf)
+            FfiConverterInt64.write(toMs, into: &buf)
+            FfiConverterOptionString.write(pageToken, into: &buf)
+            
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeGoogleCalendarCall_lift(_ buf: RustBuffer) throws -> GoogleCalendarCall {
+    return try FfiConverterTypeGoogleCalendarCall.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeGoogleCalendarCall_lower(_ value: GoogleCalendarCall) -> RustBuffer {
+    return FfiConverterTypeGoogleCalendarCall.lower(value)
+}
+
+
+
+
+public enum GoogleCalendarPushKind: Equatable, Hashable {
+    
+    case create
+    case update
+    case delete
+    /**
+     * Writes the task id onto an imported event.
+     */
+    case tag
+
+
+
+
+
+}
+
+#if compiler(>=6)
+extension GoogleCalendarPushKind: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeGoogleCalendarPushKind: FfiConverterRustBuffer {
+    typealias SwiftType = GoogleCalendarPushKind
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> GoogleCalendarPushKind {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .create
+        
+        case 2: return .update
+        
+        case 3: return .delete
+        
+        case 4: return .tag
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: GoogleCalendarPushKind, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case .create:
+            writeInt(&buf, Int32(1))
+        
+        
+        case .update:
+            writeInt(&buf, Int32(2))
+        
+        
+        case .delete:
+            writeInt(&buf, Int32(3))
+        
+        
+        case .tag:
+            writeInt(&buf, Int32(4))
+        
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeGoogleCalendarPushKind_lift(_ buf: RustBuffer) throws -> GoogleCalendarPushKind {
+    return try FfiConverterTypeGoogleCalendarPushKind.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeGoogleCalendarPushKind_lower(_ value: GoogleCalendarPushKind) -> RustBuffer {
+    return FfiConverterTypeGoogleCalendarPushKind.lower(value)
+}
+
+
+
+
+public enum GoogleCalendarPushOutcome: Equatable, Hashable {
+    
+    case done
+    /**
+     * The grant was refused: sign in again.
+     */
+    case unauthorized
+    /**
+     * Left as it was; the next pass tries again.
+     */
+    case failed(detail: String
+    )
+
+
+
+
+
+}
+
+#if compiler(>=6)
+extension GoogleCalendarPushOutcome: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeGoogleCalendarPushOutcome: FfiConverterRustBuffer {
+    typealias SwiftType = GoogleCalendarPushOutcome
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> GoogleCalendarPushOutcome {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .done
+        
+        case 2: return .unauthorized
+        
+        case 3: return .failed(detail: try FfiConverterString.read(from: &buf)
+        )
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: GoogleCalendarPushOutcome, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case .done:
+            writeInt(&buf, Int32(1))
+        
+        
+        case .unauthorized:
+            writeInt(&buf, Int32(2))
+        
+        
+        case let .failed(detail):
+            writeInt(&buf, Int32(3))
+            FfiConverterString.write(detail, into: &buf)
+            
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeGoogleCalendarPushOutcome_lift(_ buf: RustBuffer) throws -> GoogleCalendarPushOutcome {
+    return try FfiConverterTypeGoogleCalendarPushOutcome.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeGoogleCalendarPushOutcome_lower(_ value: GoogleCalendarPushOutcome) -> RustBuffer {
+    return FfiConverterTypeGoogleCalendarPushOutcome.lower(value)
 }
 
 
@@ -23087,6 +24442,54 @@ fileprivate struct FfiConverterOptionTypeFollowUpPlan: FfiConverterRustBuffer {
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterOptionTypeGoogleCalendarHttpRequest: FfiConverterRustBuffer {
+    typealias SwiftType = GoogleCalendarHttpRequest?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterTypeGoogleCalendarHttpRequest.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterTypeGoogleCalendarHttpRequest.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterOptionTypeGoogleCalendarPass: FfiConverterRustBuffer {
+    typealias SwiftType = GoogleCalendarPass?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterTypeGoogleCalendarPass.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterTypeGoogleCalendarPass.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterOptionTypeHabitColumnChange: FfiConverterRustBuffer {
     typealias SwiftType = HabitColumnChange?
 
@@ -24879,6 +26282,131 @@ fileprivate struct FfiConverterSequenceTypeFolderRow: FfiConverterRustBuffer {
         seq.reserveCapacity(Int(len))
         for _ in 0 ..< len {
             seq.append(try FfiConverterTypeFolderRow.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterSequenceTypeGoogleCalendarAgendaEntry: FfiConverterRustBuffer {
+    typealias SwiftType = [GoogleCalendarAgendaEntry]
+
+    public static func write(_ value: [GoogleCalendarAgendaEntry], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeGoogleCalendarAgendaEntry.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [GoogleCalendarAgendaEntry] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [GoogleCalendarAgendaEntry]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeGoogleCalendarAgendaEntry.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterSequenceTypeGoogleCalendarEvent: FfiConverterRustBuffer {
+    typealias SwiftType = [GoogleCalendarEvent]
+
+    public static func write(_ value: [GoogleCalendarEvent], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeGoogleCalendarEvent.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [GoogleCalendarEvent] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [GoogleCalendarEvent]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeGoogleCalendarEvent.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterSequenceTypeGoogleCalendarHeader: FfiConverterRustBuffer {
+    typealias SwiftType = [GoogleCalendarHeader]
+
+    public static func write(_ value: [GoogleCalendarHeader], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeGoogleCalendarHeader.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [GoogleCalendarHeader] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [GoogleCalendarHeader]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeGoogleCalendarHeader.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterSequenceTypeGoogleCalendarInfo: FfiConverterRustBuffer {
+    typealias SwiftType = [GoogleCalendarInfo]
+
+    public static func write(_ value: [GoogleCalendarInfo], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeGoogleCalendarInfo.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [GoogleCalendarInfo] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [GoogleCalendarInfo]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeGoogleCalendarInfo.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterSequenceTypeGoogleCalendarPush: FfiConverterRustBuffer {
+    typealias SwiftType = [GoogleCalendarPush]
+
+    public static func write(_ value: [GoogleCalendarPush], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeGoogleCalendarPush.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [GoogleCalendarPush] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [GoogleCalendarPush]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeGoogleCalendarPush.read(from: &buf))
         }
         return seq
     }
@@ -27378,6 +28906,54 @@ public func focusContextIsStale(context: StoredFocusContext, nowMs: Int64, zone:
 })
 }
 /**
+ * A page of `calendarList`.
+ */
+public func googleCalendarCalendars(body: String)throws  -> GoogleCalendarCalendarsPage  {
+    return try  FfiConverterTypeGoogleCalendarCalendarsPage_lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_google_calendar_calendars(
+        FfiConverterString.lower(body),uniffiCallStatus
+    )
+})
+}
+/**
+ * The id Takt gives a task's event: `takt` and 32 hex digits of
+ * `SHA-256("takt.calendar:<taskId>")`, inside Google's base32hex alphabet.
+ * Every device derives the same one, so two of them cannot make two events.
+ */
+public func googleCalendarEventId(taskId: String) -> String  {
+    return try!  FfiConverterString.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_google_calendar_event_id(
+        FfiConverterString.lower(taskId),uniffiCallStatus
+    )
+})
+}
+/**
+ * A page of a calendar's events, from a change feed or a window.
+ */
+public func googleCalendarEventsPage(calendarId: String, body: String)throws  -> GoogleCalendarEventsPage  {
+    return try  FfiConverterTypeGoogleCalendarEventsPage_lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_google_calendar_events_page(
+        FfiConverterString.lower(calendarId),
+        FfiConverterString.lower(body),uniffiCallStatus
+    )
+})
+}
+/**
+ * The request for a read.
+ */
+public func googleCalendarRequest(call: GoogleCalendarCall, accessToken: String) -> GoogleCalendarHttpRequest  {
+    return try!  FfiConverterTypeGoogleCalendarHttpRequest_lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_google_calendar_request(
+        FfiConverterTypeGoogleCalendarCall_lower(call),
+        FfiConverterString.lower(accessToken),uniffiCallStatus
+    )
+})
+}
+/**
  * Works out what has to happen for the two sides to agree.
  *
  * The ledger is `ledger_tasks` (keyed by local task id) and `ledger_lists`
@@ -29009,6 +30585,18 @@ private let initializationResult: InitializationResult = {
     if (uniffi_takt_core_checksum_func_focus_context_is_stale() != 22807) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_takt_core_checksum_func_google_calendar_calendars() != 43950) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_google_calendar_event_id() != 11061) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_google_calendar_events_page() != 50146) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_google_calendar_request() != 63848) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_takt_core_checksum_func_google_tasks_plan() != 64663) {
         return InitializationResult.apiChecksumMismatch
     }
@@ -29418,6 +31006,27 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_method_coreworkspace_update_filter_list() != 10132) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_google_calendar_agenda() != 34507) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_google_calendar_begin_pass() != 28433) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_google_calendar_reconcile() != 14124) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_google_calendar_record_push() != 29348) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_google_calendar_settings() != 31668) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_set_google_calendar_settings() != 17534) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_set_google_calendar_sync_token() != 27648) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_method_coreworkspace_redo_step() != 44009) {

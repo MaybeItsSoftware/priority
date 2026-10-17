@@ -833,6 +833,14 @@ internal object IntegrityCheckingUniffiLib {
     ): Int
     external fun uniffi_takt_core_checksum_func_focus_context_is_stale(
     ): Int
+    external fun uniffi_takt_core_checksum_func_google_calendar_calendars(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_google_calendar_event_id(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_google_calendar_events_page(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_google_calendar_request(
+    ): Int
     external fun uniffi_takt_core_checksum_func_google_tasks_plan(
     ): Int
     external fun uniffi_takt_core_checksum_func_keyboard_chord(
@@ -1106,6 +1114,20 @@ internal object IntegrityCheckingUniffiLib {
     external fun uniffi_takt_core_checksum_method_coreworkspace_rename_filter_list(
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_update_filter_list(
+    ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_google_calendar_agenda(
+    ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_google_calendar_begin_pass(
+    ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_google_calendar_reconcile(
+    ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_google_calendar_record_push(
+    ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_google_calendar_settings(
+    ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_set_google_calendar_settings(
+    ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_set_google_calendar_sync_token(
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_redo_step(
     ): Int
@@ -1585,6 +1607,20 @@ internal object UniffiLib {
     ): Unit
     external fun uniffi_takt_core_fn_method_coreworkspace_update_filter_list(`ptr`: Long,`id`: RustBuffer.ByValue,`name`: RustBuffer.ByValue,`icon`: RustBuffer.ByValue,`colorHex`: RustBuffer.ByValue,`definition`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_method_coreworkspace_google_calendar_agenda(`ptr`: Long,`events`: RustBuffer.ByValue,`fromMs`: Long,`toMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_method_coreworkspace_google_calendar_begin_pass(`ptr`: Long,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_method_coreworkspace_google_calendar_reconcile(`ptr`: Long,`calendarId`: RustBuffer.ByValue,`events`: RustBuffer.ByValue,`full`: Byte,`accessToken`: RustBuffer.ByValue,`nowMs`: Long,`zone`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_method_coreworkspace_google_calendar_record_push(`ptr`: Long,`push`: RustBuffer.ByValue,`status`: Short,`body`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_method_coreworkspace_google_calendar_settings(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_method_coreworkspace_set_google_calendar_settings(`ptr`: Long,`settings`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Unit
+    external fun uniffi_takt_core_fn_method_coreworkspace_set_google_calendar_sync_token(`ptr`: Long,`calendarId`: RustBuffer.ByValue,`syncToken`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Unit
     external fun uniffi_takt_core_fn_method_coreworkspace_redo_step(`ptr`: Long,`id`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): Byte
     external fun uniffi_takt_core_fn_method_coreworkspace_step_undo_plan(`ptr`: Long,`id`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
@@ -2113,6 +2149,14 @@ internal object UniffiLib {
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_func_focus_context_is_stale(`context`: RustBuffer.ByValue,`nowMs`: Long,`zone`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): Byte
+    external fun uniffi_takt_core_fn_func_google_calendar_calendars(`body`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_google_calendar_event_id(`taskId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_google_calendar_events_page(`calendarId`: RustBuffer.ByValue,`body`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_google_calendar_request(`call`: RustBuffer.ByValue,`accessToken`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_func_google_tasks_plan(`localLists`: RustBuffer.ByValue,`localTasks`: RustBuffer.ByValue,`remoteLists`: RustBuffer.ByValue,`remoteTasks`: RustBuffer.ByValue,`ledgerTasks`: RustBuffer.ByValue,`ledgerLists`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_func_keyboard_chord(`key`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
@@ -2679,6 +2723,18 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
     if ((lib.uniffi_takt_core_checksum_func_focus_context_is_stale() and 0xFFFF) != 22807) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if ((lib.uniffi_takt_core_checksum_func_google_calendar_calendars() and 0xFFFF) != 43950) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_google_calendar_event_id() and 0xFFFF) != 11061) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_google_calendar_events_page() and 0xFFFF) != 50146) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_google_calendar_request() and 0xFFFF) != 63848) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if ((lib.uniffi_takt_core_checksum_func_google_tasks_plan() and 0xFFFF) != 64663) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
@@ -3088,6 +3144,27 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_update_filter_list() and 0xFFFF) != 10132) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_google_calendar_agenda() and 0xFFFF) != 34507) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_google_calendar_begin_pass() and 0xFFFF) != 28433) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_google_calendar_reconcile() and 0xFFFF) != 14124) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_google_calendar_record_push() and 0xFFFF) != 29348) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_google_calendar_settings() and 0xFFFF) != 31668) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_set_google_calendar_settings() and 0xFFFF) != 17534) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_set_google_calendar_sync_token() and 0xFFFF) != 27648) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_redo_step() and 0xFFFF) != 44009) {
@@ -3835,6 +3912,33 @@ public object FfiConverterUByte: FfiConverter<UByte, Byte> {
 
     override fun write(value: UByte, buf: ByteBuffer) {
         buf.put(value.toByte())
+    }
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterUShort: FfiConverter<UShort, Short> {
+    override fun lift(value: Short): UShort {
+        return value.toUShort()
+    }
+
+    fun lift(value: Int): UShort {
+        return value.toUShort()
+    }
+
+    override fun read(buf: ByteBuffer): UShort {
+        return lift(buf.getShort())
+    }
+
+    override fun lower(value: UShort): Short {
+        return value.toShort()
+    }
+
+    override fun allocationSize(value: UShort) = 2UL
+
+    override fun write(value: UShort, buf: ByteBuffer) {
+        buf.putShort(value.toShort())
     }
 }
 
@@ -4722,6 +4826,50 @@ public interface CoreWorkspaceInterface {
      * List" step.
      */
     fun `updateFilterList`(`id`: kotlin.String, `name`: kotlin.String, `icon`: kotlin.String?, `colorHex`: kotlin.String?, `definition`: FilterDefinition, `nowMs`: kotlin.Long): FilterListRow
+    
+    /**
+     * A window's schedule: `events` (from the agenda calendars) and the
+     * timed tasks overlapping `[from_ms, to_ms)`, all-day events first,
+     * then by start. An event that stands for a task is shown as the task.
+     */
+    fun `googleCalendarAgenda`(`events`: List<GoogleCalendarEvent>, `fromMs`: kotlin.Long, `toMs`: kotlin.Long): List<GoogleCalendarAgendaEntry>
+    
+    /**
+     * Starts a pass: None when two-way sync is off or another device holds
+     * the lease, otherwise the calendar and where its feed was left.
+     */
+    fun `googleCalendarBeginPass`(`nowMs`: kotlin.Long): GoogleCalendarPass?
+    
+    /**
+     * Merges a pass's changed events (every event when `full`) with the
+     * workspace. Changes to tasks are one "Google Calendar" undo step;
+     * the writes Google needs come back to be sent, each then handed to
+     * [`Self::google_calendar_record_push`].
+     */
+    fun `googleCalendarReconcile`(`calendarId`: kotlin.String, `events`: List<GoogleCalendarEvent>, `full`: kotlin.Boolean, `accessToken`: kotlin.String, `nowMs`: kotlin.Long, `zone`: kotlin.String): GoogleCalendarReconcile
+    
+    /**
+     * Files a sent write's answer: `status` is the HTTP status of the last
+     * request sent for it (`on_conflict`'s, when that was sent), `body`
+     * what came back.
+     */
+    fun `googleCalendarRecordPush`(`push`: GoogleCalendarPush, `status`: kotlin.UShort, `body`: kotlin.String, `nowMs`: kotlin.Long): GoogleCalendarPushOutcome
+    
+    /**
+     * The account's calendar choices.
+     */
+    fun `googleCalendarSettings`(): GoogleCalendarSettings
+    
+    /**
+     * Stores the account's calendar choices. Choosing another two-way
+     * calendar forgets the links to the old one's events, which stay there.
+     */
+    fun `setGoogleCalendarSettings`(`settings`: GoogleCalendarSettings, `nowMs`: kotlin.Long)
+    
+    /**
+     * Where a calendar's feed carries on from; None starts it again.
+     */
+    fun `setGoogleCalendarSyncToken`(`calendarId`: kotlin.String, `syncToken`: kotlin.String?, `nowMs`: kotlin.Long)
     
     /**
      * Puts back one step taken back; see [`redo_step`].
@@ -6194,6 +6342,151 @@ open class CoreWorkspace: Disposable, AutoCloseable, CoreWorkspaceInterface
     }
     )
     }
+    
+
+    
+    /**
+     * A window's schedule: `events` (from the agenda calendars) and the
+     * timed tasks overlapping `[from_ms, to_ms)`, all-day events first,
+     * then by start. An event that stands for a task is shown as the task.
+     */
+    @Throws(CoreException::class)override fun `googleCalendarAgenda`(`events`: List<GoogleCalendarEvent>, `fromMs`: kotlin.Long, `toMs`: kotlin.Long): List<GoogleCalendarAgendaEntry> {
+            return FfiConverterSequenceTypeGoogleCalendarAgendaEntry.lift(
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_google_calendar_agenda(
+        it,
+        
+        FfiConverterSequenceTypeGoogleCalendarEvent.lower(`events`),
+        FfiConverterLong.lower(`fromMs`),
+        FfiConverterLong.lower(`toMs`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * Starts a pass: None when two-way sync is off or another device holds
+     * the lease, otherwise the calendar and where its feed was left.
+     */
+    @Throws(CoreException::class)override fun `googleCalendarBeginPass`(`nowMs`: kotlin.Long): GoogleCalendarPass? {
+            return FfiConverterOptionalTypeGoogleCalendarPass.lift(
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_google_calendar_begin_pass(
+        it,
+        
+        FfiConverterLong.lower(`nowMs`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * Merges a pass's changed events (every event when `full`) with the
+     * workspace. Changes to tasks are one "Google Calendar" undo step;
+     * the writes Google needs come back to be sent, each then handed to
+     * [`Self::google_calendar_record_push`].
+     */
+    @Throws(CoreException::class)override fun `googleCalendarReconcile`(`calendarId`: kotlin.String, `events`: List<GoogleCalendarEvent>, `full`: kotlin.Boolean, `accessToken`: kotlin.String, `nowMs`: kotlin.Long, `zone`: kotlin.String): GoogleCalendarReconcile {
+            return FfiConverterTypeGoogleCalendarReconcile.lift(
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_google_calendar_reconcile(
+        it,
+        
+        FfiConverterString.lower(`calendarId`),
+        FfiConverterSequenceTypeGoogleCalendarEvent.lower(`events`),
+        FfiConverterBoolean.lower(`full`),
+        FfiConverterString.lower(`accessToken`),
+        FfiConverterLong.lower(`nowMs`),
+        FfiConverterString.lower(`zone`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * Files a sent write's answer: `status` is the HTTP status of the last
+     * request sent for it (`on_conflict`'s, when that was sent), `body`
+     * what came back.
+     */
+    @Throws(CoreException::class)override fun `googleCalendarRecordPush`(`push`: GoogleCalendarPush, `status`: kotlin.UShort, `body`: kotlin.String, `nowMs`: kotlin.Long): GoogleCalendarPushOutcome {
+            return FfiConverterTypeGoogleCalendarPushOutcome.lift(
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_google_calendar_record_push(
+        it,
+        
+        FfiConverterTypeGoogleCalendarPush.lower(`push`),
+        FfiConverterUShort.lower(`status`),
+        FfiConverterString.lower(`body`),
+        FfiConverterLong.lower(`nowMs`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * The account's calendar choices.
+     */
+    @Throws(CoreException::class)override fun `googleCalendarSettings`(): GoogleCalendarSettings {
+            return FfiConverterTypeGoogleCalendarSettings.lift(
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_google_calendar_settings(
+        it,
+        _status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * Stores the account's calendar choices. Choosing another two-way
+     * calendar forgets the links to the old one's events, which stay there.
+     */
+    @Throws(CoreException::class)override fun `setGoogleCalendarSettings`(`settings`: GoogleCalendarSettings, `nowMs`: kotlin.Long)
+        = 
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_set_google_calendar_settings(
+        it,
+        
+        FfiConverterTypeGoogleCalendarSettings.lower(`settings`),
+        FfiConverterLong.lower(`nowMs`),_status)
+}
+    }
+    
+    
+
+    
+    /**
+     * Where a calendar's feed carries on from; None starts it again.
+     */
+    @Throws(CoreException::class)override fun `setGoogleCalendarSyncToken`(`calendarId`: kotlin.String, `syncToken`: kotlin.String?, `nowMs`: kotlin.Long)
+        = 
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_set_google_calendar_sync_token(
+        it,
+        
+        FfiConverterString.lower(`calendarId`),
+        FfiConverterOptionalString.lower(`syncToken`),
+        FfiConverterLong.lower(`nowMs`),_status)
+}
+    }
+    
     
 
     
@@ -15399,6 +15692,643 @@ public object FfiConverterTypeFollowUpPlan: FfiConverterRustBuffer<FollowUpPlan>
 
 
 /**
+ * One line of a day's schedule.
+ */
+data class GoogleCalendarAgendaEntry (
+    var `kind`: GoogleCalendarAgendaKind
+    , 
+    /**
+     * The event's or the task's id.
+     */
+    var `id`: kotlin.String
+    , 
+    var `title`: kotlin.String
+    , 
+    var `startMs`: kotlin.Long?
+    , 
+    var `endMs`: kotlin.Long?
+    , 
+    var `allDay`: kotlin.Boolean
+    , 
+    var `calendarId`: kotlin.String?
+    , 
+    var `isDone`: kotlin.Boolean
+    , 
+    var `htmlLink`: kotlin.String?
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeGoogleCalendarAgendaEntry: FfiConverterRustBuffer<GoogleCalendarAgendaEntry> {
+    override fun read(buf: ByteBuffer): GoogleCalendarAgendaEntry {
+        return GoogleCalendarAgendaEntry(
+            FfiConverterTypeGoogleCalendarAgendaKind.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterOptionalLong.read(buf),
+            FfiConverterOptionalLong.read(buf),
+            FfiConverterBoolean.read(buf),
+            FfiConverterOptionalString.read(buf),
+            FfiConverterBoolean.read(buf),
+            FfiConverterOptionalString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: GoogleCalendarAgendaEntry) = (
+            FfiConverterTypeGoogleCalendarAgendaKind.allocationSize(value.`kind`) +
+            FfiConverterString.allocationSize(value.`id`) +
+            FfiConverterString.allocationSize(value.`title`) +
+            FfiConverterOptionalLong.allocationSize(value.`startMs`) +
+            FfiConverterOptionalLong.allocationSize(value.`endMs`) +
+            FfiConverterBoolean.allocationSize(value.`allDay`) +
+            FfiConverterOptionalString.allocationSize(value.`calendarId`) +
+            FfiConverterBoolean.allocationSize(value.`isDone`) +
+            FfiConverterOptionalString.allocationSize(value.`htmlLink`)
+    )
+
+    override fun write(value: GoogleCalendarAgendaEntry, buf: ByteBuffer) {
+            FfiConverterTypeGoogleCalendarAgendaKind.write(value.`kind`, buf)
+            FfiConverterString.write(value.`id`, buf)
+            FfiConverterString.write(value.`title`, buf)
+            FfiConverterOptionalLong.write(value.`startMs`, buf)
+            FfiConverterOptionalLong.write(value.`endMs`, buf)
+            FfiConverterBoolean.write(value.`allDay`, buf)
+            FfiConverterOptionalString.write(value.`calendarId`, buf)
+            FfiConverterBoolean.write(value.`isDone`, buf)
+            FfiConverterOptionalString.write(value.`htmlLink`, buf)
+    }
+}
+
+
+
+data class GoogleCalendarCalendarsPage (
+    var `calendars`: List<GoogleCalendarInfo>
+    , 
+    var `nextPageToken`: kotlin.String?
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeGoogleCalendarCalendarsPage: FfiConverterRustBuffer<GoogleCalendarCalendarsPage> {
+    override fun read(buf: ByteBuffer): GoogleCalendarCalendarsPage {
+        return GoogleCalendarCalendarsPage(
+            FfiConverterSequenceTypeGoogleCalendarInfo.read(buf),
+            FfiConverterOptionalString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: GoogleCalendarCalendarsPage) = (
+            FfiConverterSequenceTypeGoogleCalendarInfo.allocationSize(value.`calendars`) +
+            FfiConverterOptionalString.allocationSize(value.`nextPageToken`)
+    )
+
+    override fun write(value: GoogleCalendarCalendarsPage, buf: ByteBuffer) {
+            FfiConverterSequenceTypeGoogleCalendarInfo.write(value.`calendars`, buf)
+            FfiConverterOptionalString.write(value.`nextPageToken`, buf)
+    }
+}
+
+
+
+/**
+ * An event as the core needs it.
+ */
+data class GoogleCalendarEvent (
+    var `id`: kotlin.String
+    , 
+    var `calendarId`: kotlin.String
+    , 
+    /**
+     * `confirmed`, `tentative` or `cancelled`.
+     */
+    var `status`: kotlin.String
+    , 
+    var `summary`: kotlin.String
+    , 
+    /**
+     * A timed event's start and end.
+     */
+    var `startMs`: kotlin.Long?
+    , 
+    var `endMs`: kotlin.Long?
+    , 
+    /**
+     * An all-day event's first day and the day after its last, `yyyy-MM-dd`.
+     */
+    var `startDate`: kotlin.String?
+    , 
+    var `endDate`: kotlin.String?
+    , 
+    var `updatedMs`: kotlin.Long?
+    , 
+    /**
+     * `extendedProperties.private.taktTaskId`.
+     */
+    var `taskId`: kotlin.String?
+    , 
+    var `htmlLink`: kotlin.String?
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeGoogleCalendarEvent: FfiConverterRustBuffer<GoogleCalendarEvent> {
+    override fun read(buf: ByteBuffer): GoogleCalendarEvent {
+        return GoogleCalendarEvent(
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterOptionalLong.read(buf),
+            FfiConverterOptionalLong.read(buf),
+            FfiConverterOptionalString.read(buf),
+            FfiConverterOptionalString.read(buf),
+            FfiConverterOptionalLong.read(buf),
+            FfiConverterOptionalString.read(buf),
+            FfiConverterOptionalString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: GoogleCalendarEvent) = (
+            FfiConverterString.allocationSize(value.`id`) +
+            FfiConverterString.allocationSize(value.`calendarId`) +
+            FfiConverterString.allocationSize(value.`status`) +
+            FfiConverterString.allocationSize(value.`summary`) +
+            FfiConverterOptionalLong.allocationSize(value.`startMs`) +
+            FfiConverterOptionalLong.allocationSize(value.`endMs`) +
+            FfiConverterOptionalString.allocationSize(value.`startDate`) +
+            FfiConverterOptionalString.allocationSize(value.`endDate`) +
+            FfiConverterOptionalLong.allocationSize(value.`updatedMs`) +
+            FfiConverterOptionalString.allocationSize(value.`taskId`) +
+            FfiConverterOptionalString.allocationSize(value.`htmlLink`)
+    )
+
+    override fun write(value: GoogleCalendarEvent, buf: ByteBuffer) {
+            FfiConverterString.write(value.`id`, buf)
+            FfiConverterString.write(value.`calendarId`, buf)
+            FfiConverterString.write(value.`status`, buf)
+            FfiConverterString.write(value.`summary`, buf)
+            FfiConverterOptionalLong.write(value.`startMs`, buf)
+            FfiConverterOptionalLong.write(value.`endMs`, buf)
+            FfiConverterOptionalString.write(value.`startDate`, buf)
+            FfiConverterOptionalString.write(value.`endDate`, buf)
+            FfiConverterOptionalLong.write(value.`updatedMs`, buf)
+            FfiConverterOptionalString.write(value.`taskId`, buf)
+            FfiConverterOptionalString.write(value.`htmlLink`, buf)
+    }
+}
+
+
+
+data class GoogleCalendarEventsPage (
+    var `events`: List<GoogleCalendarEvent>
+    , 
+    var `nextPageToken`: kotlin.String?
+    , 
+    /**
+     * On the last page of a change feed: where the next pass starts.
+     */
+    var `nextSyncToken`: kotlin.String?
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeGoogleCalendarEventsPage: FfiConverterRustBuffer<GoogleCalendarEventsPage> {
+    override fun read(buf: ByteBuffer): GoogleCalendarEventsPage {
+        return GoogleCalendarEventsPage(
+            FfiConverterSequenceTypeGoogleCalendarEvent.read(buf),
+            FfiConverterOptionalString.read(buf),
+            FfiConverterOptionalString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: GoogleCalendarEventsPage) = (
+            FfiConverterSequenceTypeGoogleCalendarEvent.allocationSize(value.`events`) +
+            FfiConverterOptionalString.allocationSize(value.`nextPageToken`) +
+            FfiConverterOptionalString.allocationSize(value.`nextSyncToken`)
+    )
+
+    override fun write(value: GoogleCalendarEventsPage, buf: ByteBuffer) {
+            FfiConverterSequenceTypeGoogleCalendarEvent.write(value.`events`, buf)
+            FfiConverterOptionalString.write(value.`nextPageToken`, buf)
+            FfiConverterOptionalString.write(value.`nextSyncToken`, buf)
+    }
+}
+
+
+
+data class GoogleCalendarHeader (
+    var `name`: kotlin.String
+    , 
+    var `value`: kotlin.String
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeGoogleCalendarHeader: FfiConverterRustBuffer<GoogleCalendarHeader> {
+    override fun read(buf: ByteBuffer): GoogleCalendarHeader {
+        return GoogleCalendarHeader(
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: GoogleCalendarHeader) = (
+            FfiConverterString.allocationSize(value.`name`) +
+            FfiConverterString.allocationSize(value.`value`)
+    )
+
+    override fun write(value: GoogleCalendarHeader, buf: ByteBuffer) {
+            FfiConverterString.write(value.`name`, buf)
+            FfiConverterString.write(value.`value`, buf)
+    }
+}
+
+
+
+/**
+ * One request, ready for a client's HTTP stack.
+ */
+data class GoogleCalendarHttpRequest (
+    /**
+     * `GET`, `POST`, `PATCH` or `DELETE`.
+     */
+    var `method`: kotlin.String
+    , 
+    var `url`: kotlin.String
+    , 
+    var `headers`: List<GoogleCalendarHeader>
+    , 
+    /**
+     * JSON, when the call has a body.
+     */
+    var `body`: kotlin.String?
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeGoogleCalendarHttpRequest: FfiConverterRustBuffer<GoogleCalendarHttpRequest> {
+    override fun read(buf: ByteBuffer): GoogleCalendarHttpRequest {
+        return GoogleCalendarHttpRequest(
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterSequenceTypeGoogleCalendarHeader.read(buf),
+            FfiConverterOptionalString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: GoogleCalendarHttpRequest) = (
+            FfiConverterString.allocationSize(value.`method`) +
+            FfiConverterString.allocationSize(value.`url`) +
+            FfiConverterSequenceTypeGoogleCalendarHeader.allocationSize(value.`headers`) +
+            FfiConverterOptionalString.allocationSize(value.`body`)
+    )
+
+    override fun write(value: GoogleCalendarHttpRequest, buf: ByteBuffer) {
+            FfiConverterString.write(value.`method`, buf)
+            FfiConverterString.write(value.`url`, buf)
+            FfiConverterSequenceTypeGoogleCalendarHeader.write(value.`headers`, buf)
+            FfiConverterOptionalString.write(value.`body`, buf)
+    }
+}
+
+
+
+data class GoogleCalendarInfo (
+    var `id`: kotlin.String
+    , 
+    var `summary`: kotlin.String
+    , 
+    var `isPrimary`: kotlin.Boolean
+    , 
+    /**
+     * Whether events can be written there (owner or writer).
+     */
+    var `canWrite`: kotlin.Boolean
+    , 
+    /**
+     * `#rrggbb`, as Google colours it for this account.
+     */
+    var `color`: kotlin.String?
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeGoogleCalendarInfo: FfiConverterRustBuffer<GoogleCalendarInfo> {
+    override fun read(buf: ByteBuffer): GoogleCalendarInfo {
+        return GoogleCalendarInfo(
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterBoolean.read(buf),
+            FfiConverterBoolean.read(buf),
+            FfiConverterOptionalString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: GoogleCalendarInfo) = (
+            FfiConverterString.allocationSize(value.`id`) +
+            FfiConverterString.allocationSize(value.`summary`) +
+            FfiConverterBoolean.allocationSize(value.`isPrimary`) +
+            FfiConverterBoolean.allocationSize(value.`canWrite`) +
+            FfiConverterOptionalString.allocationSize(value.`color`)
+    )
+
+    override fun write(value: GoogleCalendarInfo, buf: ByteBuffer) {
+            FfiConverterString.write(value.`id`, buf)
+            FfiConverterString.write(value.`summary`, buf)
+            FfiConverterBoolean.write(value.`isPrimary`, buf)
+            FfiConverterBoolean.write(value.`canWrite`, buf)
+            FfiConverterOptionalString.write(value.`color`, buf)
+    }
+}
+
+
+
+/**
+ * What a pass works on, once this device holds the lease.
+ */
+data class GoogleCalendarPass (
+    var `calendarId`: kotlin.String
+    , 
+    /**
+     * None: list everything.
+     */
+    var `syncToken`: kotlin.String?
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeGoogleCalendarPass: FfiConverterRustBuffer<GoogleCalendarPass> {
+    override fun read(buf: ByteBuffer): GoogleCalendarPass {
+        return GoogleCalendarPass(
+            FfiConverterString.read(buf),
+            FfiConverterOptionalString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: GoogleCalendarPass) = (
+            FfiConverterString.allocationSize(value.`calendarId`) +
+            FfiConverterOptionalString.allocationSize(value.`syncToken`)
+    )
+
+    override fun write(value: GoogleCalendarPass, buf: ByteBuffer) {
+            FfiConverterString.write(value.`calendarId`, buf)
+            FfiConverterOptionalString.write(value.`syncToken`, buf)
+    }
+}
+
+
+
+/**
+ * One write for the client to send, then hand back with its answer.
+ */
+data class GoogleCalendarPush (
+    var `taskId`: kotlin.String
+    , 
+    var `calendarId`: kotlin.String
+    , 
+    var `eventId`: kotlin.String
+    , 
+    var `kind`: GoogleCalendarPushKind
+    , 
+    var `request`: GoogleCalendarHttpRequest
+    , 
+    /**
+     * Sent instead when `request` answers `409`: the derived id is taken,
+     * by another device's insert or an event deleted earlier, so it is
+     * patched back to life.
+     */
+    var `onConflict`: GoogleCalendarHttpRequest?
+    , 
+    /**
+     * What the link records once it has been sent (`pushedJSON`).
+     */
+    var `agreedJson`: kotlin.String?
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeGoogleCalendarPush: FfiConverterRustBuffer<GoogleCalendarPush> {
+    override fun read(buf: ByteBuffer): GoogleCalendarPush {
+        return GoogleCalendarPush(
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterTypeGoogleCalendarPushKind.read(buf),
+            FfiConverterTypeGoogleCalendarHttpRequest.read(buf),
+            FfiConverterOptionalTypeGoogleCalendarHttpRequest.read(buf),
+            FfiConverterOptionalString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: GoogleCalendarPush) = (
+            FfiConverterString.allocationSize(value.`taskId`) +
+            FfiConverterString.allocationSize(value.`calendarId`) +
+            FfiConverterString.allocationSize(value.`eventId`) +
+            FfiConverterTypeGoogleCalendarPushKind.allocationSize(value.`kind`) +
+            FfiConverterTypeGoogleCalendarHttpRequest.allocationSize(value.`request`) +
+            FfiConverterOptionalTypeGoogleCalendarHttpRequest.allocationSize(value.`onConflict`) +
+            FfiConverterOptionalString.allocationSize(value.`agreedJson`)
+    )
+
+    override fun write(value: GoogleCalendarPush, buf: ByteBuffer) {
+            FfiConverterString.write(value.`taskId`, buf)
+            FfiConverterString.write(value.`calendarId`, buf)
+            FfiConverterString.write(value.`eventId`, buf)
+            FfiConverterTypeGoogleCalendarPushKind.write(value.`kind`, buf)
+            FfiConverterTypeGoogleCalendarHttpRequest.write(value.`request`, buf)
+            FfiConverterOptionalTypeGoogleCalendarHttpRequest.write(value.`onConflict`, buf)
+            FfiConverterOptionalString.write(value.`agreedJson`, buf)
+    }
+}
+
+
+
+data class GoogleCalendarReconcile (
+    var `pushes`: List<GoogleCalendarPush>
+    , 
+    /**
+     * Tasks moved or renamed from Google.
+     */
+    var `tasksUpdated`: kotlin.UInt
+    , 
+    /**
+     * Tasks made from events (only with import on).
+     */
+    var `tasksImported`: kotlin.UInt
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeGoogleCalendarReconcile: FfiConverterRustBuffer<GoogleCalendarReconcile> {
+    override fun read(buf: ByteBuffer): GoogleCalendarReconcile {
+        return GoogleCalendarReconcile(
+            FfiConverterSequenceTypeGoogleCalendarPush.read(buf),
+            FfiConverterUInt.read(buf),
+            FfiConverterUInt.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: GoogleCalendarReconcile) = (
+            FfiConverterSequenceTypeGoogleCalendarPush.allocationSize(value.`pushes`) +
+            FfiConverterUInt.allocationSize(value.`tasksUpdated`) +
+            FfiConverterUInt.allocationSize(value.`tasksImported`)
+    )
+
+    override fun write(value: GoogleCalendarReconcile, buf: ByteBuffer) {
+            FfiConverterSequenceTypeGoogleCalendarPush.write(value.`pushes`, buf)
+            FfiConverterUInt.write(value.`tasksUpdated`, buf)
+            FfiConverterUInt.write(value.`tasksImported`, buf)
+    }
+}
+
+
+
+/**
+ * The account's choices, kept as synced preferences.
+ */
+data class GoogleCalendarSettings (
+    /**
+     * The two-way calendar; none switches two-way sync off.
+     */
+    var `calendarId`: kotlin.String?
+    , 
+    /**
+     * Whether events made in Google become tasks.
+     */
+    var `importEvents`: kotlin.Boolean
+    , 
+    /**
+     * The calendars Today shows.
+     */
+    var `agendaCalendarIds`: List<kotlin.String>
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeGoogleCalendarSettings: FfiConverterRustBuffer<GoogleCalendarSettings> {
+    override fun read(buf: ByteBuffer): GoogleCalendarSettings {
+        return GoogleCalendarSettings(
+            FfiConverterOptionalString.read(buf),
+            FfiConverterBoolean.read(buf),
+            FfiConverterSequenceString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: GoogleCalendarSettings) = (
+            FfiConverterOptionalString.allocationSize(value.`calendarId`) +
+            FfiConverterBoolean.allocationSize(value.`importEvents`) +
+            FfiConverterSequenceString.allocationSize(value.`agendaCalendarIds`)
+    )
+
+    override fun write(value: GoogleCalendarSettings, buf: ByteBuffer) {
+            FfiConverterOptionalString.write(value.`calendarId`, buf)
+            FfiConverterBoolean.write(value.`importEvents`, buf)
+            FfiConverterSequenceString.write(value.`agendaCalendarIds`, buf)
+    }
+}
+
+
+
+/**
  * Something Takt overwrote because it had the final say.
  */
 data class GoogleTasksConflict (
@@ -21432,6 +22362,18 @@ sealed class CoreException: kotlin.Exception() {
             get() = ""
     }
     
+    /**
+     * A Google Calendar answer the core could not read
+     * (`google_calendar.rs`).
+     */
+    class GoogleCalendar(
+        
+        val `detail`: kotlin.String
+        ) : CoreException() {
+        override val message
+            get() = "detail=${ `detail` }"
+    }
+    
 
     
 
@@ -21508,6 +22450,9 @@ public object FfiConverterTypeCoreError : FfiConverterRustBuffer<CoreException> 
                 FfiConverterString.read(buf),
                 )
             30 -> CoreException.InvalidEstimate()
+            31 -> CoreException.GoogleCalendar(
+                FfiConverterString.read(buf),
+                )
             else -> throw RuntimeException("invalid error enum value, something is very wrong!!")
         }
     }
@@ -21648,6 +22593,11 @@ public object FfiConverterTypeCoreError : FfiConverterRustBuffer<CoreException> 
                 // Add the size for the Int that specifies the variant plus the size needed for all fields
                 4UL
             )
+            is CoreException.GoogleCalendar -> (
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                4UL
+                + FfiConverterString.allocationSize(value.`detail`)
+            )
         }
     }
 
@@ -21785,6 +22735,11 @@ public object FfiConverterTypeCoreError : FfiConverterRustBuffer<CoreException> 
             }
             is CoreException.InvalidEstimate -> {
                 buf.putInt(30)
+                Unit
+            }
+            is CoreException.GoogleCalendar -> {
+                buf.putInt(31)
+                FfiConverterString.write(value.`detail`, buf)
                 Unit
             }
         }.let { /* this makes the `when` an expression, which ensures it is exhaustive */ }
@@ -22555,6 +23510,312 @@ public object FfiConverterTypeFocusDeferral: FfiConverterRustBuffer<FocusDeferra
 
     override fun write(value: FocusDeferral, buf: ByteBuffer) {
         buf.putInt(value.ordinal + 1)
+    }
+}
+
+
+
+
+
+
+enum class GoogleCalendarAgendaKind {
+    
+    EVENT,
+    TASK;
+
+    
+
+
+    companion object
+}
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeGoogleCalendarAgendaKind: FfiConverterRustBuffer<GoogleCalendarAgendaKind> {
+    override fun read(buf: ByteBuffer) = try {
+        GoogleCalendarAgendaKind.values()[buf.getInt() - 1]
+    } catch (e: IndexOutOfBoundsException) {
+        throw RuntimeException("invalid enum value, something is very wrong!!", e)
+    }
+
+    override fun allocationSize(value: GoogleCalendarAgendaKind) = 4UL
+
+    override fun write(value: GoogleCalendarAgendaKind, buf: ByteBuffer) {
+        buf.putInt(value.ordinal + 1)
+    }
+}
+
+
+
+
+
+/**
+ * A read to make. The writes come out of
+ * [`CoreWorkspace::google_calendar_reconcile`] already built.
+ */
+sealed class GoogleCalendarCall {
+    
+    /**
+     * The calendars the account can see.
+     */
+    data class Calendars(
+        val `pageToken`: kotlin.String?) : GoogleCalendarCall()
+        
+    {
+        
+
+        companion object
+    }
+    
+    /**
+     * What changed in a calendar since `sync_token`; everything without one.
+     */
+    data class Changes(
+        val `calendarId`: kotlin.String, 
+        val `syncToken`: kotlin.String?, 
+        val `pageToken`: kotlin.String?) : GoogleCalendarCall()
+        
+    {
+        
+
+        companion object
+    }
+    
+    /**
+     * The events overlapping a window, recurring ones expanded, in order.
+     */
+    data class Window(
+        val `calendarId`: kotlin.String, 
+        val `fromMs`: kotlin.Long, 
+        val `toMs`: kotlin.Long, 
+        val `pageToken`: kotlin.String?) : GoogleCalendarCall()
+        
+    {
+        
+
+        companion object
+    }
+    
+
+    
+
+    
+    
+
+
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeGoogleCalendarCall : FfiConverterRustBuffer<GoogleCalendarCall>{
+    override fun read(buf: ByteBuffer): GoogleCalendarCall {
+        return when(buf.getInt()) {
+            1 -> GoogleCalendarCall.Calendars(
+                FfiConverterOptionalString.read(buf),
+                )
+            2 -> GoogleCalendarCall.Changes(
+                FfiConverterString.read(buf),
+                FfiConverterOptionalString.read(buf),
+                FfiConverterOptionalString.read(buf),
+                )
+            3 -> GoogleCalendarCall.Window(
+                FfiConverterString.read(buf),
+                FfiConverterLong.read(buf),
+                FfiConverterLong.read(buf),
+                FfiConverterOptionalString.read(buf),
+                )
+            else -> throw RuntimeException("invalid enum value, something is very wrong!!")
+        }
+    }
+
+    override fun allocationSize(value: GoogleCalendarCall): ULong = when(value) {
+        is GoogleCalendarCall.Calendars -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterOptionalString.allocationSize(value.`pageToken`)
+            )
+        }
+        is GoogleCalendarCall.Changes -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`calendarId`)
+                + FfiConverterOptionalString.allocationSize(value.`syncToken`)
+                + FfiConverterOptionalString.allocationSize(value.`pageToken`)
+            )
+        }
+        is GoogleCalendarCall.Window -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`calendarId`)
+                + FfiConverterLong.allocationSize(value.`fromMs`)
+                + FfiConverterLong.allocationSize(value.`toMs`)
+                + FfiConverterOptionalString.allocationSize(value.`pageToken`)
+            )
+        }
+    }
+
+    override fun write(value: GoogleCalendarCall, buf: ByteBuffer) {
+        when(value) {
+            is GoogleCalendarCall.Calendars -> {
+                buf.putInt(1)
+                FfiConverterOptionalString.write(value.`pageToken`, buf)
+                Unit
+            }
+            is GoogleCalendarCall.Changes -> {
+                buf.putInt(2)
+                FfiConverterString.write(value.`calendarId`, buf)
+                FfiConverterOptionalString.write(value.`syncToken`, buf)
+                FfiConverterOptionalString.write(value.`pageToken`, buf)
+                Unit
+            }
+            is GoogleCalendarCall.Window -> {
+                buf.putInt(3)
+                FfiConverterString.write(value.`calendarId`, buf)
+                FfiConverterLong.write(value.`fromMs`, buf)
+                FfiConverterLong.write(value.`toMs`, buf)
+                FfiConverterOptionalString.write(value.`pageToken`, buf)
+                Unit
+            }
+        }.let { /* this makes the `when` an expression, which ensures it is exhaustive */ }
+    }
+}
+
+
+
+
+
+
+enum class GoogleCalendarPushKind {
+    
+    CREATE,
+    UPDATE,
+    DELETE,
+    /**
+     * Writes the task id onto an imported event.
+     */
+    TAG;
+
+    
+
+
+    companion object
+}
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeGoogleCalendarPushKind: FfiConverterRustBuffer<GoogleCalendarPushKind> {
+    override fun read(buf: ByteBuffer) = try {
+        GoogleCalendarPushKind.values()[buf.getInt() - 1]
+    } catch (e: IndexOutOfBoundsException) {
+        throw RuntimeException("invalid enum value, something is very wrong!!", e)
+    }
+
+    override fun allocationSize(value: GoogleCalendarPushKind) = 4UL
+
+    override fun write(value: GoogleCalendarPushKind, buf: ByteBuffer) {
+        buf.putInt(value.ordinal + 1)
+    }
+}
+
+
+
+
+
+sealed class GoogleCalendarPushOutcome {
+    
+    object Done : GoogleCalendarPushOutcome()
+    
+    
+    /**
+     * The grant was refused: sign in again.
+     */
+    object Unauthorized : GoogleCalendarPushOutcome()
+    
+    
+    /**
+     * Left as it was; the next pass tries again.
+     */
+    data class Failed(
+        val `detail`: kotlin.String) : GoogleCalendarPushOutcome()
+        
+    {
+        
+
+        companion object
+    }
+    
+
+    
+
+    
+    
+
+
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeGoogleCalendarPushOutcome : FfiConverterRustBuffer<GoogleCalendarPushOutcome>{
+    override fun read(buf: ByteBuffer): GoogleCalendarPushOutcome {
+        return when(buf.getInt()) {
+            1 -> GoogleCalendarPushOutcome.Done
+            2 -> GoogleCalendarPushOutcome.Unauthorized
+            3 -> GoogleCalendarPushOutcome.Failed(
+                FfiConverterString.read(buf),
+                )
+            else -> throw RuntimeException("invalid enum value, something is very wrong!!")
+        }
+    }
+
+    override fun allocationSize(value: GoogleCalendarPushOutcome): ULong = when(value) {
+        is GoogleCalendarPushOutcome.Done -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is GoogleCalendarPushOutcome.Unauthorized -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is GoogleCalendarPushOutcome.Failed -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`detail`)
+            )
+        }
+    }
+
+    override fun write(value: GoogleCalendarPushOutcome, buf: ByteBuffer) {
+        when(value) {
+            is GoogleCalendarPushOutcome.Done -> {
+                buf.putInt(1)
+                Unit
+            }
+            is GoogleCalendarPushOutcome.Unauthorized -> {
+                buf.putInt(2)
+                Unit
+            }
+            is GoogleCalendarPushOutcome.Failed -> {
+                buf.putInt(3)
+                FfiConverterString.write(value.`detail`, buf)
+                Unit
+            }
+        }.let { /* this makes the `when` an expression, which ensures it is exhaustive */ }
     }
 }
 
@@ -25821,6 +27082,70 @@ public object FfiConverterOptionalTypeFollowUpPlan: FfiConverterRustBuffer<Follo
 /**
  * @suppress
  */
+public object FfiConverterOptionalTypeGoogleCalendarHttpRequest: FfiConverterRustBuffer<GoogleCalendarHttpRequest?> {
+    override fun read(buf: ByteBuffer): GoogleCalendarHttpRequest? {
+        if (buf.get().toInt() == 0) {
+            return null
+        }
+        return FfiConverterTypeGoogleCalendarHttpRequest.read(buf)
+    }
+
+    override fun allocationSize(value: GoogleCalendarHttpRequest?): ULong {
+        if (value == null) {
+            return 1UL
+        } else {
+            return 1UL + FfiConverterTypeGoogleCalendarHttpRequest.allocationSize(value)
+        }
+    }
+
+    override fun write(value: GoogleCalendarHttpRequest?, buf: ByteBuffer) {
+        if (value == null) {
+            buf.put(0)
+        } else {
+            buf.put(1)
+            FfiConverterTypeGoogleCalendarHttpRequest.write(value, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterOptionalTypeGoogleCalendarPass: FfiConverterRustBuffer<GoogleCalendarPass?> {
+    override fun read(buf: ByteBuffer): GoogleCalendarPass? {
+        if (buf.get().toInt() == 0) {
+            return null
+        }
+        return FfiConverterTypeGoogleCalendarPass.read(buf)
+    }
+
+    override fun allocationSize(value: GoogleCalendarPass?): ULong {
+        if (value == null) {
+            return 1UL
+        } else {
+            return 1UL + FfiConverterTypeGoogleCalendarPass.allocationSize(value)
+        }
+    }
+
+    override fun write(value: GoogleCalendarPass?, buf: ByteBuffer) {
+        if (value == null) {
+            buf.put(0)
+        } else {
+            buf.put(1)
+            FfiConverterTypeGoogleCalendarPass.write(value, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
 public object FfiConverterOptionalTypeHabitColumnChange: FfiConverterRustBuffer<HabitColumnChange?> {
     override fun read(buf: ByteBuffer): HabitColumnChange? {
         if (buf.get().toInt() == 0) {
@@ -27955,6 +29280,146 @@ public object FfiConverterSequenceTypeFolderRow: FfiConverterRustBuffer<List<Fol
         buf.putInt(value.size)
         value.iterator().forEach {
             FfiConverterTypeFolderRow.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceTypeGoogleCalendarAgendaEntry: FfiConverterRustBuffer<List<GoogleCalendarAgendaEntry>> {
+    override fun read(buf: ByteBuffer): List<GoogleCalendarAgendaEntry> {
+        val len = buf.getInt()
+        return List<GoogleCalendarAgendaEntry>(len) {
+            FfiConverterTypeGoogleCalendarAgendaEntry.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<GoogleCalendarAgendaEntry>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeGoogleCalendarAgendaEntry.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<GoogleCalendarAgendaEntry>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeGoogleCalendarAgendaEntry.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceTypeGoogleCalendarEvent: FfiConverterRustBuffer<List<GoogleCalendarEvent>> {
+    override fun read(buf: ByteBuffer): List<GoogleCalendarEvent> {
+        val len = buf.getInt()
+        return List<GoogleCalendarEvent>(len) {
+            FfiConverterTypeGoogleCalendarEvent.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<GoogleCalendarEvent>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeGoogleCalendarEvent.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<GoogleCalendarEvent>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeGoogleCalendarEvent.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceTypeGoogleCalendarHeader: FfiConverterRustBuffer<List<GoogleCalendarHeader>> {
+    override fun read(buf: ByteBuffer): List<GoogleCalendarHeader> {
+        val len = buf.getInt()
+        return List<GoogleCalendarHeader>(len) {
+            FfiConverterTypeGoogleCalendarHeader.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<GoogleCalendarHeader>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeGoogleCalendarHeader.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<GoogleCalendarHeader>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeGoogleCalendarHeader.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceTypeGoogleCalendarInfo: FfiConverterRustBuffer<List<GoogleCalendarInfo>> {
+    override fun read(buf: ByteBuffer): List<GoogleCalendarInfo> {
+        val len = buf.getInt()
+        return List<GoogleCalendarInfo>(len) {
+            FfiConverterTypeGoogleCalendarInfo.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<GoogleCalendarInfo>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeGoogleCalendarInfo.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<GoogleCalendarInfo>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeGoogleCalendarInfo.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceTypeGoogleCalendarPush: FfiConverterRustBuffer<List<GoogleCalendarPush>> {
+    override fun read(buf: ByteBuffer): List<GoogleCalendarPush> {
+        val len = buf.getInt()
+        return List<GoogleCalendarPush>(len) {
+            FfiConverterTypeGoogleCalendarPush.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<GoogleCalendarPush>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeGoogleCalendarPush.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<GoogleCalendarPush>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeGoogleCalendarPush.write(it, buf)
         }
     }
 }
@@ -30910,6 +32375,68 @@ public object FfiConverterMapStringTypeSyncValue: FfiConverterRustBuffer<Map<kot
         FfiConverterTypeStoredFocusContext.lower(`context`),
         FfiConverterLong.lower(`nowMs`),
         FfiConverterString.lower(`zone`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * A page of `calendarList`.
+         */
+    @Throws(CoreException::class) fun `googleCalendarCalendars`(`body`: kotlin.String): GoogleCalendarCalendarsPage {
+            return FfiConverterTypeGoogleCalendarCalendarsPage.lift(
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_google_calendar_calendars(
+    
+        
+        FfiConverterString.lower(`body`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * The id Takt gives a task's event: `takt` and 32 hex digits of
+         * `SHA-256("takt.calendar:<taskId>")`, inside Google's base32hex alphabet.
+         * Every device derives the same one, so two of them cannot make two events.
+         */ fun `googleCalendarEventId`(`taskId`: kotlin.String): kotlin.String {
+            return FfiConverterString.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_google_calendar_event_id(
+    
+        
+        FfiConverterString.lower(`taskId`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * A page of a calendar's events, from a change feed or a window.
+         */
+    @Throws(CoreException::class) fun `googleCalendarEventsPage`(`calendarId`: kotlin.String, `body`: kotlin.String): GoogleCalendarEventsPage {
+            return FfiConverterTypeGoogleCalendarEventsPage.lift(
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_google_calendar_events_page(
+    
+        
+        FfiConverterString.lower(`calendarId`),
+        FfiConverterString.lower(`body`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * The request for a read.
+         */ fun `googleCalendarRequest`(`call`: GoogleCalendarCall, `accessToken`: kotlin.String): GoogleCalendarHttpRequest {
+            return FfiConverterTypeGoogleCalendarHttpRequest.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_google_calendar_request(
+    
+        
+        FfiConverterTypeGoogleCalendarCall.lower(`call`),
+        FfiConverterString.lower(`accessToken`),_status)
 }
     )
     }

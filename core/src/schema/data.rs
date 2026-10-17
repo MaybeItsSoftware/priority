@@ -36,7 +36,8 @@ pub(super) fn finish(transaction: &Transaction, identifier: &str) -> Result<(), 
         | "v23_filter_lists"
         | "v25_agent_instructions"
         | "v26_commitment_missed_stack"
-        | "v29_daily_contribution_skips" => Ok(super::triggers::reinstall(transaction)?),
+        | "v29_daily_contribution_skips"
+        | "v30_google_calendar" => Ok(super::triggers::reinstall(transaction)?),
         "v24_condition_categories" => {
             super::triggers::reinstall(transaction)?;
             file_places_under_location(transaction)

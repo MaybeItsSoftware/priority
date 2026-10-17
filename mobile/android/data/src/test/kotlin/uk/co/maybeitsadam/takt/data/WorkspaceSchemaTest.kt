@@ -61,7 +61,7 @@ class WorkspaceSchemaTest {
             assertTrue("missing: ${expected - present}", present.containsAll(expected))
 
             val migrations = workspace.database.read { it.strings("SELECT identifier FROM grdb_migrations") }
-            assertEquals(29, migrations.size)
+            assertEquals(30, migrations.size)
             assertTrue("v17_sync" in migrations)
             assertTrue("v18_themes_and_preferences" in migrations)
             assertTrue("v19_habit_options" in migrations)
@@ -75,6 +75,7 @@ class WorkspaceSchemaTest {
             assertTrue("v27_condition_order_and_context" in migrations)
             assertTrue("v28_synced_focus_context" in migrations)
             assertTrue("v29_daily_contribution_skips" in migrations)
+            assertTrue("v30_google_calendar" in migrations)
             assertEquals(listOf(0L to 0L), workspace.database.read { db ->
                 db.query("SELECT recording, applying FROM sync_control") { it.long("recording") to it.long("applying") }
             })
@@ -91,7 +92,7 @@ class WorkspaceSchemaTest {
         val count = reopened.read { it.long("SELECT COUNT(*) FROM grdb_migrations WHERE identifier = 'v17_sync'") }
         assertEquals(1L, count)
         // The sync triggers are the core's, installed once each.
-        assertEquals(57L, reopened.read {
+        assertEquals(60L, reopened.read {
             it.long("SELECT COUNT(*) FROM sqlite_master WHERE name LIKE 'sync_outbox_%' AND type = 'trigger'")
         })
         reopened.close()
@@ -102,7 +103,17 @@ class WorkspaceSchemaTest {
     // install that lacks one migration lacks every later one too, since they
     // only ever apply in order, so each rewind takes the later ones off first.
 
+    private fun rewindV30(connection: SQLiteConnection) {
+        for (op in listOf("insert", "update", "delete")) {
+            connection.execSQL("DROP TRIGGER sync_outbox_calendar_event_links_$op")
+        }
+        connection.execSQL("DROP TABLE calendar_event_links")
+        connection.execSQL("DROP TABLE calendar_sync_tokens")
+        connection.execSQL("DELETE FROM grdb_migrations WHERE identifier = 'v30_google_calendar'")
+    }
+
     private fun rewindV29(connection: SQLiteConnection) {
+        rewindV30(connection)
         // The journal's and the outbox's contribution triggers name the new
         // column, so they come off first; v29 reinstalls them.
         for (op in listOf("insert", "update", "delete")) {
@@ -246,8 +257,8 @@ class WorkspaceSchemaTest {
         try {
             assertEquals(expected, upgraded.read { schema(it) })
             val migrations = upgraded.read { it.strings("SELECT identifier FROM grdb_migrations") }
-            assertEquals(29, migrations.size)
-            assertEquals(29, migrations.toSet().size)
+            assertEquals(30, migrations.size)
+            assertEquals(30, migrations.toSet().size)
         } finally {
             upgraded.close()
             dir.deleteRecursively()
@@ -257,6 +268,10 @@ class WorkspaceSchemaTest {
     /** A v25 database takes `stacksMissedFrom` on `dailies`. */
     @Test
     fun aV25DatabaseUpgradesToTheFixture() = assertUpgradesToTheFixture("v25", ::rewindV26)
+
+    /** A v29 database takes the calendar links and sync tokens. */
+    @Test
+    fun aV29DatabaseUpgradesToTheFixture() = assertUpgradesToTheFixture("v29", ::rewindV30)
 
     /** A v28 database takes `skippedAt` on `daily_contributions`. */
     @Test
