@@ -12,6 +12,9 @@ import TaktSync
 struct WorkspaceAccountButton: View {
   @Environment(WorkspaceViewModel.self) private var model
   @Environment(\.theme) private var theme
+  @Environment(\.displayScale) private var displayScale
+  /// The account's picture, fetched once per URL.
+  @State private var photo: (url: URL, image: NSImage)?
 
   private var diameter: CGFloat { theme.scale.body + theme.space.xs }
 
@@ -26,13 +29,17 @@ struct WorkspaceAccountButton: View {
         Divider()
         Button("Sign out") { Task { await session.signOut() } }
       } label: {
-        avatar(session.profile, email: session.email)
+        // A menu's label is redrawn as a native button, which keeps an image
+        // but drops the frame and the clip around it; a photo then shows at
+        // its own size. So the round avatar goes in already drawn.
+        Image(nsImage: rendered(avatar(session.profile, email: session.email)))
       }
       .menuStyle(.borderlessButton)
       .menuIndicator(.hidden)
       .fixedSize()
       .help(session.email.map { "Signed in as \($0)" } ?? "Signed in")
       .accessibilityLabel("Account")
+      .task(id: session.profile?.avatarURL) { await load(session.profile?.avatarURL) }
     } else {
       Button { AppDelegate.shared.menuSettings(pane: .sync) } label: {
         Image(systemName: "person.crop.circle")
@@ -57,14 +64,8 @@ struct WorkspaceAccountButton: View {
       .frame(width: diameter, height: diameter)
       .background(theme.well, in: Circle())
     Group {
-      if let url = profile?.avatarURL {
-        AsyncImage(url: url) { phase in
-          if let image = phase.image {
-            image.resizable().scaledToFill()
-          } else {
-            initial
-          }
-        }
+      if let photo, photo.url == profile?.avatarURL {
+        Image(nsImage: photo.image).resizable().scaledToFill()
       } else {
         initial
       }
@@ -72,5 +73,17 @@ struct WorkspaceAccountButton: View {
     .frame(width: diameter, height: diameter)
     .clipShape(Circle())
     .overlay(Circle().strokeBorder(theme.border, lineWidth: theme.hairline))
+  }
+
+  private func rendered(_ view: some View) -> NSImage {
+    let renderer = ImageRenderer(content: view)
+    renderer.scale = displayScale
+    return renderer.nsImage ?? NSImage()
+  }
+
+  private func load(_ url: URL?) async {
+    guard let url, photo?.url != url else { return }
+    guard let (data, _) = try? await URLSession.shared.data(from: url), let image = NSImage(data: data) else { return }
+    photo = (url, image)
   }
 }
