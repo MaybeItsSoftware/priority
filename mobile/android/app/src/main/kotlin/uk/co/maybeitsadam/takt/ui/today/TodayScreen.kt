@@ -2,6 +2,7 @@ package uk.co.maybeitsadam.takt.ui.today
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -22,12 +23,15 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -45,9 +49,10 @@ import androidx.compose.ui.zIndex
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import java.time.LocalDate
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import uk.co.maybeitsadam.takt.core.DayPlanReason
 import uk.co.maybeitsadam.takt.core.FocusSession
-import uk.co.maybeitsadam.takt.core.TaskStatus
 import uk.co.maybeitsadam.takt.ui.commands.KeyCommand
 import uk.co.maybeitsadam.takt.ui.commands.RegisterCommands
 import uk.co.maybeitsadam.takt.ui.components.EmptyState
@@ -61,7 +66,6 @@ import uk.co.maybeitsadam.takt.ui.components.SectionHeader
 import uk.co.maybeitsadam.takt.ui.components.SettingsAction
 import uk.co.maybeitsadam.takt.ui.components.SwipeAction
 import uk.co.maybeitsadam.takt.ui.components.SwipeRow
-import uk.co.maybeitsadam.takt.ui.components.TaskCheck
 import uk.co.maybeitsadam.takt.ui.focus.BlockIconButton
 import uk.co.maybeitsadam.takt.ui.focus.ClockReading
 import uk.co.maybeitsadam.takt.ui.focus.QualityPrompt
@@ -91,6 +95,25 @@ fun TodayScreen() {
     val gate = rememberNotificationGate()
     val listState = rememberLazyListState()
     val drag = rememberPlannedDrag(listState)
+    val scope = rememberCoroutineScope()
+    // Rows just finished, held where they stood and crossed out for a moment
+    // before they go, so a swipe reads as done rather than as vanished.
+    val leavingCards = remember { mutableStateMapOf<String, Leaving<DayCard>>() }
+    val leavingDailies = remember { mutableStateMapOf<String, Leaving<DayDaily>>() }
+    fun finish(card: DayCard, kind: DaySectionKind, index: Int) {
+        if (!card.isRunning && !card.isDailyDoneToday) {
+            leavingCards[card.id] = Leaving(card, kind, index)
+            scope.launch { delay(LEAVE_MILLIS); leavingCards.remove(card.id) }
+        }
+        vm.tickOff(card)
+    }
+    fun finish(daily: DayDaily, index: Int) {
+        if (!daily.isDone) {
+            leavingDailies[daily.id] = Leaving(daily, null, index)
+            scope.launch { delay(LEAVE_MILLIS); leavingDailies.remove(daily.id) }
+        }
+        vm.toggleDaily(daily)
+    }
 
     RegisterCommands(
         listOf(
@@ -100,7 +123,12 @@ fun TodayScreen() {
 
     Column(Modifier.fillMaxSize().background(TaktTheme.colors.paper)) {
         TaktTopBar("Today", subtitle = longDay(LocalDate.now()), actions = { SettingsAction() })
-        val sections = day.sections
+        val sections = DaySectionKind.entries.mapNotNull { kind ->
+            val cards = day.sections.firstOrNull { it.kind == kind }?.cards.orEmpty()
+            withLeaving(cards, leavingCards.values.filter { it.kind == kind }, DayCard::id)
+                .takeIf { it.isNotEmpty() }?.let { kind to it }
+        }
+        val dailies = withLeaving(day.dailies, leavingDailies.values, DayDaily::id)
         val plannedIds = day.plannedIds
         LazyColumn(
             state = listState,
@@ -109,17 +137,18 @@ fun TodayScreen() {
         ) {
             item(key = "forecast", contentType = "forecast") { DayHeader(day) }
             item(key = "calendar", contentType = "calendar") { CalendarAgenda(container.calendar, onOpenTask = container.inspector::open) }
-            for (section in sections) {
-                item(key = "section-${section.kind.name}", contentType = "section") {
-                    SectionHeader(section.kind.title, detail = section.cards.size.toString())
+            for ((kind, sectionCards) in sections) {
+                item(key = "section-${kind.name}", contentType = "section") {
+                    SectionHeader(kind.title, detail = sectionCards.count { it.id !in leavingCards }.toString())
                 }
-                val cards = if (section.kind == DaySectionKind.PLANNED && drag.order != null) {
-                    val byId = section.cards.associateBy { it.id }
+                val cards = if (kind == DaySectionKind.PLANNED && drag.order != null) {
+                    val byId = sectionCards.associateBy { it.id }
                     drag.order.orEmpty().mapNotNull(byId::get)
                 } else {
-                    section.cards
+                    sectionCards
                 }
                 items(cards, key = { it.id }, contentType = { if (it.isRunning) "running" else "card" }) { card ->
+                    val index = sectionCards.indexOf(card)
                     val isDragging = drag.draggingId == card.id
                     val itemModifier = if (isDragging) {
                         Modifier.zIndex(1f).graphicsLayer { translationY = drag.offset }
@@ -143,17 +172,17 @@ fun TodayScreen() {
                                 if (card.dailyId != null) "Log today" else "Done",
                                 Icons.Filled.Check,
                                 TaktTheme.colors.success,
-                            ) { vm.tickOff(card) },
+                            ) { finish(card, kind, index) },
                             end = SwipeAction("Tomorrow", PIcons.Calendar, TaktTheme.colors.warning) { vm.deferToTomorrow(card) },
                             modifier = itemModifier,
                         ) {
                             DayCardRow(
                                 card = card,
                                 isDragging = isDragging,
+                                isLeaving = card.id in leavingCards,
                                 canStart = true,
-                                onTick = { vm.tickOff(card) },
+                                onTick = { finish(card, kind, index) },
                                 onStart = { gate { vm.start(card) } },
-                                onOpen = { vm.inspect(card) },
                                 menu = { dismiss ->
                                     CardMenu(card, vm, dismiss, onStart = { gate { vm.start(card) } }, onHabit = { container.habits.open(card.id) })
                                 },
@@ -167,15 +196,27 @@ fun TodayScreen() {
                     }
                 }
             }
-            if (day.dailies.isNotEmpty()) {
+            if (dailies.isNotEmpty()) {
                 item(key = "section-dailies", contentType = "section") {
-                    SectionHeader("Dailies", detail = "${day.dailies.count { it.isDone }}/${day.dailies.size}")
+                    SectionHeader("Dailies", detail = dailies.count { it.id !in leavingDailies }.toString())
                 }
-                items(day.dailies, key = { "daily-${it.id}" }, contentType = { "daily" }) { daily ->
-                    DailyRow(daily, onToggle = { vm.toggleDaily(daily) }, modifier = Modifier.animateItem())
+                items(dailies, key = { "daily-${it.id}" }, contentType = { "daily" }) { daily ->
+                    val index = dailies.indexOf(daily)
+                    SwipeRow(
+                        start = SwipeAction("Log today", Icons.Filled.Check, TaktTheme.colors.success) { finish(daily, index) },
+                        end = null,
+                        modifier = Modifier.animateItem(),
+                    ) {
+                        DailyRow(
+                            daily,
+                            isLeaving = daily.id in leavingDailies,
+                            onToggle = { finish(daily, index) },
+                            onOpen = { container.inspector.open(daily.taskId) },
+                        )
+                    }
                 }
             }
-            if (day.isLoaded && day.cards.isEmpty() && day.dailies.isEmpty()) {
+            if (day.isLoaded && sections.isEmpty() && dailies.isEmpty()) {
                 item(key = "empty", contentType = "empty") {
                     EmptyState(
                         "Nothing planned for today",
@@ -193,6 +234,23 @@ fun TodayScreen() {
 
 private fun longDay(date: LocalDate): String =
     date.format(java.time.format.DateTimeFormatter.ofPattern("EEEE d MMMM", java.util.Locale.UK))
+
+/** How long a finished row stays, crossed out, before it leaves the day. */
+private const val LEAVE_MILLIS = 900L
+
+/** A row just finished, and where it stood: its section, and its place in it. */
+private data class Leaving<T>(val item: T, val kind: DaySectionKind?, val index: Int)
+
+/** [items] with the rows still leaving put back where they stood, once the day has dropped them. */
+private fun <T> withLeaving(items: List<T>, leaving: Collection<Leaving<T>>, id: (T) -> String): List<T> {
+    if (leaving.isEmpty()) return items
+    val present = items.mapTo(HashSet(), id)
+    val rows = items.toMutableList()
+    for (row in leaving.sortedBy { it.index }) {
+        if (id(row.item) !in present) rows.add(minOf(row.index, rows.size), row.item)
+    }
+    return rows
+}
 
 // region Header
 
@@ -251,49 +309,27 @@ private fun DayHeader(day: DayState) {
 private fun DayCardRow(
     card: DayCard,
     isDragging: Boolean,
+    isLeaving: Boolean,
     canStart: Boolean,
     onTick: () -> Unit,
     onStart: () -> Unit,
-    onOpen: () -> Unit,
     menu: @Composable (dismiss: () -> Unit) -> Unit,
     handle: Modifier?,
     modifier: Modifier = Modifier,
 ) {
     var menuOpen by remember { mutableStateOf(false) }
     Column(modifier.background(if (isDragging) TaktTheme.colors.raised else TaktTheme.colors.paper)) {
+        // No check circle: tapping the row finishes it, crossed out and then
+        // gone; play starts a block on it; the options sit just before play
+        // and the drag handle on the leading edge.
+        val verb = if (card.dailyId != null) "Log today" else "Complete"
         Row(
-            Modifier.fillMaxWidth().heightIn(min = 56.dp).padding(start = Metrics.xs, end = Metrics.xs),
+            Modifier
+                .fillMaxWidth()
+                .heightIn(min = 56.dp)
+                .padding(start = if (handle == null) Metrics.lg - Metrics.xs else 0.dp, end = Metrics.xs),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            TaskCheck(
-                status = if (card.isDailyDoneToday) TaskStatus.COMPLETED else TaskStatus.OPEN,
-                isList = card.isList,
-                label = card.title,
-                onToggle = onTick,
-            )
-            Box(Modifier.weight(1f)) {
-                Column(
-                    Modifier
-                        .fillMaxWidth()
-                        .clip(Metrics.control)
-                        .combinedClickable(onClick = onOpen, onLongClick = { menuOpen = true }, onLongClickLabel = "Task actions")
-                        .padding(vertical = Metrics.sm, horizontal = Metrics.xs),
-                ) {
-                    Text(
-                        card.title,
-                        style = TaktTheme.type.body,
-                        color = if (card.isBlocked) TaktTheme.colors.mutedText else TaktTheme.colors.ink,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                    CardDetail(card)
-                }
-                ChalkMenu(menuOpen, onDismiss = { menuOpen = false }) { menu { menuOpen = false } }
-            }
-            CardCost(card)
-            if (canStart) {
-                IconAction(Icons.Filled.PlayArrow, "Start focus on ${card.title}", tint = TaktTheme.colors.primary, onClick = onStart)
-            }
             if (handle != null) {
                 Box(
                     handle.size(Metrics.touchTarget).semantics { contentDescription = "Reorder ${card.title}" },
@@ -301,6 +337,36 @@ private fun DayCardRow(
                 ) {
                     Icon(PIcons.DragHandle, null, tint = TaktTheme.colors.dimText, modifier = Modifier.size(20.dp))
                 }
+            }
+            Column(
+                Modifier
+                    .weight(1f)
+                    .clip(Metrics.control)
+                    .combinedClickable(
+                        onClick = onTick,
+                        onClickLabel = "$verb ${card.title}",
+                        onLongClick = { menuOpen = true },
+                        onLongClickLabel = "Task actions",
+                    )
+                    .padding(vertical = Metrics.sm, horizontal = Metrics.xs),
+            ) {
+                Text(
+                    card.title,
+                    style = TaktTheme.type.body,
+                    color = if (card.isBlocked || isLeaving) TaktTheme.colors.mutedText else TaktTheme.colors.ink,
+                    textDecoration = if (isLeaving) TextDecoration.LineThrough else null,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                CardDetail(card)
+            }
+            CardCost(card)
+            Box {
+                IconAction(Icons.Filled.MoreVert, "Options for ${card.title}") { menuOpen = true }
+                ChalkMenu(menuOpen, onDismiss = { menuOpen = false }) { menu { menuOpen = false } }
+            }
+            if (canStart) {
+                IconAction(Icons.Filled.PlayArrow, "Start focus on ${card.title}", tint = TaktTheme.colors.primary, onClick = onStart)
             }
         }
         Hairline(color = TaktTheme.colors.borderMuted)
@@ -430,33 +496,34 @@ private fun RunningDayCard(
 // region Dailies
 
 @Composable
-private fun DailyRow(daily: DayDaily, onToggle: () -> Unit, modifier: Modifier = Modifier) {
-    Column(modifier) {
+private fun DailyRow(daily: DayDaily, isLeaving: Boolean, onToggle: () -> Unit, onOpen: () -> Unit, modifier: Modifier = Modifier) {
+    val crossed = isLeaving || daily.isDone
+    Column(modifier.background(TaktTheme.colors.paper)) {
         Row(
-            Modifier.fillMaxWidth().heightIn(min = Metrics.touchTarget).padding(start = Metrics.xs, end = Metrics.lg),
+            Modifier
+                .fillMaxWidth()
+                .heightIn(min = Metrics.touchTarget)
+                .clickable(onClickLabel = "Log today ${daily.title}", onClick = onToggle)
+                .padding(start = Metrics.lg, end = Metrics.xs),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            TaskCheck(
-                status = if (daily.isDone) TaskStatus.COMPLETED else TaskStatus.OPEN,
-                label = daily.title,
-                onToggle = onToggle,
-            )
-            Column(Modifier.weight(1f).padding(horizontal = Metrics.xs)) {
+            Column(Modifier.weight(1f).padding(end = Metrics.xs)) {
                 Text(
                     daily.title,
                     style = TaktTheme.type.body,
-                    color = if (daily.isDone) TaktTheme.colors.mutedText else TaktTheme.colors.ink,
-                    textDecoration = if (daily.isDone) TextDecoration.LineThrough else null,
+                    color = if (crossed) TaktTheme.colors.mutedText else TaktTheme.colors.ink,
+                    textDecoration = if (crossed) TextDecoration.LineThrough else null,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                 )
                 daily.progressFraction?.let { fraction ->
                     Box(Modifier.padding(top = Metrics.xs).width(120.dp).height(3.dp).background(TaktTheme.colors.well)) {
-                        Box(Modifier.fillMaxWidth(fraction).height(3.dp).background(if (daily.isDone) TaktTheme.colors.success else TaktTheme.colors.categoricalPurple))
+                        Box(Modifier.fillMaxWidth(fraction).height(3.dp).background(if (crossed) TaktTheme.colors.success else TaktTheme.colors.categoricalPurple))
                     }
                 }
             }
             daily.progressText?.let { MonoText(it) }
+            IconAction(Icons.Filled.MoreVert, "Options for ${daily.title}", onClick = onOpen)
         }
         Hairline(color = TaktTheme.colors.borderMuted)
     }

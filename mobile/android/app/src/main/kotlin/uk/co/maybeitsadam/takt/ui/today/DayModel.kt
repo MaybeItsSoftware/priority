@@ -192,6 +192,9 @@ object DayShaping {
             if (!seen.add(id)) return@mapNotNull null
             val task = snapshot.dayTasks[id] ?: return@mapNotNull null
             val daily = dailyByTask[id]
+            // Finished is finished: a daily met today leaves the day as a
+            // completed task does, unless it is the one being timed.
+            if (daily?.isDoneToday == true && id != runningId) return@mapNotNull null
             val list = listsById[task.listId]
             DayCard(
                 id = id,
@@ -209,9 +212,13 @@ object DayShaping {
                 isBlocked = id in blockedIds,
             )
         }
+        val onTheDay = cards.mapTo(HashSet()) { it.id }
         return DayState(
             cards = cards.toImmutableList(),
-            dailies = dailies.map {
+            // Only the dailies the day is not already showing, and only those
+            // still owed: a habit lands in Today as a card, and listing it
+            // again underneath was the same task twice.
+            dailies = dailies.filter { !it.isDoneToday && it.task.id !in onTheDay }.map {
                 DayDaily(
                     id = it.daily.id,
                     taskId = it.task.id,

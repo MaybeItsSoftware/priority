@@ -6,6 +6,8 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import uk.co.maybeitsadam.takt.T0
+import uk.co.maybeitsadam.takt.core.DailyContribution
+import uk.co.maybeitsadam.takt.core.DailyItem
 import uk.co.maybeitsadam.takt.core.DayPlanEntry
 import uk.co.maybeitsadam.takt.core.DayPlanReason
 import uk.co.maybeitsadam.takt.core.FocusRanking
@@ -13,6 +15,7 @@ import uk.co.maybeitsadam.takt.core.NextUpCandidate
 import uk.co.maybeitsadam.takt.core.NextUpReason
 import uk.co.maybeitsadam.takt.core.ScoredNextUp
 import uk.co.maybeitsadam.takt.core.WorkProgress
+import uk.co.maybeitsadam.takt.core.WorkspaceDaily
 import uk.co.maybeitsadam.takt.core.WorkspaceNextUpSnapshot
 import uk.co.maybeitsadam.takt.session
 import uk.co.maybeitsadam.takt.task
@@ -106,5 +109,27 @@ class DayModelTest {
     @Test fun dailyProgressText() {
         assertEquals("20m/30m", DayDaily("d", "t", "x", false, 1200, 1800).progressText)
         assertNull(DayDaily("d", "t", "x", false, 0, null).progressText)
+    }
+
+    private fun daily(taskId: String, done: Boolean) = DailyItem(
+        daily = WorkspaceDaily(id = "d-$taskId", taskId = taskId, sortOrder = 0, createdAt = T0, updatedAt = T0),
+        task = task(taskId),
+        contribution = if (done) DailyContribution("c-$taskId", "d-$taskId", taskId, "2026-10-02", 0, T0, T0) else null,
+    )
+
+    @Test fun aDailyOnTheDayIsNotListedAgainAndAMetOneLeaves() {
+        val plan = listOf("habit", "met", "plain").map { DayPlanEntry(it, DayPlanReason.PLANNED) }
+        val dailies = listOf(daily("habit", done = false), daily("met", done = true), daily("elsewhere", done = false))
+        val day = DayShaping.build(snapshot(plan), null, dailies, emptyList())
+        assertEquals(listOf("habit", "plain"), day.cards.map { it.id })
+        assertEquals(listOf("elsewhere"), day.dailies.map { it.taskId })
+    }
+
+    @Test fun theRunningDailyStaysOnTheDayOnceMet() {
+        val day = DayShaping.build(
+            snapshot(listOf(DayPlanEntry("met", DayPlanReason.RUNNING))), session("met"), listOf(daily("met", done = true)), emptyList(),
+        )
+        assertEquals(listOf("met"), day.cards.map { it.id })
+        assertTrue(day.dailies.isEmpty())
     }
 }
