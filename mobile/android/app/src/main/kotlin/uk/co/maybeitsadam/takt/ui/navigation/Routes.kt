@@ -34,7 +34,7 @@ enum class Tab(val title: String, private val iconProvider: () -> ImageVector, v
     LISTS("Lists", { PIcons.ListIcon }, ListsRoute),
     FOCUS("Focus", { PIcons.Focus }, FocusRoute),
     REVIEW("Review", { PIcons.Review }, ReviewRoute),
-    SEARCH("Search", { Icons.Filled.Search }, SearchRoute),
+    SEARCH("Find", { Icons.Filled.Search }, SearchRoute),
     ;
 
     val icon: ImageVector get() = iconProvider()

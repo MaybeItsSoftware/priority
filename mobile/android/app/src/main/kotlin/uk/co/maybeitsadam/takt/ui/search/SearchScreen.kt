@@ -1,6 +1,12 @@
 package uk.co.maybeitsadam.takt.ui.search
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.graphics.Color
+import uk.co.maybeitsadam.takt.ui.commands.PhoneCommands
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.combinedClickable
@@ -62,7 +68,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import uk.co.maybeitsadam.takt.core.TaskStatus
 import uk.co.maybeitsadam.takt.data.workspace.TaskSearchResult
-import uk.co.maybeitsadam.takt.ui.components.EmptyState
 import uk.co.maybeitsadam.takt.ui.components.Format
 import uk.co.maybeitsadam.takt.ui.components.Hairline
 import uk.co.maybeitsadam.takt.ui.components.IconAction
@@ -78,9 +83,12 @@ import uk.co.maybeitsadam.takt.ui.theme.PIcons
 import uk.co.maybeitsadam.takt.ui.theme.parseHexColor
 
 /**
- * Search: titles and notes across every list. Tap a result to open its list
- * with the task selected; long-press for its details; ↑/↓ and Enter from the
- * field do the same without leaving the keyboard.
+ * Find: the Mac's command palette, list navigator and search in one field.
+ * What you type is matched against the phone's commands and every list by
+ * the core's palette scoring, and against task titles and notes by
+ * full-text search. With nothing typed it is a launcher: recent commands
+ * first, then every place. Enter runs the best row; Up and Down walk the
+ * tasks.
  */
 @Composable
 fun SearchScreen() {
@@ -89,23 +97,52 @@ fun SearchScreen() {
     val query by model.query.collectAsStateWithLifecycle()
     val includeCompleted by model.includeCompleted.collectAsStateWithLifecycle()
     val state by model.state.collectAsStateWithLifecycle()
+    val palette by model.palette.collectAsStateWithLifecycle()
     val focus = remember { FocusRequester() }
     val focusManager = LocalFocusManager.current
     var selected by rememberSaveable(state.query) { mutableStateOf<Int?>(null) }
     val listState = rememberLazyListState()
     val results = state.results
+    val trimmed = query.trim()
 
     fun reveal(result: TaskSearchResult) {
         focusManager.clearFocus()
         shell.navigator.openList(result.list.id, revealTaskId = result.task.id)
     }
 
+    fun runCommand(id: String) {
+        focusManager.clearFocus()
+        model.recordCommand(id)
+        model.setQuery("")
+        PhoneCommands.run(id, shell, shell.container.session.value?.inboxId)
+    }
+
+    fun openPlace(place: FindPlace) {
+        focusManager.clearFocus()
+        model.setQuery("")
+        when (place.kind) {
+            FindPlaceKind.FILTER -> place.id?.let(shell.navigator::openFilterList)
+            else -> shell.navigator.openList(place.id)
+        }
+    }
+
+    /** Enter: a picked task, else the best command, else the best place, else the first task. */
+    fun submit() {
+        val picked = selected?.let { results.getOrNull(it) }
+        when {
+            picked != null -> reveal(picked)
+            trimmed.isEmpty() -> Unit
+            palette.commands.isNotEmpty() -> runCommand(palette.commands.first().id)
+            palette.places.isNotEmpty() -> openPlace(palette.places.first())
+            else -> results.firstOrNull()?.let(::reveal)
+        }
+    }
+
     LaunchedEffect(Unit) { focus.requestFocus() }
-    LaunchedEffect(selected) { selected?.let { listState.animateScrollToItem(it + 1) } }
 
     Column(Modifier.fillMaxSize().background(TaktTheme.colors.paper).imePadding()) {
-        TaktTopBar("Search", actions = { SettingsAction() })
-        Column(Modifier.padding(horizontal = Metrics.lg, vertical = Metrics.sm), verticalArrangement = Arrangement.spacedBy(Metrics.sm)) {
+        TaktTopBar("Find", actions = { SettingsAction() })
+        Column(Modifier.padding(horizontal = Metrics.lg, vertical = Metrics.sm)) {
             SearchField(
                 value = query,
                 onValueChange = model::setQuery,
@@ -116,38 +153,77 @@ fun SearchScreen() {
                         when (event.key) {
                             Key.DirectionDown -> { selected = SearchMatching.move(selected, 1, results.size); true }
                             Key.DirectionUp -> { selected = SearchMatching.move(selected, -1, results.size); true }
-                            Key.Enter, Key.NumPadEnter -> {
-                                val index = selected ?: if (results.isNotEmpty()) 0 else null
-                                index?.let { results.getOrNull(it) }?.let(::reveal)
-                                index != null
-                            }
+                            Key.Enter, Key.NumPadEnter -> { submit(); true }
                             else -> false
                         }
                     },
-                onSubmit = { results.getOrNull(selected ?: 0)?.let(::reveal) },
-            )
-            Tag(
-                "Include completed",
-                selected = includeCompleted,
-                color = if (includeCompleted) TaktTheme.colors.primary else TaktTheme.colors.mutedText,
-                leading = if (includeCompleted) Icons.Filled.Check else null,
-                modifier = Modifier
-                    .testTag("search_include_completed")
-                    .semantics { contentDescription = if (includeCompleted) "Include completed, on" else "Include completed, off" },
-                onClick = { model.setIncludeCompleted(!includeCompleted) },
+                onSubmit = ::submit,
             )
         }
         Hairline()
-        val trimmed = query.trim()
-        when {
-            trimmed.isEmpty() -> EmptyState("Search every task", detail = "Titles and notes, across all your lists.")
-            results.isEmpty() && state.query == trimmed -> EmptyState(
-                "No matches",
-                detail = if (includeCompleted) null else "Completed tasks are hidden.",
-            )
-            else -> LazyColumn(Modifier.fillMaxSize().testTag("search_results"), state = listState) {
-                item(key = "header", contentType = "header") {
-                    SectionHeader(if (results.size == 1) "1 task" else "${results.size} tasks")
+        LazyColumn(Modifier.fillMaxSize().testTag("search_results"), state = listState) {
+            if (palette.commands.isNotEmpty()) {
+                item(key = "commands", contentType = "header") { SectionHeader("Commands") }
+                items(palette.commands, key = { "command-${it.id}" }, contentType = { "command" }) { command ->
+                    FindRow(
+                        icon = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                        title = command.title,
+                        detail = command.group,
+                        tag = "find_command_${command.id}",
+                        onClick = { runCommand(command.id) },
+                    )
+                }
+            }
+            if (palette.places.isNotEmpty()) {
+                item(key = "places", contentType = "header") { SectionHeader("Lists", detail = palette.places.size.toString()) }
+                items(palette.places, key = { "place-${it.kind}-${it.id}" }, contentType = { "place" }) { place ->
+                    FindRow(
+                        icon = when (place.kind) {
+                            FindPlaceKind.EVERYTHING -> PIcons.Inbox
+                            FindPlaceKind.FILTER -> Icons.Filled.Search
+                            FindPlaceKind.LIST -> PIcons.ListIcon
+                        },
+                        iconTint = parseHexColor(place.colorHex),
+                        title = place.name,
+                        detail = place.detail.takeIf { it.isNotBlank() },
+                        tag = "find_place",
+                        onClick = { openPlace(place) },
+                    )
+                }
+            }
+            if (trimmed.isNotEmpty()) {
+                item(key = "tasks", contentType = "header") {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        SectionHeader(
+                            when {
+                                state.query != trimmed -> "Tasks"
+                                results.size == 1 -> "1 task"
+                                else -> "${results.size} tasks"
+                            },
+                            modifier = Modifier.weight(1f),
+                        )
+                        Tag(
+                            "Include completed",
+                            selected = includeCompleted,
+                            color = if (includeCompleted) TaktTheme.colors.primary else TaktTheme.colors.mutedText,
+                            leading = if (includeCompleted) Icons.Filled.Check else null,
+                            modifier = Modifier
+                                .padding(end = Metrics.lg)
+                                .testTag("search_include_completed")
+                                .semantics { contentDescription = if (includeCompleted) "Include completed, on" else "Include completed, off" },
+                            onClick = { model.setIncludeCompleted(!includeCompleted) },
+                        )
+                    }
+                }
+                if (results.isEmpty() && state.query == trimmed) {
+                    item(key = "no-tasks", contentType = "empty") {
+                        Text(
+                            if (includeCompleted) "No task matches" else "No open task matches",
+                            style = TaktTheme.type.small,
+                            color = TaktTheme.colors.mutedText,
+                            modifier = Modifier.padding(horizontal = Metrics.lg, vertical = Metrics.md),
+                        )
+                    }
                 }
                 itemsIndexed(results, key = { _, r -> r.task.id }, contentType = { _, _ -> "result" }) { index, result ->
                     ResultRow(
@@ -162,6 +238,35 @@ fun SearchScreen() {
                 }
             }
         }
+    }
+}
+
+/** A command or a place: a glyph, its name and where it belongs. */
+@Composable
+private fun FindRow(
+    icon: ImageVector,
+    title: String,
+    detail: String?,
+    tag: String,
+    onClick: () -> Unit,
+    iconTint: Color? = null,
+) {
+    val colors = TaktTheme.colors
+    Column(Modifier.fillMaxWidth().clickable(onClick = onClick).testTag(tag)) {
+        Row(
+            Modifier.fillMaxWidth().heightIn(min = Metrics.touchTarget + Metrics.xs).padding(horizontal = Metrics.lg),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(Metrics.md),
+        ) {
+            Icon(icon, null, tint = iconTint ?: colors.mutedText, modifier = Modifier.size(18.dp))
+            Column(Modifier.weight(1f)) {
+                Text(title, style = TaktTheme.type.body, color = colors.ink, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                if (detail != null) {
+                    Text(detail, style = TaktTheme.type.small, color = colors.mutedText, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                }
+            }
+        }
+        Hairline(Modifier.padding(start = Metrics.lg + 18.dp + Metrics.md), color = colors.borderMuted)
     }
 }
 

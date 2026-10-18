@@ -31,6 +31,7 @@ import androidx.compose.material3.adaptive.layout.calculatePaneScaffoldDirective
 import androidx.compose.material3.adaptive.navigation.NavigableListDetailPaneScaffold
 import androidx.compose.material3.adaptive.navigation.rememberListDetailPaneScaffoldNavigator
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -53,6 +54,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.launch
+import uk.co.maybeitsadam.takt.app.ListsPrompt
 import uk.co.maybeitsadam.takt.ui.commands.Chord
 import uk.co.maybeitsadam.takt.ui.commands.KeyCommand
 import uk.co.maybeitsadam.takt.ui.commands.RegisterCommands
@@ -177,6 +179,14 @@ private fun ListsTree(
     val vm: ListsViewModel = viewModel { ListsViewModel(container) }
     val state by vm.tree.collectAsStateWithLifecycle()
     var dialog by remember { mutableStateOf<ListsDialog?>(null) }
+    val prompt by container.listsPrompt.pending.collectAsStateWithLifecycle()
+    LaunchedEffect(prompt) {
+        when (container.listsPrompt.take()) {
+            ListsPrompt.NEW_LIST -> dialog = ListsDialog.NewList(null)
+            ListsPrompt.NEW_FOLDER -> dialog = ListsDialog.NewFolder(null)
+            null -> Unit
+        }
+    }
 
     RegisterCommands(
         listOf(

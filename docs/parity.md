@@ -29,8 +29,8 @@ Last checked against `main` on 6 October 2026.
 | Task inspector (dates, estimate, priority, tags, planning, conditions, notes) | Done | `ui/inspector` |
 | Delete asks first, and undo works either way | Done | Confirm dialog in lists and the inspector, plus an Undo snackbar. The Mac's "Confirm before deleting" switch is not ported: on a phone it always asks |
 | Undo, redo and history | Done | Same journal and the same labels |
-| Search | Done | |
-| Command palette | Done | Reachable with a hardware keyboard (`Ctrl+K`) |
+| Search | Done | In the Find tab, under commands and lists |
+| Command palette | Done | The Find tab, by touch: commands, lists and tasks in one field, ranked by the core (`core/src/palette.rs`). `Ctrl+K` with a hardware keyboard. See [the phones' UX](mobile-ux.md) |
 | Typed command language (`CommandEngine`) | Not on a phone | It has no surface on the Mac either |
 
 ## Dailies and habits

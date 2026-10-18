@@ -51,7 +51,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.testTag
@@ -158,6 +160,7 @@ fun AppShell(container: AppContainer, pendingIntent: Intent?, onIntentHandled: (
     var historyOpen by remember { mutableStateOf(false) }
     var paletteOpen by remember { mutableStateOf(false) }
     val snackbar = remember { SnackbarHostState() }
+    val haptics = LocalHapticFeedback.current
     val inspectorTaskId by container.inspector.taskId.collectAsStateWithLifecycle()
     val quickAdd by container.quickAdd.request.collectAsStateWithLifecycle()
     val habitRequest by container.habits.request.collectAsStateWithLifecycle()
@@ -171,6 +174,7 @@ fun AppShell(container: AppContainer, pendingIntent: Intent?, onIntentHandled: (
                 duration = if (message.action != null) SnackbarDuration.Short else SnackbarDuration.Short,
             )
             if (result == SnackbarResult.ActionPerformed) {
+                haptics.performHapticFeedback(HapticFeedbackType.Confirm)
                 when (message.action) {
                     SnackAction.UNDO -> container.undo.undo()
                     SnackAction.REDO -> container.undo.redo()
@@ -260,7 +264,13 @@ fun AppShell(container: AppContainer, pendingIntent: Intent?, onIntentHandled: (
                         if (showFab && !layout.isWide) {
                             QuickAddFab(
                                 Modifier.align(Alignment.BottomEnd).padding(Metrics.lg),
-                            ) { container.quickAdd.open(QuickAddRequest(listId = container.quickAdd.contextListId.value)) }
+                            ) {
+                                // From Today the task is planned for today, so it lands where it was typed.
+                                val fromToday = currentTab == Tab.TODAY
+                                container.quickAdd.open(
+                                    QuickAddRequest(listId = if (fromToday) null else container.quickAdd.contextListId.value, plansToday = fromToday),
+                                )
+                            }
                         }
                     }
                     val taskId = inspectorTaskId

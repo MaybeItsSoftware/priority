@@ -88,6 +88,7 @@ class AppContainer(
     val inspector = InspectorController()
     val quickAdd = QuickAddController()
     val habits = HabitFormController()
+    val listsPrompt = ListsPromptController()
     val undo = UndoCenter(this)
     val commands = TaskCommands(this)
     val sync = SyncController(this)

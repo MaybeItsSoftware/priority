@@ -38,6 +38,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.draw.clip
@@ -324,11 +326,15 @@ fun TaskCheck(
         TaskStatus.CANCELLED -> "Reinstate"
     }
     val description = if (label == null) verb else "$verb $label"
+    val haptics = LocalHapticFeedback.current
     Box(
         modifier
             .size(Metrics.touchTarget)
             .clip(CircleShape)
-            .clickable(role = Role.Checkbox, onClick = onToggle)
+            .clickable(role = Role.Checkbox) {
+                haptics.performHapticFeedback(if (status == TaskStatus.OPEN) HapticFeedbackType.ToggleOn else HapticFeedbackType.ToggleOff)
+                onToggle()
+            }
             .semantics { contentDescription = description },
         contentAlignment = Alignment.Center,
     ) {

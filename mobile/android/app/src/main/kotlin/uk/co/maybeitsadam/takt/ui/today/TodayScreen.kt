@@ -59,6 +59,8 @@ import uk.co.maybeitsadam.takt.ui.components.PButton
 import uk.co.maybeitsadam.takt.ui.components.TaktTopBar
 import uk.co.maybeitsadam.takt.ui.components.SectionHeader
 import uk.co.maybeitsadam.takt.ui.components.SettingsAction
+import uk.co.maybeitsadam.takt.ui.components.SwipeAction
+import uk.co.maybeitsadam.takt.ui.components.SwipeRow
 import uk.co.maybeitsadam.takt.ui.components.TaskCheck
 import uk.co.maybeitsadam.takt.ui.focus.BlockIconButton
 import uk.co.maybeitsadam.takt.ui.focus.ClockReading
@@ -68,7 +70,6 @@ import uk.co.maybeitsadam.takt.ui.focus.rememberNotificationGate
 import uk.co.maybeitsadam.takt.ui.focus.rememberTicker
 import uk.co.maybeitsadam.takt.ui.navigation.LocalShell
 import uk.co.maybeitsadam.takt.ui.navigation.Tab
-import uk.co.maybeitsadam.takt.ui.quickadd.QuickAddBar
 import uk.co.maybeitsadam.takt.ui.theme.TaktTheme
 import uk.co.maybeitsadam.takt.ui.theme.Metrics
 import uk.co.maybeitsadam.takt.ui.theme.PIcons
@@ -98,11 +99,7 @@ fun TodayScreen() {
     )
 
     Column(Modifier.fillMaxSize().background(TaktTheme.colors.paper)) {
-        TaktTopBar("Today", subtitle = longDay(LocalDate.now()), actions = {
-            IconAction(PIcons.Repeat, "New habit") { container.habits.open(null) }
-            SettingsAction()
-        })
-        QuickAddBar(listId = null)
+        TaktTopBar("Today", subtitle = longDay(LocalDate.now()), actions = { SettingsAction() })
         val sections = day.sections
         val plannedIds = day.plannedIds
         LazyColumn(
@@ -140,23 +137,32 @@ fun TodayScreen() {
                             modifier = itemModifier,
                         )
                     } else {
-                        DayCardRow(
-                            card = card,
-                            isDragging = isDragging,
-                            canStart = true,
-                            onTick = { vm.tickOff(card) },
-                            onStart = { gate { vm.start(card) } },
-                            onOpen = { vm.inspect(card) },
-                            menu = { dismiss ->
-                                CardMenu(card, vm, dismiss, onStart = { gate { vm.start(card) } }, onHabit = { container.habits.open(card.id) })
-                            },
-                            handle = if (card.isPlanned && plannedIds.size > 1) {
-                                Modifier.plannedDragHandle(drag, card.id, plannedIds, vm::arrange)
-                            } else {
-                                null
-                            },
+                        SwipeRow(
+                            start = SwipeAction(
+                                if (card.dailyId != null) "Log today" else "Done",
+                                Icons.Filled.Check,
+                                TaktTheme.colors.success,
+                            ) { vm.tickOff(card) },
+                            end = SwipeAction("Tomorrow", PIcons.Calendar, TaktTheme.colors.warning) { vm.deferToTomorrow(card) },
                             modifier = itemModifier,
-                        )
+                        ) {
+                            DayCardRow(
+                                card = card,
+                                isDragging = isDragging,
+                                canStart = true,
+                                onTick = { vm.tickOff(card) },
+                                onStart = { gate { vm.start(card) } },
+                                onOpen = { vm.inspect(card) },
+                                menu = { dismiss ->
+                                    CardMenu(card, vm, dismiss, onStart = { gate { vm.start(card) } }, onHabit = { container.habits.open(card.id) })
+                                },
+                                handle = if (card.isPlanned && plannedIds.size > 1) {
+                                    Modifier.plannedDragHandle(drag, card.id, plannedIds, vm::arrange)
+                                } else {
+                                    null
+                                },
+                            )
+                        }
                     }
                 }
             }
@@ -172,7 +178,7 @@ fun TodayScreen() {
                 item(key = "empty", contentType = "empty") {
                     EmptyState(
                         "Nothing planned for today",
-                        detail = "Plan a task for today from its menu, or add one above.",
+                        detail = "Add one with +, or swipe a task left to put it off.",
                     )
                 }
             }

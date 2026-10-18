@@ -24,6 +24,8 @@ data class QuickAddRequest(
     val parentTaskId: String? = null,
     /** Text to start with, e.g. from a share or the search field. */
     val text: String = "",
+    /** Opened from Today: the task is planned for today, so it lands where it was typed. */
+    val plansToday: Boolean = false,
     /** Bumped on every request so the same request twice still reopens the sheet. */
     val nonce: Long = System.nanoTime(),
 )
@@ -66,4 +68,20 @@ class HabitFormController {
     fun close() {
         _request.value = null
     }
+}
+
+/** A create prompt the Lists tree should open when it is next on screen: Find's "Create a list". */
+enum class ListsPrompt { NEW_LIST, NEW_FOLDER }
+
+/** Carries a [ListsPrompt] from wherever it was asked for to the Lists tree, which takes it once. */
+class ListsPromptController {
+    private val _pending = MutableStateFlow<ListsPrompt?>(null)
+    val pending: StateFlow<ListsPrompt?> = _pending.asStateFlow()
+
+    fun request(prompt: ListsPrompt) {
+        _pending.value = prompt
+    }
+
+    /** The prompt, once: the tree opens it and clears it. */
+    fun take(): ListsPrompt? = _pending.value.also { _pending.value = null }
 }

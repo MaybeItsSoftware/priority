@@ -21,13 +21,9 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.Icon
-import androidx.compose.material3.SwipeToDismissBox
-import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
-import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableFloatState
@@ -58,6 +54,8 @@ import androidx.compose.ui.zIndex
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.launch
 import uk.co.maybeitsadam.takt.app.CelebrationStyle
+import uk.co.maybeitsadam.takt.ui.components.SwipeAction
+import uk.co.maybeitsadam.takt.ui.components.SwipeRow
 import uk.co.maybeitsadam.takt.ui.commands.Chord
 import uk.co.maybeitsadam.takt.ui.components.BlockedDivider
 import uk.co.maybeitsadam.takt.ui.components.EmptyState
@@ -244,20 +242,17 @@ private fun OutlineRowView(
     modifier: Modifier = Modifier,
 ) {
     var menu by remember { mutableStateOf(false) }
-    val dismiss = rememberSwipeToDismissBoxState()
-    val scope = rememberCoroutineScope()
-    SwipeToDismissBox(
-        state = dismiss,
-        modifier = modifier,
-        backgroundContent = { SwipeBackground(dismiss.dismissDirection, row) },
-        onDismiss = { value ->
-            when (value) {
-                SwipeToDismissBoxValue.StartToEnd -> actions.toggleComplete(row.id)
-                SwipeToDismissBoxValue.EndToStart -> actions.toggleInvalidate(row.id)
-                SwipeToDismissBoxValue.Settled -> Unit
-            }
-            scope.launch { dismiss.reset() }
+    // The same two swipes as Today (docs/mobile-ux.md): right completes,
+    // left puts it on today. Cancelling is in the long-press menu.
+    val open = row.status == uk.co.maybeitsadam.takt.core.TaskStatus.OPEN
+    SwipeRow(
+        start = SwipeAction(if (open) "Complete" else "Reopen", Icons.Filled.Check, TaktTheme.colors.success) { actions.toggleComplete(row.id) },
+        end = if (open) {
+            SwipeAction(if (row.isPlanned) "Take off today" else "Today", PIcons.Today, TaktTheme.colors.primary) { actions.togglePlannedToday(row.id) }
+        } else {
+            null
         },
+        modifier = modifier,
     ) {
         val colors = TaktTheme.colors
         Box {
@@ -304,35 +299,6 @@ private fun OutlineRowView(
         }
     }
 }
-
-/** Emerald behind a swipe right (complete), raspberry behind a swipe left (cancel): tinted, not solid. */
-@Composable
-private fun SwipeBackground(direction: SwipeToDismissBoxValue, row: OutlineRow) {
-    val colors = TaktTheme.colors
-    val (tint, icon, text, alignment) = when (direction) {
-        SwipeToDismissBoxValue.StartToEnd -> Quad(colors.success, Icons.Filled.Check, if (row.status == uk.co.maybeitsadam.takt.core.TaskStatus.OPEN) "Complete" else "Reopen", Alignment.CenterStart)
-        SwipeToDismissBoxValue.EndToStart -> Quad(colors.danger, Icons.Filled.Close, if (row.status == uk.co.maybeitsadam.takt.core.TaskStatus.CANCELLED) "Reinstate" else "Cancel", Alignment.CenterEnd)
-        SwipeToDismissBoxValue.Settled -> Quad(colors.paper, null, "", Alignment.Center)
-    }
-    Box(
-        Modifier.fillMaxSize().background(colors.paper).background(tint.copy(alpha = 0.14f)).padding(horizontal = Metrics.lg),
-        contentAlignment = alignment,
-    ) {
-        if (icon != null) {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Metrics.xs + Metrics.xxs)) {
-                Icon(icon, null, tint = tint, modifier = Modifier.size(18.dp))
-                Text(text, style = TaktTheme.type.label, color = tint)
-            }
-        }
-    }
-}
-
-private data class Quad(
-    val tint: androidx.compose.ui.graphics.Color,
-    val icon: androidx.compose.ui.graphics.vector.ImageVector?,
-    val text: String,
-    val alignment: Alignment,
-)
 
 /**
  * The inline add field at the foot of the outline. Enter files the task and
