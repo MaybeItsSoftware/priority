@@ -15,7 +15,7 @@ struct KeyboardCommands: View {
 
   /// The commands offered, in the order the ⌘ overlay lists them.
   static let commandIDs: [WorkspaceCommandID] = [
-    .goToday, .goBoard, .goOutline, .goMatrix, .goEverything, .goFocus, .goTimeline, .goSearch,
+    .goToday, .goBoard, .goOutline, .goMatrix, .goEverything, .goFocus, .goTimeline, .goSearch, .goCommandPalette,
     .taskNew, .taskNewAbove, .taskNewChild, .taskComplete, .taskInvalidate, .taskDelete,
     .taskDueToday, .taskDueTomorrow, .taskToggleDaily, .taskTogglePlannedToday, .taskMove,
     .taskIndent, .taskOutdent, .taskMoveUp, .taskMoveDown, .taskMoveToPreviousList, .taskMoveToNextList,
@@ -129,7 +129,7 @@ struct KeyboardCommands: View {
     case .goEverything: navigation.open(.everything, isPad: isPad)
     case .goFocus: navigation.go(to: .focus, isPad: isPad)
     case .goTimeline: navigation.go(to: .review, isPad: isPad)
-    case .goSearch:
+    case .goSearch, .goCommandPalette:
       navigation.go(to: .search, isPad: isPad)
       navigation.searchFocusRequest &+= 1
     case .taskNew:

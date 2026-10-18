@@ -1,53 +1,85 @@
+import TaktCore
 import TaktWorkspace
 import SwiftUI
 
-/// Search: FTS through the store, with "include completed". Tapping a result
-/// opens its list with the task selected.
+/// Find: the Mac's command palette, list navigator and search in one field.
+/// What you type is matched against the phone's commands and every list by
+/// the core's palette scoring, and against task titles and notes by full-text
+/// search. With nothing typed it is a launcher: recent commands first, then
+/// every place. Return runs the best row.
 struct SearchScreen: View {
   @Environment(\.theme) private var theme
   @Environment(WorkspaceModel.self) private var model
   @Environment(\.isPadLayout) private var isPad
   @State private var search = SearchModel()
+  @State private var recents = FindPalette.recents
   @FocusState private var isFieldFocused: Bool
 
   var body: some View {
+    let query = search.trimmedQuery
+    let commands = FindPalette.commands(query, recents: recents)
+    let places = FindPalette.places(query, in: FindPlace.all(in: model.structure))
     List {
-      if !search.trimmedQuery.isEmpty && !search.results.isEmpty {
+      if !commands.isEmpty {
+        Section {
+          ForEach(commands) { command in
+            findRow(symbol: "chevron.right", title: command.title, detail: command.group, tint: nil) {
+              run(command.id)
+            }
+            .accessibilityIdentifier("find.command.\(command.id)")
+          }
+        } header: {
+          header("Commands")
+        }
+      }
+      if !places.isEmpty {
+        Section {
+          ForEach(places) { place in
+            findRow(
+              symbol: place.symbol, title: place.name, detail: place.detail.isEmpty ? nil : place.detail,
+              tint: ListColor.color(hex: place.colorHex)
+            ) { open(place) }
+            .accessibilityIdentifier("find.place.\(place.name)")
+          }
+        } header: {
+          header("Lists")
+        }
+      }
+      if !query.isEmpty {
         Section {
           ForEach(search.results) { result in
             resultRow(result)
           }
+          if search.results.isEmpty && search.searchedQuery == query {
+            Text(search.includesCompleted ? "No task matches" : "No open task matches")
+              .font(theme.type.caption)
+              .foregroundStyle(theme.muted)
+              .listRowBackground(theme.paper)
+          }
         } header: {
-          Text(header).font(theme.type.caption).foregroundStyle(theme.muted).textCase(nil)
+          HStack {
+            header(taskHeader)
+            Spacer()
+            Toggle(isOn: $search.includesCompleted) {
+              Text("Include completed").font(theme.type.caption)
+            }
+            .toggleStyle(.button)
+            .buttonStyle(.borderless)
+            .tint(theme.primary)
+            .accessibilityIdentifier("search.includeCompleted")
+          }
         }
       }
     }
     .listStyle(.plain)
     .scrollContentBackground(.hidden)
+    .scrollDismissesKeyboard(.immediately)
     .background(theme.paper)
-    .overlay {
-      if search.trimmedQuery.isEmpty {
-        EmptyState(
-          title: "Search every task", message: "Titles and notes, across all your lists.", systemImage: "magnifyingglass")
-      } else if search.results.isEmpty && search.searchedQuery == search.trimmedQuery {
-        EmptyState(
-          title: "No matches", message: search.includesCompleted ? nil : "Completed tasks are hidden.",
-          systemImage: "magnifyingglass")
-      }
-    }
-    .searchable(text: $search.query, placement: .navigationBarDrawer(displayMode: .always), prompt: "Search tasks")
+    .searchable(text: $search.query, placement: .navigationBarDrawer(displayMode: .always), prompt: "Commands, lists and tasks")
     .searchFocused($isFieldFocused)
-    .navigationTitle("Search")
+    .onSubmit(of: .search) { submit(commands: commands, places: places) }
+    .navigationTitle("Find")
     .navigationBarTitleDisplayMode(.inline)
-    .toolbar {
-      ToolbarItem(placement: .topBarTrailing) {
-        Toggle(isOn: $search.includesCompleted) {
-          Label("Include completed", systemImage: search.includesCompleted ? "checkmark.circle.fill" : "checkmark.circle")
-        }
-        .toggleStyle(.button)
-        .accessibilityIdentifier("search.includeCompleted")
-      }
-    }
     .task(id: search.key(revision: model.revision)) {
       // Debounce: a keystroke within 150ms cancels this read before it runs.
       try? await Task.sleep(for: .milliseconds(150))
@@ -55,12 +87,71 @@ struct SearchScreen: View {
       await search.search(store: model.store, workspaceID: model.workspace.id)
     }
     .onChange(of: model.navigation.searchFocusRequest) { _, _ in isFieldFocused = true }
-    .onAppear { if model.navigation.searchFocusRequest > 0 { isFieldFocused = true } }
+    .onAppear {
+      recents = FindPalette.recents
+      if model.navigation.searchFocusRequest > 0 { isFieldFocused = true }
+    }
   }
 
-  private var header: String {
+  private var taskHeader: String {
+    guard search.searchedQuery == search.trimmedQuery else { return "Tasks" }
     let count = search.results.count
     return count == 1 ? "1 task" : "\(count) tasks"
+  }
+
+  private func header(_ text: String) -> some View {
+    Text(text).font(theme.type.caption).foregroundStyle(theme.muted).textCase(nil)
+  }
+
+  private func findRow(
+    symbol: String, title: String, detail: String?, tint: Color?, action: @escaping () -> Void
+  ) -> some View {
+    Button(action: action) {
+      HStack(spacing: theme.space.md) {
+        Image(systemName: symbol)
+          .font(theme.type.glyph(14))
+          .foregroundStyle(tint ?? theme.muted)
+          .frame(width: 20)
+        VStack(alignment: .leading, spacing: 0) {
+          Text(title).font(theme.type.body).foregroundStyle(theme.ink).lineLimit(1)
+          if let detail {
+            Text(detail).font(theme.type.footnote).foregroundStyle(theme.muted).lineLimit(1)
+          }
+        }
+        Spacer(minLength: 0)
+      }
+      .frame(minHeight: theme.touchTarget)
+      .contentShape(Rectangle())
+    }
+    .buttonStyle(.plain)
+    .listRowBackground(theme.paper)
+    .listRowSeparatorTint(theme.borderMuted)
+  }
+
+  /// Return: the best command, else the best place, else the first task.
+  private func submit(commands: [PhonePalette.Command], places: [FindPlace]) {
+    guard !search.trimmedQuery.isEmpty else { return }
+    if let command = commands.first {
+      run(command.id)
+    } else if let place = places.first {
+      open(place)
+    } else if let result = search.results.first {
+      reveal(result)
+    }
+  }
+
+  private func run(_ id: String) {
+    isFieldFocused = false
+    FindPalette.record(id)
+    recents = FindPalette.recents
+    search.query = ""
+    PhoneCommandRunner.run(id, model: model, isPad: isPad)
+  }
+
+  private func open(_ place: FindPlace) {
+    isFieldFocused = false
+    search.query = ""
+    model.navigation.open(place.scope, isPad: isPad)
   }
 
   private func resultRow(_ result: TaskSearchResult) -> some View {

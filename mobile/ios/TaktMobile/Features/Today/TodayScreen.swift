@@ -53,9 +53,12 @@ struct TodayScreen: View {
       if today.isLoaded && today.day.cards.isEmpty && today.day.dailies.isEmpty {
         EmptyState(
           title: "Nothing planned for today",
-          message: "Plan a task for today from its menu, or add one with +.",
+          message: "Add one with +, or plan a task from its menu or with a swipe left in a list.",
           systemImage: "sun.max")
       }
+    }
+    .overlay(alignment: .bottomTrailing) {
+      if !isPad { AddButton(plansToday: true) }
     }
     .navigationTitle("Today")
     .navigationBarTitleDisplayMode(.inline)

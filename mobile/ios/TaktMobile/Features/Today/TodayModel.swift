@@ -236,7 +236,7 @@ final class TodayModel {
       if card.isPlanned { try store.setPlannedForToday(false, taskIds: [card.id]) }
       try store.scheduleTask(id: card.id, startAt: morning)
     }
-    if ok { model.showToast("Moved to tomorrow") }
+    if ok { model.announce("Moved to tomorrow") }
   }
 
   // MARK: - The running block

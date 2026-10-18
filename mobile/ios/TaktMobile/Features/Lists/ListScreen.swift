@@ -34,6 +34,9 @@ struct ListScreen: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
     .background(theme.paper)
+    .overlay(alignment: .bottomTrailing) {
+      if !isPad { AddButton(action: add) }
+    }
     .navigationTitle(model.title(for: scope))
     .navigationBarTitleDisplayMode(.inline)
     .toolbar {
