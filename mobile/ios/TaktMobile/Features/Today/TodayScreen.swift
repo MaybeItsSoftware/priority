@@ -21,6 +21,7 @@ struct TodayScreen: View {
           .listRowSeparator(.hidden)
           .selectionDisabled()
       }
+      CalendarAgendaSection()
       Section {
         ForEach(Array(today.day.cards.enumerated()), id: \.element.id) { index, card in
           cardRow(card, index: index)

@@ -84,6 +84,8 @@ struct SettingsScreen: View {
         }
         .listRowBackground(theme.raised)
 
+        CalendarSettingsRow()
+
         #if DEBUG
         Section {
           Button("Seed 5,000 tasks") {

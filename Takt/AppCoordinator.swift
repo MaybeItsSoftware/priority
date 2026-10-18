@@ -27,6 +27,14 @@ import SwiftUI
       storeProvider: { [weak self] in self?.workspaceStoreProvider?() },
       isEnabled: { [weak self] in self?.integrations.googleCalendarIntegrationEnabled ?? false })
 
+  /// Two-way Google Calendar: timed tasks as events in the chosen calendar,
+  /// and moves and renames made there coming back (docs/google-calendar.md).
+  @ObservationIgnored private(set) lazy var googleCalendarTwoWay = GoogleCalendarTwoWayService(
+    account: (integrations.googleCalendarPlugin as? NativeGoogleCalendarIntegrationPlugin)?.account
+      ?? GoogleAccount(),
+    storeProvider: { [weak self] in self?.workspaceStoreProvider?() },
+    isEnabled: { [weak self] in self?.integrations.googleCalendarIntegrationEnabled ?? false })
+
   @ObservationIgnored private(set) lazy var googleTasksMirror = GoogleTasksMirrorService(
     plugin: integrations.googleTasksPlugin,
     storeProvider: { [weak self] in self?.workspaceStoreProvider?() },

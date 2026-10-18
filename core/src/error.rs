@@ -73,6 +73,10 @@ pub enum CoreError {
     /// one (`editor_draft.rs`).
     #[error("Enter a non-negative number of minutes within the supported range.")]
     InvalidEstimate,
+    /// A Google Calendar answer the core could not read
+    /// (`google_calendar.rs`).
+    #[error("{detail}")]
+    GoogleCalendar { detail: String },
 }
 
 impl From<rusqlite::Error> for CoreError {

@@ -52,6 +52,8 @@ object WorkspaceSchema {
         "preferences" to "key",
         // `v28_synced_focus_context`: what holds now, one row per workspace.
         "focus_contexts" to "workspaceId",
+        // `v30_google_calendar`: a task's calendar event (docs/google-calendar.md).
+        "calendar_event_links" to "taskId",
     )
 
     fun syncKey(table: String): String? = syncedTables.firstOrNull { it.first == table }?.second

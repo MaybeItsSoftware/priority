@@ -108,6 +108,7 @@ fun TodayScreen() {
             contentPadding = PaddingValues(bottom = 96.dp),
         ) {
             item(key = "forecast", contentType = "forecast") { DayHeader(day) }
+            item(key = "calendar", contentType = "calendar") { CalendarAgenda(container.calendar, onOpenTask = container.inspector::open) }
             for (section in sections) {
                 item(key = "section-${section.kind.name}", contentType = "section") {
                     SectionHeader(section.kind.title, detail = section.cards.size.toString())

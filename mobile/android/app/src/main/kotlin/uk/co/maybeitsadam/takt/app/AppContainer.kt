@@ -26,6 +26,7 @@ import uk.co.maybeitsadam.takt.core.Workspace
 import uk.co.maybeitsadam.takt.data.db.WorkspaceDatabase
 import uk.co.maybeitsadam.takt.data.workspace.WorkspaceRepository
 import uk.co.maybeitsadam.takt.focus.FocusServiceLauncher
+import uk.co.maybeitsadam.takt.settings.GoogleCalendarController
 import uk.co.maybeitsadam.takt.settings.SyncController
 import uk.co.maybeitsadam.takt.ui.actions.TaskCommands
 import uk.co.maybeitsadam.takt.ui.undo.UndoCenter
@@ -92,12 +93,14 @@ class AppContainer(
     val undo = UndoCenter(this)
     val commands = TaskCommands(this)
     val sync = SyncController(this)
+    val calendar = GoogleCalendarController(this)
     private val engines = ForegroundEngines(this)
 
     init {
         scope.launch { awaitSession() }
         FocusServiceLauncher.attach(this)
         sync.attach()
+        calendar.attach()
         engines.attach()
         // The widget is drawn from the theme in force, so a new one redraws it.
         scope.launch {

@@ -2,7 +2,7 @@ import TestSQLite
 
 extension Database {
   /// Takes `v17_sync` back off a database, and `v18_themes_and_preferences`
-  /// and `v19_habit_options`, `v20_waiting_follow_ups`, `v21_task_dependencies`, `v22_matrix_order`, `v23_filter_lists`, `v24_condition_categories`, `v25_agent_instructions`, `v26_commitment_missed_stack`, `v27_condition_order_and_context`, `v28_synced_focus_context` and `v29_daily_contribution_skips` with it since they come later, so a test can rewind to an older schema. Its triggers name every column of the synced tables, so like the
+  /// and `v19_habit_options`, `v20_waiting_follow_ups`, `v21_task_dependencies`, `v22_matrix_order`, `v23_filter_lists`, `v24_condition_categories`, `v25_agent_instructions`, `v26_commitment_missed_stack`, `v27_condition_order_and_context`, `v28_synced_focus_context`, `v29_daily_contribution_skips` and `v30_google_calendar` with it since they come later, so a test can rewind to an older schema. Its triggers name every column of the synced tables, so like the
   /// undo journal's they have to come off before a column can be taken away.
   /// Reopening the store runs the migration again.
   func rollBackSyncMigration() throws {
@@ -41,7 +41,7 @@ extension Database {
     }
     // `v21_task_dependencies` and `v23_filter_lists` come later still: their
     // tables go, triggers and all.
-    for table in ["focus_contexts", "agent_instructions", "filter_lists", "task_dependencies", "sync_outbox", "sync_state", "sync_control", "themes", "preferences"] {
+    for table in ["calendar_event_links", "calendar_sync_tokens", "focus_contexts", "agent_instructions", "filter_lists", "task_dependencies", "sync_outbox", "sync_state", "sync_control", "themes", "preferences"] {
       try execute(sql: "DROP TABLE IF EXISTS \(table)")
     }
     try execute(
@@ -49,6 +49,6 @@ extension Database {
         + "'v19_habit_options', 'v20_waiting_follow_ups', 'v21_task_dependencies', 'v22_matrix_order', "
         + "'v23_filter_lists', 'v24_condition_categories', 'v25_agent_instructions', "
         + "'v26_commitment_missed_stack', 'v27_condition_order_and_context', 'v28_synced_focus_context', "
-        + "'v29_daily_contribution_skips')")
+        + "'v29_daily_contribution_skips', 'v30_google_calendar')")
   }
 }

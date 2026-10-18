@@ -148,6 +148,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     }
     workspace.onLocalWrite = { [weak checkvistManager] in
       checkvistManager?.googleTasksMirror.scheduleSync()
+      checkvistManager?.googleCalendarTwoWay.scheduleSync()
     }
     // The mirror and the calendar watcher write through the store directly,
     // and the external-write poll ignores this process's own commits, so
@@ -156,6 +157,9 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
       workspace?.reloadAfterExternalWrite()
     }
     checkvistManager.googleCalendarCompletions.onWroteLocally = { [weak workspace] in
+      workspace?.reloadAfterExternalWrite()
+    }
+    checkvistManager.googleCalendarTwoWay.onWroteLocally = { [weak workspace] in
       workspace?.reloadAfterExternalWrite()
     }
     workspace.onGoogleCalendarEventCreated = { [weak checkvistManager] taskID, eventID in
@@ -189,10 +193,12 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     reportThemeFileIssues()
     checkvistManager.googleTasksMirror.startPolling()
     checkvistManager.googleCalendarCompletions.startPolling()
+    checkvistManager.googleCalendarTwoWay.startPolling()
     // One pass at launch, so anything ticked off on a phone while the app was
     // closed lands before the first thing you look at.
     checkvistManager.integrations.googleTasksPlugin.prepareAuthentication()
     Task { [weak checkvistManager] in await checkvistManager?.googleTasksMirror.sync() }
+    Task { [weak checkvistManager] in await checkvistManager?.googleCalendarTwoWay.sync() }
     mainWindowController = MainWindowController(manager: checkvistManager, workspace: workspace)
     // The status item reports the focus session, which is the one thing worth
     // showing there while you are working in another app.

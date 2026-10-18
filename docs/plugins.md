@@ -49,6 +49,10 @@ Plugin registration lives in `Takt/Plugins/Registry/PluginRegistry.swift`.
 
 - Event URL composition for selected tasks.
 - Due-date mapping decisions for event timing.
+- Two-way sync with a chosen calendar (`GoogleCalendarTwoWayService`, app-only):
+  timing and sign-in only. Requests, the merge and the lease are the Rust
+  core's (`core/src/google_calendar.rs`), sent by `GoogleCalendarClient` in
+  `TaktWorkspace`, which the iPhone shares. See `docs/google-calendar.md`.
 
 ### Google Tasks (`GoogleTasksIntegrationPlugin`)
 

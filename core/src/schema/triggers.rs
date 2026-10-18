@@ -50,6 +50,8 @@ pub const SYNCED_TABLES: &[(&str, &str)] = &[
     ("preferences", "key"),
     // `v28_synced_focus_context`: one row per workspace, after `workspaces`.
     ("focus_contexts", "workspaceId"),
+    // `v30_google_calendar`: a task's event. Names no row by foreign key.
+    ("calendar_event_links", "taskId"),
 ];
 
 /// Synced tables whose every change pushes the whole row rather than the
@@ -58,7 +60,10 @@ pub const SYNCED_TABLES: &[(&str, &str)] = &[
 /// one answer — the conditions, when they were said, the window and the
 /// expiry go together — and half of one device's answer under half of
 /// another's would be neither.
-pub const WHOLE_ROW_TABLES: &[&str] = &["focus_contexts"];
+///
+/// A calendar link is the same kind of answer: the event, its state and what
+/// was agreed with Google belong together.
+pub const WHOLE_ROW_TABLES: &[&str] = &["focus_contexts", "calendar_event_links"];
 
 /// Drops and recreates every journal and outbox trigger for the tables that
 /// exist, from their columns as they are now.
