@@ -1,4 +1,5 @@
 import TaktCore
+import TaktSync
 import SwiftUI
 
 /// The sign-in controls, shown identically by every Google integration's
@@ -35,7 +36,15 @@ struct GoogleAccountSettingsSection: View {
       .autocorrectionDisabled()
 
       HStack(spacing: 8) {
-        Button(account.isAuthenticated ? "Re-authenticate" : "Sign in with Google") {
+        // Google's own button (`SyncProviderButton`); signing in again to the
+        // connected account is the approved "Continue with Google".
+        SyncProviderButton(
+          .google,
+          wording: account.isAuthenticated ? .continue : .signIn,
+          isDark: theme.appearance == .dark,
+          cornerRadius: theme.controlRadius,
+          fillsWidth: false
+        ) {
           Task { await signIn() }
         }
         .disabled(account.isAuthenticating || !account.hasClientConfiguration)
@@ -44,6 +53,7 @@ struct GoogleAccountSettingsSection: View {
           account.disconnect()
           signInError = nil
         }
+        .buttonStyle(FocusActionButtonStyle())
         .disabled(account.isAuthenticating || !account.isAuthenticated)
 
         Spacer()

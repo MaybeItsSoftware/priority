@@ -97,6 +97,7 @@ targets:
         UIBackgroundModes:
           - fetch
         UIAppFonts:
+          - GoogleSansSignIn-Medium.ttf
           - IBMPlexSans-Regular.ttf
           - IBMPlexSans-Medium.ttf
           - IBMPlexSans-SemiBold.ttf

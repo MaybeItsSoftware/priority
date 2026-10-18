@@ -1,104 +1,194 @@
 import SwiftUI
 
-/// The face of a "Sign in with Google" or "Sign in with Apple" button, shared
-/// by the Mac and iOS settings screens.
+/// A "Sign in with Google" or "Sign in with Apple" button, shared by the Mac
+/// and iOS settings screens.
 ///
-/// Each brand's own rules for colour, mark and wording, set flat at the apps'
-/// 6px control radius with a hairline instead of a shadow. The colours are
-/// the brands', fixed rather than themed, the way a photo's letterbox is: the
-/// marks aren't ours to recolour. Only the mode follows the system, as both
-/// brands ask: Google's light or dark button, Apple's black or white one.
-public struct SyncProviderButtonLabel: View {
+/// Each brand's own rules for colour, mark, type and wording — the one place
+/// the apps set aside their theme, because the marks aren't ours to recolour.
+/// The shape is Takt's: flat, at the theme's control radius, with a hairline
+/// rather than a shadow.
+///
+/// Google (developers.google.com/identity/branding-guidelines): the
+/// standard-colour "G" from Google's download kit (`GoogleG` in each app's
+/// asset catalogue, rendered from the kit's SVG), Google Sans Medium 14/20
+/// (`GoogleSansSignIn-Medium`, subset to the approved labels, in
+/// `Takt/Fonts`), and the light (#FFFFFF, #747775 border, #1F1F1F text) or
+/// dark (#131314, #8E918F, #E3E3E3) button.
+///
+/// Apple (HIG, Sign in with Apple): black with white in a light appearance,
+/// white with black in a dark one, the Apple logo and the system font. The
+/// iPhone uses the native `SignInWithAppleButton`; the Mac signs in through
+/// Supabase's web flow, so it draws the same button with `apple.logo`.
+///
+/// The appearance is the theme's, not the system's: a theme locked to dark
+/// gets the dark buttons on a light system.
+public struct SyncProviderButton: View {
   public enum Brand: Sendable {
     case google
     case apple
   }
 
-  let brand: Brand
-  let font: Font
-  let height: CGFloat
-  @Environment(\.colorScheme) private var colorScheme
+  /// The approved wordings. "Continue" is for signing in again to an account
+  /// already connected, where "Sign in" would read as a second account.
+  public enum Wording: Sendable {
+    case signIn
+    case `continue`
+  }
 
-  public init(_ brand: Brand, font: Font = .system(size: 14, weight: .medium), height: CGFloat = 36) {
+  let brand: Brand
+  let wording: Wording
+  let isDark: Bool
+  let cornerRadius: CGFloat
+  let height: CGFloat
+  let fillsWidth: Bool
+  let action: () -> Void
+
+  public init(
+    _ brand: Brand,
+    wording: Wording = .signIn,
+    isDark: Bool,
+    cornerRadius: CGFloat,
+    height: CGFloat = 44,
+    fillsWidth: Bool = true,
+    action: @escaping () -> Void
+  ) {
     self.brand = brand
-    self.font = font
+    self.wording = wording
+    self.isDark = isDark
+    self.cornerRadius = cornerRadius
     self.height = height
+    self.fillsWidth = fillsWidth
+    self.action = action
   }
 
   public var body: some View {
-    HStack(spacing: 10) {
+    Button(action: action) {
+      SyncProviderButtonLabel(
+        brand: brand, title: title, isDark: isDark, height: height, fillsWidth: fillsWidth)
+    }
+    .buttonStyle(SyncProviderButtonStyle(brand: brand, isDark: isDark, cornerRadius: cornerRadius))
+    .accessibilityLabel(title)
+  }
+
+  var title: String {
+    switch (brand, wording) {
+    case (.google, .signIn): "Sign in with Google"
+    case (.google, .continue): "Continue with Google"
+    case (.apple, .signIn): "Sign in with Apple"
+    case (.apple, .continue): "Continue with Apple"
+    }
+  }
+}
+
+/// The mark and the words, at the brand's sizes.
+struct SyncProviderButtonLabel: View {
+  let brand: SyncProviderButton.Brand
+  let title: String
+  let isDark: Bool
+  let height: CGFloat
+  let fillsWidth: Bool
+
+  var body: some View {
+    HStack(spacing: brand == .google ? Self.googleGap : 6) {
       mark
-      Text(brand == .google ? "Sign in with Google" : "Sign in with Apple")
+      Text(title)
         .font(font)
         .lineLimit(1)
+        .fixedSize()
     }
-    .foregroundStyle(text)
-    .padding(.horizontal, 12)
-    .frame(maxWidth: .infinity, minHeight: height)
-    .background(fill, in: RoundedRectangle(cornerRadius: 6))
-    .overlay(RoundedRectangle(cornerRadius: 6).strokeBorder(border, lineWidth: 1))
-    .contentShape(RoundedRectangle(cornerRadius: 6))
+    .padding(.horizontal, brand == .google ? Self.googleInset : 16)
+    .frame(maxWidth: fillsWidth ? .infinity : nil, minHeight: height)
   }
 
   @ViewBuilder
   private var mark: some View {
     switch brand {
-    case .google: GoogleMark().frame(width: 18, height: 18)
-    case .apple: Image(systemName: "apple.logo").font(.system(size: 16, weight: .medium))
+    case .google:
+      // The kit's 20pt logo, unscaled whatever the button's height.
+      Image("GoogleG")
+        .resizable()
+        .interpolation(.high)
+        .frame(width: 20, height: 20)
+        .accessibilityHidden(true)
+    case .apple:
+      Image(systemName: "apple.logo")
+        .font(.system(size: 15, weight: .medium))
+        .accessibilityHidden(true)
     }
   }
 
-  private var isDark: Bool { colorScheme == .dark }
-
-  // Google: #FFFFFF / #1F1F1F / #747775 light; #131314 / #E3E3E3 / #8E918F dark.
-  // Apple: black with white in light mode, white with black in dark.
-  private var fill: Color {
+  private var font: Font {
     switch brand {
-    case .google: isDark ? Color(hex: 0x131314) : .white
-    case .apple: isDark ? .white : .black
+    case .google: Font.custom("GoogleSansSignIn-Medium", fixedSize: 14)
+    case .apple: .system(size: 15, weight: .medium)
     }
   }
 
-  private var text: Color {
-    switch brand {
-    case .google: Color(hex: isDark ? 0xE3E3E3 : 0x1F1F1F)
-    case .apple: isDark ? .black : .white
-    }
-  }
-
-  private var border: Color {
-    switch brand {
-    case .google: Color(hex: isDark ? 0x8E918F : 0x747775)
-    case .apple: isDark ? .white : .black
-    }
-  }
+  // The kit's padding: 16pt to the logo and 12pt to the words on iOS, 12 and
+  // 10 on the Android and web buttons the Mac's matches.
+  #if os(iOS)
+    static let googleInset: CGFloat = 16
+    static let googleGap: CGFloat = 12
+  #else
+    static let googleInset: CGFloat = 12
+    static let googleGap: CGFloat = 10
+  #endif
 }
 
-/// Google's four-colour "G", drawn rather than shipped as an image.
-struct GoogleMark: View {
-  var body: some View {
-    Canvas { context, size in
-      let side = min(size.width, size.height)
-      let width = side * 0.2
-      let radius = (side - width) / 2
-      let center = CGPoint(x: size.width / 2, y: size.height / 2)
-      // Clockwise from three o'clock, with the opening at the upper right.
-      let arcs: [(Double, Double, Color)] = [
-        (0, 45, Color(hex: 0x4285F4)),
-        (45, 150, Color(hex: 0x34A853)),
-        (150, 210, Color(hex: 0xFBBC05)),
-        (210, 318, Color(hex: 0xEA4335)),
-      ]
-      for (start, end, color) in arcs {
-        var arc = Path()
-        arc.addArc(
-          center: center, radius: radius, startAngle: .degrees(start), endAngle: .degrees(end), clockwise: false)
-        context.stroke(arc, with: .color(color), style: StrokeStyle(lineWidth: width, lineCap: .butt))
-      }
-      let bar = CGRect(x: center.x, y: center.y - width / 2, width: radius + width / 2, height: width)
-      context.fill(Path(bar), with: .color(Color(hex: 0x4285F4)))
+/// Fill, hairline and the pressed and disabled states.
+struct SyncProviderButtonStyle: ButtonStyle {
+  let brand: SyncProviderButton.Brand
+  let isDark: Bool
+  let cornerRadius: CGFloat
+
+  func makeBody(configuration: Configuration) -> some View {
+    Face(configuration: configuration, brand: brand, isDark: isDark, cornerRadius: cornerRadius)
+  }
+
+  private struct Face: View {
+    let configuration: Configuration
+    let brand: SyncProviderButton.Brand
+    let isDark: Bool
+    let cornerRadius: CGFloat
+    @Environment(\.isEnabled) private var isEnabled
+
+    var body: some View {
+      let shape = RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+      configuration.label
+        .foregroundStyle(text)
+        // Material's disabled state, which Google's buttons follow: 38%.
+        .opacity(isEnabled ? 1 : 0.38)
+        .background(fill, in: shape)
+        .overlay {
+          // Material's pressed state layer: the text colour at 12%.
+          if configuration.isPressed { shape.fill(text.opacity(0.12)) }
+        }
+        .overlay(shape.strokeBorder(border.opacity(isEnabled ? 1 : 0.12), lineWidth: 1))
+        .contentShape(shape)
     }
-    .accessibilityHidden(true)
+
+    // Google: #FFFFFF / #1F1F1F / #747775 light; #131314 / #E3E3E3 / #8E918F dark.
+    // Apple: black with white in light mode, white with black in dark.
+    private var fill: Color {
+      switch brand {
+      case .google: isDark ? Color(hex: 0x131314) : .white
+      case .apple: isDark ? .white : .black
+      }
+    }
+
+    private var text: Color {
+      switch brand {
+      case .google: Color(hex: isDark ? 0xE3E3E3 : 0x1F1F1F)
+      case .apple: isDark ? .black : .white
+      }
+    }
+
+    private var border: Color {
+      switch brand {
+      case .google: Color(hex: isDark ? 0x8E918F : 0x747775)
+      case .apple: isDark ? .white : .black
+      }
+    }
   }
 }
 

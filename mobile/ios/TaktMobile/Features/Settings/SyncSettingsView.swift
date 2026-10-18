@@ -219,13 +219,12 @@ private struct SyncSettingsForm: View {
       .frame(height: 44)
       .clipShape(RoundedRectangle(cornerRadius: theme.radius.control))
       .accessibilityIdentifier("sync.apple")
-      Button {
+      // Google's own button (`SyncProviderButton`), in the theme's
+      // appearance and at its control radius, beside Apple's native one.
+      SyncProviderButton(.google, isDark: colorScheme == .dark, cornerRadius: theme.radius.control) {
         guard let server = chosenServer() else { return }
         Task { await controller.signIn(with: .google, serverURL: server) }
-      } label: {
-        SyncProviderButtonLabel(.google, font: theme.type.body.weight(.medium), height: 44)
       }
-      .buttonStyle(.plain)
       .accessibilityIdentifier("sync.google")
     } header: {
       header("Sign in")

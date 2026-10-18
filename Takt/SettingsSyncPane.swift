@@ -68,10 +68,14 @@ struct SettingsSyncPane: View {
       // The providers and the email form are two rows, so the panel's
       // hairline divides them.
       HStack(spacing: theme.space.sm) {
-        Button { signIn(session, with: .apple) } label: { SyncProviderButtonLabel(.apple, font: providerFont) }
-          .buttonStyle(.plain)
-        Button { signIn(session, with: .google) } label: { SyncProviderButtonLabel(.google, font: providerFont) }
-          .buttonStyle(.plain)
+        // The brands' own buttons, in the theme's appearance and at its
+        // control radius (`SyncProviderButton`).
+        SyncProviderButton(.apple, isDark: isDark, cornerRadius: theme.controlRadius) {
+          signIn(session, with: .apple)
+        }
+        SyncProviderButton(.google, isDark: isDark, cornerRadius: theme.controlRadius) {
+          signIn(session, with: .google)
+        }
       }
       .disabled(isWorking)
       .frame(maxWidth: 460)
@@ -146,7 +150,7 @@ struct SettingsSyncPane: View {
     .onAppear { prefill(from: session) }
   }
 
-  private var providerFont: Font { theme.bodyFont(weight: .medium) }
+  private var isDark: Bool { theme.appearance == .dark }
 
   private func field(_ title: String, @ViewBuilder control: () -> some View) -> some View {
     VStack(alignment: .leading, spacing: theme.space.xs) {

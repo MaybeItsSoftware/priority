@@ -75,6 +75,8 @@ import uk.co.maybeitsadam.takt.ui.components.Hairline
 import uk.co.maybeitsadam.takt.ui.components.IconAction
 import uk.co.maybeitsadam.takt.ui.components.MonoText
 import uk.co.maybeitsadam.takt.ui.components.PButton
+import uk.co.maybeitsadam.takt.ui.components.SignInWithAppleButton
+import uk.co.maybeitsadam.takt.ui.components.SignInWithGoogleButton
 import uk.co.maybeitsadam.takt.ui.components.TaktTopBar
 import uk.co.maybeitsadam.takt.ui.inspector.SwitchRow
 import uk.co.maybeitsadam.takt.ui.navigation.LocalShell
@@ -531,11 +533,11 @@ private fun SignedOutSync(sync: SyncController, signingIn: Boolean, hint: Signed
         Hairline(color = TaktTheme.colors.borderMuted)
         Column(Modifier.padding(Metrics.md), verticalArrangement = Arrangement.spacedBy(Metrics.sm)) {
             if (googleAvailable) {
-                PButton("Sign in with Google", enabled = !signingIn, modifier = Modifier.fillMaxWidth().testTag("sync_google")) {
+                SignInWithGoogleButton(Modifier.fillMaxWidth().testTag("sync_google"), enabled = !signingIn) {
                     scope.launch { val target = target() ?: return@launch; sync.signInWithGoogle(context, target) }
                 }
             }
-            PButton("Sign in with Apple", enabled = !signingIn, modifier = Modifier.fillMaxWidth().testTag("sync_apple")) {
+            SignInWithAppleButton(Modifier.fillMaxWidth().testTag("sync_apple"), enabled = !signingIn) {
                 scope.launch { val target = target() ?: return@launch; sync.signInWithApple(target) }
             }
         }
