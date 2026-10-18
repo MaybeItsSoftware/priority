@@ -6,23 +6,26 @@ import com.google.android.gms.wearable.DataEventBuffer
 import com.google.android.gms.wearable.DataMapItem
 import com.google.android.gms.wearable.WearableListenerService
 import kotlinx.coroutines.launch
+import uk.co.maybeitsadam.takt.watch.WatchApplication
 import uk.co.maybeitsadam.takt.watch.watch
 import uk.co.maybeitsadam.takt.wear.contract.WearCodec
 import uk.co.maybeitsadam.takt.wear.contract.WearPaths
 
 /**
  * Started by Play Services when the phone publishes a new day or comes back
- * in reach, whether or not the app is open: the snapshot is stored and
- * anything queued is sent.
+ * in reach, whether or not the app is open: the snapshot is stored, the tile
+ * and complication redrawn, and anything queued is sent.
  */
 class PhoneListenerService : WearableListenerService() {
     override fun onDataChanged(events: DataEventBuffer) {
         val app = watch
+        var took = false
         for (event in events) {
             if (event.type != DataEvent.TYPE_CHANGED || event.dataItem.uri.path != WearPaths.TODAY) continue
             val bytes = DataMapItem.fromDataItem(event.dataItem).dataMap.getByteArray(WearPaths.SNAPSHOT_KEY) ?: continue
-            WearCodec.decodeSnapshot(bytes)?.let { app.store.receive(it) }
+            WearCodec.decodeSnapshot(bytes)?.let { took = app.store.receive(it) || took }
         }
+        if (took) WatchApplication.refreshGlanceables(this)
         // The phone just spoke, so it is in reach.
         app.scope.launch { app.link.flush() }
     }
