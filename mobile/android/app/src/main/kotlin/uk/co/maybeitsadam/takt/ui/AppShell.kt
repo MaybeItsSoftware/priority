@@ -1,12 +1,14 @@
 package uk.co.maybeitsadam.takt.ui
 
 import android.content.Intent
+import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -56,6 +58,7 @@ import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -64,6 +67,7 @@ import androidx.compose.ui.semantics.testTagsAsResourceId
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavDestination.Companion.hasRoute
+import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
@@ -256,10 +260,13 @@ fun AppShell(container: AppContainer, pendingIntent: Intent?, onIntentHandled: (
             val currentTab = Tab.entries.firstOrNull { tab -> destination?.hasRoute(tab.route::class) == true }
                 ?: if (destination?.hasRoute(ListRoute::class) == true || destination?.hasRoute(FilterListRoute::class) == true) Tab.LISTS else null
             val showFab = currentTab == Tab.TODAY || currentTab == Tab.LISTS
+            // A tab's own screen, not a list opened from Lists or Settings:
+            // only there does a sideways swipe mean the tab beside it.
+            val swipeTab = Tab.entries.firstOrNull { tab -> destination?.hasRoute(tab.route::class) == true }
 
             val content: @Composable (Modifier) -> Unit = { modifier ->
                 Row(modifier.fillMaxSize()) {
-                    Box(Modifier.weight(1f).fillMaxHeight()) {
+                    Box(Modifier.weight(1f).fillMaxHeight().tabSwipe(swipeTab, navigator::openTab)) {
                         AppNavHost(nav)
                         if (showFab && !layout.isWide) {
                             QuickAddFab(
@@ -369,13 +376,57 @@ fun AppShell(container: AppContainer, pendingIntent: Intent?, onIntentHandled: (
     }
 }
 
+/**
+ * A sideways swipe across a tab's screen opens the tab beside it, in the
+ * bar's order. Rows that swipe themselves (complete, put off) consume the
+ * drag before it gets here, so a swipe that starts on one stays the row's.
+ */
+private fun Modifier.tabSwipe(current: Tab?, onSelect: (Tab) -> Unit): Modifier =
+    if (current == null) {
+        this
+    } else {
+        pointerInput(current) {
+            val threshold = 72.dp.toPx()
+            var travelled = 0f
+            detectHorizontalDragGestures(
+                onDragStart = { travelled = 0f },
+                onDragEnd = {
+                    val step = when {
+                        travelled <= -threshold -> 1
+                        travelled >= threshold -> -1
+                        else -> 0
+                    }
+                    if (step != 0) Tab.entries.getOrNull(current.ordinal + step)?.let(onSelect)
+                },
+                onHorizontalDrag = { change, amount ->
+                    change.consume()
+                    travelled += amount
+                },
+            )
+        }
+    }
+
+private fun NavBackStackEntry.tabIndex(): Int? =
+    Tab.entries.indexOfFirst { destination.hasRoute(it.route::class) }.takeIf { it >= 0 }
+
+/** Between two tabs, the way the bar runs, so a swipe and a tap on the bar both slide; anything else fades. */
+private fun AnimatedContentTransitionScope<NavBackStackEntry>.tabDirection(): AnimatedContentTransitionScope.SlideDirection? {
+    val from = initialState.tabIndex() ?: return null
+    val to = targetState.tabIndex() ?: return null
+    return when {
+        to > from -> AnimatedContentTransitionScope.SlideDirection.Left
+        to < from -> AnimatedContentTransitionScope.SlideDirection.Right
+        else -> null
+    }
+}
+
 @Composable
 private fun AppNavHost(nav: NavHostController) {
     NavHost(
         navController = nav,
         startDestination = TodayRoute,
-        enterTransition = { fadeIn() },
-        exitTransition = { fadeOut() },
+        enterTransition = { tabDirection()?.let { slideIntoContainer(it) } ?: fadeIn() },
+        exitTransition = { tabDirection()?.let { slideOutOfContainer(it) } ?: fadeOut() },
         popEnterTransition = { EnterTransition.None },
         popExitTransition = { ExitTransition.None },
     ) {
