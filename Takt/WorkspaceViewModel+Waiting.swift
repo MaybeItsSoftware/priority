@@ -48,6 +48,8 @@ extension WorkspaceViewModel {
     if let blocked = try? store.blockedTaskIds(), blockedTaskIDs != blocked { blockedTaskIDs = blocked }
     // A priority is set on the same writes, from a key here or `!2` on a phone.
     if let priorities = try? store.taskPriorities(), taskPriorities != priorities { taskPriorities = priorities }
+    // A link is added on the same writes, from the picker here or a phone.
+    if let linked = try? store.linkedTaskIds(), linkedTaskIDs != linked { linkedTaskIDs = linked }
     waitingDetailsStamp = stamp.map { (key, $0) }
   }
 

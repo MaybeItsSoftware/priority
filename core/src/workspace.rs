@@ -329,6 +329,52 @@ impl CoreWorkspace {
         dependencies::is_blocked(&self.lock(), &task_id)
     }
 
+    /// The task's links, described for drawing (`links::task_links`).
+    pub fn task_links(&self, task_id: String) -> Result<Vec<crate::links::TaskLink>, CoreError> {
+        crate::links::task_links(&self.read(), &task_id)
+    }
+
+    /// Every task with a link: what a client marks on its rows.
+    pub fn linked_task_ids(&self) -> Result<Vec<String>, CoreError> {
+        crate::links::linked_task_ids(&self.read())
+    }
+
+    /// Links `url` to the task as one "Add Link" step, naming it `title`
+    /// with the file type `mime_type` when the picker knew them. Returns
+    /// whether the address is new; an address already there is renamed.
+    pub fn add_task_link(
+        &self,
+        task_id: String,
+        url: String,
+        title: Option<String>,
+        mime_type: Option<String>,
+        now_ms: i64,
+    ) -> Result<bool, CoreError> {
+        journal::journalled(&mut self.lock(), "Add Link", |tx| {
+            crate::links::add_link(
+                tx,
+                &task_id,
+                &url,
+                title.as_deref(),
+                mime_type.as_deref(),
+                now_ms,
+            )
+        })
+    }
+
+    /// Takes `url` off the task's links as one "Remove Link" step. Returns
+    /// whether it was there.
+    pub fn remove_task_link(
+        &self,
+        task_id: String,
+        url: String,
+        now_ms: i64,
+    ) -> Result<bool, CoreError> {
+        journal::journalled(&mut self.lock(), "Remove Link", |tx| {
+            crate::links::remove_link(tx, &task_id, &url, now_ms)
+        })
+    }
+
     /// Deletes a list and its tasks as one "Delete List" step.
     pub fn delete_list(&self, id: String) -> Result<DeletedList, CoreError> {
         journal::journalled(&mut self.lock(), "Delete List", |tx| {

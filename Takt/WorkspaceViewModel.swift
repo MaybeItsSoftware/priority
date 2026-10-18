@@ -180,6 +180,9 @@ enum WorkspaceSidebarItem: Identifiable {
   /// `statusMessage` rather than anything on the workspace. For feedback a
   /// key owes when what it did is not visible where you are looking.
   @ObservationIgnored var onStatusMessage: ((String) -> Void)?
+  /// Where the link picker searches: Obsidian vaults and Google Drive. The
+  /// Links plugin, handed over by the app delegate (docs/links.md).
+  @ObservationIgnored var linkSources: (any LinksIntegrationPlugin)?
   /// Called after any local write, so the Google Tasks mirror can push it.
   /// Coalesced on the far side — this fires far more often than it syncs.
   @ObservationIgnored var onLocalWrite: (() -> Void)?
@@ -775,6 +778,9 @@ enum WorkspaceSidebarItem: Identifiable {
   /// Each prioritised task's priority, 1–4, for the number on its row.
   /// Read with `waitingDetails`, under the same change stamp.
   var taskPriorities: [String: Int] = [:]
+  /// The tasks with at least one link, for the link mark on their rows.
+  /// Read with `waitingDetails`, under the same change stamp.
+  var linkedTaskIDs: Set<String> = []
   /// The store and its change stamp `waitingDetails` was read at. While both
   /// match, nothing has been written, and the reread is skipped: switching
   /// lists rebuilds the task cache but cannot change who waits on what.

@@ -275,6 +275,11 @@ extension WorkspaceViewModel {
           .filter { !$0.isEmpty }
         values.tags = (existing + capture.tags).joined(separator: ", ")
       }
+      // A pasted address joins the task's links (docs/links.md).
+      if !capture.links.isEmpty {
+        let existing = values.links.split(whereSeparator: \.isNewline).map(String.init)
+        values.links = (existing + capture.links.filter { !existing.contains($0) }).joined(separator: "\n")
+      }
     }
   }
 

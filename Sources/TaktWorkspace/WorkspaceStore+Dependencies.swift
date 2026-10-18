@@ -58,7 +58,7 @@ extension WorkspaceStore {
       listId: task.listId, title: capture.title, parentTaskId: task.parentTaskId, kind: WorkspaceItemKind.task.rawValue,
       notes: "", kanbanColumn: column, startAtMs: nil, dueAtMs: capture.dueAt?.coreMilliseconds,
       estimateSeconds: capture.estimateSeconds.map(Int64.init), tags: capture.tags,
-      priority: capture.priority.map(Int64.init), waitingOn: capture.waitingOn, externalLinks: [], atTop: false,
+      priority: capture.priority.map(Int64.init), waitingOn: capture.waitingOn, externalLinks: capture.links, atTop: false,
       adjacentTaskId: task.id, above: true)
     let id = try coreWrite {
       try core.createTaskBlocker(taskId: task.id, task: new, nowMs: now.coreMilliseconds)

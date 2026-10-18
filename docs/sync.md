@@ -195,6 +195,15 @@ devices' rows for the same day merge by keeping the earlier `skippedAt`, as
 they keep the earlier `completedAt`. A client older than v29 drops the
 column on pull and sees the day as not done.
 
+`v31_link_details` adds `linkDetailsJSON TEXT` to `task_metadata`: a JSON
+object keyed by link address of the name and file type the link picker knew
+(`{"<url>": {"title": "Budget", "mimeType": "…"}}`), NULL for nothing known.
+The addresses themselves stay in `externalLinksJSON`, so the two columns
+merge independently; a name whose address is gone is ignored and pruned on
+the next link write (`core/src/links.rs`). It reinstalls every journal and
+outbox trigger. A client older than v31 drops the column on pull and draws
+its links from the address alone. See `docs/links.md`.
+
 The following are not synced: the undo journal (`undo_control`, `change_log`), the FTS index
 (rebuilt by its own triggers as synced rows land), `grdb_migrations`, and the
 sync tables themselves. Day-log files stay per device. Theme *files* do

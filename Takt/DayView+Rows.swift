@@ -187,6 +187,7 @@ struct DayTaskRow: View, Equatable {
           if facts.priority != nil {
             WorkspacePriorityBadge(taskID: task.id)
           }
+          WorkspaceLinkMark(taskID: task.id)
           if facts.isDaily {
             DailyBadge(task: task, isDoneToday: facts.isDailyDone)
           }

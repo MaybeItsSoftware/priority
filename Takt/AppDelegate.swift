@@ -161,6 +161,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     workspace.onGoogleCalendarEventCreated = { [weak checkvistManager] taskID, eventID in
       checkvistManager?.googleCalendarCompletions.watch(eventID: eventID, forTask: taskID)
     }
+    workspace.linkSources = checkvistManager.links
     workspace.onShowDiagnostics = { [weak checkvistManager] in
       checkvistManager?.showsDiagnostics = true
     }

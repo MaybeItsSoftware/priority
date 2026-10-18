@@ -643,7 +643,7 @@ private fun LinksSection(values: TaskEditorValues, edit: ((TaskEditorValues) -> 
         ChalkField(
             values.links,
             onValueChange = { text -> edit { it.copy(links = text) } },
-            placeholder = "https://…, one per line",
+            placeholder = "Paste a Drive, Obsidian or web address, one per line",
             singleLine = false,
             minLines = 2,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri, capitalization = KeyboardCapitalization.None, autoCorrectEnabled = false),
@@ -651,7 +651,10 @@ private fun LinksSection(values: TaskEditorValues, edit: ((TaskEditorValues) -> 
             contentDescription = "Links, one per line",
         )
         for (link in links) {
-            val host = remember(link) { runCatching { link.toUri().host }.getOrNull() ?: link }
+            // What the link is, read by the core from the address (docs/links.md):
+            // a Drive file's kind, an Obsidian note's name, a page's host.
+            val described = remember(link) { runCatching { uniffi.takt_core.linkDescribe(link, null, null) }.getOrNull() }
+            val host = described?.title ?: runCatching { link.toUri().host }.getOrNull() ?: link
             Row(
                 Modifier
                     .fillMaxWidth()
@@ -672,6 +675,9 @@ private fun LinksSection(values: TaskEditorValues, edit: ((TaskEditorValues) -> 
             ) {
                 Icon(InspectorIcons.OpenLink, null, tint = colors.primary, modifier = Modifier.size(18.dp))
                 Text(host, style = TaktTheme.type.body.copy(textDecoration = TextDecoration.Underline), color = colors.ink, maxLines = 1)
+                described?.subtitle?.takeIf { it != host }?.let {
+                    Text(it, style = TaktTheme.type.small, color = colors.mutedText, maxLines = 1)
+                }
             }
         }
     }

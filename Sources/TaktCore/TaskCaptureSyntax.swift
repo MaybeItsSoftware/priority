@@ -33,10 +33,14 @@ public struct TaskCapture: Equatable, Sendable {
   /// Who it waits on, from `wait:Sam`: the task is filed in Waiting on with
   /// that tag, as `ww` would put it there.
   public var waitingOn: String?
+  /// Addresses typed or pasted at the end — a Drive file, an Obsidian note,
+  /// a page — filed as the task's links. An address alone names the task
+  /// for what it points at. See docs/links.md.
+  public var links: [String]
 
   public init(
     title: String, estimateSeconds: Int? = nil, dueAt: Date? = nil, tags: [String] = [],
-    priority: Int? = nil, waitingOn: String? = nil
+    priority: Int? = nil, waitingOn: String? = nil, links: [String] = []
   ) {
     self.title = title
     self.estimateSeconds = estimateSeconds
@@ -44,11 +48,12 @@ public struct TaskCapture: Equatable, Sendable {
     self.tags = tags
     self.priority = priority
     self.waitingOn = waitingOn
+    self.links = links
   }
 
   /// Whether anything beyond the title was found.
   public var hasDetails: Bool {
-    estimateSeconds != nil || dueAt != nil || !tags.isEmpty || priority != nil || waitingOn != nil
+    estimateSeconds != nil || dueAt != nil || !tags.isEmpty || priority != nil || waitingOn != nil || !links.isEmpty
   }
 
   /// Parses `text` as typed into an add field. See the type for the rules.
@@ -86,13 +91,13 @@ public struct TaskCapture: Equatable, Sendable {
     self.init(
       title: core.title, estimateSeconds: core.estimateSeconds.map { Int($0) },
       dueAt: core.dueAtMs.map { Date(rankingMilliseconds: $0) }, tags: core.tags,
-      priority: core.priority.map { Int($0) }, waitingOn: core.waitingOn)
+      priority: core.priority.map { Int($0) }, waitingOn: core.waitingOn, links: core.links)
   }
 
   var core: CaptureParts {
     CaptureParts(
       title: title, estimateSeconds: estimateSeconds.map { Int64($0) }, dueAtMs: dueAt?.rankingMilliseconds,
-      tags: tags, priority: priority.map { Int64($0) }, waitingOn: waitingOn)
+      tags: tags, priority: priority.map { Int64($0) }, waitingOn: waitingOn, links: links)
   }
 }
 

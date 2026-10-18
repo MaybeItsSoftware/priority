@@ -82,6 +82,7 @@ let pluginTargetExcludes = [
   "Takt/Plugins/Native/GoogleCalendar/NativeGoogleCalendarIntegrationPlugin+Settings.swift",
   "Takt/Plugins/Native/GoogleCalendar/GoogleCalendarCompletionWatcher.swift",
   "Takt/Plugins/Native/GoogleTasks/NativeGoogleTasksIntegrationPlugin+Settings.swift",
+  "Takt/Plugins/Native/Links/NativeLinksPlugin+Settings.swift",
   // App-only: the mirror drives the workspace store, which lives in a module
   // `TaktPlugins` does not depend on.
   "Takt/Plugins/Native/GoogleTasks/GoogleTasksMirrorService.swift",
@@ -200,6 +201,10 @@ let package = Package(
         "Takt/Plugins/Native/Google/GoogleOAuthTokenStore.swift",
         "Takt/Plugins/Native/GoogleCalendar/NativeGoogleCalendarIntegrationPlugin.swift",
         "Takt/Plugins/Native/GoogleTasks/NativeGoogleTasksIntegrationPlugin.swift",
+        "Takt/Plugins/Native/Links/LinkCandidate.swift",
+        "Takt/Plugins/Native/Links/ObsidianVaultIndex.swift",
+        "Takt/Plugins/Native/Links/GoogleDriveSearch.swift",
+        "Takt/Plugins/Native/Links/NativeLinksPlugin.swift",
         "Takt/Plugins/Native/MCP/NativeMCPIntegrationPlugin.swift",
         "Takt/Plugins/User/UserPluginManager.swift",
         "Takt/Plugins/User/UserPluginManifest.swift",

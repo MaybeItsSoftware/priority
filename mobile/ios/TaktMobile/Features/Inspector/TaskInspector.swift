@@ -435,7 +435,7 @@ struct TaskInspector: View {
           .accessibilityIdentifier("inspector.tags")
       }
       VStack(alignment: .leading, spacing: theme.space.xs) {
-        Text("Links, one per line").font(theme.type.callout).foregroundStyle(theme.muted)
+        Text("Links — paste an address, one per line").font(theme.type.callout).foregroundStyle(theme.muted)
         TextField("https://…", text: binding(\.links), axis: .vertical)
           .lineLimit(1...6)
           .keyboardType(.URL)
@@ -443,22 +443,44 @@ struct TaskInspector: View {
           .focused($focused, equals: .links)
           .controlFrame()
           .accessibilityIdentifier("inspector.links")
-        ForEach(linkURLs(values), id: \.self) { url in
-          Link(destination: url) {
-            Label(url.host() ?? url.absoluteString, systemImage: "arrow.up.right.square")
+        ForEach(links(values), id: \.url) { link in
+          if let url = URL(string: link.url) {
+            Link(destination: url) {
+              Label {
+                Text(link.title).underline() + Text("  \(link.subtitle)").foregroundStyle(theme.muted)
+              } icon: {
+                Image(systemName: linkSymbol(link.icon))
+              }
               .font(theme.type.caption)
-              .underline()
+            }
           }
         }
       }
     }
   }
 
-  private func linkURLs(_ values: TaskEditorValues) -> [URL] {
-    values.links.split(whereSeparator: \.isNewline).compactMap { line in
-      URL(string: line.trimmingCharacters(in: .whitespaces)).flatMap {
-        ["http", "https", "obsidian"].contains($0.scheme?.lowercased() ?? "") ? $0 : nil
-      }
+  /// The addresses being edited, each drawn by the core (docs/links.md):
+  /// a Drive file or an Obsidian note by name, with the name the Mac's
+  /// picker stored when there is one.
+  private func links(_ values: TaskEditorValues) -> [WorkspaceTaskLink] {
+    let stored = Dictionary(
+      ((try? model.store.links(of: inspector.taskID)) ?? []).map { ($0.url, $0) },
+      uniquingKeysWith: { first, _ in first })
+    return values.links.split(whereSeparator: \.isNewline).compactMap { line in
+      WorkspaceTaskLink.address(in: String(line)).map { stored[$0] ?? WorkspaceTaskLink.describe($0) }
+    }
+  }
+
+  private func linkSymbol(_ icon: String) -> String {
+    switch icon {
+    case "doc": "doc.text"
+    case "sheet": "tablecells"
+    case "slides": "rectangle.on.rectangle"
+    case "pdf": "doc.richtext"
+    case "folder": "folder"
+    case "note": "note.text"
+    case "file", "form", "image": "doc"
+    default: "arrow.up.right.square"
     }
   }
 

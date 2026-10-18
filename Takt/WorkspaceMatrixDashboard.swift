@@ -397,6 +397,7 @@ struct WorkspaceMatrixTaskRow: View {
         .frame(maxWidth: .infinity, alignment: .leading)
       }
       WorkspacePriorityBadge(taskID: task.id)
+      WorkspaceLinkMark(taskID: task.id)
       if model.isMultiListScope, let list = model.list(for: task) {
         Text(list.name)
           .font(theme.captionFont)

@@ -630,6 +630,7 @@ struct WorkspaceKanbanCard: View {
         .strikethrough(task.status != .open)
       }
       WorkspacePriorityBadge(taskID: task.id)
+      WorkspaceLinkMark(taskID: task.id)
       if !model.descendants(of: task).isEmpty {
         Button {
           model.toggleFold(of: task)
@@ -812,6 +813,7 @@ struct WorkspaceKanbanCard: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .help(item.task.title)
         WorkspacePriorityBadge(taskID: item.task.id)
+        WorkspaceLinkMark(taskID: item.task.id)
       }
       // Trailing, as the card's own fold is. Not on a row whose subtasks are
       // drawn on its own card in another column. Held to its glyph's height:

@@ -265,13 +265,14 @@ public final class WorkspaceStore: @unchecked Sendable {
     tags: [String] = [],
     priority: Int? = nil,
     waitingOn: String? = nil,
+    externalLinks: [String] = [],
     now: Date = .now
   ) throws -> WorkspaceTask {
     let new = NewTask(
       listId: listId, title: title, parentTaskId: parentTaskId, kind: kind.rawValue, notes: "",
       kanbanColumn: kanbanColumn, startAtMs: startAt?.coreMilliseconds, dueAtMs: dueAt?.coreMilliseconds,
       estimateSeconds: estimateSeconds.map(Int64.init), tags: tags, priority: priority.map(Int64.init),
-      waitingOn: waitingOn, externalLinks: [], atTop: atTop, adjacentTaskId: adjacentTaskId, above: above)
+      waitingOn: waitingOn, externalLinks: externalLinks, atTop: atTop, adjacentTaskId: adjacentTaskId, above: above)
     let id = try coreWrite { try core.createTask(task: new, nowMs: now.coreMilliseconds) }
     guard let task = try task(id: id) else {
       throw WorkspaceStoreError.missingTask

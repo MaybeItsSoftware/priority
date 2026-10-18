@@ -335,3 +335,27 @@ fn checkvists_formats_read_as_foundation_read_them() {
     assert_eq!(read("2026-10-00"), None);
     assert_eq!(read("20261002"), None);
 }
+
+#[test]
+fn an_address_at_the_end_is_filed_as_a_link() {
+    let parts = p("Review the budget https://docs.google.com/spreadsheets/d/1x/edit #work");
+    assert_eq!(parts.title, "Review the budget");
+    assert_eq!(parts.tags, vec!["work".to_string()]);
+    assert_eq!(
+        parts.links,
+        vec!["https://docs.google.com/spreadsheets/d/1x/edit".to_string()]
+    );
+    assert_eq!(
+        detail_labels(&parts, now(), Tz::UTC),
+        vec!["#work".to_string(), "link: Google Sheet".to_string()]
+    );
+    // In the middle it is part of the title.
+    assert!(p("Read https://a.example first").links.is_empty());
+}
+
+#[test]
+fn an_address_alone_is_named_for_what_it_points_at() {
+    let parts = p("obsidian://open?vault=Life&file=Projects%2FTakt%20plan");
+    assert_eq!(parts.title, "Takt plan");
+    assert_eq!(parts.links.len(), 1);
+}

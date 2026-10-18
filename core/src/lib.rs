@@ -37,6 +37,7 @@ pub mod habits;
 pub mod imports;
 pub mod journal;
 pub mod keymap;
+pub mod links;
 pub mod lists;
 pub mod next_up;
 pub mod packed_rows;
