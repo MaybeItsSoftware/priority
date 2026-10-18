@@ -6,6 +6,7 @@ import Foundation
 let featureInstallers: [(WorkspaceModel) -> Void] = [
   SyncController.install(on:),
   { WidgetBridge.shared.install(on: $0) },
+  { WatchBridge.shared.install(on: $0) },
   { QuickAddRouting.install(on: $0) },
   GoogleCalendarController.install(on:),
 ]

@@ -38,6 +38,8 @@ targets:
     sources:
       - path: TaktMobile
       - path: Shared
+      - path: WatchShared/Contract
+        group: WatchShared
       - path: ../../Takt/Fonts
         group: Fonts
         buildPhase: resources
