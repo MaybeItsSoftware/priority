@@ -26,6 +26,8 @@ targets:
     dependencies:
       - sdk: WatchConnectivity.framework
       - sdk: WidgetKit.framework
+      - target: TaktWatchWidgets
+        embed: true
     entitlements:
       path: TaktWatch/TaktWatch.entitlements
       properties:
@@ -49,11 +51,44 @@ targets:
         ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
         SKIP_INSTALL: YES
 
+  # The complications and the Smart Stack card. They read the snapshot the
+  # watch app saves into the app group; nothing else.
+  TaktWatchWidgets:
+    type: app-extension
+    platform: watchOS
+    sources:
+      - path: TaktWatchWidgets
+      - path: WatchShared
+    dependencies:
+      - sdk: WidgetKit.framework
+      - sdk: SwiftUI.framework
+    entitlements:
+      path: TaktWatchWidgets/TaktWatchWidgets.entitlements
+      properties:
+        com.apple.security.application-groups:
+          - group.uk.co.maybeitssoftware.takt
+    info:
+      path: TaktWatchWidgets/Info.plist
+      properties:
+        CFBundleDisplayName: Takt
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
+    settings:
+      base:
+        PRODUCT_NAME: TaktWatchWidgets
+        PRODUCT_BUNDLE_IDENTIFIER: uk.co.maybeitssoftware.takt.watchkitapp.widgets
+        TARGETED_DEVICE_FAMILY: "4"
+        SKIP_INSTALL: YES
+        APPLICATION_EXTENSION_API_ONLY: YES
+
 schemes:
   TaktWatch:
     build:
       targets:
         TaktWatch: all
+        TaktWatchWidgets: all
     run:
       config: Debug
     archive:
