@@ -63,10 +63,10 @@ struct TaskInspector: View {
       }
       if !isPad {
         ToolbarItem(placement: .confirmationAction) {
-          Button("Done") {
-            inspector.save(model)
-            dismiss()
-          }
+          // Saved as it goes, by `onDisappear`: a move onto a repeating
+          // task's next turn is then asked about over the app, once the
+          // sheet is out of the way.
+          Button("Done") { dismiss() }
           .accessibilityIdentifier("inspector.done")
         }
       }
@@ -77,7 +77,8 @@ struct TaskInspector: View {
       // Leaving a field is committing it.
       if previous != nil { inspector.save(model) }
     }
-    .onDisappear { inspector.save(model) }
+    .onDisappear { inspector.save(model, askingOn: .app) }
+    .recurrenceClashDialog(model, on: .inspector)
     .sheet(isPresented: $showsConditions) { ConditionsSheet().environment(model) }
     .sheet(isPresented: $choosesConditions) { TaskConditionsSheet(inspector: inspector).environment(model) }
     .accessibilityIdentifier("inspector")

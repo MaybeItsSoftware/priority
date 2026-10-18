@@ -147,14 +147,28 @@ final class InspectorModel {
 
   /// Saves now if there is anything to save. Returns whether the draft is
   /// clean afterwards.
+  ///
+  /// A save moving a repeating task onto the day it comes round again asks
+  /// first, on `surface`: the inspector while it is up, the app once it has
+  /// gone. Until the person chooses, the draft stays as it is, unsaved.
   @discardableResult
-  func save(_ model: WorkspaceModel) -> Bool {
+  func save(_ model: WorkspaceModel, askingOn surface: PendingRecurrenceClash.Surface = .inspector) -> Bool {
     pendingSave?.cancel()
     pendingSave = nil
     guard let draft, draft.isDirty else { return true }
     guard draft.conflicts.isEmpty, !draft.isUnavailable else { return false }
     // An empty title is a draft in progress, not a failed save.
     guard !draft.values.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return false }
+    // Already asking here: a field losing focus under the dialog is not a second question.
+    if surface == .inspector, model.recurrenceClash?.clash.taskId == taskID { return false }
+    // Held strongly: asked as the inspector goes, the answer outlives it.
+    if model.askAboutRecurrenceClash(draft, surface: surface, save: { self.commit(draft, model: model) }) {
+      return false
+    }
+    return commit(draft, model: model)
+  }
+
+  private func commit(_ draft: TaskEditorDraft, model: WorkspaceModel) -> Bool {
     do {
       let committed = try model.store.saveTaskEditor(draft)
       self.draft = TaskEditorDraft(snapshot: committed)

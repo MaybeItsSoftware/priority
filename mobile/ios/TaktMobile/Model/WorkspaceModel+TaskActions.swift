@@ -118,13 +118,20 @@ extension WorkspaceModel {
   // MARK: - Editing values
 
   /// Edits a task through the same draft the inspector saves, so a keyboard
-  /// shortcut and the inspector write identically.
-  func editValues(_ taskID: String, _ change: (inout TaskEditorValues) -> Void) {
-    perform { store in
-      var draft = TaskEditorDraft(snapshot: try store.taskEditorSnapshot(for: taskID))
-      change(&draft.values)
-      _ = try store.saveTaskEditor(draft)
+  /// shortcut and the inspector write identically. A move of a repeating
+  /// task onto its next turn asks first; `saved` follows the save, whether
+  /// it is made now or from that question.
+  func editValues(
+    _ taskID: String, saved: (@MainActor () -> Void)? = nil, _ change: (inout TaskEditorValues) -> Void
+  ) {
+    guard var draft = performReturning({ TaskEditorDraft(snapshot: try $0.taskEditorSnapshot(for: taskID)) })
+    else { return }
+    change(&draft.values)
+    let save: @MainActor () -> Bool = { [weak self, draft] in
+      self?.perform { _ = try $0.saveTaskEditor(draft) } ?? false
     }
+    if askAboutRecurrenceClash(draft, save: save, saved: saved) { return }
+    if save() { saved?() }
   }
 
   func rename(_ taskID: String, to title: String) {
@@ -136,15 +143,15 @@ extension WorkspaceModel {
   func setDue(_ taskID: String, daysFromToday days: Int) {
     let start = Calendar.current.startOfDay(for: .now)
     let day = Calendar.current.date(byAdding: .day, value: days, to: start)
-    editValues(taskID) { $0.dueAt = day; $0.dueDate = nil }
-    announce(days == 0 ? "Due today" : days == 1 ? "Due tomorrow" : nil)
+    editValues(taskID, saved: { [weak self] in
+      self?.announce(days == 0 ? "Due today" : days == 1 ? "Due tomorrow" : nil)
+    }) { $0.dueAt = day; $0.dueDate = nil }
   }
 
   /// Starts the task at the beginning of tomorrow: the Mac's bury.
   func bury(_ taskID: String) {
     let tomorrow = Calendar.current.date(byAdding: .day, value: 1, to: Calendar.current.startOfDay(for: .now))
-    editValues(taskID) { $0.startAt = tomorrow }
-    announce("Buried until tomorrow")
+    editValues(taskID, saved: { [weak self] in self?.announce("Buried until tomorrow") }) { $0.startAt = tomorrow }
   }
 
   func clearDue(_ taskID: String) {

@@ -118,6 +118,9 @@ final class WorkspaceModel {
   /// start. Read after every write and when the app comes forward.
   private(set) var buriedStarts: [String: Date] = [:]
   var errorMessage: String?
+  /// A move of a repeating task onto its next turn, held until the person
+  /// chooses what happens. See `WorkspaceModel+RecurrenceClash.swift`.
+  var recurrenceClash: PendingRecurrenceClash?
   /// Moves when something is completed, so a view can play the haptic.
   private(set) var completionCount = 0
   /// A passing line of feedback ("Moved to Work") for actions whose result is

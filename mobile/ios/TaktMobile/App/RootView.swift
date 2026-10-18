@@ -46,6 +46,7 @@ struct RootView: View {
       BlockQualityPrompt(pending: pending).environment(model)
     }
     .modifier(ListsPresenters())
+    .recurrenceClashDialog(model)
     .overlay(alignment: .bottom) { ToastView() }
     .sensoryFeedback(trigger: model.completionCount) { _, _ in
       CompletionHaptics.isEnabled() ? .success : nil

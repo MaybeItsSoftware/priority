@@ -232,11 +232,16 @@ final class TodayModel {
     let calendar = Calendar.current
     let tomorrow = calendar.date(byAdding: .day, value: 1, to: calendar.startOfDay(for: .now)) ?? .now
     let morning = calendar.date(bySettingHour: 9, minute: 0, second: 0, of: tomorrow) ?? tomorrow
-    let ok = model.perform { store in
-      if card.isPlanned { try store.setPlannedForToday(false, taskIds: [card.id]) }
-      try store.scheduleTask(id: card.id, startAt: morning)
+    let move: @MainActor () -> Bool = { [weak model] in
+      model?.perform { store in
+        if card.isPlanned { try store.setPlannedForToday(false, taskIds: [card.id]) }
+        try store.scheduleTask(id: card.id, startAt: morning)
+      } ?? false
     }
-    if ok { model.announce("Moved to tomorrow") }
+    let moved: @MainActor () -> Void = { [weak model] in model?.announce("Moved to tomorrow") }
+    // A repeating task that comes round tomorrow anyway asks first.
+    if model.askAboutRecurrenceClash(starting: card.id, at: morning, save: move, saved: moved) { return }
+    if move() { moved() }
   }
 
   // MARK: - The running block

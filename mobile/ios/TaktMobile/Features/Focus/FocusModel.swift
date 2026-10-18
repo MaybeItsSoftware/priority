@@ -408,9 +408,19 @@ final class FocusModel {
   }
 
   func deferTask(_ taskID: String, _ deferral: FocusDeferral, now: Date = .now) {
-    model.perform { try $0.scheduleTask(id: taskID, startAt: deferral.date(from: now)) }
-    if stagedTaskID == taskID { stagedTaskID = nil }
-    model.announce("Deferred to \(deferral.title.lowercased())")
+    let start = deferral.date(from: now)
+    let move: @MainActor () -> Bool = { [weak model] in
+      model?.perform { try $0.scheduleTask(id: taskID, startAt: start) } ?? false
+    }
+    let moved: @MainActor () -> Void = { [weak self] in
+      guard let self else { return }
+      if stagedTaskID == taskID { stagedTaskID = nil }
+      model.announce("Deferred to \(deferral.title.lowercased())")
+    }
+    // A repeating task deferred onto its own next turn asks first.
+    if model.askAboutRecurrenceClash(starting: taskID, at: start, save: move, saved: moved) { return }
+    _ = move()
+    moved()
   }
 
   /// Moves a rung by hand. Only the task that moved is pinned; its
