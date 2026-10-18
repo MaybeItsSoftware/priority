@@ -1,0 +1,9 @@
+<resources>
+    <!-- The page before Compose draws: Takt's dark grape, not the system's black. -->
+    <style name="Theme.Takt.Watch" parent="android:Theme.DeviceDefault">
+        <item name="android:windowBackground">@color/page</item>
+        <item name="android:windowActionBar">false</item>
+        <item name="android:windowNoTitle">true</item>
+    </style>
+    <color name="page">#1C1A23</color>
+</resources>
