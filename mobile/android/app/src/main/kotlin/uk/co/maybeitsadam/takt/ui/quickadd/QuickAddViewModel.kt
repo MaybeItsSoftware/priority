@@ -1,5 +1,6 @@
 package uk.co.maybeitsadam.takt.ui.quickadd
 
+import uk.co.maybeitsadam.takt.core.NextUpSelector
 import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -35,9 +36,14 @@ class QuickAddViewModel(private val container: AppContainer) : ViewModel() {
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), QuickAddTargets())
 
     /** Files [text] (its trailing tokens included) as one undo step. */
-    fun add(text: String, listId: String, parentTaskId: String?) {
+    fun add(text: String, listId: String, parentTaskId: String?, plansToday: Boolean = false) {
         container.undo.perform { repo ->
-            repo.createTask(capturing = text, listId = listId, parentTaskId = parentTaskId)
+            repo.createTask(
+                capturing = text,
+                listId = listId,
+                parentTaskId = parentTaskId,
+                kanbanColumn = if (plansToday) NextUpSelector.todayColumnID else null,
+            )
         }
     }
 

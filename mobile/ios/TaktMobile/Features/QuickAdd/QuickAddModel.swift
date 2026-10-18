@@ -63,6 +63,9 @@ final class QuickAddModel {
   func prepare(_ model: WorkspaceModel) {
     let navigation = model.navigation
     let destinations = Self.destinations(in: model.structure)
+    // Opened from Today, the task is planned for today, so it lands where it was typed.
+    plansToday = navigation.quickAddPlansToday
+    navigation.quickAddPlansToday = false
     if let parent = navigation.quickAddParentTaskID, destinations.contains(where: { $0.id == parent }) {
       destinationID = parent
     } else if let parent = navigation.quickAddParentTaskID, let listID = model.task(parent)?.listId {
@@ -95,7 +98,7 @@ final class QuickAddModel {
     else { return nil }
     added.insert(task.title, at: 0)
     text = ""
-    model.showToast("Added to \(destination.title)")
+    model.announce("Added to \(destination.title)")
     return task
   }
 }

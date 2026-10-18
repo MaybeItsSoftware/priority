@@ -14,7 +14,7 @@ enum RootTab: String, CaseIterable, Identifiable, Hashable {
     case .lists: "Lists"
     case .focus: "Focus"
     case .review: "Review"
-    case .search: "Search"
+    case .search: "Find"
     }
   }
 
@@ -132,6 +132,8 @@ final class AppNavigation {
   /// task: nil means the Inbox.
   var quickAddListID: String?
   var quickAddParentTaskID: String?
+  /// Quick add was opened from Today: the task starts planned for today.
+  var quickAddPlansToday = false
   /// The task the move-to-list picker is up for.
   var movingTaskID: String?
   /// The create/rename alert the list tree has up.

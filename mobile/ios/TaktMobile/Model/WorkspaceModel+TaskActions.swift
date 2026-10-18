@@ -15,20 +15,25 @@ extension WorkspaceModel {
   func toggleComplete(_ taskID: String) {
     guard let task = task(taskID) else { return }
     let completing = task.status == .open
-    if perform({ try $0.setStatus(completing ? .completed : .open, for: taskID) }), completing {
-      noteCompletion()
-    }
+    guard perform({ try $0.setStatus(completing ? .completed : .open, for: taskID) }) else { return }
+    if completing { noteCompletion() }
+    announce(completing ? "Completed \(task.title)" : "Reopened \(task.title)")
   }
 
   /// Marks a task as no longer worth doing — closed, but not done — or
   /// reopens an invalidated one.
   func toggleInvalidated(_ taskID: String) {
     guard let task = task(taskID) else { return }
-    perform { try $0.setStatus(task.status == .cancelled ? .open : .cancelled, for: taskID) }
+    let cancelling = task.status != .cancelled
+    if perform({ try $0.setStatus(cancelling ? .cancelled : .open, for: taskID) }) {
+      announce(cancelling ? "Cancelled \(task.title)" : "Reinstated \(task.title)")
+    }
   }
 
   func delete(_ taskID: String) {
+    let title = task(taskID)?.title
     if perform({ try $0.deleteTask(id: taskID) }) {
+      announce(title.map { "Deleted \($0)" })
       if navigation.selectedTaskID == taskID { navigation.selectedTaskID = nil }
       if navigation.inspectedTaskID == taskID { navigation.inspectedTaskID = nil }
     }
@@ -48,7 +53,7 @@ extension WorkspaceModel {
   /// Moves a task (with its subtree) to the top level of another list.
   func move(_ taskID: String, toList listID: String, parentTaskID: String? = nil) {
     if perform({ try $0.moveTask(id: taskID, toListId: listID, parentTaskId: parentTaskID, toVisibleRoot: parentTaskID == nil) }) {
-      showToast("Moved to \(listName(for: listID))")
+      announce("Moved to \(listName(for: listID))")
     }
   }
 
@@ -88,7 +93,7 @@ extension WorkspaceModel {
   @discardableResult
   func extractBranch(_ taskID: String) -> TaskList? {
     let list = performReturning { try $0.moveTaskToFolder(id: taskID, folderId: nil) }
-    if let list { showToast("Extracted to \(list.name)") }
+    if let list { announce("Extracted to \(list.name)") }
     return list
   }
 
@@ -132,16 +137,19 @@ extension WorkspaceModel {
     let start = Calendar.current.startOfDay(for: .now)
     let day = Calendar.current.date(byAdding: .day, value: days, to: start)
     editValues(taskID) { $0.dueAt = day; $0.dueDate = nil }
+    announce(days == 0 ? "Due today" : days == 1 ? "Due tomorrow" : nil)
   }
 
   /// Starts the task at the beginning of tomorrow: the Mac's bury.
   func bury(_ taskID: String) {
     let tomorrow = Calendar.current.date(byAdding: .day, value: 1, to: Calendar.current.startOfDay(for: .now))
     editValues(taskID) { $0.startAt = tomorrow }
+    announce("Buried until tomorrow")
   }
 
   func clearDue(_ taskID: String) {
     editValues(taskID) { $0.dueAt = nil; $0.dueDate = nil }
+    announce("Cleared the due date")
   }
 
   // MARK: - Planning
@@ -154,7 +162,7 @@ extension WorkspaceModel {
   func togglePlannedToday(_ taskID: String) {
     let planned = isPlannedToday(taskID)
     if perform({ try $0.setPlannedForToday(!planned, taskIds: [taskID]) }) {
-      showToast(planned ? "Taken off today" : "Planned for today")
+      announce(planned ? "Taken off today" : "Planned for today")
     }
   }
 

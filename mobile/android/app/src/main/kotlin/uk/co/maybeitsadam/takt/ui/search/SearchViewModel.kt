@@ -6,7 +6,12 @@ import androidx.lifecycle.viewModelScope
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
@@ -20,6 +25,7 @@ import kotlinx.coroutines.flow.stateIn
 import uk.co.maybeitsadam.takt.app.AppContainer
 import uk.co.maybeitsadam.takt.data.workspace.TaskSearchResult
 import uk.co.maybeitsadam.takt.data.workspace.blockedTaskIds
+import uk.co.maybeitsadam.takt.data.workspace.observeSidebar
 
 @Immutable
 data class SearchState(
@@ -64,11 +70,32 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SearchState())
 
+    /** Commands run from Find, newest first: what it lifts, and lists with nothing typed. */
+    private val recents: Flow<List<String>> = container.settings.string(RECENT_COMMANDS).map(FindModel::decodeRecents)
+
+    private val places: Flow<List<FindPlace>> = container.withSession { session ->
+        session.repository.observeSidebar(session.workspace.id).map(FindModel::places)
+    }
+
+    /** The commands and places matching the query. Instant: no store read, so no debounce. */
+    val palette: StateFlow<FindPalette> = combine(_query, recents, places.onStart { emit(emptyList()) }) { q, r, p ->
+        FindModel.palette(q, r, p)
+    }.flowOn(Dispatchers.Default)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), FindPalette(commands = FindModel.commands.toImmutableList()))
+
+    fun recordCommand(id: String) {
+        container.scope.launch {
+            val current = FindModel.decodeRecents(container.settings.string(RECENT_COMMANDS).first())
+            container.settings.putString(RECENT_COMMANDS, FindModel.encodeRecents(FindModel.recording(id, current)))
+        }
+    }
+
     fun inspect(taskId: String) = container.inspector.open(taskId)
 
     fun toggle(result: TaskSearchResult) = container.commands.toggleComplete(result.task)
 
     companion object {
         const val DEBOUNCE_MS = 150L
+        const val RECENT_COMMANDS = "findRecentCommands"
     }
 }

@@ -47,6 +47,7 @@ struct RootView: View {
     .sensoryFeedback(trigger: model.completionCount) { _, _ in
       CompletionHaptics.isEnabled() ? .success : nil
     }
+    .sensoryFeedback(.impact(weight: .light), trigger: model.undoCount)
     .alert("Something went wrong", isPresented: errorBinding) {
       Button("OK", role: .cancel) { model.errorMessage = nil }
     } message: {
@@ -126,9 +127,12 @@ struct PhoneRootView: View {
 
 // MARK: - Shared chrome
 
-/// The buttons every root screen carries: undo, redo, and add.
+/// The buttons every root screen carries. On iPhone that is Undo alone, with
+/// Redo and History on a long press; add is at the thumb (`AddButton`). On
+/// iPad, with room to spare, undo, redo and add sit in the bar.
 struct WorkspaceToolbar: ToolbarContent {
   @Environment(WorkspaceModel.self) private var model
+  @Environment(\.isPadLayout) private var isPad
   /// What the add button does; nil opens quick add for the Inbox.
   var onAdd: (() -> Void)?
 
@@ -139,24 +143,26 @@ struct WorkspaceToolbar: ToolbarContent {
         .accessibilityLabel(model.undoLabel.map { "Undo \($0)" } ?? "Undo")
         .accessibilityIdentifier("toolbar.undo")
         .contextMenu {
-          Button("History…") { model.navigation.isHistoryPresented = true }
           if model.redoLabel != nil {
             Button("Redo \(model.redoLabel ?? "")") { model.redo() }
           }
+          Button("History…") { model.navigation.isHistoryPresented = true }
         }
-      Button { model.redo() } label: { Image(systemName: "arrow.uturn.forward") }
-        .disabled(model.redoLabel == nil)
-        .accessibilityLabel(model.redoLabel.map { "Redo \($0)" } ?? "Redo")
-        .accessibilityIdentifier("toolbar.redo")
-      Button {
-        if let onAdd { onAdd() } else {
-          model.navigation.quickAddListID = nil
-          model.navigation.quickAddParentTaskID = nil
-          model.navigation.isQuickAddPresented = true
-        }
-      } label: { Image(systemName: "plus") }
-        .accessibilityLabel("Add task")
-        .accessibilityIdentifier("toolbar.add")
+      if isPad {
+        Button { model.redo() } label: { Image(systemName: "arrow.uturn.forward") }
+          .disabled(model.redoLabel == nil)
+          .accessibilityLabel(model.redoLabel.map { "Redo \($0)" } ?? "Redo")
+          .accessibilityIdentifier("toolbar.redo")
+        Button {
+          if let onAdd { onAdd() } else {
+            model.navigation.quickAddListID = nil
+            model.navigation.quickAddParentTaskID = nil
+            model.navigation.isQuickAddPresented = true
+          }
+        } label: { Image(systemName: "plus") }
+          .accessibilityLabel("Add task")
+          .accessibilityIdentifier("toolbar.add")
+      }
     }
   }
 }
@@ -167,18 +173,64 @@ struct ToastView: View {
 
   var body: some View {
     if let toast = model.toast {
-      Text(toast)
-        .font(theme.type.callout)
-        .foregroundStyle(theme.ink)
-        .padding(.horizontal, theme.space.lg)
-        .padding(.vertical, theme.space.sm)
-        .background(theme.raised, in: RoundedRectangle(cornerRadius: theme.radius.panel))
-        .overlay(RoundedRectangle(cornerRadius: theme.radius.panel).strokeBorder(theme.border, lineWidth: theme.stroke))
-        .padding(.bottom, 64)
-        .transition(.opacity.combined(with: .move(edge: .bottom)))
-        .accessibilityIdentifier("toast")
-        .allowsHitTesting(false)
+      HStack(spacing: theme.space.md) {
+        Text(toast)
+          .font(theme.type.callout)
+          .foregroundStyle(theme.paper)
+          .lineLimit(2)
+          .frame(maxWidth: .infinity, alignment: .leading)
+        if let action = model.toastAction {
+          Button(action.title) { model.runToastAction() }
+            .font(theme.type.callout.weight(.semibold))
+            .foregroundStyle(theme.paper)
+            .frame(minWidth: theme.touchTarget, minHeight: theme.touchTarget)
+            .contentShape(Rectangle())
+            .accessibilityIdentifier("toast.action")
+        }
+      }
+      .padding(.leading, theme.space.lg)
+      .padding(.trailing, model.toastAction == nil ? theme.space.lg : theme.space.sm)
+      .padding(.vertical, model.toastAction == nil ? theme.space.md : 0)
+      .background(theme.ink, in: RoundedRectangle(cornerRadius: theme.radius.control))
+      .padding(.horizontal, theme.space.md)
+      .padding(.bottom, 64)
+      .transition(.opacity.combined(with: .move(edge: .bottom)))
+      .accessibilityElement(children: .contain)
+      .accessibilityIdentifier("toast")
+      .allowsHitTesting(model.toastAction != nil)
     }
+  }
+}
+
+/// Add, where the thumb is: a square azure tile at the bottom right of Today
+/// and Lists on iPhone. From Today the task starts planned for today, so it
+/// lands where it was typed; from a list, it goes into that list.
+struct AddButton: View {
+  @Environment(\.theme) private var theme
+  @Environment(WorkspaceModel.self) private var model
+  var plansToday = false
+  var action: (() -> Void)?
+
+  var body: some View {
+    Button {
+      if let action { action() } else {
+        let navigation = model.navigation
+        navigation.quickAddListID = plansToday ? nil : navigation.currentScope?.listID
+        navigation.quickAddParentTaskID = nil
+        navigation.quickAddPlansToday = plansToday
+        navigation.isQuickAddPresented = true
+      }
+    } label: {
+      Image(systemName: "plus")
+        .font(theme.type.glyph(20, .semibold))
+        .foregroundStyle(theme.onAccent)
+        .frame(width: 52, height: 52)
+        .background(theme.primary, in: RoundedRectangle(cornerRadius: theme.radius.control))
+    }
+    .buttonStyle(.plain)
+    .padding(theme.space.lg)
+    .accessibilityLabel("Add task")
+    .accessibilityIdentifier("toolbar.add")
   }
 }
 

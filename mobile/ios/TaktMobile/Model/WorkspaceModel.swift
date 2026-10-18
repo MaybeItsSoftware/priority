@@ -88,6 +88,18 @@ struct WorkspaceStructure: Sendable, Equatable {
 /// Writes from other processes — the widget's intents, the sync agent, the
 /// Mac CLI if the file is shared — are noticed with `PRAGMA data_version`,
 /// which the store exposes as `readExternalChangeToken()`.
+/// What a toast offers to tap.
+enum ToastAction: Equatable {
+  case undo, redo
+
+  var title: String {
+    switch self {
+    case .undo: "Undo"
+    case .redo: "Redo"
+    }
+  }
+}
+
 @MainActor
 @Observable
 final class WorkspaceModel {
@@ -107,6 +119,11 @@ final class WorkspaceModel {
   /// A passing line of feedback ("Moved to Work") for actions whose result is
   /// off screen.
   var toast: String?
+  /// What the toast offers to tap: Undo after an edit, Redo after an undo.
+  private(set) var toastAction: ToastAction?
+  @ObservationIgnored private var toastGeneration = 0
+  /// Moves on every undo or redo, so a view can play the haptic.
+  private(set) var undoCount = 0
   /// A task someone asked to focus on from elsewhere — a context menu, a day
   /// card. The Focus screen stages it and clears this.
   var focusRequestTaskID: String?
@@ -197,12 +214,34 @@ final class WorkspaceModel {
 
   func noteCompletion() { completionCount &+= 1 }
 
-  func showToast(_ text: String) {
+  /// Shows a line of feedback. With an action it stays long enough to tap,
+  /// as Android's snackbar does.
+  func showToast(_ text: String, action: ToastAction? = nil) {
     toast = text
-    let shown = text
+    toastAction = action
+    toastGeneration &+= 1
+    let shown = toastGeneration
     Task { @MainActor [weak self] in
-      try? await Task.sleep(for: .seconds(2))
-      if self?.toast == shown { self?.toast = nil }
+      try? await Task.sleep(for: .seconds(action == nil ? 2 : 4))
+      guard let self, self.toastGeneration == shown else { return }
+      self.toast = nil
+      self.toastAction = nil
+    }
+  }
+
+  /// After an edit: names the step the journal just recorded, with Undo.
+  /// Every edit the thumb makes without looking (a swipe, a tick, a menu
+  /// item) announces itself so it can be taken back from where you are.
+  func announce(_ text: String? = nil) {
+    guard let label = text ?? undoLabel else { return }
+    showToast(label, action: .undo)
+  }
+
+  func runToastAction() {
+    switch toastAction {
+    case .undo: undo()
+    case .redo: redo()
+    case nil: break
     }
   }
 
@@ -256,13 +295,19 @@ final class WorkspaceModel {
   func undo() {
     var label: String?
     perform { store in label = try store.undo() }
-    if let label { showToast("Undid \(label.lowercased())") }
+    if let label {
+      undoCount &+= 1
+      showToast("Undid \(label.lowercased())", action: .redo)
+    }
   }
 
   func redo() {
     var label: String?
     perform { store in label = try store.redo() }
-    if let label { showToast("Redid \(label.lowercased())") }
+    if let label {
+      undoCount &+= 1
+      showToast("Redid \(label.lowercased())", action: .undo)
+    }
   }
 
   // MARK: - Other processes

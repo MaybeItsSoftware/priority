@@ -35,7 +35,7 @@ extension WorkspaceModel {
 
   func setArchived(_ archived: Bool, list listID: String) {
     if perform({ try $0.setListArchived(archived, id: listID) }) {
-      showToast(archived ? "Archived" : "Restored")
+      announce(archived ? "Archived" : "Restored")
       if archived, navigation.currentScope?.listID == listID { leaveScope(listID: listID) }
     }
   }

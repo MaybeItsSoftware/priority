@@ -32,6 +32,9 @@ struct ListsTreeView: View {
             .accessibilityIdentifier("toolbar.settings")
         }
       }
+      .overlay(alignment: .bottomTrailing) {
+        if !isPad { AddButton() }
+      }
       .refreshable { await SyncController.shared?.syncNow() }
       .accessibilityIdentifier("lists.tree")
     }

@@ -39,7 +39,7 @@ start on a screen, e.g. `-open takt://lists/Work`.
 | `project.yml` | XcodeGen spec: app `TaktMobile` (product "Takt", bundle id `uk.co.maybeitssoftware.takt`), `TaktWidgets`, tests |
 | `Shared/` | Compiled into the app and the widget: app group paths, widget snapshot, Live Activity attributes, widget palette, quick-add intent |
 | `TaktMobile/Model/` | `WorkspaceModel` (the one write funnel, `revision`), `StoreQuery`, `AppNavigation`, task and list commands |
-| `TaktMobile/Features/` | One folder per screen: Lists, Outline, Board, Matrix, Today, Focus, Review, Search, Inspector, QuickAdd, History, Settings (incl. sync) |
+| `TaktMobile/Features/` | One folder per screen: Lists, Outline, Board, Matrix, Today, Focus, Review, Search (the Find tab: commands, lists and tasks; see `docs/mobile-ux.md`), Inspector, QuickAdd, History, Settings (incl. sync) |
 | `TaktMobile/App/` | Entry point, iPhone tabs / iPad split view, deep links, keyboard shortcuts |
 | `TaktMobile/Bridge/` | Widget snapshot writer and the focus Live Activity |
 | `TaktMobile/Intents/` | "Add task to Takt" App Intent and Siri phrases |

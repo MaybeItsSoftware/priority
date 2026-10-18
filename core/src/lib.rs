@@ -41,6 +41,7 @@ pub mod keymap;
 pub mod lists;
 pub mod next_up;
 pub mod packed_rows;
+pub mod palette;
 pub mod periodic;
 pub mod planning;
 pub mod progress;

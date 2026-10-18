@@ -407,7 +407,7 @@ final class FocusModel {
   func deferTask(_ taskID: String, _ deferral: FocusDeferral, now: Date = .now) {
     model.perform { try $0.scheduleTask(id: taskID, startAt: deferral.date(from: now)) }
     if stagedTaskID == taskID { stagedTaskID = nil }
-    model.showToast("Deferred to \(deferral.title.lowercased())")
+    model.announce("Deferred to \(deferral.title.lowercased())")
   }
 
   /// Moves a rung by hand. Only the task that moved is pinned; its

@@ -48,6 +48,9 @@ import kotlinx.coroutines.delay
 import uk.co.maybeitsadam.takt.app.QuickAddRequest
 import uk.co.maybeitsadam.takt.ui.SheetHandle
 import uk.co.maybeitsadam.takt.ui.components.PButton
+import uk.co.maybeitsadam.takt.ui.components.Tag
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import uk.co.maybeitsadam.takt.ui.inspector.ChalkField
 import uk.co.maybeitsadam.takt.ui.inspector.ChalkMenuItem
 import uk.co.maybeitsadam.takt.ui.inspector.FieldLabel
@@ -71,6 +74,7 @@ fun QuickAddSheet(request: QuickAddRequest, onDismiss: () -> Unit) {
 
     var text by rememberSaveable(request.nonce) { mutableStateOf(request.text) }
     var chosenListId by rememberSaveable(request.nonce) { mutableStateOf(request.listId) }
+    var plansToday by rememberSaveable(request.nonce) { mutableStateOf(request.plansToday) }
     val added = remember(request.nonce) { mutableStateListOf<String>() }
     val preview by remember { derivedStateOf { CapturePreview.of(text) } }
     val targetId = chosenListId?.takeIf { id -> targets.lists.any { it.id == id } } ?: targets.inboxId
@@ -90,7 +94,7 @@ fun QuickAddSheet(request: QuickAddRequest, onDismiss: () -> Unit) {
         if (!preview.canAdd) return
         // A parent only makes sense in the list it was asked for.
         val parent = request.parentTaskId?.takeIf { listId == (request.listId ?: targets.inboxId) }
-        vm.add(text, listId, parent)
+        vm.add(text, listId, parent, plansToday)
         added.add(0, preview.title)
         text = ""
     }
@@ -181,6 +185,17 @@ fun QuickAddSheet(request: QuickAddRequest, onDismiss: () -> Unit) {
                     onClick = ::submit,
                 )
             }
+            Tag(
+                "Plan for today",
+                selected = plansToday,
+                color = if (plansToday) TaktTheme.colors.primary else TaktTheme.colors.mutedText,
+                leading = if (plansToday) Icons.Filled.Check else PIcons.Today,
+                modifier = Modifier
+                    .heightIn(min = Metrics.touchTarget)
+                    .testTag("quick_add_plan_today")
+                    .semantics { contentDescription = if (plansToday) "Plan for today, on" else "Plan for today, off" },
+                onClick = { plansToday = !plansToday },
+            )
             Text(CapturePreview.HINT, style = TaktTheme.type.small, color = TaktTheme.colors.dimText)
             if (added.isNotEmpty()) {
                 FieldLabel("Added")

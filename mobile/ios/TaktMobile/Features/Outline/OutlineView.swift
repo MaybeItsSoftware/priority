@@ -107,12 +107,15 @@ struct OutlineView: View {
       }
       .tint(theme.success)
     }
-    .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-      Button(role: .destructive) { model.delete(row.id) } label: { Label("Delete", systemImage: "trash") }
-      Button { model.toggleInvalidated(row.id) } label: {
-        Label(row.status == .cancelled ? "Reopen" : "Invalidate", systemImage: "xmark")
+    // The same two swipes as Today and as Android (docs/mobile-ux.md): right
+    // completes, left puts it on today. Cancel and delete are in the menu.
+    .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+      if row.status == .open {
+        Button { model.togglePlannedToday(row.id) } label: {
+          Label(row.isPlanned ? "Take off today" : "Today", systemImage: "sun.max")
+        }
+        .tint(theme.primary)
       }
-      .tint(theme.muted)
     }
     .contextMenu {
       TaskContextMenu(
