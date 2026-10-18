@@ -28,6 +28,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.LocationOn
@@ -63,6 +64,7 @@ import uk.co.maybeitsadam.takt.data.workspace.ConditionGroups
 import uk.co.maybeitsadam.takt.ui.commands.KeyCommand
 import uk.co.maybeitsadam.takt.ui.commands.PaletteCommand
 import uk.co.maybeitsadam.takt.ui.commands.RegisterCommands
+import uk.co.maybeitsadam.takt.ui.conditions.NowConditionsSheet
 import uk.co.maybeitsadam.takt.ui.components.Card
 import uk.co.maybeitsadam.takt.ui.components.EmptyState
 import uk.co.maybeitsadam.takt.ui.components.Format
@@ -272,6 +274,7 @@ private fun Stat(label: String, value: String, modifier: Modifier = Modifier) {
 @Composable
 private fun ContextControls(state: FocusUiState, context: FocusContextState, vm: FocusViewModel) {
     var addingCondition by rememberSaveable { mutableStateOf(false) }
+    var choosing by rememberSaveable { mutableStateOf(false) }
     var customMinutes by rememberSaveable { mutableStateOf(false) }
     var pickingUntil by rememberSaveable { mutableStateOf(false) }
     val groups = remember(state.conditions, state.requiredConditionIds, context.selected) {
@@ -292,6 +295,8 @@ private fun ContextControls(state: FocusUiState, context: FocusContextState, vm:
                     modifier = Modifier.testTag("focus_conditions_empty"),
                 )
             }
+            // Every condition in one sheet, searched, for when the chips are many.
+            Tag("All…", leading = Icons.Filled.Search, onClick = { choosing = true }, modifier = Modifier.testTag("focus_conditions_all"))
             Tag("New condition", leading = Icons.Filled.Add, onClick = { addingCondition = true })
         }
         // Only what an open task needs, under its category: a condition nothing
@@ -357,6 +362,7 @@ private fun ContextControls(state: FocusUiState, context: FocusContextState, vm:
     }
     Hairline()
 
+    if (choosing) NowConditionsSheet(onDismiss = { choosing = false })
     if (addingCondition) {
         NewConditionDialog(
             categories = remember(state.conditions) { ConditionGroups.categories(state.conditions) },

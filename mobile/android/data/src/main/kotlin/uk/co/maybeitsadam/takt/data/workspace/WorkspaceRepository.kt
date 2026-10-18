@@ -735,6 +735,16 @@ class WorkspaceRepository(
     suspend fun requiredConditionIds(workspaceId: String): Set<String> =
         database.read { it.core.requiredConditionIds(workspaceId).toSet() }
 
+    /**
+     * How many open tasks require each condition, by id — a condition no open
+     * task needs is absent: the Rust core's `conditions::condition_usage`,
+     * again whenever a task, its plan or a condition changes.
+     */
+    fun observeConditionUsage(workspaceId: String): Flow<Map<String, Int>> =
+        database.observe(setOf("tasks", "task_metadata", "task_lists", "task_conditions")) { db ->
+            db.core.conditionUsage(workspaceId).filter { it.openTasks > 0u }.associate { it.conditionId to it.openTasks.toInt() }
+        }
+
     /** Saves a condition: the Rust core's `conditions::save_condition`. */
     suspend fun saveCondition(id: String, name: String, isLocation: Boolean, isArchived: Boolean, now: Instant = now()) {
         coreWrite { it.saveCondition(id, name, isLocation, isArchived, now.toEpochMilli()) }

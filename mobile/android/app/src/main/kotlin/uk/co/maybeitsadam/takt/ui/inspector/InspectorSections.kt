@@ -61,6 +61,7 @@ import uk.co.maybeitsadam.takt.ui.components.Hairline
 import uk.co.maybeitsadam.takt.ui.components.MonoText
 import uk.co.maybeitsadam.takt.ui.components.PButton
 import uk.co.maybeitsadam.takt.ui.components.Tag
+import uk.co.maybeitsadam.takt.ui.conditions.TaskConditionsSheet
 import uk.co.maybeitsadam.takt.ui.components.TaskCheck
 import uk.co.maybeitsadam.takt.ui.components.priorityColor
 import uk.co.maybeitsadam.takt.ui.navigation.LocalShell
@@ -434,25 +435,21 @@ private fun ConditionsSection(
                 )
             }
         }
-        val candidates = RequirementGroups.candidatesForNewGroup(values.requirementGroups, around.conditions, { it.id }, { it.isArchived })
-        if (around.conditions.none { !it.isArchived }) {
-            Hint("No conditions yet. Conditions like \"At my desk\" are made on the Mac or in Focus.")
-        } else if (candidates.isNotEmpty()) {
-            var open by remember { mutableStateOf(false) }
-            MenuField(
-                "Add a required condition",
-                expanded = open,
-                onExpandedChange = { open = it },
-                leading = Icons.Filled.Add,
-                contentDescription = "Add a required condition",
-            ) {
-                for (condition in candidates) {
-                    ChalkMenuItem(condition.name, onClick = {
-                        open = false
-                        edit { it.copy(requirementGroups = RequirementGroups.addGroup(it.requirementGroups, condition.id)) }
-                    })
-                }
-            }
+        // Every condition in one sheet, ticked under its category, searched,
+        // and made there when it does not exist yet: the Mac's `cc` picker.
+        var picking by rememberSaveable { mutableStateOf(false) }
+        PButton(
+            if (groups.isEmpty()) "Choose conditions" else "Change conditions",
+            icon = Icons.Filled.Add,
+            modifier = Modifier.fillMaxWidth().testTag("inspector_conditions"),
+            onClick = { picking = true },
+        )
+        if (picking) {
+            TaskConditionsSheet(
+                groups = values.requirementGroups,
+                onGroupsChange = { change -> edit { it.copy(requirementGroups = change(it.requirementGroups)) } },
+                onDismiss = { picking = false },
+            )
         }
         Hint("Every group must be met; any condition within a group will do.")
 

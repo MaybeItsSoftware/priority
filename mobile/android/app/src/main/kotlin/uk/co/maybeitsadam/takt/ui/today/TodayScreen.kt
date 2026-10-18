@@ -55,6 +55,7 @@ import uk.co.maybeitsadam.takt.core.DayPlanReason
 import uk.co.maybeitsadam.takt.core.FocusSession
 import uk.co.maybeitsadam.takt.ui.commands.KeyCommand
 import uk.co.maybeitsadam.takt.ui.commands.RegisterCommands
+import uk.co.maybeitsadam.takt.ui.conditions.NowConditionsBar
 import uk.co.maybeitsadam.takt.ui.components.EmptyState
 import uk.co.maybeitsadam.takt.ui.components.Format
 import uk.co.maybeitsadam.takt.ui.components.Hairline
@@ -136,6 +137,7 @@ fun TodayScreen() {
             contentPadding = PaddingValues(bottom = 96.dp),
         ) {
             item(key = "forecast", contentType = "forecast") { DayHeader(day) }
+            item(key = "conditions", contentType = "conditions") { NowConditionsBar() }
             item(key = "calendar", contentType = "calendar") { CalendarAgenda(container.calendar, onOpenTask = container.inspector::open) }
             for ((kind, sectionCards) in sections) {
                 item(key = "section-${kind.name}", contentType = "section") {
