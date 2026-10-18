@@ -15089,6 +15089,93 @@ public func FfiConverterTypeOutlineItem_lower(_ value: OutlineItem) -> RustBuffe
 
 
 /**
+ * One row a palette could show.
+ */
+public struct PaletteCandidate: Equatable, Hashable {
+    public var title: String
+    /**
+     * Matched for less than the title: a command's group, a list's folder.
+     */
+    public var detail: String
+    /**
+     * Keys the row answers to, in the catalogue's spelling. Typing one
+     * exactly is the most specific query there is.
+     */
+    public var keys: [String]
+    /**
+     * Added to the row's score: how recently it was used, or how near the
+     * surface it is. Orders the rows when nothing has been typed.
+     */
+    public var boost: Int64
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(title: String, 
+        /**
+         * Matched for less than the title: a command's group, a list's folder.
+         */detail: String, 
+        /**
+         * Keys the row answers to, in the catalogue's spelling. Typing one
+         * exactly is the most specific query there is.
+         */keys: [String], 
+        /**
+         * Added to the row's score: how recently it was used, or how near the
+         * surface it is. Orders the rows when nothing has been typed.
+         */boost: Int64) {
+        self.title = title
+        self.detail = detail
+        self.keys = keys
+        self.boost = boost
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension PaletteCandidate: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypePaletteCandidate: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> PaletteCandidate {
+        return
+            try PaletteCandidate(
+                title: FfiConverterString.read(from: &buf), 
+                detail: FfiConverterString.read(from: &buf), 
+                keys: FfiConverterSequenceString.read(from: &buf), 
+                boost: FfiConverterInt64.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: PaletteCandidate, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.title, into: &buf)
+        FfiConverterString.write(value.detail, into: &buf)
+        FfiConverterSequenceString.write(value.keys, into: &buf)
+        FfiConverterInt64.write(value.boost, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypePaletteCandidate_lift(_ buf: RustBuffer) throws -> PaletteCandidate {
+    return try FfiConverterTypePaletteCandidate.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypePaletteCandidate_lower(_ value: PaletteCandidate) -> RustBuffer {
+    return FfiConverterTypePaletteCandidate.lower(value)
+}
+
+
+/**
  * A batch of outgoing changes and the newest outbox entry folded in, which
  * is what to acknowledge once the server has them.
  */
@@ -25412,6 +25499,31 @@ fileprivate struct FfiConverterSequenceTypeOutlineItem: FfiConverterRustBuffer {
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterSequenceTypePaletteCandidate: FfiConverterRustBuffer {
+    typealias SwiftType = [PaletteCandidate]
+
+    public static func write(_ value: [PaletteCandidate], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypePaletteCandidate.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [PaletteCandidate] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [PaletteCandidate]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypePaletteCandidate.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterSequenceTypePreferenceRow: FfiConverterRustBuffer {
     typealias SwiftType = [PreferenceRow]
 
@@ -27484,6 +27596,74 @@ public func workspaceCommandCatalog() -> [CommandEntry]  {
 })
 }
 /**
+ * How well `needle` matches `haystack` as a subsequence, or `None` when it
+ * does not. Each matched character scores; one that starts a word, or the
+ * text, scores more; one that follows the previous match directly scores
+ * more again; every character skipped between two matches costs a little.
+ * Spaces in the needle are dropped.
+ */
+public func paletteFuzzyScore(needle: String, haystack: String) -> Int64?  {
+    return try!  FfiConverterOptionInt64.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_palette_fuzzy_score(
+        FfiConverterString.lower(needle),
+        FfiConverterString.lower(haystack),uniffiCallStatus
+    )
+})
+}
+/**
+ * The indices of the candidates that match `query`, best first. An empty
+ * query matches everything, ordered by boost. Ties keep their given order.
+ */
+public func paletteRank(query: String, candidates: [PaletteCandidate]) -> [UInt32]  {
+    return try!  FfiConverterSequenceUInt32.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_palette_rank(
+        FfiConverterString.lower(query),
+        FfiConverterSequenceTypePaletteCandidate.lower(candidates),uniffiCallStatus
+    )
+})
+}
+/**
+ * The ids of `commands` that match `query`, best first, the ones in
+ * `recents` (most recent first) lifted.
+ */
+public func paletteRankCommands(query: String, commands: [CommandEntry], recents: [String]) -> [String]  {
+    return try!  FfiConverterSequenceString.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_palette_rank_commands(
+        FfiConverterString.lower(query),
+        FfiConverterSequenceTypeCommandEntry.lower(commands),
+        FfiConverterSequenceString.lower(recents),uniffiCallStatus
+    )
+})
+}
+/**
+ * `recents` with `id` moved to the front and the list capped: what a client
+ * stores after running a command from the palette.
+ */
+public func paletteRecording(id: String, recents: [String]) -> [String]  {
+    return try!  FfiConverterSequenceString.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_palette_recording(
+        FfiConverterString.lower(id),
+        FfiConverterSequenceString.lower(recents),uniffiCallStatus
+    )
+})
+}
+/**
+ * Every command the phones' palette offers, in the order it lists them when
+ * nothing has been typed. Android and the iPhone each run every one of these
+ * ids, which their tests hold them to.
+ */
+public func phonePaletteCommands() -> [CommandEntry]  {
+    return try!  FfiConverterSequenceTypeCommandEntry.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_phone_palette_commands(uniffiCallStatus
+    )
+})
+}
+/**
  * Reads stored planning JSON. `JSONDecoder().decode(TaskPlanning.self, …)`.
  */
 public func taskPlanningDecode(json: String)throws  -> Planning  {
@@ -29031,6 +29211,21 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_func_workspace_command_catalog() != 5765) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_palette_fuzzy_score() != 11885) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_palette_rank() != 24084) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_palette_rank_commands() != 56301) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_palette_recording() != 6644) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_phone_palette_commands() != 42796) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_func_task_planning_decode() != 24542) {

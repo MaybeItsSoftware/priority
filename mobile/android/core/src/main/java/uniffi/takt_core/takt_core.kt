@@ -849,6 +849,16 @@ internal object IntegrityCheckingUniffiLib {
     ): Int
     external fun uniffi_takt_core_checksum_func_workspace_command_catalog(
     ): Int
+    external fun uniffi_takt_core_checksum_func_palette_fuzzy_score(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_palette_rank(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_palette_rank_commands(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_palette_recording(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_phone_palette_commands(
+    ): Int
     external fun uniffi_takt_core_checksum_func_task_planning_decode(
     ): Int
     external fun uniffi_takt_core_checksum_func_task_planning_encode(
@@ -2129,6 +2139,16 @@ internal object UniffiLib {
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_func_workspace_command_catalog(uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_palette_fuzzy_score(`needle`: RustBuffer.ByValue,`haystack`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_palette_rank(`query`: RustBuffer.ByValue,`candidates`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_palette_rank_commands(`query`: RustBuffer.ByValue,`commands`: RustBuffer.ByValue,`recents`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_palette_recording(`id`: RustBuffer.ByValue,`recents`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_phone_palette_commands(uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_func_task_planning_decode(`json`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_func_task_planning_encode(`planning`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
@@ -2701,6 +2721,21 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_func_workspace_command_catalog() and 0xFFFF) != 5765) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_palette_fuzzy_score() and 0xFFFF) != 11885) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_palette_rank() and 0xFFFF) != 24084) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_palette_rank_commands() and 0xFFFF) != 56301) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_palette_recording() and 0xFFFF) != 6644) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_phone_palette_commands() and 0xFFFF) != 42796) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_func_task_planning_decode() and 0xFFFF) != 24542) {
@@ -17748,6 +17783,68 @@ public object FfiConverterTypeOutlineItem: FfiConverterRustBuffer<OutlineItem> {
 
 
 /**
+ * One row a palette could show.
+ */
+data class PaletteCandidate (
+    var `title`: kotlin.String
+    , 
+    /**
+     * Matched for less than the title: a command's group, a list's folder.
+     */
+    var `detail`: kotlin.String
+    , 
+    /**
+     * Keys the row answers to, in the catalogue's spelling. Typing one
+     * exactly is the most specific query there is.
+     */
+    var `keys`: List<kotlin.String>
+    , 
+    /**
+     * Added to the row's score: how recently it was used, or how near the
+     * surface it is. Orders the rows when nothing has been typed.
+     */
+    var `boost`: kotlin.Long
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypePaletteCandidate: FfiConverterRustBuffer<PaletteCandidate> {
+    override fun read(buf: ByteBuffer): PaletteCandidate {
+        return PaletteCandidate(
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterSequenceString.read(buf),
+            FfiConverterLong.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: PaletteCandidate) = (
+            FfiConverterString.allocationSize(value.`title`) +
+            FfiConverterString.allocationSize(value.`detail`) +
+            FfiConverterSequenceString.allocationSize(value.`keys`) +
+            FfiConverterLong.allocationSize(value.`boost`)
+    )
+
+    override fun write(value: PaletteCandidate, buf: ByteBuffer) {
+            FfiConverterString.write(value.`title`, buf)
+            FfiConverterString.write(value.`detail`, buf)
+            FfiConverterSequenceString.write(value.`keys`, buf)
+            FfiConverterLong.write(value.`boost`, buf)
+    }
+}
+
+
+
+/**
  * A batch of outgoing changes and the newest outbox entry folded in, which
  * is what to acknowledge once the server has them.
  */
@@ -28553,6 +28650,34 @@ public object FfiConverterSequenceTypeOutlineItem: FfiConverterRustBuffer<List<O
 /**
  * @suppress
  */
+public object FfiConverterSequenceTypePaletteCandidate: FfiConverterRustBuffer<List<PaletteCandidate>> {
+    override fun read(buf: ByteBuffer): List<PaletteCandidate> {
+        val len = buf.getInt()
+        return List<PaletteCandidate>(len) {
+            FfiConverterTypePaletteCandidate.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<PaletteCandidate>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypePaletteCandidate.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<PaletteCandidate>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypePaletteCandidate.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
 public object FfiConverterSequenceTypePreferenceRow: FfiConverterRustBuffer<List<PreferenceRow>> {
     override fun read(buf: ByteBuffer): List<PreferenceRow> {
         val len = buf.getInt()
@@ -31039,6 +31164,89 @@ public object FfiConverterMapStringTypeSyncValue: FfiConverterRustBuffer<Map<kot
             return FfiConverterSequenceTypeCommandEntry.lift(
     uniffiRustCall() { _status ->
     UniffiLib.uniffi_takt_core_fn_func_workspace_command_catalog(
+    
+        _status)
+}
+    )
+    }
+    
+
+        /**
+         * How well `needle` matches `haystack` as a subsequence, or `None` when it
+         * does not. Each matched character scores; one that starts a word, or the
+         * text, scores more; one that follows the previous match directly scores
+         * more again; every character skipped between two matches costs a little.
+         * Spaces in the needle are dropped.
+         */ fun `paletteFuzzyScore`(`needle`: kotlin.String, `haystack`: kotlin.String): kotlin.Long? {
+            return FfiConverterOptionalLong.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_palette_fuzzy_score(
+    
+        
+        FfiConverterString.lower(`needle`),
+        FfiConverterString.lower(`haystack`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * The indices of the candidates that match `query`, best first. An empty
+         * query matches everything, ordered by boost. Ties keep their given order.
+         */ fun `paletteRank`(`query`: kotlin.String, `candidates`: List<PaletteCandidate>): List<kotlin.UInt> {
+            return FfiConverterSequenceUInt.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_palette_rank(
+    
+        
+        FfiConverterString.lower(`query`),
+        FfiConverterSequenceTypePaletteCandidate.lower(`candidates`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * The ids of `commands` that match `query`, best first, the ones in
+         * `recents` (most recent first) lifted.
+         */ fun `paletteRankCommands`(`query`: kotlin.String, `commands`: List<CommandEntry>, `recents`: List<kotlin.String>): List<kotlin.String> {
+            return FfiConverterSequenceString.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_palette_rank_commands(
+    
+        
+        FfiConverterString.lower(`query`),
+        FfiConverterSequenceTypeCommandEntry.lower(`commands`),
+        FfiConverterSequenceString.lower(`recents`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * `recents` with `id` moved to the front and the list capped: what a client
+         * stores after running a command from the palette.
+         */ fun `paletteRecording`(`id`: kotlin.String, `recents`: List<kotlin.String>): List<kotlin.String> {
+            return FfiConverterSequenceString.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_palette_recording(
+    
+        
+        FfiConverterString.lower(`id`),
+        FfiConverterSequenceString.lower(`recents`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * Every command the phones' palette offers, in the order it lists them when
+         * nothing has been typed. Android and the iPhone each run every one of these
+         * ids, which their tests hold them to.
+         */ fun `phonePaletteCommands`(): List<CommandEntry> {
+            return FfiConverterSequenceTypeCommandEntry.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_phone_palette_commands(
     
         _status)
 }
