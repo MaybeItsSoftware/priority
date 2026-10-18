@@ -212,6 +212,7 @@ private struct FocusContextControls: View {
   @State private var newCondition = ""
   @State private var newCategory = ""
   @State private var showsConditions = false
+  @State private var choosesConditions = false
 
   var body: some View {
     VStack(alignment: .leading, spacing: theme.space.md) {
@@ -234,12 +235,24 @@ private struct FocusContextControls: View {
               chip(condition, isExclusive: section.isExclusive)
             }
           }
+          // Every condition in one sheet, searched, for when the chips are many.
+          Button {
+            choosesConditions = true
+          } label: {
+            Image(systemName: "magnifyingglass")
+              .foregroundStyle(theme.muted)
+              .frame(width: theme.touchTarget, height: theme.touchTarget)
+              .overlay(RoundedRectangle(cornerRadius: theme.radius.control).strokeBorder(theme.border, lineWidth: theme.stroke))
+          }
+          .buttonStyle(.plain)
+          .accessibilityLabel("All conditions")
+          .accessibilityIdentifier("focus.allConditions")
           Button {
             isAddingCondition = true
           } label: {
             Image(systemName: "plus")
               .foregroundStyle(theme.muted)
-              .frame(width: 34, height: 34)
+              .frame(width: theme.touchTarget, height: theme.touchTarget)
               .overlay(RoundedRectangle(cornerRadius: theme.radius.control).strokeBorder(theme.border, lineWidth: theme.stroke))
           }
           .buttonStyle(.plain)
@@ -249,7 +262,7 @@ private struct FocusContextControls: View {
           } label: {
             Image(systemName: "slider.horizontal.3")
               .foregroundStyle(theme.muted)
-              .frame(width: 34, height: 34)
+              .frame(width: theme.touchTarget, height: theme.touchTarget)
               .overlay(RoundedRectangle(cornerRadius: theme.radius.control).strokeBorder(theme.border, lineWidth: theme.stroke))
           }
           .buttonStyle(.plain)
@@ -309,6 +322,7 @@ private struct FocusContextControls: View {
         + "Location, Equipment… Location is one place at a time.")
     }
     .sheet(isPresented: $showsConditions) { ConditionsSheet() }
+    .sheet(isPresented: $choosesConditions) { NowConditionsSheet(focus: focus) }
   }
 
   /// Said on an earlier day, here or on another device: probably not where
@@ -402,7 +416,7 @@ private struct FocusContextControls: View {
       .font(theme.type.callout)
       .foregroundStyle(isOn ? theme.primary : theme.ink)
       .padding(.horizontal, theme.space.md)
-      .frame(minHeight: 34)
+      .frame(minHeight: theme.touchTarget)
       .background(isOn ? theme.primary.opacity(0.10) : theme.raised,
         in: RoundedRectangle(cornerRadius: theme.radius.control))
       .overlay(RoundedRectangle(cornerRadius: theme.radius.control)

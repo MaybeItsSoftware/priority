@@ -10,6 +10,7 @@ struct TodayScreen: View {
   @Environment(WorkspaceModel.self) private var model
   @Environment(\.isPadLayout) private var isPad
   @State private var today = TodayModel()
+  @State private var conditions = NowConditionsModel()
 
   var body: some View {
     @Bindable var navigation = model.navigation
@@ -20,6 +21,13 @@ struct TodayScreen: View {
           .listRowBackground(theme.paper)
           .listRowSeparator(.hidden)
           .selectionDisabled()
+        if !conditions.available.isEmpty {
+          NowConditionsBar(conditions: conditions)
+            .listRowInsets(EdgeInsets())
+            .listRowBackground(theme.paper)
+            .listRowSeparator(.hidden)
+            .selectionDisabled()
+        }
       }
       CalendarAgendaSection()
       Section {
@@ -65,6 +73,7 @@ struct TodayScreen: View {
     .navigationBarTitleDisplayMode(.inline)
     .toolbar { WorkspaceToolbar() }
     .task(id: model.revision) { await today.load(model) }
+    .task(id: model.revision) { await conditions.load(model) }
     .task(id: today.day.session?.id) { await refreshWhileRunning() }
     .accessibilityIdentifier("today.list")
   }

@@ -292,6 +292,16 @@ final class InspectorModel {
     }
   }
 
+  /// Ticks a condition on the task or off, as the Mac's `cc` picker: a tick
+  /// is a group of its own, but a second place joins the first as "or",
+  /// since you are in one place at a time. `places` are the conditions that
+  /// are places. Saved straight away, as every other requirement edit is.
+  func toggleRequirement(_ conditionID: String, places: Set<String>, model: WorkspaceModel) {
+    edit(model, immediate: true) { values in
+      values.requirementGroups = TaskRequirementToggle.toggling(conditionID, in: values.requirementGroups, places: places)
+    }
+  }
+
   func conditionName(_ id: String) -> String {
     conditions.first { $0.id == id }?.name ?? "Missing condition"
   }

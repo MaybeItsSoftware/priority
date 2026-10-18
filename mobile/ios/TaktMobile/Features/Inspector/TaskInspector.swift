@@ -16,6 +16,7 @@ struct TaskInspector: View {
   @State private var inspector: InspectorModel
   @FocusState private var focused: Field?
   @State private var showsConditions = false
+  @State private var choosesConditions = false
 
   enum Field: Hashable { case title, notes, estimate, tags, recurrence, links, minimumBlock }
 
@@ -78,6 +79,7 @@ struct TaskInspector: View {
     }
     .onDisappear { inspector.save(model) }
     .sheet(isPresented: $showsConditions) { ConditionsSheet().environment(model) }
+    .sheet(isPresented: $choosesConditions) { TaskConditionsSheet(inspector: inspector).environment(model) }
     .accessibilityIdentifier("inspector")
   }
 
@@ -373,17 +375,12 @@ struct TaskInspector: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .overlay(RoundedRectangle(cornerRadius: theme.radius.control).strokeBorder(theme.borderMuted, lineWidth: theme.stroke))
       }
-      Menu {
-        ForEach(inspector.conditions.filter { condition in
-          !condition.isArchived && !groups.contains([condition.id])
-        }) { condition in
-          Button(condition.name) { inspector.addRequirement(condition.id, model: model) }
-        }
-        Divider()
-        Button { showsConditions = true } label: { Label("New condition…", systemImage: "plus") }
-      } label: {
-        ThemedMenuLabel(title: groups.isEmpty ? "Add a required condition" : "And requires…", systemImage: "plus")
+      // Every condition in one sheet, ticked under its category, searched,
+      // and made there when it does not exist yet: the Mac's `cc` picker.
+      Button { choosesConditions = true } label: {
+        ThemedMenuLabel(title: groups.isEmpty ? "Choose conditions" : "Change conditions", systemImage: "plus")
       }
+      .buttonStyle(.plain)
       .accessibilityIdentifier("inspector.addCondition")
       if groups.count > 1 || groups.contains(where: { $0.count > 1 }) {
         Text("Every group must hold; any one condition within a group will do.")

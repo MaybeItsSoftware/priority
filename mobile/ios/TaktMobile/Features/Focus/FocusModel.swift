@@ -242,12 +242,15 @@ final class FocusModel {
     conditionsSetAt = ((try? model.store.focusContext(in: workspaceID)) ?? nil)?.conditionsSetAt
   }
 
-  func toggleCondition(_ condition: TaskCondition) {
+  /// Says `condition` holds now, or no longer does. `conditions` are the
+  /// ones to find the places among — the ladder's, unless the caller has
+  /// read its own, as the conditions sheet on Today does.
+  func toggleCondition(_ condition: TaskCondition, among conditions: [TaskCondition]? = nil) {
     suggestedContextIDs = []
     // One place at a time: choosing a location replaces the last one.
     conditionIDs = FocusContextSelection.toggling(
       condition.id, isLocation: condition.isLocation, in: conditionIDs,
-      locationIDs: Set(snapshot.conditions.filter(\.isLocation).map(\.id)))
+      locationIDs: Set((conditions ?? snapshot.conditions).filter(\.isLocation).map(\.id)))
   }
 
   func setAvailable(minutes: Int?, now: Date = .now) {
