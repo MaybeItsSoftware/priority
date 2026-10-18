@@ -307,23 +307,57 @@ private struct QuickCapturePanelView: View {
   }
 }
 
-/// Where a capture can go: every list, then the nested lists under it, in the
-/// list finder's rows (`WorkspaceListNavigator`) — the list's name, where it
-/// lives beside it in muted type, and the selection band on the one the
-/// capture is going to. A click picks one and hands the caret back.
+/// Where a capture can go: every list, then the nested lists under it, with
+/// the one it is going to selected and the home list marked. A click picks
+/// one and hands the caret back.
 private struct QuickCaptureDestinationList: View {
   @Environment(WorkspaceViewModel.self) private var model
-  @Environment(\.theme) private var theme
 
   var body: some View {
-    let destinations = model.quickCaptureDestinations
-    let selectedID = model.quickCaptureDestination?.id
     let homeID = model.quickCaptureHomeList?.id
+    WorkspaceDestinationRows(
+      destinations: model.quickCaptureDestinations, selectedID: model.quickCaptureDestination?.id,
+      note: { $0.id == homeID ? "Default" : nil },
+      onPick: { destination in
+        model.quickCaptureDestinationID = destination.id
+        model.quickCaptureFocusRequest += 1
+      })
+  }
+}
+
+/// Lists and nested lists in the list finder's rows (`WorkspaceListNavigator`)
+/// — the name, where it lives beside it in muted type, and the selection band
+/// on the chosen one, kept in view. Quick add's destinations, and the focus
+/// panel's list switcher, which puts Today above them as `header`.
+struct WorkspaceDestinationRows<Header: View>: View {
+  @Environment(WorkspaceViewModel.self) private var model
+  @Environment(\.theme) private var theme
+  let destinations: [QuickCaptureDestination]
+  let selectedID: String?
+  /// What the row says at its far end — "Default", "Current" — if anything.
+  var note: (QuickCaptureDestination) -> String? = { _ in nil }
+  @ViewBuilder var header: Header
+  let onPick: (QuickCaptureDestination) -> Void
+
+  init(
+    destinations: [QuickCaptureDestination], selectedID: String?,
+    note: @escaping (QuickCaptureDestination) -> String? = { _ in nil },
+    @ViewBuilder header: () -> Header, onPick: @escaping (QuickCaptureDestination) -> Void
+  ) {
+    self.destinations = destinations
+    self.selectedID = selectedID
+    self.note = note
+    self.header = header()
+    self.onPick = onPick
+  }
+
+  var body: some View {
     let folderNames = Dictionary(model.folders.map { ($0.id, $0.name) }, uniquingKeysWith: { first, _ in first })
     let listFolders = Dictionary(model.lists.map { ($0.id, $0.folderId) }, uniquingKeysWith: { first, _ in first })
     ScrollViewReader { proxy in
       ScrollView {
         LazyVStack(alignment: .leading, spacing: 0) {
+          header
           ForEach(destinations) { destination in
             HStack(spacing: theme.space.sm) {
               Label(
@@ -338,17 +372,14 @@ private struct QuickCaptureDestinationList: View {
                   .truncationMode(.middle)
               }
               Spacer(minLength: theme.space.sm)
-              if destination.id == homeID {
-                Text("Default").font(theme.captionFont).foregroundStyle(theme.dim)
+              if let note = note(destination) {
+                Text(note).font(theme.captionFont).foregroundStyle(theme.dim)
               }
             }
             .font(theme.bodyFont())
             .overlayRow(isSelected: destination.id == selectedID)
             .id(destination.id)
-            .onTapGesture {
-              model.quickCaptureDestinationID = destination.id
-              model.quickCaptureFocusRequest += 1
-            }
+            .onTapGesture { onPick(destination) }
           }
         }
       }
@@ -371,5 +402,15 @@ private struct QuickCaptureDestinationList: View {
     }
     let parents = destination.path.components(separatedBy: " › ").dropLast()
     return parents.isEmpty ? nil : parents.joined(separator: " › ")
+  }
+}
+
+extension WorkspaceDestinationRows where Header == EmptyView {
+  init(
+    destinations: [QuickCaptureDestination], selectedID: String?,
+    note: @escaping (QuickCaptureDestination) -> String? = { _ in nil },
+    onPick: @escaping (QuickCaptureDestination) -> Void
+  ) {
+    self.init(destinations: destinations, selectedID: selectedID, note: note, header: { EmptyView() }, onPick: onPick)
   }
 }

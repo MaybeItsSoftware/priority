@@ -1,3 +1,4 @@
+import AppKit
 import TaktCore
 import TaktWorkspace
 import SwiftUI
@@ -33,6 +34,9 @@ struct DayView: View {
   /// Changes whenever the surface is presented afresh, so it opens ready to
   /// type rather than holding the last thing that was searched.
   let resetToken: Int
+  /// The panel's places, which ⌘P and ← at the top of the day go to. Set
+  /// only on the panel.
+  var summons: FocusPanelSummons?
   var onClose: ((FocusPanelDismissal) -> Void)?
   /// Shrinks the panel back to the running block's strip. Set only on the
   /// panel, and only while a block runs.
@@ -43,6 +47,10 @@ struct DayView: View {
   @State private var selectedID: String?
   @State private var hoveredID: String?
   @FocusState private var isFieldFocused: Bool
+  /// The panel's keyboard is on the cards rather than in the field: ↓ from
+  /// an empty field puts it there, and the window's keys work.
+  @State private var keysInList = false
+  @State private var router = FocusPanelKeyRouter()
 
   /// The id the create row answers to. A task's id is a UUID, so this cannot
   /// collide with one.
@@ -75,8 +83,7 @@ struct DayView: View {
         if model.pendingTaskDeletionID != nil, let pending = model.pendingTaskDeletion {
           TaskDeletionPrompt(task: pending)
         } else {
-          FocusRule()
-          hints
+          WorkspaceOverlayFooter(hints: hints)
         }
       } else {
         // The window's mount is the header band and the list, and nothing
@@ -93,6 +100,20 @@ struct DayView: View {
       }
     }
     .frame(maxWidth: .infinity, maxHeight: .infinity)
+    .background {
+      if surface.isPanel { WindowKeyMonitor(handle: handlePanelKey) }
+    }
+    // An edit put away in the panel hands the keyboard back to where it was.
+    .onChange(of: model.panelOverlay == nil) { _, closed in
+      if closed && surface.isPanel && !keysInList { isFieldFocused = true }
+    }
+    // The caret back in the field, by a click or otherwise, is typing again.
+    .onChange(of: isFieldFocused) { _, focused in
+      if focused && keysInList {
+        keysInList = false
+        router.reset()
+      }
+    }
     // Over the whole surface rather than the card: by the time this plays the
     // card it belongs to has usually left the day, and a cleared day is
     // exactly when the flourish has the most to say.
@@ -148,22 +169,9 @@ struct DayView: View {
         .commandHelp(.goFocus, note: "Open the focus panel to pick a task and start it")
       }
       if surface.isPanel {
-        Button { openInWindow() } label: {
-          Image(systemName: "macwindow")
-            .font(theme.bodyFont())
-        }
-        .buttonStyle(.plain)
-        .foregroundStyle(theme.dim)
-        .help("Open the main window (⌘↵)")
-        .accessibilityLabel("Open the main window")
-        Button { onClose?(.back) } label: {
-          Image(systemName: "xmark")
-            .font(theme.bodyFont(size: theme.scale.caption))
-        }
-        .buttonStyle(.plain)
-        .foregroundStyle(theme.dim)
-        .help("Hide the panel (esc)")
-        .accessibilityLabel("Hide the focus panel")
+        FocusPanelHeaderButtons(
+          onChooseList: { summons?.isChoosingList = true }, onOpenWindow: openInWindow,
+          onClose: { onClose?(.back) })
       }
     }
   }
@@ -245,92 +253,68 @@ struct DayView: View {
   }
 
   private var field: some View {
-    HStack(spacing: theme.space.sm) {
-      Image(systemName: "magnifyingglass")
-        .font(theme.bodyFont())
-        .foregroundStyle(theme.dim)
-      TextField("Search, or type to add a task…", text: $query)
-        .textFieldStyle(.plain)
-        .font(theme.bodyFont())
-        .foregroundStyle(theme.ink)
-        .focused($isFieldFocused)
-        .onKeyPress(.upArrow) { move(by: -1); return .handled }
-        .onKeyPress(.downArrow) { move(by: 1); return .handled }
-        .onKeyPress(.leftArrow) { leaveForSidebar() }
-        .onKeyPress(.escape) {
-          if model.pendingTaskDeletionID != nil { model.cancelPendingTaskDeletion(); return .handled }
-          return dismissOrClear()
-        }
-        // ⌘⌫ is the field's own "delete to the start of the line" while
-        // there is text in it; with the field empty there is nothing to
-        // delete there, so it asks to delete the task you are on instead.
-        .onKeyPress(keys: [.delete], phases: .down) { press in
-          guard press.modifiers.contains(.command), query.isEmpty else { return .ignored }
-          return requestDeletion() ? .handled : .ignored
-        }
-        // Return always adds, Space always completes, as in Checkvist and
-        // the window. Starting an existing task is Tab, which has nothing
-        // else to do in a one-field panel.
-        .onKeyPress(keys: [.return], phases: .down) { press in
-          if model.pendingTaskDeletionID != nil {
-            confirmDeletion()
-          } else if press.modifiers.contains(.command) {
-            openInWindow()
-          } else {
-            createFromQuery()
-          }
-          return .handled
-        }
-        // Only with the field empty: once you are typing, Space is a space.
-        .onKeyPress(.space) {
-          guard query.isEmpty, model.pendingTaskDeletionID == nil else { return .ignored }
-          tickOffSelection()
-          return .handled
-        }
-        .onKeyPress(.tab) {
-          activateSelection()
-          return .handled
-        }
-        // The keys the hint row below has no room for.
-        .help(surface.isPanel
-          ? "⌘⌫ deletes the task you are on, with the field empty · ⌘↵ opens the main window"
-          : "⌘⌫ deletes the task you are on, with the field empty")
-    }
-    .padding(.horizontal, theme.space.md)
-    .padding(.vertical, theme.space.sm)
-    // An input is a hairline on the page, not a well sunk into it.
-    .overlay(
-      RoundedRectangle(cornerRadius: theme.controlRadius)
-        .strokeBorder(isFieldFocused ? theme.focusRing : theme.inputBorder, lineWidth: theme.hairline))
-    .padding(.horizontal, theme.space.lg)
-    .padding(.bottom, theme.space.md)
+    FocusPanelField(
+      prompt: "Search, or type to add a task…", query: $query, isFocused: $isFieldFocused,
+      help: "⌘⌫ deletes the task you are on, with the field empty · ⌘↵ opens the main window · "
+        + "↓ with the field empty puts the keys on the cards",
+      onKey: fieldKey)
   }
 
-  private var hints: some View {
-    // No "↑ ↓ Choose": arrows moving through a list need no caption, and the
-    // row it took was what squeezed the others into two broken lines.
-    HStack(spacing: theme.space.md) {
-      if !surface.isPanel || !query.trimmingCharacters(in: .whitespaces).isEmpty {
-        KeyHint("↵", "Add")
+  /// Return always adds, Space always completes, as in Checkvist and the
+  /// window. Starting an existing task is Tab, which has nothing else to do
+  /// in a one-field panel.
+  private func fieldKey(_ key: FocusPanelFieldKey) -> KeyPress.Result {
+    switch key {
+    case .up, .down:
+      move(by: key == .up ? -1 : 1)
+      // With nothing typed there is nothing to refine, so the keys go to the
+      // cards, where the window's keys work.
+      if query.isEmpty {
+        keysInList = true
+        isFieldFocused = false
       }
-      if !surface.isPanel || query.isEmpty {
-        KeyHint("space", "Done")
+      return .handled
+    case .left:
+      return leaveForSidebar()
+    case .escape:
+      if model.pendingTaskDeletionID != nil { model.cancelPendingTaskDeletion(); return .handled }
+      return dismissOrClear()
+    case .commandDelete:
+      // ⌘⌫ with text is the field's; with none, delete the task you are on.
+      guard query.isEmpty else { return .ignored }
+      return requestDeletion() ? .handled : .ignored
+    case .enter, .commandEnter:
+      if model.pendingTaskDeletionID != nil {
+        confirmDeletion()
+      } else if key == .commandEnter {
+        openInWindow()
+      } else {
+        createFromQuery()
       }
-      KeyHint("⇥", startHint)
-      // Only while it does something: with a query in the field the caret
-      // owns left, and advertising a key that is busy is worse than silence.
-      if !surface.isPanel && query.isEmpty {
-        KeyHint("←", "Lists")
-      }
-      Spacer(minLength: 0)
-      if surface.isPanel {
-        KeyHint("esc", !query.isEmpty ? "Clear" : onMinimise != nil ? "Minimise" : "Hide")
-      } else if !query.isEmpty {
-        KeyHint("esc", "Clear")
-      }
+      return .handled
+    case .space:
+      // Only with the field empty: once you are typing, Space is a space.
+      guard query.isEmpty, model.pendingTaskDeletionID == nil else { return .ignored }
+      tickOffSelection()
+      return .handled
+    case .tab:
+      activateSelection()
+      return .handled
     }
-    .padding(.horizontal, theme.space.lg)
-    .padding(.vertical, theme.space.sm)
+  }
+
+  /// The foot of the panel: the keys that do something where the keyboard is.
+  private var hints: String {
+    if let jump = router.numberJumpHint { return jump }
+    let start = startHint.lowercased()
+    let escape = !query.isEmpty ? "clear" : onMinimise != nil ? "minimise" : "hide"
+    if keysInList {
+      return "space done · ee dd ⌥t edit · 1–4 priority · cc needs · / search · esc \(escape)"
+    }
+    if !query.trimmingCharacters(in: .whitespaces).isEmpty {
+      return "↑↓ choose · ↩ add · ⇥ \(start) · ⌘D due · F2 title · esc clear"
+    }
+    return "↓ the cards · space done · ⇥ \(start) · ⌘P lists · esc \(escape)"
   }
 
   private var startHint: String {
@@ -452,16 +436,6 @@ struct DayView: View {
 
   private func hover(_ id: String, _ inside: Bool) {
     if inside { hoveredID = id } else if hoveredID == id { hoveredID = nil }
-  }
-
-  /// "12m / 25m", "12m" or "25m"; nil when the task has neither.
-  private func costText(for task: WorkspaceTask, logged: Int) -> String? {
-    switch (logged > 0, task.estimateSeconds) {
-    case (true, let estimate?): return "\(duration(logged)) / \(duration(estimate))"
-    case (true, nil): return duration(logged)
-    case (false, let estimate?): return duration(estimate)
-    case (false, nil): return nil
-    }
   }
 
   /// Finishing something that never needed a block. A task that owes the day a
@@ -746,7 +720,8 @@ struct DayView: View {
         completion: daily.map { .daily(id: $0.daily.id) } ?? .workspaceTask(id: task.id),
         isDaily: isDaily, isDailyDone: isDaily && (daily?.isDoneToday ?? false),
         priority: priorities[task.id],
-        cost: costText(for: task, logged: logged[task.id] ?? 0), isBlocked: model.isBlocked(task))
+        cost: DayTaskFacts.cost(estimate: task.estimateSeconds, logged: logged[task.id] ?? 0),
+        isBlocked: model.isBlocked(task))
     }
     if trimmed.isEmpty {
       let listNames = Dictionary(model.lists.map { ($0.id, $0.name) }, uniquingKeysWith: { first, _ in first })
@@ -816,6 +791,8 @@ extension DayView {
       return
     }
     // The panel takes the caret: every key it advertises hangs off its field.
+    keysInList = false
+    router.reset()
     isFieldFocused = true
     selectedID = activeTaskID ?? rows.first?.id
   }
@@ -886,13 +863,7 @@ extension DayView {
   /// whether a task is available; pressing play on a row is an answer to that,
   /// and the block runs for as long as the task's own estimate says.
   private func start(_ task: WorkspaceTask) {
-    guard task.id != activeTaskID else { finish(); return }
-    if model.activeFocusSession != nil {
-      model.addToFocusQueue(task)
-      query = ""
-      return
-    }
-    model.startFocus(on: task, override: true)
+    model.startOrQueueFocus(on: task, from: completionSurface)
     query = ""
   }
 
@@ -947,6 +918,60 @@ extension DayView {
   /// a precision nobody typed in.
   private func duration(_ seconds: Int) -> String {
     DayForecast.hoursAndMinutes(seconds)
+  }
+}
+
+// MARK: - The panel's keys on the cards
+
+extension DayView {
+  /// The panel's keys, once they are on the cards — and the chorded few that
+  /// reach out of the field (`FocusPanelKeyRouter`). Never while the score
+  /// is being asked for, which has keys of its own.
+  private func handlePanelKey(_ event: NSEvent) -> Bool {
+    guard surface.isPanel, model.panelFocusCompletion == nil, let summons, !summons.isChoosingList
+    else { return false }
+    return keysInList
+      ? router.handleListKey(event, model: model, summons: summons, context: listContext)
+      : router.handleFieldKey(event, model: model, summons: summons, context: listContext)
+  }
+
+  private var listContext: FocusPanelListContext {
+    let rows = rows
+    let outline = rows.map(\.outline)
+    return FocusPanelListContext(
+      surface: .today, rowIDs: rows.map(\.id),
+      // As the cards number themselves: a subtask drawn under one is not a
+      // place in the day.
+      numberedIDs: rows.filter { $0.outline.depth == 0 && $0.id != Self.createRowID }.map(\.id),
+      cursorID: selectedID, setCursor: { selectedID = $0 },
+      right: { stepAcross(right: true, in: outline) },
+      left: { stepAcross(right: false, in: outline) },
+      complete: { task in
+        if task.id == activeTaskID { finish() } else { tickOff(task) }
+      },
+      start: start, confirmDeletion: confirmDeletion,
+      toField: {
+        keysInList = false
+        router.reset()
+        isFieldFocused = true
+      },
+      dismiss: { _ = dismissOrClear() }, openInWindow: openInWindow)
+  }
+
+  /// → and ← on a card, as on the window's Today: open a task's subtasks
+  /// and step in, fold them and step out — and from the top of the day, out
+  /// to the lists, where the window goes to the sidebar.
+  private func stepAcross(right: Bool, in outline: [DayOutlineRow]) {
+    guard let id = selectedID else {
+      selectedID = outline.first?.id
+      return
+    }
+    switch right ? DayOutline.right(from: id, in: outline) : DayOutline.left(from: id, in: outline) {
+    case .unfold(let id): WorkspaceMotion.animate { model.setDayTaskUnfolded(id, true) }
+    case .fold(let id): WorkspaceMotion.animate { model.setDayTaskUnfolded(id, false) }
+    case .select(let next): selectedID = next
+    case .leave: if !right { summons?.isChoosingList = true }
+    }
   }
 }
 

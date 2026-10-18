@@ -26,8 +26,8 @@ struct WorkspaceOverlayHost: View {
     // No scrim: the overlay is a tool held over the work, not a modal that
     // asks you to stop looking at it.
     ZStack(alignment: .top) {
-      if let overlay = model.activeOverlay {
-        panel(for: overlay)
+      if let overlay = model.windowOverlay {
+        WorkspaceOverlayContent(overlay: overlay)
           .frame(width: WorkspaceOverlayMetrics.width)
           .themedSurface(theme, fill: theme.raised, radius: theme.panelRadius)
           .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { frame in
@@ -40,11 +40,17 @@ struct WorkspaceOverlayHost: View {
     }
     .animation(
       reduceMotion ? nil : .easeOut(duration: WorkspaceOverlayMetrics.fade),
-      value: model.activeOverlay?.id)
+      value: model.windowOverlay?.id)
   }
+}
 
-  @ViewBuilder
-  private func panel(for overlay: WorkspaceOverlay) -> some View {
+/// What an overlay draws, whichever window it is up in: the main window's
+/// host, or the focus panel's (`FocusPanelView`).
+struct WorkspaceOverlayContent: View {
+  @Environment(WorkspaceViewModel.self) private var model
+  let overlay: WorkspaceOverlay
+
+  var body: some View {
     switch overlay {
     case .commandPalette:
       WorkspaceCommandPalette(overlayID: overlay.id)

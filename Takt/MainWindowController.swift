@@ -181,7 +181,7 @@ final class MainWindowController: NSObject, NSWindowDelegate {
         return event
       }
       self.shortcutShiftTap.keyPressed()
-      if self.workspace.activeOverlay != nil {
+      if self.workspace.windowOverlay != nil {
         self.workspace.desktopShortcutSequence.reset()
         // Nothing an overlay leaves unconsumed reaches the workspace behind
         // it: it goes to the overlay's own field, or nowhere. That includes
@@ -261,7 +261,7 @@ final class MainWindowController: NSObject, NSWindowDelegate {
       matching: [.leftMouseDown, .rightMouseDown, .otherMouseDown]
     ) { [weak self] event in
       guard let self, let window = self.window, event.window === window,
-        window.attachedSheet == nil, self.workspace.activeOverlay != nil,
+        window.attachedSheet == nil, self.workspace.windowOverlay != nil,
         let content = window.contentView else {
         return event
       }

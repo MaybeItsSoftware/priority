@@ -38,14 +38,20 @@ final class FocusPanelController: NSObject, NSWindowDelegate {
   /// What the panel is sized for now, and the height to go back to after.
   private var isCompact = false
   private var expandedHeight: CGFloat?
+  private weak var model: WorkspaceViewModel?
 
   var isVisible: Bool { panel?.isVisible ?? false }
+
+  /// Whether the panel has the keyboard, so an overlay asked for now is
+  /// drawn in it (`WorkspaceViewModel.overlaySurface`).
+  var hasKeyboard: Bool { panel?.isKeyWindow ?? false }
 
   func toggle(model: WorkspaceViewModel) {
     if isVisible { dismiss(.back) } else { show(model: model) }
   }
 
   func show(model: WorkspaceViewModel) {
+    self.model = model
     let panel = makePanelIfNeeded(model: model)
     if !NSApp.isActive { interruptedApp = NSWorkspace.shared.frontmostApplication }
     // Order and take key *before* activating, so the panel is what the app has
@@ -59,6 +65,7 @@ final class FocusPanelController: NSObject, NSWindowDelegate {
     NSRunningApplication.current.activate()
     takeKey()
     summons.showsDay = false
+    summons.isChoosingList = false
     summons.count += 1
     model.reloadNextUp()
   }
@@ -87,6 +94,9 @@ final class FocusPanelController: NSObject, NSWindowDelegate {
   /// does not, because the caller is about to bring Priority's own window up —
   /// restoring the other app first would only put it straight back behind.
   func dismiss(_ destination: FocusPanelDismissal) {
+    // An edit left open in the panel goes with it, rather than lingering as
+    // the overlay the window thinks is up somewhere it cannot see.
+    if let model, model.panelOverlay != nil { model.dismissOverlay() }
     panel?.orderOut(nil)
     if destination == .back, let interruptedApp,
       interruptedApp.processIdentifier != ProcessInfo.processInfo.processIdentifier {
@@ -219,12 +229,41 @@ final class FocusPanelController: NSObject, NSWindowDelegate {
 }
 
 /// Counts summons, so the panel's content can reset itself on each one, and
-/// holds whether a running block is shown as the strip or as the whole day.
+/// holds whether a running block is shown as the strip or as the whole day,
+/// and where the panel is: the day, or one of the lists.
 @Observable
 final class FocusPanelSummons {
   var count = 0
   /// Asked for the day while a block runs. Every summon puts it back.
   var showsDay = false
+  /// The list or nested list the panel is showing, by its destination id
+  /// (`WorkspaceViewModel.quickCaptureDestinations`); nil for Today. Kept
+  /// across summons, as the panel's size and place are.
+  var listID: String?
+  /// The list switcher is up, over whichever place the panel is at.
+  var isChoosingList = false
+
+  /// ⌘T, ⌘P and ⌘{ / ⌘}, in the panel: Today, the switcher, and the place
+  /// before or after this one — Today, then every list in the switcher's
+  /// order.
+  @MainActor func go(_ action: FocusPanelAction, model: WorkspaceViewModel) {
+    switch action {
+    case .goToday: show(listID: nil)
+    case .chooseList: isChoosingList = true
+    case .place(let offset):
+      let places: [String?] = [nil] + model.quickCaptureDestinations.map(\.id)
+      let current = places.firstIndex(of: listID) ?? 0
+      show(listID: places[min(max(current + offset, 0), places.count - 1)])
+    default: break
+    }
+  }
+
+  func show(listID: String?) {
+    self.listID = listID
+    isChoosingList = false
+    // Going somewhere is asking for the panel's content, not the strip.
+    showsDay = true
+  }
 
   /// While a block is on the clock the panel is only the task and its clock:
   /// the day is decided, and a list under the timer is something to read

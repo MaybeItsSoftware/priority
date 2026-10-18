@@ -627,6 +627,14 @@ enum WorkspaceSidebarItem: Identifiable {
   /// The palette, search, the list finder and the rest of what used to be
   /// sheets. One at a time, by construction — see `WorkspaceOverlay.swift`.
   var activeOverlay: WorkspaceOverlay?
+  /// Which window draws `activeOverlay`: the main window, or the focus panel
+  /// when the panel had the keyboard as it was asked for. Decided at each
+  /// presentation, so a quick edit asked for from the panel — and the
+  /// repeat-clash question its save may raise — is drawn there rather than in
+  /// a window behind it.
+  var overlaySurface: WorkspaceOverlaySurface = .window
+  /// Whether the focus panel has the keyboard. Set by the app shell.
+  @ObservationIgnored var focusPanelHasKeyboard: (() -> Bool)?
   @ObservationIgnored var overlayKeyHandler: WorkspaceOverlayKeyHandler?
   /// Where the overlay's card is, in the window content's top-left space.
   /// The window's mouse monitor reads it to tell a click on the card from a

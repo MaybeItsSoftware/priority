@@ -599,6 +599,57 @@ one.
 | `Cmd+Shift+.` / `Cmd+Shift+Return` | Stop the running block / finish it |
 | `Esc` | Clear the field, then minimise to the running block's strip — or, with nothing running, hide the panel |
 | `Cmd+C` / `Cmd+V` | Copy and paste, sent straight to the field — an app with no Dock icon has no Edit menu to route them |
+| `Cmd+P` | Go to a list — see *Lists in the panel* below |
+
+#### Lists in the panel
+
+The panel is not only Today. `Cmd+P` (or the list button in its header) brings
+up **Go to**: Today, then every list and nested list in quick add's rows,
+filtered as you type — `↑`/`↓` choose, `Return` goes, `Esc` goes back.
+`Cmd+T` goes straight to Today and `Cmd+Shift+{` / `Cmd+Shift+}` step to the
+place before or after (Today, then the lists in order). A list shows its
+outline as the window's outline pane would — the same completed and buried
+tasks hidden or shown, the same folds — in the day's row shape, with the
+running block as one line over it (its pause and Done, and a double-click for
+Today). Going there moves nothing in the main window. The panel remembers the
+place across summons; `Cmd+Return` opens the main window on that list and row.
+
+On a list the field filters that list, every level, best match first, and
+`Return` adds what you typed to the list. `Space`, `Tab`, `Cmd+Delete` and
+`Esc` mean what they mean on Today.
+
+#### Quick edits in the panel
+
+`↓` (or `↑`) from an **empty** field puts the keyboard on the cards or rows,
+and from there the window's own keys work on the row under the panel's cursor
+— read through your keymap, so a key you rebind moves in both. With text in
+the field the arrows only choose, so you can keep refining a search.
+
+| Key, on the rows | Action |
+| --- | --- |
+| `↑` / `↓`, `j` / `k`, `Page Up` / `Page Down`, `gg` / `Shift+G` | Move |
+| `→` / `l` | Show the subtasks, then step into them |
+| `←` / `h` | Hide them, step out to the parent — and from the top level, out to **Go to** |
+| `:` then a number, `Return` | Go to that row: Today's numbers, or a list's, shown while you type |
+| `Space` / `x` | Complete (on the running card, Done) |
+| `Tab` / `gf` | Start, or queue behind the running block; on a nested list's row, go into it |
+| `ee` / `F2` | Edit the title |
+| `dd` / `Cmd+D` | Edit the due date |
+| `Alt+S` / `Alt+T` | Edit the start date / the time estimate |
+| `nn`, `tt`, `dr` | Edit the notes, the tags, how it repeats |
+| `td` / `tm` / `cd` | Due today / tomorrow / clear the due date |
+| `1`–`4` / `0` | Set the priority (which moves the task to the top of its list) / clear it |
+| `cc` | Conditions: what the task needs |
+| `Delete` / `Cmd+Delete` | Delete, then `Return` to confirm |
+| `Cmd+Z` / `Cmd+Shift+Z` | Undo / redo |
+| `/` or `Return` | Back to the field, to search or to add |
+| `Esc` | Minimise to the strip, or hide the panel |
+
+The chorded ones — `Cmd+D`, `Alt+S`, `Alt+T`, `F2`, `Cmd+P`, `Cmd+T` — work
+from inside the field too. Every edit is the window's own: the quick-edit card
+and the conditions finder open over the panel, `Return` saves and `Esc`
+cancels, moving a repeating task onto the day it comes round again asks first,
+and each change is one step for `Cmd+Z` here or in the window.
 
 Hiding it hands the keyboard back to the app it interrupted, so summoning it
 mid-sentence and pressing `Esc` puts the caret back where it was. Clicking away

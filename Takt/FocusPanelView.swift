@@ -1,5 +1,6 @@
 import TaktCore
 import TaktWorkspace
+import AppKit
 import SwiftUI
 
 /// The summoned panel: the day, over whatever app you were in.
@@ -29,16 +30,65 @@ struct FocusPanelView: View {
         FocusPanelStrip(
           task: task, session: session, resetToken: summons.count,
           onShowDay: { summons.showsDay = true }, onClose: onClose)
+      } else if summons.isChoosingList && model.panelFocusCompletion == nil {
+        FocusPanelListSwitcher(summons: summons, onClose: onClose)
+      } else if model.panelFocusCompletion == nil, let id = summons.listID,
+        let destination = model.panelDestination(id: id) {
+        // A list, until its score is asked for: that question is Today's,
+        // and gets the panel to itself there.
+        FocusPanelListView(
+          destination: destination, summons: summons, onClose: onClose,
+          onMinimise: hasRunningBlock ? { summons.showsDay = false } : nil)
       } else {
         DayView(
-          surface: .panel, resetToken: summons.count, onClose: onClose,
+          surface: .panel, resetToken: summons.count, summons: summons, onClose: onClose,
           onMinimise: hasRunningBlock ? { summons.showsDay = false } : nil)
       }
     }
+    .overlay(alignment: .top) { overlay }
+    .background(WindowKeyMonitor(handle: overlayKey))
     .environment(model)
     // The outermost shell of its own window, so the shell radius; paper
     // and a hairline rather than a material, like every other surface.
     .themedSurface(theme, fill: theme.paper, radius: theme.shellRadius)
+  }
+}
+
+extension FocusPanelView {
+  /// A quick edit, the repeat-clash question, the conditions finder — the
+  /// window's own overlays, drawn over the panel when the panel asked for
+  /// them (`WorkspaceViewModel.panelOverlay`). A click beside the card puts
+  /// it away, as a click beside one does in the window.
+  @ViewBuilder fileprivate var overlay: some View {
+    if let overlay = model.panelOverlay {
+      ZStack(alignment: .top) {
+        Color.clear
+          .contentShape(Rectangle())
+          .onTapGesture { cancel(overlay) }
+        WorkspaceOverlayContent(overlay: overlay)
+          .themedSurface(theme, fill: theme.raised, radius: theme.panelRadius)
+          .padding(.horizontal, theme.space.md)
+          .padding(.top, theme.space.xl)
+          .id(overlay.id)
+      }
+    }
+  }
+
+  /// Escape cancels, as it does in the window; everything else is offered to
+  /// the overlay, and what it does not use goes on to its field.
+  fileprivate func overlayKey(_ event: NSEvent) -> Bool {
+    guard let overlay = model.panelOverlay, let key = event.workspaceCommandKey else { return false }
+    if key == "escape" { return model.handleOverlayKey(event) }
+    if let handler = model.overlayKeyHandler, handler.overlayID == overlay.id { return handler.handle(key) }
+    return false
+  }
+
+  private func cancel(_ overlay: WorkspaceOverlay) {
+    if case .recurrenceClash(let request) = overlay {
+      model.resolveRecurrenceClash(request, choice: .cancel)
+    } else {
+      model.dismissOverlay()
+    }
   }
 }
 

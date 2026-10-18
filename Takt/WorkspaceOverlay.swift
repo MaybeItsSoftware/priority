@@ -78,6 +78,12 @@ enum WorkspaceOverlay: Identifiable {
   }
 }
 
+/// The window an overlay is drawn in. See `WorkspaceViewModel.overlaySurface`.
+enum WorkspaceOverlaySurface {
+  case window
+  case panel
+}
+
 /// What an overlay does with the keys it owns. Registered by the overlay's own
 /// view, because the selection it moves is the view's state, and keyed by the
 /// overlay's id so a view on its way out cannot answer for its replacement.
@@ -104,8 +110,15 @@ extension WorkspaceViewModel {
       dismissOverlay()
       return
     }
+    overlaySurface = focusPanelHasKeyboard?() == true ? .panel : .window
     activeOverlay = overlay
   }
+
+  /// The overlay up in the main window, if the one up is drawn there.
+  var windowOverlay: WorkspaceOverlay? { overlaySurface == .window ? activeOverlay : nil }
+
+  /// The overlay up in the focus panel, if the one up is drawn there.
+  var panelOverlay: WorkspaceOverlay? { overlaySurface == .panel ? activeOverlay : nil }
 
   /// - Parameter restoringFocus: whether to hand the keyboard back to the
   ///   region that had it. An overlay that goes somewhere on its way out — a
@@ -115,7 +128,9 @@ extension WorkspaceViewModel {
     activeOverlay = nil
     overlayKeyHandler = nil
     overlayPanelFrame = nil
-    if restoringFocus { requestKeyboardFocus(keyboardFocusArea) }
+    // The panel puts its own keyboard back; the window's regions are not
+    // where it went.
+    if restoringFocus && overlaySurface == .window { requestKeyboardFocus(keyboardFocusArea) }
   }
 
   /// The window's key monitor asks this first whenever an overlay is up.

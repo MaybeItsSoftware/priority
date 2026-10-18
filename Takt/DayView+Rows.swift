@@ -135,6 +135,19 @@ struct DayTaskFacts: Equatable {
   let cost: String?
   /// Open and still waiting on an open task: drawn greyed.
   var isBlocked = false
+
+  /// "12m / 25m", "12m" or "25m"; nil when the task has neither. Hours and
+  /// minutes, never seconds: an estimate measured to the second is a
+  /// precision nobody typed in.
+  static func cost(estimate: Int?, logged: Int) -> String? {
+    switch (logged > 0, estimate) {
+    case (true, let estimate?):
+      return "\(DayForecast.hoursAndMinutes(logged)) / \(DayForecast.hoursAndMinutes(estimate))"
+    case (true, nil): return DayForecast.hoursAndMinutes(logged)
+    case (false, let estimate?): return DayForecast.hoursAndMinutes(estimate)
+    case (false, nil): return nil
+    }
+  }
 }
 
 /// An ordinary row: what it is, what it should cost, what it has cost.
@@ -151,6 +164,9 @@ struct DayTaskRow: View, Equatable {
   let onHover: (Bool) -> Void
   let onTap: () -> Void
   let onTick: () -> Void
+  /// The disclosure's action. Today's fold by default; a list's outline in
+  /// the focus panel folds the outline's branch instead.
+  var onFold: (() -> Void)?
 
   nonisolated static func == (lhs: DayTaskRow, rhs: DayTaskRow) -> Bool {
     lhs.facts == rhs.facts && lhs.listName == rhs.listName && lhs.detail == rhs.detail
@@ -260,7 +276,9 @@ struct DayTaskRow: View, Equatable {
     // subtasks is no wider than one without.
     .overlay(alignment: .leading) {
       if let isFolded = chrome.fold {
-        WorkspaceFoldButton(isFolded: isFolded, title: task.title) { model.toggleDayFold(task.id) }
+        WorkspaceFoldButton(isFolded: isFolded, title: task.title) {
+          if let onFold { onFold() } else { model.toggleDayFold(task.id) }
+        }
           .offset(x: -WorkspaceFoldButton.width)
       }
     }

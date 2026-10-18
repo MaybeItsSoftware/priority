@@ -134,6 +134,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
       }
     }
     workspace.hasOrdinaryWindow = { [weak self] in self?.mainWindowController?.isVisible ?? false }
+    workspace.focusPanelHasKeyboard = { [weak self] in self?.focusPanelController.hasKeyboard ?? false }
     MenuBarWorkspace.shared.workspace = workspace
     // Finishing something is finishing something, whichever surface it
     // happened on. Before this the flourish only ever played on the focus

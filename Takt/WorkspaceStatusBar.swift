@@ -36,7 +36,7 @@ struct WorkspaceStatusBar: View {
       // other way in assumes you already know a key to reach.
       WorkspacePaneIconButton(
         "keyboard", title: "Keyboard shortcuts", command: .goKeyboardReference,
-        isOn: model.activeOverlay?.id == WorkspaceOverlay.keyboardReference.id
+        isOn: model.windowOverlay?.id == WorkspaceOverlay.keyboardReference.id
       ) { model.presentOverlay(.keyboardReference) }
       rightDockToggles
     }

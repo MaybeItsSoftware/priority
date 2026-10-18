@@ -82,7 +82,23 @@ extension WorkspaceViewModel {
   /// conditions it needs — as one undo step.
   func submitQuickCapture(named title: String, slots: TaskEntryDraft = TaskEntryDraft()) {
     let normalized = title.trimmingCharacters(in: .whitespacesAndNewlines)
-    guard !normalized.isEmpty, let store, let destination = quickCaptureDestination else { return }
+    guard !normalized.isEmpty, let destination = quickCaptureDestination else { return }
+    let task = createTask(capturing: normalized, in: destination, slots: slots)
+    guard let task else { return }
+    selectedTaskID = destination.listID == selectedListID ? task.id : nil
+    cancelQuickCapture()
+  }
+
+  /// Files a task at the top level of a list or nested list — under the
+  /// list's wrapper root where an import gave it one — reading the title's
+  /// trailing words as the add field does. One undo step. Quick add's, and
+  /// the focus panel's when it is showing a list.
+  @discardableResult
+  func createTask(
+    capturing title: String, in destination: QuickCaptureDestination, slots: TaskEntryDraft = TaskEntryDraft()
+  ) -> WorkspaceTask? {
+    guard let store else { return nil }
+    var created: WorkspaceTask?
     perform {
       let parentID: String?
       if let nestedParent = destination.parentTaskID {
@@ -92,13 +108,12 @@ extension WorkspaceViewModel {
       } else {
         parentID = nil
       }
-      let task = try store.createTask(
-        capturing: normalized, listId: destination.listID, parentTaskId: parentID,
+      created = try store.createTask(
+        capturing: title, listId: destination.listID, parentTaskId: parentID,
         dueAt: slots.dueDate, estimateSeconds: slots.estimateSeconds,
         requirementGroups: slots.requirementGroups)
-      selectedTaskID = destination.listID == selectedListID ? task.id : nil
-      cancelQuickCapture()
       reloadOutline()
     }
+    return created
   }
 }
