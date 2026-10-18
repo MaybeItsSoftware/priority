@@ -1,4 +1,5 @@
 import Foundation
+import TaktCore
 import TaktWorkspace
 import XCTest
 
@@ -85,5 +86,25 @@ final class TaskOutlineFoldingTests: XCTestCase {
     XCTAssertEqual(
       TaskOutlineFolding.descendantIDs(of: id("project"), in: tree), ["step", "detail", "other"].map(id))
     XCTAssertEqual(TaskOutlineFolding.descendantIDs(of: id("solo"), in: tree), [])
+  }
+  /// A list's outline walks as Today's tree does: → opens a folded branch,
+  /// then steps in; ← folds it, then steps out; at the top, leaves.
+  func testTheOutlineWalksByTodaysRule() {
+    let parents = TaskOutlineFolding.parentIDs(tree)
+    let shut = folded("step")
+    let rows = TaskOutlineFolding.dayOutlineRows(
+      TaskOutlineFolding.visible(tree, folded: shut), parents: parents, folded: shut)
+    XCTAssertEqual(rows.map(\.id), ["project", "step", "other", "solo"].map(id))
+    XCTAssertEqual(rows.map(\.depth), [0, 1, 1, 0])
+    XCTAssertEqual(rows.map(\.parentID), [nil, id("project"), id("project"), nil])
+    XCTAssertEqual(rows.map(\.hasChildren), [true, true, false, false])
+    XCTAssertEqual(rows.map(\.isUnfolded), [true, false, false, false])
+
+    XCTAssertEqual(DayOutline.right(from: id("project"), in: rows), .select(id("step")))
+    XCTAssertEqual(DayOutline.right(from: id("step"), in: rows), .unfold(id("step")))
+    XCTAssertEqual(DayOutline.right(from: id("solo"), in: rows), .leave)
+    XCTAssertEqual(DayOutline.left(from: id("other"), in: rows), .select(id("project")))
+    XCTAssertEqual(DayOutline.left(from: id("project"), in: rows), .fold(id("project")))
+    XCTAssertEqual(DayOutline.left(from: id("solo"), in: rows), .leave)
   }
 }

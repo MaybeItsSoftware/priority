@@ -1,4 +1,5 @@
 import Foundation
+import TaktCore
 
 /// Folding a depth-first outline, the way Checkvist folds a branch: a folded
 /// task stays on screen and everything beneath it goes, so a subtree can be
@@ -55,6 +56,29 @@ public enum TaskOutlineFolding {
       items[index + 1].depth > items[index].depth
     else { return nil }
     return items[index + 1].id
+  }
+
+  /// The rows as drawn, in the shape Today's tree is walked in, so ← and →
+  /// mean the same on a list's outline as on the day — open a branch, step
+  /// in, fold it, step out — by the one rule (`DayOutline.right`/`left`).
+  ///
+  /// - Parameters:
+  ///   - visible: the rows drawn, folds already applied.
+  ///   - parents: the rows with something beneath them, folded or not.
+  ///   - folded: the rows whose branch is put away.
+  public static func dayOutlineRows(
+    _ visible: [TaskOutlineItem], parents: Set<String>, folded: Set<String>
+  ) -> [DayOutlineRow] {
+    var ancestors: [TaskOutlineItem] = []
+    return visible.map { item in
+      while let last = ancestors.last, last.depth >= item.depth { ancestors.removeLast() }
+      let parentID = ancestors.last?.id
+      ancestors.append(item)
+      let hasChildren = parents.contains(item.id)
+      return DayOutlineRow(
+        id: item.id, depth: item.depth, parentID: parentID, hasChildren: hasChildren,
+        isUnfolded: hasChildren && !folded.contains(item.id))
+    }
   }
 
   /// Every row beneath a row, at any depth.
