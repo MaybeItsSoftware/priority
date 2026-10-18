@@ -222,7 +222,8 @@ private fun ListHeaderRow(header: OutlineEntry.Header, onOpen: () -> Unit) {
 @Composable
 private fun BlockedLabelRow(label: OutlineEntry.BlockedLabel, modifier: Modifier = Modifier) {
     BlockedDivider(
-        modifier
+        isBuried = label.isBuried,
+        modifier = modifier
             .background(TaktTheme.colors.paper)
             .padding(
                 start = Metrics.xs + Metrics.indent * label.depth + 32.dp + Metrics.touchTarget,
@@ -269,7 +270,7 @@ private fun OutlineRowView(
                     .combinedClickable(onClick = onTap, onLongClick = { menu = true }, onLongClickLabel = "Task actions")
                     // Blocked, the whole row — mark, title and markers — steps
                     // back, not only its title; the selection behind it keeps its weight.
-                    .alpha(if (row.isBlocked) TaktTheme.DISABLED_ALPHA else 1f)
+                    .alpha(if (row.isBlocked || row.isBuried) TaktTheme.DISABLED_ALPHA else 1f)
                     .padding(start = Metrics.xs + Metrics.indent * row.depth, end = Metrics.xs),
                 verticalAlignment = Alignment.CenterVertically,
             ) {

@@ -40,6 +40,50 @@ pub fn blocked_section_labels(groups: Vec<u32>, blocked: Vec<bool>) -> Vec<u32> 
     labelled
 }
 
+/// Where the section labels go when siblings are drawn in three sections:
+/// open work, then blocked, then buried (`buried`).
+#[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
+pub struct SiblingSectionLabels {
+    /// The rows to draw the "Blocked" label above.
+    pub blocked: Vec<u32>,
+    /// The rows to draw the "Buried" label above.
+    pub buried: Vec<u32>,
+}
+
+/// [`blocked_section_labels`] for siblings that may end with buried rows
+/// after their blocked ones. In each group the "Buried" label heads the run
+/// of buried rows the group ends with, and the "Blocked" label heads the run
+/// of blocked rows the rest of it ends with. A row that is both is buried.
+///
+/// `groups`, `blocked` and `buried` are per row, in drawing order, as for
+/// [`blocked_section_labels`]. The answer is row indices, ascending.
+#[uniffi::export]
+pub fn sibling_section_labels(
+    groups: Vec<u32>,
+    blocked: Vec<bool>,
+    buried: Vec<bool>,
+) -> SiblingSectionLabels {
+    let is_buried = |index: usize| buried.get(index).copied().unwrap_or(false);
+    // The blocked label is placed among the rows that are not buried, then
+    // mapped back to the rows' own indices.
+    let kept: Vec<usize> = (0..groups.len())
+        .filter(|&index| !is_buried(index))
+        .collect();
+    let blocked_labels = blocked_section_labels(
+        kept.iter().map(|&index| groups[index]).collect(),
+        kept.iter()
+            .map(|&index| blocked.get(index).copied().unwrap_or(false))
+            .collect(),
+    )
+    .into_iter()
+    .map(|label| kept[label as usize] as u32)
+    .collect();
+    SiblingSectionLabels {
+        blocked: blocked_labels,
+        buried: blocked_section_labels(groups.clone(), (0..groups.len()).map(is_buried).collect()),
+    }
+}
+
 /// The planned order with `task_id` moved `offset` places, clamped at the
 /// ends; nothing when the task is not in the order or cannot move that way,
 /// so a caller has nothing to write.

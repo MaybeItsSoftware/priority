@@ -943,6 +943,8 @@ internal object IntegrityCheckingUniffiLib {
     ): Int
     external fun uniffi_takt_core_checksum_func_outline_drop_plan(
     ): Int
+    external fun uniffi_takt_core_checksum_func_sibling_section_labels(
+    ): Int
     external fun uniffi_takt_core_checksum_func_vim_find(
     ): Int
     external fun uniffi_takt_core_checksum_func_sidebar_list_ids_in_folder(
@@ -1222,6 +1224,8 @@ internal object IntegrityCheckingUniffiLib {
     external fun uniffi_takt_core_checksum_method_coreworkspace_blocked_task_ids(
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_bootstrap(
+    ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_buried_task_ids(
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_checkpoint_focus_session(
     ): Int
@@ -1700,6 +1704,8 @@ internal object UniffiLib {
     external fun uniffi_takt_core_fn_method_coreworkspace_blocked_task_ids(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_method_coreworkspace_bootstrap(`ptr`: Long,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_method_coreworkspace_buried_task_ids(`ptr`: Long,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_method_coreworkspace_checkpoint_focus_session(`ptr`: Long,`id`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
@@ -2222,6 +2228,8 @@ internal object UniffiLib {
     external fun uniffi_takt_core_fn_func_focus_deferral_date(`deferral`: RustBuffer.ByValue,`nowMs`: Long,`zone`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): Long
     external fun uniffi_takt_core_fn_func_outline_drop_plan(`rows`: RustBuffer.ByValue,`source`: Int,`destination`: Int,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_sibling_section_labels(`groups`: RustBuffer.ByValue,`blocked`: RustBuffer.ByValue,`buried`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_func_vim_find(`titles`: RustBuffer.ByValue,`current`: RustBuffer.ByValue,`character`: RustBuffer.ByValue,`forward`: Byte,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
@@ -2844,6 +2852,9 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
     if ((lib.uniffi_takt_core_checksum_func_outline_drop_plan() and 0xFFFF) != 6755) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if ((lib.uniffi_takt_core_checksum_func_sibling_section_labels() and 0xFFFF) != 9235) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if ((lib.uniffi_takt_core_checksum_func_vim_find() and 0xFFFF) != 17940) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
@@ -3262,6 +3273,9 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_bootstrap() and 0xFFFF) != 4874) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_buried_task_ids() and 0xFFFF) != 38422) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_checkpoint_focus_session() and 0xFFFF) != 13264) {
@@ -5022,6 +5036,12 @@ public interface CoreWorkspaceInterface {
      * returns its id.
      */
     fun `bootstrap`(`nowMs`: kotlin.Long): kotlin.String
+    
+    /**
+     * Every open task whose start is still to come at `now_ms`: what a
+     * client draws greyed in the buried section (`buried`).
+     */
+    fun `buriedTaskIds`(`nowMs`: kotlin.Long): List<kotlin.String>
     
     /**
      * Banks a running block's time.
@@ -7255,6 +7275,25 @@ open class CoreWorkspace: Disposable, AutoCloseable, CoreWorkspaceInterface
     callWithHandle {
     uniffiRustCallWithError(CoreException) { _status ->
     UniffiLib.uniffi_takt_core_fn_method_coreworkspace_bootstrap(
+        it,
+        
+        FfiConverterLong.lower(`nowMs`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * Every open task whose start is still to come at `now_ms`: what a
+     * client draws greyed in the buried section (`buried`).
+     */
+    @Throws(CoreException::class)override fun `buriedTaskIds`(`nowMs`: kotlin.Long): List<kotlin.String> {
+            return FfiConverterSequenceString.lift(
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_buried_task_ids(
         it,
         
         FfiConverterLong.lower(`nowMs`),_status)
@@ -18653,6 +18692,54 @@ public object FfiConverterTypeSessionRow: FfiConverterRustBuffer<SessionRow> {
             FfiConverterOptionalLong.write(value.`accumulatedSeconds`, buf)
             FfiConverterOptionalLong.write(value.`pausedAtMs`, buf)
             FfiConverterOptionalLong.write(value.`checkpointAtMs`, buf)
+    }
+}
+
+
+
+/**
+ * Where the section labels go when siblings are drawn in three sections:
+ * open work, then blocked, then buried (`buried`).
+ */
+data class SiblingSectionLabels (
+    /**
+     * The rows to draw the "Blocked" label above.
+     */
+    var `blocked`: List<kotlin.UInt>
+    , 
+    /**
+     * The rows to draw the "Buried" label above.
+     */
+    var `buried`: List<kotlin.UInt>
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeSiblingSectionLabels: FfiConverterRustBuffer<SiblingSectionLabels> {
+    override fun read(buf: ByteBuffer): SiblingSectionLabels {
+        return SiblingSectionLabels(
+            FfiConverterSequenceUInt.read(buf),
+            FfiConverterSequenceUInt.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: SiblingSectionLabels) = (
+            FfiConverterSequenceUInt.allocationSize(value.`blocked`) +
+            FfiConverterSequenceUInt.allocationSize(value.`buried`)
+    )
+
+    override fun write(value: SiblingSectionLabels, buf: ByteBuffer) {
+            FfiConverterSequenceUInt.write(value.`blocked`, buf)
+            FfiConverterSequenceUInt.write(value.`buried`, buf)
     }
 }
 
@@ -31858,6 +31945,28 @@ public object FfiConverterMapStringTypeSyncValue: FfiConverterRustBuffer<Map<kot
         FfiConverterSequenceTypeOutlineDropRow.lower(`rows`),
         FfiConverterUInt.lower(`source`),
         FfiConverterUInt.lower(`destination`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * [`blocked_section_labels`] for siblings that may end with buried rows
+         * after their blocked ones. In each group the "Buried" label heads the run
+         * of buried rows the group ends with, and the "Blocked" label heads the run
+         * of blocked rows the rest of it ends with. A row that is both is buried.
+         *
+         * `groups`, `blocked` and `buried` are per row, in drawing order, as for
+         * [`blocked_section_labels`]. The answer is row indices, ascending.
+         */ fun `siblingSectionLabels`(`groups`: List<kotlin.UInt>, `blocked`: List<kotlin.Boolean>, `buried`: List<kotlin.Boolean>): SiblingSectionLabels {
+            return FfiConverterTypeSiblingSectionLabels.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_sibling_section_labels(
+    
+        
+        FfiConverterSequenceUInt.lower(`groups`),
+        FfiConverterSequenceBoolean.lower(`blocked`),
+        FfiConverterSequenceBoolean.lower(`buried`),_status)
 }
     )
     }

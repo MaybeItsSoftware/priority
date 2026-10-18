@@ -1,6 +1,6 @@
 import TaktRustCore
 
-/// Where the "Blocked" label goes in a list of tasks.
+/// Where the "Blocked" label goes in a list of tasks, and the "Buried" one.
 ///
 /// Blocked tasks sink below their open siblings (the core's ordering), so
 /// each group of siblings — an outline parent's children, a board column's
@@ -39,5 +39,31 @@ public enum BlockedSection {
     }
     let labelled = blockedSectionLabels(groups: groups, blocked: items.map { blocked.contains($0.id) })
     return Set(labelled.map { items[Int($0)].id })
+  }
+
+  /// The ids to draw the "Blocked" and "Buried" labels above, where siblings
+  /// are drawn open, then blocked, then buried (the core's ordering): the
+  /// buried label heads the run of buried tasks a group ends with, the
+  /// blocked label the run of blocked ones before it. A task that is both is
+  /// buried. The rule is the core's `sibling_section_labels`.
+  public static func labelledIDs<Group: Hashable>(
+    _ items: [(id: String, group: Group)], blocked: Set<String>, buried: Set<String>
+  ) -> (blocked: Set<String>, buried: Set<String>) {
+    guard !buried.isEmpty else { return (labelledIDs(items, blocked: blocked), []) }
+    var numbers: [Group: UInt32] = [:]
+    var groups: [UInt32] = []
+    groups.reserveCapacity(items.count)
+    for item in items {
+      if let number = numbers[item.group] {
+        groups.append(number)
+      } else {
+        let number = UInt32(numbers.count)
+        numbers[item.group] = number
+        groups.append(number)
+      }
+    }
+    let labels = siblingSectionLabels(
+      groups: groups, blocked: items.map { blocked.contains($0.id) }, buried: items.map { buried.contains($0.id) })
+    return (Set(labels.blocked.map { items[Int($0)].id }), Set(labels.buried.map { items[Int($0)].id }))
   }
 }

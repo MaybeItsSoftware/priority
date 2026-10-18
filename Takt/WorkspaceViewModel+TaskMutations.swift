@@ -101,7 +101,10 @@ extension WorkspaceViewModel {
       return
     }
     let blocked = Set(drawn.filter { isBlocked($0) }.map(\.id))
-    guard let step = WorkspaceBoardShape.siblingStep(of: task.id, by: offset, drawn: drawn, blocked: blocked)
+    let buried = Set(drawn.filter { isBuried($0) }.map(\.id))
+    guard
+      let step = WorkspaceBoardShape.siblingStep(
+        of: task.id, by: offset, drawn: drawn, blocked: blocked, buried: buried)
     else { return }
     perform {
       try store.moveTaskBefore(id: step.moving, targetId: step.before)

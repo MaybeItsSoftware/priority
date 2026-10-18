@@ -13,6 +13,18 @@ final class BlockedSectionTests: XCTestCase {
     XCTAssertEqual(labelled, ["a2", "b"])
   }
 
+  /// Siblings drawn open, then blocked, then buried: each run is labelled
+  /// apart, and a task both blocked and buried is buried.
+  func testBlockedAndBuriedRunsAreLabelledApart() {
+    let items: [(id: String, group: String)] = [
+      ("a", "root"), ("a1", "a"), ("a2", "a"),
+      ("b", "root"), ("c", "root"), ("c1", "c"), ("d", "root"),
+    ]
+    let labels = BlockedSection.labelledIDs(items, blocked: ["b", "d"], buried: ["a2", "c", "d"])
+    XCTAssertEqual(labels.blocked, ["b"])
+    XCTAssertEqual(labels.buried, ["a2", "c"])
+  }
+
   func testNothingBlockedNoLabel() {
     XCTAssertTrue(BlockedSection.labelledIDs([(id: "a", group: 0), (id: "b", group: 0)], blocked: []).isEmpty)
   }

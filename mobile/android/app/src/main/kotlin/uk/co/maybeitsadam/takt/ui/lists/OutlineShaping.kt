@@ -54,6 +54,13 @@ data class OutlineRow(
      * unblocked siblings (the core's order), under a "Blocked" label.
      */
     val isBlocked: Boolean = false,
+    /**
+     * Open with its start still to come: the row fades too, below its blocked
+     * siblings (the core's order), under a "Buried" label.
+     */
+    val isBuried: Boolean = false,
+    /** While buried, when it starts: `starts Mon`. */
+    val starts: String? = null,
 )
 
 /** What the outline's lazy column draws: task rows and, in Everything, a header per list. */
@@ -80,8 +87,8 @@ sealed interface OutlineEntry {
      * steps onto it.
      */
     @Immutable
-    data class BlockedLabel(val beforeId: String, val depth: Int) : OutlineEntry {
-        override val key = "blocked:$beforeId"
+    data class BlockedLabel(val beforeId: String, val depth: Int, val isBuried: Boolean = false) : OutlineEntry {
+        override val key = "${if (isBuried) "buried" else "blocked"}:$beforeId"
         override val contentType = "blocked"
     }
 }
@@ -157,9 +164,11 @@ object OutlineShaping {
         zone: ZoneId,
         today: LocalDate,
         blockedIds: Set<String> = emptySet(),
+        buriedIds: Set<String> = emptySet(),
     ): OutlineRow = rowFor(
         item.task, item.depth, decorations[item.id], item.id in dailyIds, item.id in parents, item.id in folded, zone, today,
         isBlocked = item.id in blockedIds,
+        isBuried = item.id in buriedIds,
     )
 
     fun rowFor(
@@ -172,6 +181,7 @@ object OutlineShaping {
         zone: ZoneId,
         today: LocalDate,
         isBlocked: Boolean = false,
+        isBuried: Boolean = false,
     ): OutlineRow = OutlineRow(
         id = task.id,
         listId = task.listId,
@@ -193,6 +203,12 @@ object OutlineShaping {
         followUp = decoration?.takeIf { it.kanbanColumn == WaitingFollowUp.WAITING_COLUMN_ID && task.status == TaskStatus.OPEN }
             ?.followUpAt?.let { WaitingFollowUp.label(it, today, zone) },
         isBlocked = isBlocked && task.status == TaskStatus.OPEN,
+        isBuried = isBuried && task.status == TaskStatus.OPEN,
+        starts = decoration?.startAt?.takeIf { isBuried && task.status == TaskStatus.OPEN }
+            ?.let { start ->
+                val day = Format.day(start.atZone(zone).toLocalDate(), today)
+                "starts ${if (day == "Today" || day == "Tomorrow") day.lowercase() else day}"
+            },
     )
 
     /**
@@ -226,16 +242,30 @@ object OutlineShaping {
                 )
             }
             val drawn = TaskOutlineFolding.visible(items, folded).map {
-                row(it, data.decorations, data.dailyTaskIds, parents, folded, zone, today, data.blockedTaskIds)
+                row(it, data.decorations, data.dailyTaskIds, parents, folded, zone, today, data.blockedTaskIds, data.buriedTaskIds)
             }
-            val labelled = blockedLabels(drawn)
+            val (blockedLabelled, buriedLabelled) = sectionLabels(drawn)
             for (row in drawn) {
-                if (row.id in labelled) entries += OutlineEntry.BlockedLabel(row.id, row.depth)
+                if (row.id in blockedLabelled) entries += OutlineEntry.BlockedLabel(row.id, row.depth)
+                if (row.id in buriedLabelled) entries += OutlineEntry.BlockedLabel(row.id, row.depth, isBuried = true)
                 rows += row
                 entries += OutlineEntry.Task(row)
             }
         }
         return OutlineShape(entries.toImmutableList(), rows.toImmutableList(), allParents, isLoaded = true)
+    }
+
+    /**
+     * The rows to draw the "Blocked" and "Buried" labels above: the first of
+     * each sibling group's blocked run, and of its buried tail.
+     */
+    fun sectionLabels(rows: List<OutlineRow>): Pair<Set<String>, Set<String>> {
+        if (rows.none { it.isBuried }) return blockedLabels(rows) to emptySet()
+        return BlockedSection.labelledIds(
+            rows.map { it.id to "${it.listId}/${it.parentId.orEmpty()}" },
+            rows.filter { it.isBlocked }.mapTo(HashSet()) { it.id },
+            rows.filter { it.isBuried }.mapTo(HashSet()) { it.id },
+        )
     }
 
     /** The rows to draw the "Blocked" label above: the first of each sibling group's blocked tail. */

@@ -330,11 +330,13 @@ pub fn place_task_at(
 /// Moves a task `offset` places among its siblings, stopping at either end.
 /// Replaces `WorkspaceStore.moveTaskWithinSiblings` and its Kotlin copy.
 ///
-/// It counts only the siblings drawn in the same group as the task: an open
-/// task steps past open ones, a blocked task past blocked ones. Blocked tasks
-/// always sort last, so stepping an open task "down" past one of them moved
-/// it nowhere you could see, and each such press then had to be undone with
-/// another on the way back up.
+/// It counts only the siblings drawn in the same section as the task: an open
+/// task steps past open ones, a blocked task past blocked ones, a buried task
+/// past buried ones (`buried`). Blocked and buried tasks always sort last, so
+/// stepping an open task "down" past one of them moved it nowhere you could
+/// see, and each such press then had to be undone with another on the way
+/// back up. A buried task stepped past keeps its own place among the rest, so
+/// it comes back there when it starts.
 pub fn move_task_within_siblings(
     transaction: &Transaction,
     id: &str,
@@ -346,14 +348,12 @@ pub fn move_task_within_siblings(
     if !siblings.iter().any(|s| s == id) {
         return Ok(());
     }
-    let blocked: std::collections::HashSet<String> =
-        crate::dependencies::blocked_task_ids(transaction)?
-            .into_iter()
-            .collect();
-    let in_group = blocked.contains(id);
-    let peers: Vec<&String> = siblings
+    let (blocked, buried) = sections(transaction, now_ms)?;
+    let section = crate::buried::sibling_section(id, &blocked, &buried);
+    let drawn = drawn_siblings(transaction, &list_id, parent.as_deref(), &blocked, &buried)?;
+    let peers: Vec<&String> = drawn
         .iter()
-        .filter(|s| blocked.contains(s.as_str()) == in_group)
+        .filter(|s| crate::buried::sibling_section(s, &blocked, &buried) == section)
         .collect();
     let Some(position) = peers.iter().position(|s| *s == id) else {
         return Ok(());
@@ -443,15 +443,18 @@ pub fn move_task_before(
 }
 
 /// Makes a task the last child of the sibling above it, and closes the gap
-/// it leaves. The first sibling has nothing to go under. Replaces
-/// `WorkspaceStore.indentTask` and its Kotlin copy.
+/// it leaves. The first sibling has nothing to go under. "Above" is as drawn,
+/// buried tasks last, so a task never goes under a buried one it was not
+/// beside. Replaces `WorkspaceStore.indentTask` and its Kotlin copy.
 pub fn indent_task(transaction: &Transaction, id: &str, now_ms: i64) -> Result<(), CoreError> {
     let (list_id, parent) = task_place(transaction, id)?;
     let siblings = task_siblings(transaction, &list_id, parent.as_deref())?;
-    let Some(index) = siblings.iter().position(|s| s == id).filter(|&i| i > 0) else {
+    let (blocked, buried) = sections(transaction, now_ms)?;
+    let drawn = drawn_siblings(transaction, &list_id, parent.as_deref(), &blocked, &buried)?;
+    let Some(index) = drawn.iter().position(|s| s == id).filter(|&i| i > 0) else {
         return Ok(());
     };
-    let new_parent = siblings[index - 1].clone();
+    let new_parent = drawn[index - 1].clone();
     let sort_order = next_task_order(transaction, &list_id, Some(&new_parent))?;
     transaction.execute(
         "UPDATE tasks SET parentTaskId = ?1, sortOrder = ?2, updatedAt = ?3 WHERE id = ?4",
@@ -651,6 +654,44 @@ fn task_place(transaction: &Transaction, id: &str) -> Result<(String, Option<Str
         .ok_or_else(|| CoreError::MissingTask { id: id.to_string() })
 }
 
+/// The blocked tasks and the tasks buried at `now_ms`, for the sections
+/// siblings are drawn in.
+#[allow(clippy::type_complexity)]
+fn sections(
+    transaction: &Transaction,
+    now_ms: i64,
+) -> Result<(HashSet<String>, HashSet<String>), CoreError> {
+    Ok((
+        crate::dependencies::blocked_task_ids(transaction)?
+            .into_iter()
+            .collect(),
+        crate::buried::buried_task_ids(transaction, now_ms)?
+            .into_iter()
+            .collect(),
+    ))
+}
+
+/// A task's siblings as they are drawn at the moment `blocked` and `buried`
+/// were read: open work, then blocked, then buried, each in its own order —
+/// the reads' `buried::section_order`, with the moment the caller's.
+fn drawn_siblings(
+    transaction: &Transaction,
+    list_id: &str,
+    parent: Option<&str>,
+    blocked: &HashSet<String>,
+    buried: &HashSet<String>,
+) -> Result<Vec<String>, CoreError> {
+    let mut statement = transaction.prepare(
+        "SELECT id FROM tasks WHERE listId = ?1 AND parentTaskId IS ?2 ORDER BY sortOrder, createdAt, id",
+    )?;
+    let mut ids: Vec<String> = statement
+        .query_map(params![list_id, parent], |row| row.get(0))?
+        .collect::<Result<_, _>>()?;
+    // Stable: each section keeps the order the numbers give it.
+    ids.sort_by_key(|id| crate::buried::sibling_section(id, blocked, buried));
+    Ok(ids)
+}
+
 /// A task's siblings in order. The id breaks a tie in position and creation
 /// time, so every client sees the same order.
 fn task_siblings(
@@ -659,7 +700,10 @@ fn task_siblings(
     parent: Option<&str>,
 ) -> Result<Vec<String>, CoreError> {
     // The order the siblings are drawn in, blocked ones last, so a reorder
-    // moves a task past the row the user sees beside it.
+    // moves a task past the row the user sees beside it. Buried ones are left
+    // where their numbers put them: renumbering them last would keep them at
+    // the bottom after they start. The moves that read a position as drawn
+    // (`move_task_within_siblings`, `indent_task`) set them apart themselves.
     let blocked = crate::dependencies::blocked_last(transaction)?;
     let mut statement = transaction.prepare(&format!(
         "SELECT id FROM tasks WHERE listId = ?1 AND parentTaskId IS ?2 ORDER BY {blocked}, sortOrder, createdAt, id"

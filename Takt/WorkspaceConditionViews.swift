@@ -290,10 +290,17 @@ struct WorkspaceTaskPlanningBadges: View {
       if let due = planning?.dueDate {
         Label("Due \(due)", systemImage: "calendar")
       }
-      if let start = planning?.startAt {
-        // In the warning colour while it holds the task back.
-        Label("Start \(start.formatted(date: .abbreviated, time: .shortened))", systemImage: "clock")
-          .foregroundStyle(start > .now ? theme.warning : theme.muted)
+      // A buried task's start is the scope's read's, so it shows even where
+      // the planning has not been read yet.
+      if let start = planning?.startAt ?? model.buriedStarts[task.id] {
+        if start > .now {
+          // In the warning colour while it holds the task back.
+          Label(Self.startsText(start), systemImage: "clock")
+            .foregroundStyle(theme.warning)
+            .help("Starts \(start.formatted(date: .abbreviated, time: .shortened))")
+        } else {
+          Label("Start \(start.formatted(date: .abbreviated, time: .shortened))", systemImage: "clock")
+        }
       }
       if let groups = planning?.requirementGroups, !groups.isEmpty {
         WorkspaceRequirementTags(groups: groups)
@@ -313,6 +320,22 @@ struct WorkspaceTaskPlanningBadges: View {
         }
       }
     }.font(theme.captionFont).foregroundStyle(theme.muted).expandsWhenSelected(isExpanded, lineLimit: 2)
+  }
+}
+
+extension WorkspaceTaskPlanningBadges {
+  /// "starts 14:00" today, "starts Mon" within the week, "starts 3 Nov"
+  /// beyond it: a buried task's row says when it comes back.
+  static func startsText(_ start: Date, now: Date = .now, calendar: Calendar = .current) -> String {
+    if calendar.isDate(start, inSameDayAs: now) {
+      return "starts \(start.formatted(date: .omitted, time: .shortened))"
+    }
+    let days = calendar.dateComponents(
+      [.day], from: calendar.startOfDay(for: now), to: calendar.startOfDay(for: start)
+    ).day ?? 0
+    if days == 1 { return "starts tomorrow" }
+    if days < 7 { return "starts \(start.formatted(.dateTime.weekday(.abbreviated)))" }
+    return "starts \(start.formatted(.dateTime.day().month(.abbreviated)))"
   }
 }
 

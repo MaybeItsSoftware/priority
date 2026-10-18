@@ -42,6 +42,10 @@ extension WorkspaceViewModel {
       if outline != items { outline = items }
       // The `defer` above schedules the expiry once for both.
       reloadBoardNow(schedulesCompletionExpiry: false)
+      // After the board, which reads a combined scope the outline left alone.
+      let buried = currentScope.flatMap { scopeCache.entry(for: $0) }
+        .map { WorkspaceScopeShaping.buriedStarts($0.read, now: Date()) } ?? [:]
+      if buriedStarts != buried { buriedStarts = buried }
       // The rail is a view of the same writes. Hooked in here rather than at
       // every mutation because this is the one funnel they all pass through,
       // and it costs nothing while the rail is closed.
@@ -181,6 +185,13 @@ extension WorkspaceViewModel {
       guard let self else { return }
       let column = self.viewMode == .board ? self.activeBoardColumnID : nil
       let before = self.selectionOrder(inBoardColumn: column)
+      // A start has arrived: the read put that task in the buried section,
+      // so it is read again for the task to come back to its place.
+      if let scope = self.currentScope, let entry = self.scopeCache.entry(for: scope),
+        Set(WorkspaceScopeShaping.buriedStarts(entry.read, now: Date()).keys) != Set(self.buriedStarts.keys)
+      {
+        self.scopeCache.removeAll()
+      }
       self.reloadOutline(refreshSidebar: false)
       self.keepSelectionAfterExpiry(previousOrder: before, boardColumn: column)
     }

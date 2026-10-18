@@ -77,7 +77,8 @@ public struct WorkspaceScopeShapeOptions: Hashable, Sendable {
   public var registeredRootTaskID: String?
   public var hidesCompletedTasks: Bool
   /// Whether an open task whose start is still to come — a buried one — is
-  /// left off, with everything beneath it, until it starts.
+  /// left off, with everything beneath it, until it starts. Off, it is drawn
+  /// greyed below its blocked siblings (the core's order).
   public var hidesLaterTasks: Bool
 
   public init(
@@ -122,17 +123,19 @@ public struct WorkspaceBoardShape: Sendable, Equatable {
   /// "move `moving` before `before`". The store's own step counts every
   /// sibling, most of them in other columns, so a press there could swap
   /// the card with one out of sight and nothing on screen would move.
-  /// Blocked and open tasks are ordered apart, so only a neighbour in the
-  /// same group counts. Nil at either end.
+  /// Open, blocked and buried tasks are ordered apart, so only a neighbour in
+  /// the same section counts; a task that is blocked and buried is buried.
+  /// Nil at either end.
   ///
   /// - Parameter drawn: the rows in the order they are drawn.
   public static func siblingStep(
-    of taskID: String, by offset: Int, drawn: [WorkspaceTask], blocked: Set<String> = []
+    of taskID: String, by offset: Int, drawn: [WorkspaceTask], blocked: Set<String> = [], buried: Set<String> = []
   ) -> (moving: String, before: String)? {
     guard offset != 0, let task = drawn.first(where: { $0.id == taskID }) else { return nil }
-    let isBlocked = blocked.contains(taskID)
+    func section(_ id: String) -> Int { buried.contains(id) ? 2 : blocked.contains(id) ? 1 : 0 }
+    let own = section(taskID)
     let siblings = drawn.filter {
-      $0.listId == task.listId && $0.parentTaskId == task.parentTaskId && blocked.contains($0.id) == isBlocked
+      $0.listId == task.listId && $0.parentTaskId == task.parentTaskId && section($0.id) == own
     }
     guard let index = siblings.firstIndex(where: { $0.id == taskID }) else { return nil }
     let neighbour = index + (offset < 0 ? -1 : 1)
@@ -189,6 +192,10 @@ public enum WorkspaceScopeShaping {
 
   /// Tracks which open tasks are buried at `now` — their start, or an
   /// ancestor's, still to come — and the soonest one comes back.
+  ///
+  /// Buried tasks are drawn, below their blocked siblings, unless `hides`;
+  /// either way the soonest start still to come is the shape's expiry, since
+  /// the task then leaves the buried section for its own place.
   struct Later {
     let hides: Bool
     let now: Date
@@ -206,6 +213,7 @@ public enum WorkspaceScopeShaping {
       case .combined(let board): self.starts = board.starts
       }
       self.parents = parents
+      self.expiry = starts.values.lazy.filter { $0 > now }.min()
     }
 
     mutating func hides(_ task: WorkspaceTask) -> Bool {
@@ -240,6 +248,17 @@ public enum WorkspaceScopeShaping {
       }
       return kept
     }
+  }
+
+  /// The open tasks in `read` whose own start is still to come at `now`,
+  /// with their starts: the ones drawn greyed in the buried section.
+  public static func buriedStarts(_ read: WorkspaceScopeRead, now: Date) -> [String: Date] {
+    let starts: [String: Date]
+    switch read {
+    case .list(_, _, _, let listStarts): starts = listStarts
+    case .combined(let board): starts = board.starts
+    }
+    return starts.filter { $0.value > now }
   }
 
   static func soonest(_ first: Date?, _ second: Date?) -> Date? {

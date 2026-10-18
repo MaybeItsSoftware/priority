@@ -207,6 +207,21 @@ final class WorkspaceBoardReadTests: XCTestCase {
     XCTAssertNil(
       WorkspaceBoardShape.siblingStep(of: first.id, by: 1, drawn: [second, first, blocked], blocked: [blocked.id]))
 
+    // A buried card steps among the buried ones, and an open one stops
+    // short of them; one both blocked and buried is buried.
+    let buried = try store.createTask(listId: list.id, title: "Thank-you notes")
+    let both = try store.createTask(listId: list.id, title: "Photos")
+    let drawn = [second, first, blocked, buried, both]
+    let sections = (blocked: Set([blocked.id, both.id]), buried: Set([buried.id, both.id]))
+    XCTAssertNil(
+      WorkspaceBoardShape.siblingStep(
+        of: blocked.id, by: 1, drawn: drawn, blocked: sections.blocked, buried: sections.buried))
+    let buriedDown = try XCTUnwrap(
+      WorkspaceBoardShape.siblingStep(
+        of: buried.id, by: 1, drawn: drawn, blocked: sections.blocked, buried: sections.buried))
+    XCTAssertEqual(buriedDown.moving, both.id)
+    XCTAssertEqual(buriedDown.before, buried.id)
+
     // A subtask row steps among the rows on its card, not the cards.
     let row1 = try store.createTask(listId: list.id, title: "Ask price", parentTaskId: first.id)
     let row2 = try store.createTask(listId: list.id, title: "Book", parentTaskId: first.id)

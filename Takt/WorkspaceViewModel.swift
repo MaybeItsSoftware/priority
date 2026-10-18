@@ -710,10 +710,10 @@ enum WorkspaceSidebarItem: Identifiable {
   /// `completedLingerInterval`, then leaves the pane — the Done rail is where
   /// finished work is kept. `tc` turns it off and shows every completion.
   var hidesCompletedTasks = true
-  /// On by default: a task whose start is still to come is buried — left off
-  /// the outline, the board and the matrix, with its subtasks, until it
-  /// starts and Today takes it. `tl` shows them.
-  var hidesLaterTasks = true
+  /// Off by default: a task whose start is still to come is buried — drawn
+  /// greyed, with its subtasks, below its blocked siblings until it starts
+  /// and comes back to its place (the core's order). `tl` hides them.
+  var hidesLaterTasks = false
   /// When the soonest lingering completion is due to go, and the reload that
   /// takes it away. Not observed: nothing draws them.
   @ObservationIgnored var nextCompletionExpiry: Date?
@@ -772,6 +772,11 @@ enum WorkspaceSidebarItem: Identifiable {
   /// The open tasks still waiting on an open task, drawn greyed. Read with
   /// `waitingDetails`, at the same change stamp.
   var blockedTaskIDs: Set<String> = []
+  /// The open tasks in the current scope whose start is still to come, with
+  /// their starts, drawn greyed in the buried section. Taken from the
+  /// scope's read at each reload, and checked again when the soonest start
+  /// arrives.
+  var buriedStarts: [String: Date] = [:]
   /// Each prioritised task's priority, 1–4, for the number on its row.
   /// Read with `waitingDetails`, under the same change stamp.
   var taskPriorities: [String: Int] = [:]

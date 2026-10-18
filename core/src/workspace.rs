@@ -324,6 +324,12 @@ impl CoreWorkspace {
         dependencies::blocked_task_ids(&self.read())
     }
 
+    /// Every open task whose start is still to come at `now_ms`: what a
+    /// client draws greyed in the buried section (`buried`).
+    pub fn buried_task_ids(&self, now_ms: i64) -> Result<Vec<String>, CoreError> {
+        crate::buried::buried_task_ids(&self.read(), now_ms)
+    }
+
     /// Whether `task_id` waits on an open task now.
     pub fn is_task_blocked(&self, task_id: String) -> Result<bool, CoreError> {
         dependencies::is_blocked(&self.lock(), &task_id)

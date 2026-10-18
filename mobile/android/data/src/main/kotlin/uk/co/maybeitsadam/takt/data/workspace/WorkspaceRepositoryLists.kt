@@ -24,6 +24,8 @@ data class TaskDecoration(
     val waitingOn: String? = null,
     /** When to chase it. */
     val followUpAt: java.time.Instant? = null,
+    /** When it starts; while that is still to come it is buried. */
+    val startAt: java.time.Instant? = null,
 )
 
 /** One list scope, read at once: its lists, their trees, and the rows' decorations. */
@@ -39,6 +41,12 @@ data class ListScopeData(
     val allLists: List<TaskList>,
     /** Open tasks waiting on an open task (the Rust core's `dependencies::blocked_task_ids`): drawn greyed. */
     val blockedTaskIds: Set<String> = emptySet(),
+    /**
+     * Open tasks whose start is still to come (the Rust core's
+     * `buried::buried_task_ids`), as of the read: drawn greyed in the buried
+     * section, below the blocked one, where the core's order puts them.
+     */
+    val buriedTaskIds: Set<String> = emptySet(),
 )
 
 /**
@@ -84,6 +92,7 @@ private fun Db.decorations(listIds: Collection<String>): Map<String, TaskDecorat
                 matrixRank = m.matrixRank,
                 waitingOn = m.waitingOn,
                 followUpAt = m.waitingFollowUpAt,
+                startAt = m.startAt,
             )
         }
     }
@@ -108,6 +117,7 @@ internal fun readListScope(db: Db, workspaceId: String, listId: String?): ListSc
         dailyTaskIds = db.activeDailyTaskIds(),
         allLists = all,
         blockedTaskIds = db.core.blockedTaskIds().toSet(),
+        buriedTaskIds = db.core.buriedTaskIds(System.currentTimeMillis()).toSet(),
     )
 }
 

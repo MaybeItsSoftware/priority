@@ -17,6 +17,28 @@ fn the_label_heads_each_groups_blocked_tail() {
 }
 
 #[test]
+fn blocked_and_buried_sections_are_labelled_apart() {
+    // Roots a, b (blocked), c (buried, with subtask c1), d (buried and
+    // blocked); a's subtasks a1 then a2 (buried). Groups root=0, a=1, c=2.
+    // Rows: a, a1, a2, b, c, c1, d.
+    let groups = vec![0, 1, 1, 0, 0, 2, 0];
+    let blocked = vec![false, false, false, true, false, false, true];
+    let buried = vec![false, false, true, false, true, false, true];
+    let labels = sibling_section_labels(groups, blocked, buried);
+    assert_eq!(labels.blocked, [3]);
+    assert_eq!(labels.buried, [2, 4]);
+}
+
+#[test]
+fn with_nothing_buried_the_blocked_labels_are_as_before() {
+    let groups = vec![0, 1, 1, 1, 0, 0];
+    let blocked = vec![false, false, true, true, true, true];
+    let labels = sibling_section_labels(groups.clone(), blocked.clone(), vec![false; 6]);
+    assert_eq!(labels.blocked, blocked_section_labels(groups, blocked));
+    assert!(labels.buried.is_empty());
+}
+
+#[test]
 fn nothing_blocked_no_label() {
     assert!(blocked_section_labels(vec![0, 0], vec![false, false]).is_empty());
     assert!(blocked_section_labels(vec![], vec![]).is_empty());

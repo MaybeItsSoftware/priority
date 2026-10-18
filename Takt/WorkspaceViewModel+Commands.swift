@@ -375,9 +375,9 @@ extension WorkspaceViewModel {
     }
   }
 
-  /// Starts the task at the beginning of tomorrow, which buries it: it leaves
-  /// the lists, and the selection goes to its neighbour, until Today takes
-  /// it then. Another day is the start date's own editor.
+  /// Starts the task at the beginning of tomorrow, which buries it: it sinks,
+  /// greyed, below its blocked siblings until then, when it comes back to its
+  /// place and Today takes it. Another day is the start date's own editor.
   private func burySelectedTask() {
     let tomorrow = Calendar.current.date(byAdding: .day, value: 1, to: Calendar.current.startOfDay(for: .now))
     editTaskValues { $0.startAt = tomorrow }

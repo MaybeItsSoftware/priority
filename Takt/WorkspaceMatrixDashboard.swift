@@ -389,7 +389,7 @@ struct WorkspaceMatrixTaskRow: View {
         }
         .buttonStyle(.plain)
         .font(theme.bodyFont())
-        .foregroundStyle(model.isBlocked(task) ? theme.muted : theme.ink)
+        .foregroundStyle(model.isGreyed(task) ? theme.muted : theme.ink)
         .focusable()
         .multilineTextAlignment(.leading)
         .expandsWhenSelected(isSelected)

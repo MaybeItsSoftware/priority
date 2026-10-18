@@ -195,10 +195,16 @@ private fun BoardColumnView(
                 }
             }
             for (card in column.cards) {
-                // The label over the column's blocked cards, which sink to its foot.
+                // The label over the column's blocked cards, which sink to its
+                // foot, and over its buried ones, which sink below them.
                 if (card.id == column.blockedLabelId) {
                     item(key = "blocked:label", contentType = "blocked") {
                         BlockedDivider(Modifier.animateItem().padding(start = Metrics.xs, top = Metrics.xs))
+                    }
+                }
+                if (card.id == column.buriedLabelId) {
+                    item(key = "buried:label", contentType = "blocked") {
+                        BlockedDivider(Modifier.animateItem().padding(start = Metrics.xs, top = Metrics.xs), isBuried = true)
                     }
                 }
                 item(key = card.id, contentType = "card") {
@@ -228,7 +234,7 @@ private fun BoardCardView(
                     .combinedClickable(onClick = { actions.tap(row.id) }, onLongClick = { menu = true }, onLongClickLabel = "Card actions")
                     // Blocked, the whole card steps back — mark, title, markers and the
                     // subtasks that wait with it — while its frame and selection keep theirs.
-                    .alpha(if (row.isBlocked) TaktTheme.DISABLED_ALPHA else 1f)
+                    .alpha(if (row.isBlocked || row.isBuried) TaktTheme.DISABLED_ALPHA else 1f)
                     .padding(end = Metrics.sm, bottom = Metrics.xs),
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -242,7 +248,7 @@ private fun BoardCardView(
                 }
                 Box(Modifier.padding(start = Metrics.touchTarget).heightIn(max = 24.dp)) { RowMarkers(row) }
                 for (sub in card.subtasks.take(VISIBLE_SUBTASK_ROWS)) {
-                    SubtaskRow(sub, celebration, actions, cardIsBlocked = row.isBlocked)
+                    SubtaskRow(sub, celebration, actions, cardIsBlocked = row.isBlocked || row.isBuried)
                 }
                 if (card.subtasks.size > VISIBLE_SUBTASK_ROWS) {
                     Text(
@@ -283,7 +289,7 @@ private fun SubtaskRow(row: OutlineRow, celebration: CelebrationStyle, actions: 
             .fillMaxWidth()
             // A blocked subtask on a card that is not steps back as a blocked
             // card does; on a blocked card it already has.
-            .alpha(if (row.isBlocked && !cardIsBlocked) TaktTheme.DISABLED_ALPHA else 1f)
+            .alpha(if ((row.isBlocked || row.isBuried) && !cardIsBlocked) TaktTheme.DISABLED_ALPHA else 1f)
             .padding(start = Metrics.lg + Metrics.indent * row.depth),
         verticalAlignment = Alignment.CenterVertically,
     ) {

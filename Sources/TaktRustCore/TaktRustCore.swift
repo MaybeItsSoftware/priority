@@ -1345,6 +1345,12 @@ public protocol CoreWorkspaceProtocol: AnyObject, Sendable {
     func bootstrap(nowMs: Int64) throws  -> String
     
     /**
+     * Every open task whose start is still to come at `now_ms`: what a
+     * client draws greyed in the buried section (`buried`).
+     */
+    func buriedTaskIds(nowMs: Int64) throws  -> [String]
+    
+    /**
      * Banks a running block's time.
      */
     func checkpointFocusSession(id: String, nowMs: Int64) throws 
@@ -3157,6 +3163,20 @@ open func bootstrap(nowMs: Int64)throws  -> String  {
     return try  FfiConverterString.lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
         uniffiCallStatus in
     uniffi_takt_core_fn_method_coreworkspace_bootstrap(
+            self.uniffiCloneHandle(),
+        FfiConverterInt64.lower(nowMs),uniffiCallStatus
+    )
+})
+}
+    
+    /**
+     * Every open task whose start is still to come at `now_ms`: what a
+     * client draws greyed in the buried section (`buried`).
+     */
+open func buriedTaskIds(nowMs: Int64)throws  -> [String]  {
+    return try  FfiConverterSequenceString.lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_buried_task_ids(
             self.uniffiCloneHandle(),
         FfiConverterInt64.lower(nowMs),uniffiCallStatus
     )
@@ -16256,6 +16276,76 @@ public func FfiConverterTypeSessionRow_lower(_ value: SessionRow) -> RustBuffer 
 
 
 /**
+ * Where the section labels go when siblings are drawn in three sections:
+ * open work, then blocked, then buried (`buried`).
+ */
+public struct SiblingSectionLabels: Equatable, Hashable {
+    /**
+     * The rows to draw the "Blocked" label above.
+     */
+    public var blocked: [UInt32]
+    /**
+     * The rows to draw the "Buried" label above.
+     */
+    public var buried: [UInt32]
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(
+        /**
+         * The rows to draw the "Blocked" label above.
+         */blocked: [UInt32], 
+        /**
+         * The rows to draw the "Buried" label above.
+         */buried: [UInt32]) {
+        self.blocked = blocked
+        self.buried = buried
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension SiblingSectionLabels: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeSiblingSectionLabels: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SiblingSectionLabels {
+        return
+            try SiblingSectionLabels(
+                blocked: FfiConverterSequenceUInt32.read(from: &buf), 
+                buried: FfiConverterSequenceUInt32.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: SiblingSectionLabels, into buf: inout [UInt8]) {
+        FfiConverterSequenceUInt32.write(value.blocked, into: &buf)
+        FfiConverterSequenceUInt32.write(value.buried, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeSiblingSectionLabels_lift(_ buf: RustBuffer) throws -> SiblingSectionLabels {
+    return try FfiConverterTypeSiblingSectionLabels.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeSiblingSectionLabels_lower(_ value: SiblingSectionLabels) -> RustBuffer {
+    return FfiConverterTypeSiblingSectionLabels.lower(value)
+}
+
+
+/**
  * A folder, and the folder it sits in.
  */
 public struct SidebarFolder: Equatable, Hashable {
@@ -28158,6 +28248,25 @@ public func outlineDropPlan(rows: [OutlineDropRow], source: UInt32, destination:
 })
 }
 /**
+ * [`blocked_section_labels`] for siblings that may end with buried rows
+ * after their blocked ones. In each group the "Buried" label heads the run
+ * of buried rows the group ends with, and the "Blocked" label heads the run
+ * of blocked rows the rest of it ends with. A row that is both is buried.
+ *
+ * `groups`, `blocked` and `buried` are per row, in drawing order, as for
+ * [`blocked_section_labels`]. The answer is row indices, ascending.
+ */
+public func siblingSectionLabels(groups: [UInt32], blocked: [Bool], buried: [Bool]) -> SiblingSectionLabels  {
+    return try!  FfiConverterTypeSiblingSectionLabels_lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_sibling_section_labels(
+        FfiConverterSequenceUInt32.lower(groups),
+        FfiConverterSequenceBool.lower(blocked),
+        FfiConverterSequenceBool.lower(buried),uniffiCallStatus
+    )
+})
+}
+/**
  * Vim's `f` and `F` over rows: the index of the next row (or previous, when
  * `forward` is false) whose title begins with `character`, reading a title
  * from its first letter or digit and ignoring case and accents. The walk
@@ -29174,6 +29283,9 @@ private let initializationResult: InitializationResult = {
     if (uniffi_takt_core_checksum_func_outline_drop_plan() != 6755) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_takt_core_checksum_func_sibling_section_labels() != 9235) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_takt_core_checksum_func_vim_find() != 17940) {
         return InitializationResult.apiChecksumMismatch
     }
@@ -29592,6 +29704,9 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_method_coreworkspace_bootstrap() != 4874) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_buried_task_ids() != 38422) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_method_coreworkspace_checkpoint_focus_session() != 13264) {

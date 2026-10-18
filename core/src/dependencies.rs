@@ -9,8 +9,9 @@
 //! CLI cannot disagree about it:
 //!
 //! - **Order.** Among its siblings a blocked task sorts after every unblocked
-//!   one, otherwise keeping its place ([`BLOCKED_LAST`] in the reads that hand
-//!   back a list's rows, and in the sibling order a reorder works on).
+//!   one, otherwise keeping its place ([`BLOCKED_LAST`] in the sibling order
+//!   a reorder works on, and through `buried::section_order` in the reads
+//!   that hand back a list's rows, which put buried tasks after both).
 //! - **Next up.** A blocked task is not a candidate (`focus::candidates`).
 //! - **Greyed.** [`blocked_task_ids`] names the tasks a client draws dimmed.
 //!

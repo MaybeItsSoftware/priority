@@ -399,6 +399,7 @@ fn read_tasks(
     unique.sort();
     unique.dedup();
     let blocked = crate::dependencies::blocked_last(connection)?;
+    let sections = crate::buried::section_order(blocked);
     let mut tasks = Vec::new();
     let mut visible_roots = HashMap::new();
     for chunk in unique.chunks(500) {
@@ -413,7 +414,7 @@ fn read_tasks(
         // The same statement as `records::tasks_in_lists`, so rows that tie
         // on every sort key come in the same order as the client's trees.
         let mut statement = connection.prepare_cached(&format!(
-            "SELECT * FROM tasks WHERE listId IN ({marks}) ORDER BY listId, {blocked}, sortOrder, createdAt"
+            "SELECT * FROM tasks WHERE listId IN ({marks}) ORDER BY listId, {sections}, sortOrder, createdAt"
         ))?;
         let columns = TaskColumns::of(&statement)?;
         let mut rows = statement.query(rusqlite::params_from_iter(chunk))?;

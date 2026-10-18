@@ -70,18 +70,21 @@ fun Hairline(modifier: Modifier = Modifier, color: Color = TaktTheme.colors.bord
  * there.
  */
 @Composable
-fun BlockedDivider(modifier: Modifier = Modifier) {
+fun BlockedDivider(modifier: Modifier = Modifier, isBuried: Boolean = false) {
     val label = TaktTheme.microLabel
+    val title = if (isBuried) "Buried" else "Blocked"
     Row(
         modifier
             .fillMaxWidth()
             .focusProperties { canFocus = false }
-            .clearAndSetSemantics { contentDescription = "Blocked: these tasks wait on others" },
+            .clearAndSetSemantics {
+                contentDescription = if (isBuried) "Buried: these tasks start later" else "Blocked: these tasks wait on others"
+            },
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(Metrics.sm),
     ) {
         Text(
-            if (label.uppercase) "BLOCKED" else "Blocked",
+            if (label.uppercase) title.uppercase() else title,
             style = label.style,
             color = TaktTheme.colors.role(label.role),
             maxLines = 1,

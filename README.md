@@ -96,8 +96,8 @@ something you already have to know.
 | `Shift+Space` | Cancel the task, or reinstate it — it stopped mattering, rather than got done |
 | `1`–`4` / `0` | Set the task's priority at once (1 is the most urgent), as `!1`–`!4` does when you type a task, or clear it — on the outline, the board, the matrix and Today. The number shows in a small box beside the title; one undo step each |
 | `tc` | Hide or show completed tasks — a completed task stays put for three seconds and then leaves the list; `tc` shows them all again |
-| `bu` | Bury the task: it starts tomorrow, so it leaves the outline, the board and the matrix, subtasks and all, until then — and Today picks it up the morning it arrives. `start <value>` buries it until any other time; `clear start` digs it up |
-| `tl` | Hide or show buried tasks — anything whose start is still to come. Hidden by default; a filter list with a start-date rule always shows what it matches, and jumping to a buried task from search shows them |
+| `bu` | Bury the task: it starts tomorrow, so until then it sinks, greyed and subtasks and all, to the **Buried** section below its blocked siblings in the outline, on the board and in the matrix — and Today picks it up the morning it arrives. `start <value>` buries it until any other time; `clear start` digs it up |
+| `tl` | Hide or show buried tasks — anything whose start is still to come. Shown by default; `tl` hides them, with their subtasks. A filter list with a start-date rule always shows what it matches, and jumping to a buried task from search shows them again |
 | `gf` | Start a focus block on the task — on Today, queue it behind a running block |
 | `Cmd+Shift+Return` | Finish the running focus block — completes its task and asks how it went, as Done does. Works from anywhere in the window, inside a field too |
 | `Cmd+Shift+.` | Stop the running focus block — the time so far is logged unscored, the task stays open and the queue is dropped. Works from anywhere, the focus panel included |
@@ -252,11 +252,17 @@ A task you tick off stays where it was for three seconds — long enough to see
 it go and to take it back — and then leaves the list; the Done rail keeps it.
 `tc` shows every completed task again, and toggles back.
 
-A task whose start date is still to come is **buried**: off the outline, the
-board and the matrix, with everything beneath it, until the moment it starts,
-when it comes back by itself. `bu` buries the selected task until tomorrow;
-`tl` shows buried tasks, and toggles back. Today and the focus suggestions
-already left future starts alone and still do.
+A task whose start date is still to come is **buried**: it stays in the
+outline, on the board and in the matrix, greyed and with the day it starts on
+its row ("starts Mon"), but it sinks below its siblings — below the blocked
+ones too — under a quiet **Buried** label, with everything beneath it. So a
+parent's children read open work, then **Blocked**, then **Buried**, each in
+its own order; a task that is both blocked and buried is buried. The moment it
+starts it comes back to its place by itself. `bu` buries the selected task
+until tomorrow; `tl` hides buried tasks altogether, and toggles back. `⌥↑`/`⌥↓`
+step a buried task past its buried neighbours, as they step a blocked one past
+blocked ones. Today and the focus suggestions already left future starts alone
+and still do.
 
 Subtasks fold where they stand, as they do in Checkvist, so you can look
 inside a task without opening it: in the outline `→` unfolds a task and steps
@@ -787,8 +793,8 @@ step. The title is read the way the add field reads it, so `!1`, `@fri` and
 `45m` work there too. Until every task it waits on is
 done or cancelled, the task is **blocked**: its title is greyed in the outline,
 on the board, in the matrix and on Today, it sinks below its unblocked
-siblings, and it is never offered as next up. Finishing the last blocker puts
-it back where it was.
+siblings (above any buried ones), and it is never offered as next up.
+Finishing the last blocker puts it back where it was.
 
 The inspector's **Blocked by** row lists what the task waits on — open or
 done, with the list when it is another — each with a button to stop waiting on

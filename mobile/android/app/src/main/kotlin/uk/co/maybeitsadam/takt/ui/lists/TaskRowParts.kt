@@ -162,6 +162,7 @@ internal fun RowMarkers(row: OutlineRow, modifier: Modifier = Modifier, maxTags:
     Row(modifier.fillMaxHeight(), horizontalArrangement = Arrangement.spacedBy(Metrics.xs + Metrics.xxs), verticalAlignment = Alignment.CenterVertically) {
         val colors = TaktTheme.colors
         if (row.isBlocked) Icon(PIcons.Link, "Blocked by another task", tint = colors.dimText, modifier = Modifier.size(14.dp))
+        row.starts?.let { Text(it, style = TaktTheme.type.monoSmall, color = colors.warning, maxLines = 1) }
         if (row.isPlanned) Icon(PIcons.Today, "Planned for today", tint = colors.primary, modifier = Modifier.size(14.dp))
         if (row.isDaily) Icon(PIcons.Repeat, "Daily", tint = colors.success, modifier = Modifier.size(14.dp))
         row.waitingOn?.let { Tag(it, Modifier.semantics { contentDescription = "Waiting on $it" }) }

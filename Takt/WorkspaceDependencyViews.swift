@@ -226,23 +226,52 @@ struct WorkspaceDependencyInspectorSection: View {
   }
 }
 
-/// The quiet label over a group's blocked tasks — an outline parent's
-/// children, a board column's cards — which sink below the rest. A
+/// The sections a group of siblings ends with, below its open work: blocked
+/// tasks, then buried ones (the core's order).
+enum WorkspaceSiblingSection: Equatable {
+  case blocked
+  case buried
+
+  var title: String {
+    switch self {
+    case .blocked: "Blocked"
+    case .buried: "Buried"
+    }
+  }
+
+  var help: String {
+    switch self {
+    case .blocked: "Waiting on other tasks; they rise again once those are done"
+    case .buried: "Starting later; each comes back to its place when its start arrives"
+    }
+  }
+
+  var accessibilityLabel: String {
+    switch self {
+    case .blocked: "Blocked: these tasks wait on others"
+    case .buried: "Buried: these tasks start later"
+    }
+  }
+}
+
+/// The quiet label over a group's blocked or buried tasks — an outline
+/// parent's children, a board column's cards — which sink below the rest. A
 /// micro-label and a hairline, nothing to select: the keyboard walks the
 /// tasks either side of it as if it were not there.
 struct WorkspaceBlockedDivider: View {
   @Environment(\.theme) private var theme
+  var section: WorkspaceSiblingSection = .blocked
 
   var body: some View {
     HStack(spacing: theme.space.sm) {
-      MicroLabel("Blocked")
+      MicroLabel(section.title)
         .fixedSize()
       Rectangle()
         .fill(theme.border)
         .frame(height: theme.hairline)
     }
-    .help("Waiting on other tasks; they rise again once those are done")
+    .help(section.help)
     .accessibilityElement(children: .ignore)
-    .accessibilityLabel("Blocked: these tasks wait on others")
+    .accessibilityLabel(section.accessibilityLabel)
   }
 }

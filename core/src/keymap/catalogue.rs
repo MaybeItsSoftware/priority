@@ -152,7 +152,7 @@ fn task() -> Vec<Spec> {
         c("taskDueTomorrow", "Due tomorrow", "Task", &["tm", "cmd+shift+t"]),
         // `b` starts only `bb`, so `bu` was free.
         c("taskBury", "Bury until tomorrow", "Task", &["bu"])
-            .note("Starts it tomorrow: out of the lists until then, and on Today when it arrives"),
+            .note("Starts it tomorrow: greyed below its siblings until then, and on Today when it arrives"),
         c("taskClearDue", "Clear the due date", "Task", &["cd"]),
         c("taskClearNotes", "Clear the notes", "Task", &["cn"]),
         c("taskClearTags", "Clear the tags", "Task", &["ct"]),
@@ -255,11 +255,11 @@ fn plan() -> Vec<Spec> {
         ),
         c(
             "planHideLater",
-            "Hide or show tasks that start later",
+            "Hide or show buried tasks",
             "Plan",
             &["tl"],
         )
-        .note("A task whose start is still to come is buried until it arrives"),
+        .note("A task whose start is still to come is buried: shown greyed below its blocked siblings until it starts. tl hides them"),
         // Checkvist folds a branch where it stands, so a task's subtasks can be
         // read and walked without opening the task. `za` is vim's fold toggle.
         c(

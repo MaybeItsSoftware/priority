@@ -45,10 +45,19 @@ data class BoardColumnModel(
     /** Filled by its rules rather than by filing: a card dropped here is edited to match. */
     val isRuleColumn: Boolean = false,
 ) {
+    private val sectionLabels: Pair<Set<String>, Set<String>> =
+        if (cards.none { it.row.isBlocked || it.row.isBuried }) emptySet<String>() to emptySet()
+        else BlockedSection.labelledIds(
+            cards.map { it.id to 0 },
+            cards.filter { it.row.isBlocked }.mapTo(HashSet()) { it.id },
+            cards.filter { it.row.isBuried }.mapTo(HashSet()) { it.id },
+        )
+
     /** The card to draw the "Blocked" label above, if the column ends with blocked cards (they sink to its foot). */
-    val blockedLabelId: String? =
-        if (cards.none { it.row.isBlocked }) null
-        else BlockedSection.labelledIds(cards.map { it.id to 0 }, cards.filter { it.row.isBlocked }.mapTo(HashSet()) { it.id }).firstOrNull()
+    val blockedLabelId: String? = sectionLabels.first.firstOrNull()
+
+    /** The card to draw the "Buried" label above: buried cards sink below even the blocked ones. */
+    val buriedLabelId: String? = sectionLabels.second.firstOrNull()
 }
 
 @Immutable
@@ -190,10 +199,13 @@ object BoardShaping {
                 row = OutlineShaping.rowFor(
                     task, 0, decoration, task.id in data.dailyTaskIds, cardHasChildren, task.id in folded, zone, today,
                     isBlocked = task.id in data.blockedTaskIds,
+                    isBuried = task.id in data.buriedTaskIds,
                 ),
                 listName = listNames[task.listId],
                 parentTitle = if (isCross) board.parents[task.id]?.title else null,
-                subtasks = drawn.map { OutlineShaping.row(it, data.decorations, data.dailyTaskIds, parents, folded, zone, today, data.blockedTaskIds) }
+                subtasks = drawn.map {
+                    OutlineShaping.row(it, data.decorations, data.dailyTaskIds, parents, folded, zone, today, data.blockedTaskIds, data.buriedTaskIds)
+                }
                     .toImmutableList(),
                 subtaskCount = subtasks.size,
             )

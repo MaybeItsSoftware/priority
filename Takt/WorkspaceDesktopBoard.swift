@@ -250,7 +250,7 @@ struct WorkspaceKanbanColumnView: View {
 
   var body: some View {
     let tasks = model.tasks(in: column)
-    let blockedStart = model.blockedSectionStart(inCards: tasks)
+    let sectionStarts = model.siblingSectionStarts(inCards: tasks)
     // The card the selected row is drawn on, looked up in the index the
     // board keeps rather than found by walking each card's subtasks.
     let selectedCardID = selectedRowID.flatMap { model.boardRows(in: column).cardByRow[$0] }
@@ -300,7 +300,7 @@ struct WorkspaceKanbanColumnView: View {
                 if let nudge = nudges[task.id], nudge > 0 {
                   Color.clear.frame(height: nudge).accessibilityHidden(true)
                 }
-                if task.id == blockedStart { blockedDivider }
+                if let section = sectionStarts[task.id] { sectionDivider(section) }
                 WorkspaceKanbanCard(
                   task: task, column: column,
                   selectedRowID: task.id == selectedCardID ? selectedRowID : nil,
@@ -383,9 +383,10 @@ struct WorkspaceKanbanColumnView: View {
     .accessibilityHint("Drop a task here to move it to \(column.title)")
   }
 
-  /// The label over the column's blocked cards, which sink to its foot.
-  private var blockedDivider: some View {
-    WorkspaceBlockedDivider()
+  /// The label over the column's blocked or buried cards, which sink to its
+  /// foot, the buried ones last.
+  private func sectionDivider(_ section: WorkspaceSiblingSection) -> some View {
+    WorkspaceBlockedDivider(section: section)
       .padding(.horizontal, WorkspaceBoardMetrics.columnPadding(theme))
       .padding(.top, theme.space.sm)
       .padding(.bottom, theme.space.xs)
@@ -496,9 +497,9 @@ struct WorkspaceKanbanCard: View {
       subtaskTree
       headingBundles
     }
-    // Blocked, the whole card steps back — mark, title, badges and the
+    // Blocked or buried, the whole card steps back — mark, title, badges and the
     // subtasks that wait with it — while its rules and selection keep theirs.
-    .opacity(model.isBlocked(task) ? Theme.disabledOpacity : 1)
+    .opacity(model.isGreyed(task) ? Theme.disabledOpacity : 1)
     .padding(.vertical, theme.space.xs)
     .padding(.horizontal, WorkspaceBoardMetrics.columnPadding(theme))
     .frame(maxWidth: .infinity, alignment: .leading)
@@ -830,7 +831,7 @@ struct WorkspaceKanbanCard: View {
     .boardLinkEnds(rowLink.map { [.source($0.childID)] } ?? [], inColumn: column.id, geometry: linkGeometry)
     // A blocked subtask on a card that is not: the row steps back as a
     // blocked card does. On a blocked card it already has.
-    .opacity(model.isBlocked(item.task) && !model.isBlocked(task) ? Theme.disabledOpacity : 1)
+    .opacity(model.isGreyed(item.task) && !model.isGreyed(task) ? Theme.disabledOpacity : 1)
     .font(theme.captionFont)
     .padding(.vertical, theme.space.xxs)
     // The pointer on either end lights both and draws the line. Off the

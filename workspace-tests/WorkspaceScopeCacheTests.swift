@@ -114,6 +114,35 @@ final class WorkspaceScopeCacheTests: XCTestCase {
     }
   }
 
+  func testABuriedTaskIsDrawnBelowItsSiblingsUntilItStarts() throws {
+    let work = try makeList("Work", tasks: 3)
+    let roots = try store.listTree(in: work.id).children(of: nil)
+    let buried = roots[0]
+    let child = try store.listTree(in: work.id).children(of: buried.id)[0]
+    let now = Date(timeIntervalSince1970: Date().timeIntervalSince1970.rounded(.down))
+    let start = now.addingTimeInterval(3600)
+    try store.scheduleTask(id: buried.id, startAt: start, now: now)
+
+    // Shown by default: last among its siblings, its subtask under it.
+    let read = try store.scopeRead(.list(work.id), hidingCompletedBefore: nil)
+    let outline = WorkspaceScopeShaping.outline(read, options: options, now: now)
+    XCTAssertEqual(outline.items.filter { $0.depth == 0 }.map(\.id), [roots[1].id, roots[2].id, buried.id])
+    XCTAssertEqual(outline.items.suffix(2).map(\.id), [buried.id, child.id])
+    // The shape holds until the start, when the task leaves the section.
+    XCTAssertEqual(outline.expiry, start)
+    XCTAssertEqual(WorkspaceScopeShaping.buriedStarts(read, now: now), [buried.id: start])
+    XCTAssertEqual(WorkspaceScopeShaping.buriedStarts(read, now: start.addingTimeInterval(1)), [:])
+    let board = WorkspaceScopeShaping.board(read, options: options, now: now).board
+    XCTAssertEqual(board.cards.map(\.id), [roots[1].id, roots[2].id, buried.id])
+
+    // Unburied, it is back in its own place.
+    try store.scheduleTask(id: buried.id, startAt: nil, now: now)
+    let dug = try store.scopeRead(.list(work.id), hidingCompletedBefore: nil)
+    XCTAssertEqual(
+      WorkspaceScopeShaping.outline(dug, options: options, now: now).items.filter { $0.depth == 0 }.map(\.id),
+      roots.map(\.id))
+  }
+
   func testAFilterListOnStartDatesShowsWhatItMatches() {
     let plain = WorkspaceFilterDefinition(rules: [WorkspaceFilterRule(field: "tag", op: "is", value: "work")])
     let starts = WorkspaceFilterDefinition(rules: [WorkspaceFilterRule(field: "start", op: "later", value: "")])

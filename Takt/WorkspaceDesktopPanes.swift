@@ -40,9 +40,9 @@ struct WorkspaceOutlinePane: View {
                   WorkspaceEmptyMessage("No tasks")
                     .outlineRowChrome()
                 } else {
-                  let blockedStarts = model.blockedSectionStarts(in: items)
+                  let sectionStarts = model.siblingSectionStarts(in: items)
                   ForEach(items) { item in
-                    drafted(item, blocked: blockedStarts.contains(item.id)) {
+                    drafted(item, section: sectionStarts[item.id]) {
                       row(item, selectedID: selectedID, tasksHaveKeyboard: tasksHaveKeyboard)
                     }
                   }
@@ -64,9 +64,9 @@ struct WorkspaceOutlinePane: View {
             }
           } else {
             let parents = model.outlineParentIDs
-            let blockedStarts = model.blockedSectionStarts(in: model.outlineRows)
+            let sectionStarts = model.siblingSectionStarts(in: model.outlineRows)
             ForEach(model.outlineRows) { item in
-              drafted(item, blocked: blockedStarts.contains(item.id)) {
+              drafted(item, section: sectionStarts[item.id]) {
                 row(item, selectedID: selectedID, tasksHaveKeyboard: tasksHaveKeyboard,
                   fold: parents.contains(item.id) ? model.foldedTaskIDs.contains(item.id) : nil)
               }
@@ -97,7 +97,8 @@ struct WorkspaceOutlinePane: View {
     }
   }
 
-  /// The row, with the blocked label over it when it heads a blocked tail,
+  /// The row, with the blocked or buried label over it when it heads one of
+  /// those sections,
   /// and the draft row before or after it when the new task is to land
   /// there — one step further in when it goes inside.
   ///
@@ -105,10 +106,10 @@ struct WorkspaceOutlinePane: View {
   /// row or several makes the table build every element to count them, which
   /// in Everything was seven thousand rows on each switch to it.
   private func drafted(
-    _ item: TaskOutlineItem, blocked: Bool, @ViewBuilder row: () -> some View
+    _ item: TaskOutlineItem, section: WorkspaceSiblingSection?, @ViewBuilder row: () -> some View
   ) -> some View {
     VStack(spacing: 0) {
-      if blocked { blockedDivider(depth: item.depth) }
+      if let section { sectionDivider(section, depth: item.depth) }
       if model.draftsBeside(item.id, above: true) {
         WorkspaceTaskDraftRow(depth: item.depth)
       }
@@ -120,10 +121,11 @@ struct WorkspaceOutlinePane: View {
     .outlineRowChrome()
   }
 
-  /// The label over a sibling group's blocked tail, its text in the title
-  /// column of the rows it heads and the guides running on through it.
-  private func blockedDivider(depth: Int) -> some View {
-    WorkspaceBlockedDivider()
+  /// The label over a sibling group's blocked run or buried tail, its text in
+  /// the title column of the rows it heads and the guides running on through
+  /// it.
+  private func sectionDivider(_ section: WorkspaceSiblingSection, depth: Int) -> some View {
+    WorkspaceBlockedDivider(section: section)
       .padding(.leading, WorkspaceRowMetrics.iconWidth + theme.space.sm)
       .padding(.leading, CGFloat(depth) * WorkspaceRowMetrics.indent(theme))
       .padding(.top, theme.space.xs)
@@ -142,7 +144,7 @@ struct WorkspaceOutlinePane: View {
     let isSelected = item.id == selectedID
     return WorkspaceOutlineRow(
       item: item, isSelected: isSelected, hasKeyboard: isSelected && tasksHaveKeyboard, isFolded: fold,
-      isBlocked: model.isBlocked(item.task))
+      isBlocked: model.isBlocked(item.task), isBuried: model.isBuried(item.task))
       .outlineRowChrome()
   }
 }
@@ -170,6 +172,8 @@ struct WorkspaceOutlineRow: View {
   let isFolded: Bool?
   /// Open and still waiting on an open task: drawn greyed.
   var isBlocked = false
+  /// Open with its start still to come: drawn greyed too.
+  var isBuried = false
 
   var body: some View {
     // The selected row grows to show its whole title and every badge line;
@@ -225,7 +229,9 @@ struct WorkspaceOutlineRow: View {
           .help(
             isSelected
               ? WorkspaceCommandHelpText.text(for: .taskRename)
-              : isBlocked ? "\(item.task.title) — waiting on another task" : item.task.title)
+              : isBuried
+                ? "\(item.task.title) — starts later"
+                : isBlocked ? "\(item.task.title) — waiting on another task" : item.task.title)
           .strikethrough(item.task.status != .open)
           .foregroundStyle(item.task.status == .open ? theme.ink : theme.muted)
       }
@@ -234,10 +240,10 @@ struct WorkspaceOutlineRow: View {
       WorkspaceTaskPlanningBadges(task: item.task, isExpanded: isSelected)
         .frame(maxWidth: 170, alignment: .leading)
     }
-    // Blocked, the whole row — mark, title and badges — steps back, not
+    // Blocked or buried, the whole row — mark, title and badges — steps back, not
     // only its title's colour: a muted title beside full-strength badges
     // read as a finished task's. The selection behind it keeps its weight.
-    .opacity(isBlocked ? Theme.disabledOpacity : 1)
+    .opacity(isBlocked || isBuried ? Theme.disabledOpacity : 1)
     // On the row itself: a List row takes its face from the table style, not
     // from the window, so without this every title was in the system sans.
     .font(theme.bodyFont())

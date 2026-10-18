@@ -1,6 +1,7 @@
 package uk.co.maybeitsadam.takt.core
 
 import uniffi.takt_core.blockedSectionLabels
+import uniffi.takt_core.siblingSectionLabels
 
 /**
  * Where the "Blocked" label goes in a list of tasks. The rule is the Rust
@@ -30,5 +31,21 @@ object BlockedSection {
         val groups = items.map { (_, group) -> numbers.getOrPut(group) { numbers.size.toUInt() } }
         return blockedSectionLabels(groups, items.map { it.first in blocked })
             .mapTo(HashSet()) { items[it.toInt()].first }
+    }
+
+    /**
+     * The ids to draw the "Blocked" and "Buried" labels above, where siblings
+     * are drawn open, then blocked, then buried (the core's order): the
+     * buried label heads the run of buried tasks a group ends with, the
+     * blocked label the run of blocked ones before it. A task that is both is
+     * buried. The core's `sibling_section_labels`.
+     */
+    fun <G> labelledIds(items: List<Pair<String, G>>, blocked: Set<String>, buried: Set<String>): Pair<Set<String>, Set<String>> {
+        if (buried.isEmpty()) return labelledIds(items, blocked) to emptySet()
+        val numbers = HashMap<G, UInt>()
+        val groups = items.map { (_, group) -> numbers.getOrPut(group) { numbers.size.toUInt() } }
+        val labels = siblingSectionLabels(groups, items.map { it.first in blocked }, items.map { it.first in buried })
+        return labels.blocked.mapTo(HashSet()) { items[it.toInt()].first } to
+            labels.buried.mapTo(HashSet()) { items[it.toInt()].first }
     }
 }

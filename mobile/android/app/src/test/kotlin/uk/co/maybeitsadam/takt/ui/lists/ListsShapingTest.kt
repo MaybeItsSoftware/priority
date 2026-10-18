@@ -120,6 +120,25 @@ class ListsShapingTest {
         assertTrue(cards.first { it.id == "a" }.subtasks.first { it.id == "a1" }.isBlocked)
     }
 
+    @Test fun buriedRowsFadeUnderTheirOwnLabelBelowTheBlockedOnes() {
+        // The core's read puts a (blocked) before b (buried); the shaping labels each run.
+        val data = scope(listOf(home), tasks).copy(blockedTaskIds = setOf("a"), buriedTaskIds = setOf("b"))
+        val shape = OutlineShaping.shape(data, false, emptySet(), false, emptySet(), zone, today)
+        assertEquals(listOf("blocked:a", "a", "a1", "a2", "a2x", "buried:b", "b"), shape.entries.map { it.key })
+        assertEquals(OutlineEntry.BlockedLabel("b", 0, isBuried = true), shape.entries[5])
+        val b = shape.rows.first { it.id == "b" }
+        assertTrue(b.isBuried)
+        assertFalse(b.isBlocked)
+        assertFalse(shape.rows.first { it.id == "a" }.isBuried)
+
+        val column = BoardColumnModel(
+            "today", "Today",
+            shape.rows.filter { it.depth == 0 }.map { BoardCard(it, null, null, persistentListOf(), 0) }.toImmutableList(),
+        )
+        assertEquals("a", column.blockedLabelId)
+        assertEquals("b", column.buriedLabelId)
+    }
+
     @Test fun theBlockedLabelHeadsEachGroupsBlockedTail() {
         val data = scope(listOf(home), tasks).copy(blockedTaskIds = setOf("a1", "b"))
         val entries = OutlineShaping.shape(data, false, emptySet(), false, emptySet(), zone, today).entries
