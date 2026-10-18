@@ -1347,6 +1347,12 @@ public protocol CoreWorkspaceProtocol: AnyObject, Sendable {
     func actionableTasksPacked(listIds: [String]) throws  -> Data
     
     /**
+     * Keeps a one-off copy of a repeating task at the dates `edit` gives, as
+     * one "Keep Both" step; returns its id. See `tasks::add_occurrence_copy`.
+     */
+    func addOccurrenceCopy(edit: EditorSnapshot, nowMs: Int64, zone: String) throws  -> String
+    
+    /**
      * Makes `task_id` wait on `blocked_by_task_id` as one "Add Blocker" step.
      * Returns whether it was new. A task waiting on itself, or an edge that
      * would close a cycle, is refused (`dependencies::add_blocker`).
@@ -1529,6 +1535,11 @@ public protocol CoreWorkspaceProtocol: AnyObject, Sendable {
      * Removes a theme; whether there was one.
      */
     func deleteTheme(id: String) throws  -> Bool
+    
+    /**
+     * `recurrence_clash` for the dates an editor save would write. Read-only.
+     */
+    func editorRecurrenceClash(edit: EditorSnapshot, zone: String) throws  -> RecurrenceClash?
     
     /**
      * A task's editable state, as the editor opens it.
@@ -1805,6 +1816,12 @@ public protocol CoreWorkspaceProtocol: AnyObject, Sendable {
      * Pauses every running session at its last checkpoint, on reopening.
      */
     func recoverInterruptedFocus() throws 
+    
+    /**
+     * Whether moving a repeating task to these dates lands it on or past
+     * its next turn; see `tasks::recurrence_clash`. Read-only.
+     */
+    func recurrenceClash(taskId: String, dueAtMs: Int64?, startAtMs: Int64?, zone: String) throws  -> RecurrenceClash?
     
     /**
      * Puts back the most recently undone step.
@@ -3209,6 +3226,22 @@ open func actionableTasksPacked(listIds: [String])throws  -> Data  {
 }
     
     /**
+     * Keeps a one-off copy of a repeating task at the dates `edit` gives, as
+     * one "Keep Both" step; returns its id. See `tasks::add_occurrence_copy`.
+     */
+open func addOccurrenceCopy(edit: EditorSnapshot, nowMs: Int64, zone: String)throws  -> String  {
+    return try  FfiConverterString.lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_add_occurrence_copy(
+            self.uniffiCloneHandle(),
+        FfiConverterTypeEditorSnapshot_lower(edit),
+        FfiConverterInt64.lower(nowMs),
+        FfiConverterString.lower(zone),uniffiCallStatus
+    )
+})
+}
+    
+    /**
      * Makes `task_id` wait on `blocked_by_task_id` as one "Add Blocker" step.
      * Returns whether it was new. A task waiting on itself, or an edge that
      * would close a cycle, is refused (`dependencies::add_blocker`).
@@ -3693,6 +3726,20 @@ open func deleteTheme(id: String)throws  -> Bool  {
     uniffi_takt_core_fn_method_coreworkspace_delete_theme(
             self.uniffiCloneHandle(),
         FfiConverterString.lower(id),uniffiCallStatus
+    )
+})
+}
+    
+    /**
+     * `recurrence_clash` for the dates an editor save would write. Read-only.
+     */
+open func editorRecurrenceClash(edit: EditorSnapshot, zone: String)throws  -> RecurrenceClash?  {
+    return try  FfiConverterOptionTypeRecurrenceClash.lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_editor_recurrence_clash(
+            self.uniffiCloneHandle(),
+        FfiConverterTypeEditorSnapshot_lower(edit),
+        FfiConverterString.lower(zone),uniffiCallStatus
     )
 })
 }
@@ -4447,6 +4494,23 @@ open func recoverInterruptedFocus()throws   {try rustCallWithError(FfiConverterT
             self.uniffiCloneHandle(),uniffiCallStatus
     )
 }
+}
+    
+    /**
+     * Whether moving a repeating task to these dates lands it on or past
+     * its next turn; see `tasks::recurrence_clash`. Read-only.
+     */
+open func recurrenceClash(taskId: String, dueAtMs: Int64?, startAtMs: Int64?, zone: String)throws  -> RecurrenceClash?  {
+    return try  FfiConverterOptionTypeRecurrenceClash.lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_recurrence_clash(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(taskId),
+        FfiConverterOptionInt64.lower(dueAtMs),
+        FfiConverterOptionInt64.lower(startAtMs),
+        FfiConverterString.lower(zone),uniffiCallStatus
+    )
+})
 }
     
     /**
@@ -16766,6 +16830,86 @@ public func FfiConverterTypeRanking_lower(_ value: Ranking) -> RustBuffer {
 
 
 /**
+ * A repeating task's dates moved onto or past its own next turn: the day
+ * it would come round again anyway. The clients ask before saving, and let
+ * the person choose between one task standing for both days and keeping a
+ * second, one-off copy on that day.
+ */
+public struct RecurrenceClash: Equatable, Hashable {
+    public var taskId: String
+    public var rule: String
+    /**
+     * When the task would have come round again, stepping from its dates.
+     */
+    public var nextTurnMs: Int64
+    /**
+     * Where it is being moved to: the due date when it has one, else the start.
+     */
+    public var movedToMs: Int64
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(taskId: String, rule: String, 
+        /**
+         * When the task would have come round again, stepping from its dates.
+         */nextTurnMs: Int64, 
+        /**
+         * Where it is being moved to: the due date when it has one, else the start.
+         */movedToMs: Int64) {
+        self.taskId = taskId
+        self.rule = rule
+        self.nextTurnMs = nextTurnMs
+        self.movedToMs = movedToMs
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension RecurrenceClash: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeRecurrenceClash: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> RecurrenceClash {
+        return
+            try RecurrenceClash(
+                taskId: FfiConverterString.read(from: &buf), 
+                rule: FfiConverterString.read(from: &buf), 
+                nextTurnMs: FfiConverterInt64.read(from: &buf), 
+                movedToMs: FfiConverterInt64.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: RecurrenceClash, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.taskId, into: &buf)
+        FfiConverterString.write(value.rule, into: &buf)
+        FfiConverterInt64.write(value.nextTurnMs, into: &buf)
+        FfiConverterInt64.write(value.movedToMs, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeRecurrenceClash_lift(_ buf: RustBuffer) throws -> RecurrenceClash {
+    return try FfiConverterTypeRecurrenceClash.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeRecurrenceClash_lower(_ value: RecurrenceClash) -> RustBuffer {
+    return FfiConverterTypeRecurrenceClash.lower(value)
+}
+
+
+/**
  * An open task that requires a condition.
  */
 public struct RequiringTask: Equatable, Hashable {
@@ -25144,6 +25288,30 @@ fileprivate struct FfiConverterOptionTypePlanning: FfiConverterRustBuffer {
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterOptionTypeRecurrenceClash: FfiConverterRustBuffer {
+    typealias SwiftType = RecurrenceClash?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterTypeRecurrenceClash.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterTypeRecurrenceClash.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterOptionTypeSessionRow: FfiConverterRustBuffer {
     typealias SwiftType = SessionRow?
 
@@ -31838,6 +32006,9 @@ private let initializationResult: InitializationResult = {
     if (uniffi_takt_core_checksum_method_coreworkspace_actionable_tasks_packed() != 11098) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_takt_core_checksum_method_coreworkspace_add_occurrence_copy() != 51110) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_takt_core_checksum_method_coreworkspace_add_task_blocker() != 26156) {
         return InitializationResult.apiChecksumMismatch
     }
@@ -31938,6 +32109,9 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_method_coreworkspace_delete_theme() != 30938) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_editor_recurrence_clash() != 60718) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_method_coreworkspace_editor_snapshot() != 20106) {
@@ -32094,6 +32268,9 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_method_coreworkspace_recover_interrupted_focus() != 45527) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_recurrence_clash() != 23243) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_method_coreworkspace_redo() != 49682) {

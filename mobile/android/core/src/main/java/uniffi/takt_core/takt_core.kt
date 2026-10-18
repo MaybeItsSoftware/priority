@@ -1241,6 +1241,8 @@ internal object IntegrityCheckingUniffiLib {
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_actionable_tasks_packed(
     ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_add_occurrence_copy(
+    ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_add_task_blocker(
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_add_task_link(
@@ -1308,6 +1310,8 @@ internal object IntegrityCheckingUniffiLib {
     external fun uniffi_takt_core_checksum_method_coreworkspace_delete_task(
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_delete_theme(
+    ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_editor_recurrence_clash(
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_editor_snapshot(
     ): Int
@@ -1412,6 +1416,8 @@ internal object IntegrityCheckingUniffiLib {
     external fun uniffi_takt_core_checksum_method_coreworkspace_record_sync_progress(
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_recover_interrupted_focus(
+    ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_recurrence_clash(
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_redo(
     ): Int
@@ -1743,6 +1749,8 @@ internal object UniffiLib {
     ): Unit
     external fun uniffi_takt_core_fn_method_coreworkspace_actionable_tasks_packed(`ptr`: Long,`listIds`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_method_coreworkspace_add_occurrence_copy(`ptr`: Long,`edit`: RustBuffer.ByValue,`nowMs`: Long,`zone`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_method_coreworkspace_add_task_blocker(`ptr`: Long,`taskId`: RustBuffer.ByValue,`blockedByTaskId`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): Byte
     external fun uniffi_takt_core_fn_method_coreworkspace_add_task_link(`ptr`: Long,`taskId`: RustBuffer.ByValue,`url`: RustBuffer.ByValue,`title`: RustBuffer.ByValue,`mimeType`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
@@ -1811,6 +1819,8 @@ internal object UniffiLib {
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_method_coreworkspace_delete_theme(`ptr`: Long,`id`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): Byte
+    external fun uniffi_takt_core_fn_method_coreworkspace_editor_recurrence_clash(`ptr`: Long,`edit`: RustBuffer.ByValue,`zone`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_method_coreworkspace_editor_snapshot(`ptr`: Long,`taskId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_method_coreworkspace_end_focus_break(`ptr`: Long,`sessionId`: RustBuffer.ByValue,`context`: RustBuffer.ByValue,`nowMs`: Long,`zone`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
@@ -1915,6 +1925,8 @@ internal object UniffiLib {
     ): Unit
     external fun uniffi_takt_core_fn_method_coreworkspace_recover_interrupted_focus(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
+    external fun uniffi_takt_core_fn_method_coreworkspace_recurrence_clash(`ptr`: Long,`taskId`: RustBuffer.ByValue,`dueAtMs`: RustBuffer.ByValue,`startAtMs`: RustBuffer.ByValue,`zone`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_method_coreworkspace_redo(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_method_coreworkspace_redoable_label(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus, 
@@ -3391,6 +3403,9 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_actionable_tasks_packed() and 0xFFFF) != 11098) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_add_occurrence_copy() and 0xFFFF) != 51110) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_add_task_blocker() and 0xFFFF) != 26156) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
@@ -3491,6 +3506,9 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_delete_theme() and 0xFFFF) != 30938) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_editor_recurrence_clash() and 0xFFFF) != 60718) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_editor_snapshot() and 0xFFFF) != 20106) {
@@ -3647,6 +3665,9 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_recover_interrupted_focus() and 0xFFFF) != 45527) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_recurrence_clash() and 0xFFFF) != 23243) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_redo() and 0xFFFF) != 49682) {
@@ -5212,6 +5233,12 @@ public interface CoreWorkspaceInterface {
     fun `actionableTasksPacked`(`listIds`: List<kotlin.String>): kotlin.ByteArray
     
     /**
+     * Keeps a one-off copy of a repeating task at the dates `edit` gives, as
+     * one "Keep Both" step; returns its id. See `tasks::add_occurrence_copy`.
+     */
+    fun `addOccurrenceCopy`(`edit`: EditorSnapshot, `nowMs`: kotlin.Long, `zone`: kotlin.String): kotlin.String
+    
+    /**
      * Makes `task_id` wait on `blocked_by_task_id` as one "Add Blocker" step.
      * Returns whether it was new. A task waiting on itself, or an edge that
      * would close a cycle, is refused (`dependencies::add_blocker`).
@@ -5394,6 +5421,11 @@ public interface CoreWorkspaceInterface {
      * Removes a theme; whether there was one.
      */
     fun `deleteTheme`(`id`: kotlin.String): kotlin.Boolean
+    
+    /**
+     * `recurrence_clash` for the dates an editor save would write. Read-only.
+     */
+    fun `editorRecurrenceClash`(`edit`: EditorSnapshot, `zone`: kotlin.String): RecurrenceClash?
     
     /**
      * A task's editable state, as the editor opens it.
@@ -5670,6 +5702,12 @@ public interface CoreWorkspaceInterface {
      * Pauses every running session at its last checkpoint, on reopening.
      */
     fun `recoverInterruptedFocus`()
+    
+    /**
+     * Whether moving a repeating task to these dates lands it on or past
+     * its next turn; see `tasks::recurrence_clash`. Read-only.
+     */
+    fun `recurrenceClash`(`taskId`: kotlin.String, `dueAtMs`: kotlin.Long?, `startAtMs`: kotlin.Long?, `zone`: kotlin.String): RecurrenceClash?
     
     /**
      * Puts back the most recently undone step.
@@ -7477,6 +7515,27 @@ open class CoreWorkspace: Disposable, AutoCloseable, CoreWorkspaceInterface
 
     
     /**
+     * Keeps a one-off copy of a repeating task at the dates `edit` gives, as
+     * one "Keep Both" step; returns its id. See `tasks::add_occurrence_copy`.
+     */
+    @Throws(CoreException::class)override fun `addOccurrenceCopy`(`edit`: EditorSnapshot, `nowMs`: kotlin.Long, `zone`: kotlin.String): kotlin.String {
+            return FfiConverterString.lift(
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_add_occurrence_copy(
+        it,
+        
+        FfiConverterTypeEditorSnapshot.lower(`edit`),
+        FfiConverterLong.lower(`nowMs`),
+        FfiConverterString.lower(`zone`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
      * Makes `task_id` wait on `blocked_by_task_id` as one "Add Blocker" step.
      * Returns whether it was new. A task waiting on itself, or an edge that
      * would close a cycle, is refused (`dependencies::add_blocker`).
@@ -8128,6 +8187,25 @@ open class CoreWorkspace: Disposable, AutoCloseable, CoreWorkspaceInterface
         it,
         
         FfiConverterString.lower(`id`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * `recurrence_clash` for the dates an editor save would write. Read-only.
+     */
+    @Throws(CoreException::class)override fun `editorRecurrenceClash`(`edit`: EditorSnapshot, `zone`: kotlin.String): RecurrenceClash? {
+            return FfiConverterOptionalTypeRecurrenceClash.lift(
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_editor_recurrence_clash(
+        it,
+        
+        FfiConverterTypeEditorSnapshot.lower(`edit`),
+        FfiConverterString.lower(`zone`),_status)
 }
     }
     )
@@ -9144,6 +9222,28 @@ open class CoreWorkspace: Disposable, AutoCloseable, CoreWorkspaceInterface
 }
     }
     
+    
+
+    
+    /**
+     * Whether moving a repeating task to these dates lands it on or past
+     * its next turn; see `tasks::recurrence_clash`. Read-only.
+     */
+    @Throws(CoreException::class)override fun `recurrenceClash`(`taskId`: kotlin.String, `dueAtMs`: kotlin.Long?, `startAtMs`: kotlin.Long?, `zone`: kotlin.String): RecurrenceClash? {
+            return FfiConverterOptionalTypeRecurrenceClash.lift(
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_recurrence_clash(
+        it,
+        
+        FfiConverterString.lower(`taskId`),
+        FfiConverterOptionalLong.lower(`dueAtMs`),
+        FfiConverterOptionalLong.lower(`startAtMs`),
+        FfiConverterString.lower(`zone`),_status)
+}
+    }
+    )
+    }
     
 
     
@@ -19335,6 +19435,66 @@ public object FfiConverterTypeRanking: FfiConverterRustBuffer<Ranking> {
 
 
 /**
+ * A repeating task's dates moved onto or past its own next turn: the day
+ * it would come round again anyway. The clients ask before saving, and let
+ * the person choose between one task standing for both days and keeping a
+ * second, one-off copy on that day.
+ */
+data class RecurrenceClash (
+    var `taskId`: kotlin.String
+    , 
+    var `rule`: kotlin.String
+    , 
+    /**
+     * When the task would have come round again, stepping from its dates.
+     */
+    var `nextTurnMs`: kotlin.Long
+    , 
+    /**
+     * Where it is being moved to: the due date when it has one, else the start.
+     */
+    var `movedToMs`: kotlin.Long
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeRecurrenceClash: FfiConverterRustBuffer<RecurrenceClash> {
+    override fun read(buf: ByteBuffer): RecurrenceClash {
+        return RecurrenceClash(
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterLong.read(buf),
+            FfiConverterLong.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: RecurrenceClash) = (
+            FfiConverterString.allocationSize(value.`taskId`) +
+            FfiConverterString.allocationSize(value.`rule`) +
+            FfiConverterLong.allocationSize(value.`nextTurnMs`) +
+            FfiConverterLong.allocationSize(value.`movedToMs`)
+    )
+
+    override fun write(value: RecurrenceClash, buf: ByteBuffer) {
+            FfiConverterString.write(value.`taskId`, buf)
+            FfiConverterString.write(value.`rule`, buf)
+            FfiConverterLong.write(value.`nextTurnMs`, buf)
+            FfiConverterLong.write(value.`movedToMs`, buf)
+    }
+}
+
+
+
+/**
  * An open task that requires a condition.
  */
 data class RequiringTask (
@@ -27864,6 +28024,38 @@ public object FfiConverterOptionalTypePlanning: FfiConverterRustBuffer<Planning?
         } else {
             buf.put(1)
             FfiConverterTypePlanning.write(value, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterOptionalTypeRecurrenceClash: FfiConverterRustBuffer<RecurrenceClash?> {
+    override fun read(buf: ByteBuffer): RecurrenceClash? {
+        if (buf.get().toInt() == 0) {
+            return null
+        }
+        return FfiConverterTypeRecurrenceClash.read(buf)
+    }
+
+    override fun allocationSize(value: RecurrenceClash?): ULong {
+        if (value == null) {
+            return 1UL
+        } else {
+            return 1UL + FfiConverterTypeRecurrenceClash.allocationSize(value)
+        }
+    }
+
+    override fun write(value: RecurrenceClash?, buf: ByteBuffer) {
+        if (value == null) {
+            buf.put(0)
+        } else {
+            buf.put(1)
+            FfiConverterTypeRecurrenceClash.write(value, buf)
         }
     }
 }

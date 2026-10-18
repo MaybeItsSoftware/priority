@@ -816,6 +816,40 @@ impl CoreWorkspace {
         })
     }
 
+    /// Whether moving a repeating task to these dates lands it on or past
+    /// its next turn; see `tasks::recurrence_clash`. Read-only.
+    pub fn recurrence_clash(
+        &self,
+        task_id: String,
+        due_at_ms: Option<i64>,
+        start_at_ms: Option<i64>,
+        zone: String,
+    ) -> Result<Option<tasks::RecurrenceClash>, CoreError> {
+        tasks::recurrence_clash(&self.lock(), &task_id, due_at_ms, start_at_ms, &zone)
+    }
+
+    /// `recurrence_clash` for the dates an editor save would write. Read-only.
+    pub fn editor_recurrence_clash(
+        &self,
+        edit: EditorSnapshot,
+        zone: String,
+    ) -> Result<Option<tasks::RecurrenceClash>, CoreError> {
+        tasks::editor_recurrence_clash(&self.lock(), &edit, &zone)
+    }
+
+    /// Keeps a one-off copy of a repeating task at the dates `edit` gives, as
+    /// one "Keep Both" step; returns its id. See `tasks::add_occurrence_copy`.
+    pub fn add_occurrence_copy(
+        &self,
+        edit: EditorSnapshot,
+        now_ms: i64,
+        zone: String,
+    ) -> Result<String, CoreError> {
+        journal::journalled(&mut self.lock(), "Keep Both", |tx| {
+            tasks::add_occurrence_copy(tx, &edit, now_ms, &zone)
+        })
+    }
+
     /// Copies a task's planning onto its subtasks as one step.
     pub fn apply_planning_to_descendants(
         &self,

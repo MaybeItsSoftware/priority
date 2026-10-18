@@ -815,3 +815,155 @@ fn a_task_created_needing_a_condition_that_does_not_exist_is_not_created() {
     assert!(result.is_err());
     assert_eq!(ids(&connection), ["c", "g", "o", "p"]);
 }
+
+/// 2024-01-01 09:00 UTC, a Monday, in milliseconds.
+const MONDAY_9: i64 = 1_704_099_600_000;
+const DAY: i64 = 86_400_000;
+
+fn repeating(connection: &Connection, rule: &str, due: Option<&str>, start: Option<&str>) {
+    connection
+        .execute("UPDATE tasks SET dueAt = ?1 WHERE id = 'o'", [due])
+        .unwrap();
+    connection
+        .execute(
+            "INSERT INTO task_metadata (taskId, recurrenceRule, startAt, updatedAt) VALUES ('o', ?1, ?2, ?3)",
+            rusqlite::params![rule, start, T],
+        )
+        .unwrap();
+}
+
+#[test]
+fn a_daily_task_moved_to_tomorrow_lands_on_its_next_turn() {
+    let connection = workspace();
+    repeating(&connection, "daily", Some("2024-01-01 09:00:00.000"), None);
+    let clash = recurrence_clash(&connection, "o", Some(MONDAY_9 + DAY), None, "UTC")
+        .unwrap()
+        .expect("tomorrow is the next turn");
+    assert_eq!(clash.next_turn_ms, MONDAY_9 + DAY);
+    assert_eq!(clash.moved_to_ms, MONDAY_9 + DAY);
+    // Later the same day is not the next turn.
+    assert_eq!(
+        recurrence_clash(&connection, "o", Some(MONDAY_9 + 3_600_000), None, "UTC").unwrap(),
+        None
+    );
+}
+
+#[test]
+fn a_weekly_task_clashes_only_from_its_next_day_on() {
+    let connection = workspace();
+    repeating(
+        &connection,
+        "every monday",
+        Some("2024-01-01 09:00:00.000"),
+        None,
+    );
+    let moved = |days: i64| {
+        recurrence_clash(&connection, "o", Some(MONDAY_9 + days * DAY), None, "UTC").unwrap()
+    };
+    assert_eq!(moved(2), None, "Wednesday is before next Monday");
+    assert!(moved(7).is_some(), "next Monday is its turn");
+    assert!(moved(8).is_some(), "past its turn overruns it");
+}
+
+#[test]
+fn only_a_move_of_an_existing_date_on_an_open_repeating_task_counts() {
+    let connection = workspace();
+    // No rule.
+    assert_eq!(
+        recurrence_clash(&connection, "o", Some(MONDAY_9 + DAY), None, "UTC").unwrap(),
+        None
+    );
+    repeating(&connection, "daily", None, Some("2024-01-01 09:00:00.000"));
+    // The start decides when there is no due date; a due date added fresh does not.
+    assert!(
+        recurrence_clash(&connection, "o", None, Some(MONDAY_9 + DAY), "UTC")
+            .unwrap()
+            .is_some()
+    );
+    assert!(
+        recurrence_clash(
+            &connection,
+            "o",
+            Some(MONDAY_9 + DAY),
+            Some(MONDAY_9),
+            "UTC"
+        )
+        .unwrap()
+        .is_none()
+    );
+    // Moved earlier.
+    assert!(
+        recurrence_clash(&connection, "o", None, Some(MONDAY_9 - DAY), "UTC")
+            .unwrap()
+            .is_none()
+    );
+    connection
+        .execute("UPDATE tasks SET status = 'completed' WHERE id = 'o'", [])
+        .unwrap();
+    assert!(
+        recurrence_clash(&connection, "o", None, Some(MONDAY_9 + DAY), "UTC")
+            .unwrap()
+            .is_none()
+    );
+}
+
+#[test]
+fn keeping_both_adds_a_one_off_copy_beside_it_that_undo_removes() {
+    let mut connection = workspace();
+    repeating(&connection, "daily", Some("2024-01-01 09:00:00.000"), None);
+    let mut edit = crate::editor::snapshot(&connection, "o").unwrap();
+    edit.due_at_ms = Some(MONDAY_9 + DAY);
+    let copy = journalled(&mut connection, "Keep Both", |tx| {
+        add_occurrence_copy(tx, &edit, MONDAY_9, "UTC")
+    })
+    .unwrap();
+    let (title, due, rule): (String, Option<String>, Option<String>) = connection
+        .query_row(
+            "SELECT t.title, t.dueAt, m.recurrenceRule FROM tasks t JOIN task_metadata m ON m.taskId = t.id WHERE t.id = ?1",
+            [&copy],
+            |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
+        )
+        .unwrap();
+    assert_eq!(title, "Other");
+    assert!(due.unwrap().starts_with("2024-01-02 09:00"));
+    assert_eq!(rule, None, "the copy does not repeat");
+    let order: Vec<String> = connection
+        .prepare("SELECT id FROM tasks WHERE parentTaskId IS NULL ORDER BY sortOrder")
+        .unwrap()
+        .query_map([], |row| row.get(0))
+        .unwrap()
+        .collect::<Result<_, _>>()
+        .unwrap();
+    assert_eq!(order, vec!["p".to_string(), "o".to_string(), copy.clone()]);
+    undo(&mut connection).unwrap();
+    assert!(!ids(&connection).contains(&copy));
+}
+
+#[test]
+fn a_due_day_counts_as_its_first_moment() {
+    let connection = workspace();
+    repeating(&connection, "daily", None, None);
+    connection
+        .execute(
+            "UPDATE task_metadata SET planningJSON = '{\"dueDate\":\"2024-01-01\"}' WHERE taskId = 'o'",
+            [],
+        )
+        .unwrap();
+    let mut edit = crate::editor::snapshot(&connection, "o").unwrap();
+    assert_eq!(
+        edit.planning.as_ref().and_then(|p| p.due_date.as_deref()),
+        Some("2024-01-01")
+    );
+    edit.planning.as_mut().unwrap().due_date = Some("2024-01-02".into());
+    assert!(
+        editor_recurrence_clash(&connection, &edit, "UTC")
+            .unwrap()
+            .is_some()
+    );
+    edit.planning.as_mut().unwrap().due_date = Some("2024-01-01".into());
+    assert!(
+        editor_recurrence_clash(&connection, &edit, "UTC")
+            .unwrap()
+            .is_none()
+    );
+}

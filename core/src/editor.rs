@@ -677,7 +677,7 @@ fn set_daily_attachment(
 
 /// The start of a `yyyy-MM-dd` date, as a wall-clock time; `None`
 /// for anything that is not exactly such a date. `TaskCalendarDate.date`.
-fn calendar_date(text: &str) -> Option<chrono::NaiveDateTime> {
+pub(crate) fn calendar_date(text: &str) -> Option<chrono::NaiveDateTime> {
     let pieces: Vec<i64> = text
         .split('-')
         .map(|piece| piece.parse().ok())

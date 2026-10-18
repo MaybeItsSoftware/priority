@@ -9,9 +9,10 @@
 
 use std::collections::HashSet;
 
-use rusqlite::{OptionalExtension, Transaction, params};
+use rusqlite::{Connection, OptionalExtension, Transaction, params};
 
 use crate::CoreError;
+use crate::editor::EditorSnapshot;
 use crate::time::stored;
 
 /// A task to create: everything any client can set when it adds one.
@@ -992,6 +993,150 @@ pub fn schedule_next_occurrence(
         persist_task_order(transaction, &siblings, now_ms)?;
     }
     Ok(Some(id))
+}
+
+/// A repeating task's dates moved onto or past its own next turn: the day
+/// it would come round again anyway. The clients ask before saving, and let
+/// the person choose between one task standing for both days and keeping a
+/// second, one-off copy on that day.
+#[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
+pub struct RecurrenceClash {
+    pub task_id: String,
+    pub rule: String,
+    /// When the task would have come round again, stepping from its dates.
+    pub next_turn_ms: i64,
+    /// Where it is being moved to: the due date when it has one, else the start.
+    pub moved_to_ms: i64,
+}
+
+/// Whether moving `task_id` to these dates lands it on or past its next
+/// turn. Only a move counts: a date added where there was none has nothing
+/// to collide with, and neither has one moved earlier. The due date decides
+/// when the task has one; the start, when it only has that.
+pub fn recurrence_clash(
+    connection: &Connection,
+    task_id: &str,
+    due_at_ms: Option<i64>,
+    start_at_ms: Option<i64>,
+    zone: &str,
+) -> Result<Option<RecurrenceClash>, CoreError> {
+    use crate::periodic::Cadence;
+
+    let open: Option<bool> = connection
+        .query_row(
+            "SELECT status = 'open' FROM tasks WHERE id = ?1",
+            [task_id],
+            |row| row.get(0),
+        )
+        .optional()?;
+    if open != Some(true) {
+        return Ok(None);
+    }
+    let saved = crate::editor::snapshot(connection, task_id)?;
+    let Some(rule) = saved.metadata.recurrence_rule.clone() else {
+        return Ok(None);
+    };
+    let Some(cadence) = Cadence::parse(&rule) else {
+        return Ok(None);
+    };
+    let tz = crate::periodic::zone(zone);
+    let saved_start = saved.planning.as_ref().and_then(|p| p.start_at_ms);
+    let (current, proposed) = match effective_due(&saved, tz) {
+        Some(current) => (current, due_at_ms),
+        None => match saved_start {
+            Some(current) => (current, start_at_ms),
+            None => return Ok(None),
+        },
+    };
+    let Some(proposed) = proposed.filter(|proposed| *proposed > current) else {
+        return Ok(None);
+    };
+    let instant = |ms: i64| chrono::DateTime::from_timestamp_millis(ms).unwrap_or_default();
+    let Some(next) = cadence.next_occurrence(instant(current), None, tz) else {
+        return Ok(None);
+    };
+    if instant(proposed).with_timezone(&tz).date_naive() < next.with_timezone(&tz).date_naive() {
+        return Ok(None);
+    }
+    Ok(Some(RecurrenceClash {
+        task_id: task_id.to_string(),
+        rule,
+        next_turn_ms: next.timestamp_millis(),
+        moved_to_ms: proposed,
+    }))
+}
+
+/// `recurrence_clash` for an editor save: the dates `edit` would write.
+pub fn editor_recurrence_clash(
+    connection: &Connection,
+    edit: &EditorSnapshot,
+    zone: &str,
+) -> Result<Option<RecurrenceClash>, CoreError> {
+    let due = effective_due(edit, crate::periodic::zone(zone));
+    let start = edit.planning.as_ref().and_then(|p| p.start_at_ms);
+    recurrence_clash(connection, &edit.task_id, due, start, zone)
+}
+
+/// A due time, or the first moment of a due day, in milliseconds.
+fn effective_due(snapshot: &EditorSnapshot, zone: chrono_tz::Tz) -> Option<i64> {
+    snapshot.due_at_ms.or_else(|| {
+        let day = snapshot.planning.as_ref()?.due_date.as_deref()?;
+        let midnight = crate::editor::calendar_date(day)?;
+        Some(crate::periodic::resolve(zone, midnight).timestamp_millis())
+    })
+}
+
+/// Writes a one-off copy of a repeating task just after it, carrying the
+/// dates `edit` gives, and returns its id: "keep both" when a move lands on
+/// the task's next turn. The copy does not repeat — the original still
+/// carries the rule, so finishing the copy schedules nothing and the rhythm
+/// is not doubled.
+pub fn add_occurrence_copy(
+    transaction: &Transaction,
+    edit: &EditorSnapshot,
+    now_ms: i64,
+    zone: &str,
+) -> Result<String, CoreError> {
+    let task_id = edit.task_id.as_str();
+    let (list_id, parent): (String, Option<String>) = transaction.query_row(
+        "SELECT listId, parentTaskId FROM tasks WHERE id = ?1",
+        [task_id],
+        |row| Ok((row.get(0)?, row.get(1)?)),
+    )?;
+    let id = crate::lists::new_id();
+    let stamp = stored(now_ms);
+    transaction.execute(
+        "INSERT INTO tasks (id, listId, parentTaskId, title, notes, status, sortOrder, dueAt, estimateSeconds,
+                            sourceSystem, sourceId, itemKind, isPromoted, archivedAt, completedAt, createdAt, updatedAt)
+         SELECT ?1, listId, parentTaskId, title, notes, 'open', sortOrder, dueAt, estimateSeconds,
+                NULL, NULL, itemKind, isPromoted, NULL, NULL, ?2, ?2
+         FROM tasks WHERE id = ?3",
+        params![id, stamp, task_id],
+    )?;
+    transaction.execute(
+        "INSERT INTO task_metadata (taskId, priority, startAt, tagsJSON, recurrenceRule, matrixUrgency,
+                                    matrixImportance, kanbanColumn, externalLinksJSON, focusRank, planningJSON, updatedAt)
+         SELECT ?1, priority, startAt, tagsJSON, NULL, matrixUrgency, matrixImportance, NULL,
+                externalLinksJSON, NULL, planningJSON, ?2
+         FROM task_metadata WHERE taskId = ?3",
+        params![id, stamp, task_id],
+    )?;
+    // The dates go through the editor, so a due day stays a day and a start
+    // after the deadline is refused as it is anywhere else.
+    let baseline = crate::editor::snapshot(transaction, &id)?;
+    let mut copy = edit.clone();
+    copy.task_id = id.clone();
+    copy.workspace_id = baseline.workspace_id.clone();
+    copy.metadata.recurrence_rule = None;
+    copy.daily_progress = false;
+    crate::editor::save_editor(transaction, &copy, &baseline, now_ms, zone)?;
+    let mut siblings = task_siblings(transaction, &list_id, parent.as_deref())?;
+    siblings.retain(|sibling| sibling != &id);
+    if let Some(index) = siblings.iter().position(|sibling| sibling == task_id) {
+        siblings.insert(index + 1, id.clone());
+        persist_task_order(transaction, &siblings, now_ms)?;
+    }
+    Ok(id)
 }
 
 /// The parts of a finished occurrence the next one is made from.
