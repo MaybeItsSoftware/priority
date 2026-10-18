@@ -91,6 +91,9 @@ targets:
               - takt
         BGTaskSchedulerPermittedIdentifiers:
           - uk.co.maybeitssoftware.takt.sync
+        # Google Calendar's iOS OAuth client (docs/google-calendar.md). Empty
+        # hides the Calendar settings' Connect button.
+        GoogleIOSClientID: $(GOOGLE_IOS_CLIENT_ID)
         UIBackgroundModes:
           - fetch
         UIAppFonts:
@@ -126,6 +129,9 @@ targets:
       base:
         PRODUCT_NAME: Takt
         PRODUCT_BUNDLE_IDENTIFIER: uk.co.maybeitssoftware.takt
+        # The iOS OAuth client from Google Cloud project takt-511416, of the
+        # form `<number>-<id>.apps.googleusercontent.com`.
+        GOOGLE_IOS_CLIENT_ID: ""
         TARGETED_DEVICE_FAMILY: "1,2"
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         SUPPORTS_MACCATALYST: NO
