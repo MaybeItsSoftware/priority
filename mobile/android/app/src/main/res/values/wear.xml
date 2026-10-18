@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <!-- Tells a paired watch which node takes Takt's actions (docs/wear-os.md). -->
+    <string-array name="android_wear_capabilities" tools:ignore="UnusedResources">
+        <item>takt_phone</item>
+    </string-array>
+</resources>

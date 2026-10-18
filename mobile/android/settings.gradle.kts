@@ -15,4 +15,4 @@ dependencyResolutionManagement {
 }
 
 rootProject.name = "Takt"
-include(":core", ":data", ":app", ":baselineprofile", ":benchmark")
+include(":core", ":data", ":app", ":baselineprofile", ":benchmark", ":wearcontract")
