@@ -28,6 +28,7 @@ import uk.co.maybeitsadam.takt.data.workspace.WorkspaceRepository
 import uk.co.maybeitsadam.takt.focus.FocusServiceLauncher
 import uk.co.maybeitsadam.takt.settings.GoogleCalendarController
 import uk.co.maybeitsadam.takt.settings.SyncController
+import uk.co.maybeitsadam.takt.ui.actions.RecurrenceClashes
 import uk.co.maybeitsadam.takt.ui.actions.TaskCommands
 import uk.co.maybeitsadam.takt.ui.undo.UndoCenter
 
@@ -92,6 +93,7 @@ class AppContainer(
     val listsPrompt = ListsPromptController()
     val undo = UndoCenter(this)
     val commands = TaskCommands(this)
+    val clashes = RecurrenceClashes(this)
     val sync = SyncController(this)
     val calendar = GoogleCalendarController(this)
     private val engines = ForegroundEngines(this)

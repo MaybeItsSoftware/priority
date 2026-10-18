@@ -77,6 +77,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
 import uk.co.maybeitsadam.takt.app.AppContainer
 import uk.co.maybeitsadam.takt.app.QuickAddRequest
+import uk.co.maybeitsadam.takt.ui.actions.RecurrenceClashSheet
 import uk.co.maybeitsadam.takt.ui.commands.CommandPalette
 import uk.co.maybeitsadam.takt.ui.commands.CommandRegistry
 import uk.co.maybeitsadam.takt.ui.commands.KeyCommand
@@ -168,6 +169,7 @@ fun AppShell(container: AppContainer, pendingIntent: Intent?, onIntentHandled: (
     val inspectorTaskId by container.inspector.taskId.collectAsStateWithLifecycle()
     val quickAdd by container.quickAdd.request.collectAsStateWithLifecycle()
     val habitRequest by container.habits.request.collectAsStateWithLifecycle()
+    val recurrenceClash by container.clashes.pending.collectAsStateWithLifecycle()
 
     LaunchedEffect(container) {
         container.undo.messages.collect { message ->
@@ -365,6 +367,11 @@ fun AppShell(container: AppContainer, pendingIntent: Intent?, onIntentHandled: (
             }
 
             if (historyOpen) HistorySheet(onDismiss = { historyOpen = false })
+
+            // Last, so it sits over the inspector sheet a save asked it from.
+            recurrenceClash?.let { pending ->
+                RecurrenceClashSheet(pending, onChoose = container.clashes::answer)
+            }
 
             if (paletteOpen) {
                 CommandPalette(

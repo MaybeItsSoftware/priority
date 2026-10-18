@@ -48,6 +48,7 @@ import uk.co.maybeitsadam.takt.core.TaskPlanningException
 import uk.co.maybeitsadam.takt.core.WorkspaceNextUpSnapshot
 import uk.co.maybeitsadam.takt.data.workspace.FocusCompletionOutcome
 import uk.co.maybeitsadam.takt.data.workspace.emptyFocusContext
+import uk.co.maybeitsadam.takt.data.workspace.startClash
 import uk.co.maybeitsadam.takt.ui.today.dayTicks
 import uk.co.maybeitsadam.takt.ui.today.minuteTicks
 
@@ -346,10 +347,14 @@ class FocusViewModel(private val container: AppContainer) : ViewModel() {
 
     fun deferTask(taskId: String, deferral: FocusDeferral) = deferTo(taskId, deferral.date(Instant.now()), deferral.title.lowercase())
 
-    fun deferTo(taskId: String, at: Instant, label: String) {
-        if (_staged.value == taskId) _staged.value = null
-        container.undo.perform(message = "Deferred to $label") { it.scheduleTask(taskId, at) }
-    }
+    /** A repeating task deferred onto its own next turn asks first (`RecurrenceClashes`). */
+    fun deferTo(taskId: String, at: Instant, label: String) = container.clashes.move(
+        taskId,
+        message = "Deferred to $label",
+        find = { it.startClash(taskId, at) },
+        move = { it.scheduleTask(taskId, at) },
+        then = { if (_staged.value == taskId) _staged.value = null },
+    )
 
     /** Moves a rung by hand: only the task that moved is pinned, so a nudge stays a nudge. */
     fun moveRung(taskId: String, offset: Int) {

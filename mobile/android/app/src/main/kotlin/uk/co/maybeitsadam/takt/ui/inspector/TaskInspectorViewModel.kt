@@ -43,8 +43,10 @@ import uk.co.maybeitsadam.takt.data.workspace.TaskEditorField
 import uk.co.maybeitsadam.takt.data.workspace.TaskEditorSnapshot
 import uk.co.maybeitsadam.takt.data.workspace.TaskEditorValues
 import uk.co.maybeitsadam.takt.data.workspace.TaskInspectorFacts
+import uk.co.maybeitsadam.takt.data.workspace.TaskRecurrenceClash
 import uk.co.maybeitsadam.takt.data.workspace.WorkspaceStoreException
 import uk.co.maybeitsadam.takt.data.workspace.observeTaskInspectorFacts
+import uk.co.maybeitsadam.takt.data.workspace.recurrenceClash
 import uk.co.maybeitsadam.takt.data.workspace.setWaiting
 
 /** Everything around the draft: the task row, its list, the catalogues, its placement. */
@@ -169,10 +171,15 @@ class TaskInspectorViewModel(private val container: AppContainer) : ViewModel() 
             container.undo.say("Edits to “${draft.baseline.title}” were not saved: ${problems.firstOrNull()?.message ?: TaskEditorError.CONFLICTING_CHANGES.message}")
             return
         }
-        viewModelScope.launch {
-            container.undo.performNow { it.saveTaskEditor(draft) }
+        // The app's scope: asked as the inspector goes, the answer outlives it.
+        container.scope.launch {
+            // A move onto a repeating task's next turn asks first; Cancel keeps the draft to reopen.
+            val choice = container.clashes.choose(draft.values.title, clashOf(draft))
+            if (!choice.saves) return@launch
+            if (!container.undo.performNow { it.saveTaskEditor(draft) }) return@launch
             // Reopening the task now starts from the saved values.
             _draft.update { current -> if (current === draft) null else current }
+            container.clashes.keepBothIfChosen(choice, draft.baseline.taskId)
         }
     }
 
@@ -207,6 +214,10 @@ class TaskInspectorViewModel(private val container: AppContainer) : ViewModel() 
             _save.value = SaveState(error = blocker, attempted = true)
             return false
         }
+        // A move onto a repeating task's next turn asks first. Cancel saves
+        // nothing and leaves the draft as it is, to change.
+        val choice = container.clashes.choose(draft.values.title, clashOf(draft))
+        if (!choice.saves) return false
         _save.value = SaveState(saving = true, attempted = true)
         var saved: TaskEditorSnapshot? = null
         var failure: Throwable? = null
@@ -234,8 +245,13 @@ class TaskInspectorViewModel(private val container: AppContainer) : ViewModel() 
             }
         }
         _save.value = SaveState()
+        container.clashes.keepBothIfChosen(choice, committed.taskId)
         return true
     }
+
+    /** Whether saving [draft] lands a repeating task on its next turn; the core decides. */
+    private suspend fun clashOf(draft: TaskEditorDraft): TaskRecurrenceClash? =
+        runCatching { container.repository().recurrenceClash(draft) }.getOrNull()
 
     fun saveAsync(then: (Boolean) -> Unit = {}) {
         viewModelScope.launch { then(save()) }

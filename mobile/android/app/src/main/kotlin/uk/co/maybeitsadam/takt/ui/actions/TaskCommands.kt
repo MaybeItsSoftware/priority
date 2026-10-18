@@ -8,6 +8,7 @@ import uk.co.maybeitsadam.takt.core.TaskStatus
 import uk.co.maybeitsadam.takt.core.WorkspaceItemKind
 import uk.co.maybeitsadam.takt.core.WorkspaceTask
 import uk.co.maybeitsadam.takt.data.workspace.WorkspaceRepository
+import uk.co.maybeitsadam.takt.data.workspace.recurrenceClash
 
 /**
  * Every Task-group command from the desktop catalogue
@@ -90,8 +91,12 @@ class TaskCommands(private val container: AppContainer) {
 
     fun clearDue(taskId: String) = setDue(taskId, null)
 
-    fun setDue(taskId: String, dueAt: Instant?) = undo.perform { repo ->
-        val task = repo.task(taskId) ?: return@perform
+    /** A repeating task moved onto the day it comes round again asks first (`RecurrenceClashes`). */
+    fun setDue(taskId: String, dueAt: Instant?) = container.clashes.move(
+        taskId,
+        find = { repo -> repo.recurrenceClash(taskId, dueAt, repo.taskEditorSnapshot(taskId).planning?.startAt) },
+    ) { repo ->
+        val task = repo.task(taskId) ?: return@move
         repo.updateTask(task.id, task.title, task.notes, dueAt, task.estimateSeconds)
     }
 

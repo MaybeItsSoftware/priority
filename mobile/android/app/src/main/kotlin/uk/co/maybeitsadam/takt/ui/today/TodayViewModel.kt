@@ -28,6 +28,7 @@ import uk.co.maybeitsadam.takt.core.WorkspaceNextUpSnapshot
 import uk.co.maybeitsadam.takt.core.FocusSessionPhase
 import uk.co.maybeitsadam.takt.core.TaskAvailabilityPolicy
 import uk.co.maybeitsadam.takt.data.workspace.observeBlockedTaskIds
+import uk.co.maybeitsadam.takt.data.workspace.startClash
 import uk.co.maybeitsadam.takt.ui.focus.FocusActions
 import uk.co.maybeitsadam.takt.ui.focus.FocusDeferral
 import uk.co.maybeitsadam.takt.ui.focus.PendingCompletion
@@ -141,10 +142,19 @@ class TodayViewModel(private val container: AppContainer) : ViewModel() {
 
     fun dueTomorrow(card: DayCard) = container.commands.dueTomorrow(card.id)
 
-    /** Not today: off the plan, and the start pushed to tomorrow morning. */
-    fun deferToTomorrow(card: DayCard) = container.undo.perform(message = "Moved ${card.title} to tomorrow") { repo ->
-        if (card.isPlanned) repo.setPlannedForToday(false, listOf(card.id))
-        repo.scheduleTask(card.id, FocusDeferral.TOMORROW.date(Instant.now()))
+    /**
+     * Not today: off the plan, and the start pushed to tomorrow morning. A
+     * repeating task that comes round tomorrow anyway asks first.
+     */
+    fun deferToTomorrow(card: DayCard) {
+        val morning = FocusDeferral.TOMORROW.date(Instant.now())
+        container.clashes.move(
+            card.id, card.title, message = "Moved ${card.title} to tomorrow",
+            find = { it.startClash(card.id, morning) },
+        ) { repo ->
+            if (card.isPlanned) repo.setPlannedForToday(false, listOf(card.id))
+            repo.scheduleTask(card.id, morning)
+        }
     }
 
     fun inspect(card: DayCard) = container.inspector.open(card.id)
