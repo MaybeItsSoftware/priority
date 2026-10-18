@@ -155,7 +155,7 @@ xcodebuild -project mobile/ios/TaktMobile.xcodeproj -scheme TaktMobile -destinat
 After changing anything under `mobile/android` (Gradle builds share `/tmp/priority-gradle.lock`):
 
 ```bash
-(cd mobile/android && ./gradlew :core:test :data:testDebugUnitTest :app:testDebugUnitTest lint :app:assembleDebug :app:assembleRelease)
+(cd mobile/android && ./gradlew :core:test :data:testDebugUnitTest :app:testDebugUnitTest :wearcontract:test :wear:testDebugUnitTest lint :app:assembleDebug :wear:assembleDebug :app:assembleRelease :wear:assembleRelease)
 ./scripts/install_android.sh        # onto the connected device or emulator
 ./scripts/build_play_bundle.sh      # signed .aab for the Play Console, into build/play/
 ```
