@@ -98,6 +98,9 @@ internal fun InspectorBody(
         ConflictBanners(vm, draft, around)
         TitleBlock(vm, values, task, around, problem(TaskEditorField.TITLE), onClose)
 
+        WhenSection(values, today, zone, problem(TaskEditorField.START_AT), edit)
+        PlanSection(values, task, around, problem(TaskEditorField.ESTIMATE_MINUTES), edit)
+
         InspectorSection("Notes") {
             ChalkField(
                 values.notes,
@@ -111,8 +114,6 @@ internal fun InspectorBody(
             )
         }
 
-        WhenSection(values, today, zone, problem(TaskEditorField.START_AT), edit)
-        PlanSection(values, task, around, problem(TaskEditorField.ESTIMATE_MINUTES), edit)
         RepeatSection(values, zone, edit)
         ConditionsSection(vm, values, around, problem(TaskEditorField.MINIMUM_BLOCK), problem(TaskEditorField.SINGLE_SITTING), edit)
         TodaySection(vm, values, draft, around, edit)
@@ -208,25 +209,6 @@ private fun WhenSection(
 ) {
     val mode = DueEditing.mode(values)
     InspectorSection("When") {
-        FieldLabel("Due")
-        ChalkDateField(
-            label = "Due",
-            date = DueEditing.day(values, zone),
-            time = values.dueAt?.let { DateFieldMath.time(it, zone) },
-            today = today,
-            onDate = { date -> edit { DueEditing.setDay(it, date, zone) } },
-            onTime = { time -> edit { DueEditing.setTime(it, time, zone) } },
-            testTag = "inspector_due",
-        )
-        if (mode != DueMode.NONE) {
-            SwitchRow(
-                "At a set time",
-                checked = mode == DueMode.TIME,
-                onCheckedChange = { exact -> edit { DueEditing.setExact(it, exact, zone, today) } },
-                detail = if (mode == DueMode.TIME) "Due at an exact time" else "Due any time that day, wherever you are",
-            )
-        }
-        Spacer(Modifier.size(Metrics.xs))
         FieldLabel("Start")
         ChalkDateField(
             label = "Start",
@@ -248,6 +230,25 @@ private fun WhenSection(
         )
         if (startError != null) Hint(startError, color = TaktTheme.colors.danger)
         else Hint("It stays out of Next up until then.")
+        Spacer(Modifier.size(Metrics.xs))
+        FieldLabel("Due")
+        ChalkDateField(
+            label = "Due",
+            date = DueEditing.day(values, zone),
+            time = values.dueAt?.let { DateFieldMath.time(it, zone) },
+            today = today,
+            onDate = { date -> edit { DueEditing.setDay(it, date, zone) } },
+            onTime = { time -> edit { DueEditing.setTime(it, time, zone) } },
+            testTag = "inspector_due",
+        )
+        if (mode != DueMode.NONE) {
+            SwitchRow(
+                "At a set time",
+                checked = mode == DueMode.TIME,
+                onCheckedChange = { exact -> edit { DueEditing.setExact(it, exact, zone, today) } },
+                detail = if (mode == DueMode.TIME) "Due at an exact time" else "Due any time that day, wherever you are",
+            )
+        }
     }
 }
 

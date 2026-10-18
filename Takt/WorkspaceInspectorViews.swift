@@ -183,10 +183,25 @@ struct LocalTaskInspector: View {
     }
   }
 
-  /// When it is due, and when it may start.
+  /// When it may start, and when it is due — in the order they come.
   @ViewBuilder
   private func when(_ draft: TaskEditorDraft) -> some View {
     let hasDue = draft.values.dueAt != nil || draft.values.dueDate != nil
+    InspectorOptionalRow(
+      "Start", add: "Add start", isSet: draft.values.startAt != nil, stop: "start",
+      add: { model.taskEditor.edit(task.id) { $0.startAt = $0.startAt ?? .now } },
+      clear: { model.taskEditor.edit(task.id) { $0.startAt = nil } },
+      value: {
+        if let start = draft.values.startAt {
+          ThemedDateField(
+            selection: Binding(
+              get: { model.taskEditor.draft(for: task.id)?.values.startAt ?? start },
+              set: { date in model.taskEditor.edit(task.id) { $0.startAt = date } }),
+            includesTime: true, stop: "start.date", framed: false)
+          .commandHelp(.taskEditStart)
+        }
+      })
+    .commandHelp(.taskEditStart)
     InspectorOptionalRow(
       "Due", add: "Add date", isSet: hasDue, stop: "due",
       add: {
@@ -241,21 +256,6 @@ struct LocalTaskInspector: View {
         .help("Due at a set time rather than any time that day")
       }
     }
-    InspectorOptionalRow(
-      "Start", add: "Add start", isSet: draft.values.startAt != nil, stop: "start",
-      add: { model.taskEditor.edit(task.id) { $0.startAt = $0.startAt ?? .now } },
-      clear: { model.taskEditor.edit(task.id) { $0.startAt = nil } },
-      value: {
-        if let start = draft.values.startAt {
-          ThemedDateField(
-            selection: Binding(
-              get: { model.taskEditor.draft(for: task.id)?.values.startAt ?? start },
-              set: { date in model.taskEditor.edit(task.id) { $0.startAt = date } }),
-            includesTime: true, stop: "start.date", framed: false)
-          .commandHelp(.taskEditStart)
-        }
-      })
-    .commandHelp(.taskEditStart)
   }
 
   private func setExactDue(_ exact: Bool) {

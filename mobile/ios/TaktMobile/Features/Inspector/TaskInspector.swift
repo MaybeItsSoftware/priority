@@ -33,9 +33,9 @@ struct TaskInspector: View {
             if !inspector.conflicts.isEmpty { conflictBanner }
             if let error = inspector.error { errorLine(error) }
             if inspector.isUnavailable { unavailableLine }
-            notes(values)
             when(values)
             plan(task, values)
+            notes(values)
             placement
             if !task.isList { BlockedBySection(task: task) }
             filing(values)
@@ -177,6 +177,22 @@ struct TaskInspector: View {
 
   private func when(_ values: TaskEditorValues) -> some View {
     InspectorSection("When") {
+      Toggle("Start later", isOn: Binding(
+        get: { inspector.values?.startAt != nil },
+        set: { on in inspector.edit(model, immediate: true) { $0.startAt = on ? ($0.startAt ?? defaultStart) : nil } }))
+        .toggleStyle(ThemedToggleStyle())
+        .accessibilityIdentifier("inspector.start")
+      if values.startAt != nil {
+        DatePicker(
+          "Starts",
+          selection: Binding(
+            get: { inspector.values?.startAt ?? .now },
+            set: { date in inspector.edit(model, immediate: true) { $0.startAt = date } }),
+          displayedComponents: [.date, .hourAndMinute]
+        )
+        .font(theme.type.body)
+        .foregroundStyle(theme.muted)
+      }
       InspectorRow("Due") {
         ChoiceChips(
           options: InspectorModel.DueKind.allCases.map { ($0.title, $0) },
@@ -206,22 +222,6 @@ struct TaskInspector: View {
         .foregroundStyle(theme.muted)
       case .none:
         quickDueButtons
-      }
-      Toggle("Start later", isOn: Binding(
-        get: { inspector.values?.startAt != nil },
-        set: { on in inspector.edit(model, immediate: true) { $0.startAt = on ? ($0.startAt ?? defaultStart) : nil } }))
-        .toggleStyle(ThemedToggleStyle())
-        .accessibilityIdentifier("inspector.start")
-      if values.startAt != nil {
-        DatePicker(
-          "Starts",
-          selection: Binding(
-            get: { inspector.values?.startAt ?? .now },
-            set: { date in inspector.edit(model, immediate: true) { $0.startAt = date } }),
-          displayedComponents: [.date, .hourAndMinute]
-        )
-        .font(theme.type.body)
-        .foregroundStyle(theme.muted)
       }
       InspectorRow("Repeat") {
         TextField("Every Monday", text: binding(\.recurrenceRule))
