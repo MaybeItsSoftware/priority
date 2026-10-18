@@ -198,6 +198,11 @@ struct TitleBarAddTextField: NSViewRepresentable {
       case #selector(NSResponder.moveUp(_:)): return parent.onArrow(.up)
       case #selector(NSResponder.moveDown(_:)): return parent.onArrow(.down)
       case #selector(NSResponder.insertTab(_:)): return parent.onArrow(.right)
+      // ⌘⌫ takes back a word, as ⌥⌫ does, rather than the whole line: a
+      // capture is one line, so "to the start of the line" was everything.
+      case #selector(NSResponder.deleteToBeginningOfLine(_:)):
+        textView.deleteWordBackward(nil)
+        return true
       // Left and right move the caret, as they do in the window's own add
       // row; only where the caret can go no further do they steer — → at
       // the end into the slots.

@@ -201,6 +201,9 @@ afterwards:
 release notes", estimated at 45 minutes, tagged `work`, due on Friday, at
 priority 1 — the most urgent.
 
+In the add field and the quick-capture panel, `⌘⌫` deletes the word before the
+caret, as `⌥⌫` does, rather than the whole line.
+
 The same endings work when you **edit a title in place**. In the outline,
 `F2`, `ee` or a click on the task already selected turns its title into a field
 in the row, as in Checkvist; `ea` starts typing at the end of the title and `ei`
