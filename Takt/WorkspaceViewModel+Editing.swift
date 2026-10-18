@@ -10,12 +10,26 @@ extension WorkspaceViewModel {
     taskEditor.open(task.id, store: store)
   }
 
+  /// Saves the inspector's draft — asking first when it moves a repeating
+  /// task onto the day it comes round again anyway.
   func saveTaskEditor(_ task: WorkspaceTask) {
-    guard let store, taskEditor.save(task.id, store: store) else { return }
+    if let draft = taskEditor.draft(for: task.id),
+      askAboutRecurrenceClash(draft, title: draft.values.title, save: { [weak self] in
+        self?.commitTaskEditor(task) ?? false
+      }) {
+      return
+    }
+    commitTaskEditor(task)
+  }
+
+  @discardableResult
+  private func commitTaskEditor(_ task: WorkspaceTask) -> Bool {
+    guard let store, taskEditor.save(task.id, store: store) else { return false }
     reloadOutline()
     reloadDailies()
     reloadFocus()
     reloadNextUp()
+    return true
   }
 
   func revertTaskEditor(_ task: WorkspaceTask) {

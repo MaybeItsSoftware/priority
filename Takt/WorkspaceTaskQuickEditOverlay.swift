@@ -23,6 +23,9 @@ struct WorkspaceTaskQuickEditRequest: Identifiable {
   let id = UUID()
   let task: WorkspaceTask
   let kind: WorkspaceTaskQuickEditKind
+  /// The date to open on in place of the saved one: the date a cancelled
+  /// recurrence clash hands back.
+  var date: Date?
 }
 
 /// One field of one task, edited without opening the inspector: `t` for the
@@ -244,8 +247,10 @@ struct WorkspaceTaskQuickEditOverlay: View {
       case .notes: text = snapshot.notes
       case .tags: text = snapshot.values.tags
       case .recurrence: text = snapshot.values.recurrenceRule
-      case .due: date = snapshot.dueAt ?? snapshot.planning?.dueDate.flatMap { TaskCalendarDate.date($0) } ?? defaultDate
-      case .start: date = snapshot.planning?.startAt ?? defaultDate
+      case .due:
+        date = request.date ?? snapshot.dueAt ?? snapshot.planning?.dueDate.flatMap { TaskCalendarDate.date($0) }
+          ?? defaultDate
+      case .start: date = request.date ?? snapshot.planning?.startAt ?? defaultDate
       }
     } catch { self.error = error.localizedDescription }
   }
@@ -268,10 +273,34 @@ struct WorkspaceTaskQuickEditOverlay: View {
       case .due: draft.values.dueAt = clear ? nil : date; draft.values.dueDate = nil
       case .start: draft.values.startAt = clear ? nil : date
       }
-      _ = try store.saveTaskEditor(draft)
-      model.taskEditor.refresh(store: store)
-      model.reloadOutline(); model.reloadDailies(); model.reloadFocus(); model.reloadNextUp()
+      let model = model
+      let request = request
+      let chosen = date
+      let held = draft
+      if model.askAboutRecurrenceClash(
+        draft, title: request.task.title,
+        save: {
+          do {
+            try Self.commit(held, store: store, model: model)
+            return true
+          } catch {
+            model.errorMessage = error.localizedDescription
+            return false
+          }
+        },
+        cancel: {
+          model.presentOverlay(.quickEdit(WorkspaceTaskQuickEditRequest(task: request.task, kind: request.kind, date: chosen)))
+        }) {
+        return
+      }
+      try Self.commit(draft, store: store, model: model)
       model.dismissOverlay()
     } catch { self.error = error.localizedDescription }
+  }
+
+  private static func commit(_ draft: TaskEditorDraft, store: WorkspaceStore, model: WorkspaceViewModel) throws {
+    _ = try store.saveTaskEditor(draft)
+    model.taskEditor.refresh(store: store)
+    model.reloadOutline(); model.reloadDailies(); model.reloadFocus(); model.reloadNextUp()
   }
 }

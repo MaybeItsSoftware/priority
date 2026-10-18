@@ -48,6 +48,8 @@ enum WorkspaceOverlay: Identifiable {
   case deleteBoardColumn(String)
   /// Telling the agent what to do to a task: `aa`.
   case quickAsk(WorkspaceQuickAskRequest)
+  /// A save moving a repeating task onto its next turn, held for a choice.
+  case recurrenceClash(WorkspaceRecurrenceClashRequest)
 
   var id: String {
     switch self {
@@ -71,6 +73,7 @@ enum WorkspaceOverlay: Identifiable {
     case .renameBoardColumn(let id): "column-rename:\(id)"
     case .deleteBoardColumn(let id): "column-delete:\(id)"
     case .quickAsk(let request): "quick-ask:\(request.id)"
+    case .recurrenceClash(let request): "recurrence-clash:\(request.id)"
     }
   }
 }
@@ -124,7 +127,12 @@ extension WorkspaceViewModel {
   func handleOverlayKey(_ event: NSEvent) -> Bool {
     guard let overlay = activeOverlay, let key = event.workspaceCommandKey else { return false }
     if key == "escape" {
-      dismissOverlay()
+      // Cancelling a clash hands the edit back to where it was made.
+      if case .recurrenceClash(let request) = overlay {
+        resolveRecurrenceClash(request, choice: .cancel)
+      } else {
+        dismissOverlay()
+      }
       return true
     }
     if WorkspaceCommandCatalog.isChord(key),

@@ -305,16 +305,32 @@ extension WorkspaceViewModel {
     editTaskValues(of: task, change)
   }
 
+  /// One change saved straight away — asking first when it moves a
+  /// repeating task onto the day it comes round again anyway.
   func editTaskValues(of task: WorkspaceTask, _ change: (inout TaskEditorValues) -> Void) {
     guard let store else { return }
-    perform {
-      var draft = TaskEditorDraft(snapshot: try store.taskEditorSnapshot(for: task.id))
-      change(&draft.values)
-      _ = try store.saveTaskEditor(draft)
-      reloadOutline(refreshSidebar: task.isList)
-      reloadDailies()
-      reloadNextUp()
+    var draft: TaskEditorDraft
+    do {
+      draft = TaskEditorDraft(snapshot: try store.taskEditorSnapshot(for: task.id))
+    } catch {
+      errorMessage = error.localizedDescription
+      return
     }
+    change(&draft.values)
+    let save: @MainActor () -> Bool = { [weak self, draft] in
+      guard let self else { return false }
+      var saved = false
+      perform {
+        _ = try store.saveTaskEditor(draft)
+        saved = true
+        self.reloadOutline(refreshSidebar: task.isList)
+        self.reloadDailies()
+        self.reloadNextUp()
+      }
+      return saved
+    }
+    if askAboutRecurrenceClash(draft, title: task.title, save: save) { return }
+    _ = save()
   }
 
   func invalidateTask(_ task: WorkspaceTask) {

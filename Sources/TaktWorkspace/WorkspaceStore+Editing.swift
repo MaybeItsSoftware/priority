@@ -19,6 +19,27 @@ extension WorkspaceStore {
     return try taskEditorSnapshot(for: edit.taskId)
   }
 
+  /// Whether saving `draft` moves a repeating task onto or past its next
+  /// turn: the Rust core's `tasks::editor_recurrence_clash`. Read-only, and
+  /// nil for anything that is not such a move.
+  public func recurrenceClash(for draft: TaskEditorDraft) throws -> TaskRecurrenceClash? {
+    let edit = try draft.validatedSnapshot()
+    return try Self.mappingCoreErrors {
+      try core.editorRecurrenceClash(edit: edit.core, zone: TimeZone.current.identifier)
+    }.map(TaskRecurrenceClash.init)
+  }
+
+  /// "Keep both": a one-off copy of the task beside it, carrying the dates
+  /// `draft` gives, as its own "Keep Both" step. Returns the copy's id: the
+  /// Rust core's `tasks::add_occurrence_copy`.
+  @discardableResult
+  public func addOccurrenceCopy(_ draft: TaskEditorDraft, now: Date = .now) throws -> String {
+    let edit = try draft.validatedSnapshot()
+    return try coreWrite {
+      try core.addOccurrenceCopy(edit: edit.core, nowMs: now.coreMilliseconds, zone: TimeZone.current.identifier)
+    }
+  }
+
   /// The folders a folder may move into: the Rust core's `records::valid_parent_folders`.
   public func validParentFolders(for folderId: String) throws -> [ListFolder] {
     try Self.mappingCoreErrors { try core.validParentFolders(folderId: folderId) }.map(ListFolder.init)

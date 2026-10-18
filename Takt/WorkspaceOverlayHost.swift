@@ -112,6 +112,8 @@ struct WorkspaceOverlayHost: View {
       ) { model.renameKanbanColumn(id, to: $0) }
     case .deleteBoardColumn(let id):
       WorkspaceDeleteColumnOverlay(overlayID: overlay.id, columnID: id)
+    case .recurrenceClash(let request):
+      WorkspaceRecurrenceClashOverlay(overlayID: overlay.id, request: request)
     }
   }
 
