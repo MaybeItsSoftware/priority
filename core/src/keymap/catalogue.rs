@@ -189,6 +189,9 @@ fn task() -> Vec<Spec> {
         c("taskPromoteList", "Promote or unpin a nested list", "Task", &["cmd+option+p"]),
         c("taskExtractBranch", "Extract the branch as a list", "Task", &["xx"]),
         c("taskOpenLink", "Open the task's first link", "Task", &["gx", "cmd+o"]),
+        // `p` starts only `pc`; `ll` would shadow Today's and the sidebar's `l`.
+        c("taskAddLink", "Link…: a Drive file, an Obsidian note, a page", "Task", &["pl", "cmd+ctrl+l"])
+            .note("Type to find a note in your vaults or a file in Drive, or paste an address"),
         c("taskShowProgress", "Show the task's progress", "Task", &["pc"]),
         c("taskToggleInspector", "Open or close the inspector", "Task", &["i", "sd"]),
         // The modifier says what kind of move it is. Bare arrows move the cursor

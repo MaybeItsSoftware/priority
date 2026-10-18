@@ -1354,6 +1354,13 @@ public protocol CoreWorkspaceProtocol: AnyObject, Sendable {
     func addTaskBlocker(taskId: String, blockedByTaskId: String, nowMs: Int64) throws  -> Bool
     
     /**
+     * Links `url` to the task as one "Add Link" step, naming it `title`
+     * with the file type `mime_type` when the picker knew them. Returns
+     * whether the address is new; an address already there is renamed.
+     */
+    func addTaskLink(taskId: String, url: String, title: String?, mimeType: String?, nowMs: Int64) throws  -> Bool
+    
+    /**
      * Queues a task in a focus session.
      */
     func addToFocusQueue(sessionId: String, taskId: String, plannedSeconds: Int64?, nowMs: Int64) throws 
@@ -1612,6 +1619,11 @@ public protocol CoreWorkspaceProtocol: AnyObject, Sendable {
     func latestSyncOutboxSeq() throws  -> Int64?
     
     /**
+     * Every task with a link: what a client marks on its rows.
+     */
+    func linkedTaskIds() throws  -> [String]
+    
+    /**
      * One list, if it exists.
      */
     func list(id: String) throws  -> ListRow?
@@ -1811,6 +1823,12 @@ public protocol CoreWorkspaceProtocol: AnyObject, Sendable {
     func removeTaskBlocker(taskId: String, blockedByTaskId: String) throws  -> Bool
     
     /**
+     * Takes `url` off the task's links as one "Remove Link" step. Returns
+     * whether it was there.
+     */
+    func removeTaskLink(taskId: String, url: String, nowMs: Int64) throws  -> Bool
+    
+    /**
      * Files every condition under `from` under `to`, as one "Rename
      * Category" step; returns how many moved. Location cannot be renamed.
      */
@@ -1994,6 +2012,11 @@ public protocol CoreWorkspaceProtocol: AnyObject, Sendable {
      * The tasks `task_id` waits on, open ones first.
      */
     func taskBlockers(taskId: String) throws  -> [TaskRow]
+    
+    /**
+     * The task's links, described for drawing (`links::task_links`).
+     */
+    func taskLinks(taskId: String) throws  -> [TaskLink]
     
     /**
      * The tasks waiting on `task_id`, open ones first.
@@ -3203,6 +3226,25 @@ open func addTaskBlocker(taskId: String, blockedByTaskId: String, nowMs: Int64)t
 }
     
     /**
+     * Links `url` to the task as one "Add Link" step, naming it `title`
+     * with the file type `mime_type` when the picker knew them. Returns
+     * whether the address is new; an address already there is renamed.
+     */
+open func addTaskLink(taskId: String, url: String, title: String?, mimeType: String?, nowMs: Int64)throws  -> Bool  {
+    return try  FfiConverterBool.lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_add_task_link(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(taskId),
+        FfiConverterString.lower(url),
+        FfiConverterOptionString.lower(title),
+        FfiConverterOptionString.lower(mimeType),
+        FfiConverterInt64.lower(nowMs),uniffiCallStatus
+    )
+})
+}
+    
+    /**
      * Queues a task in a focus session.
      */
 open func addToFocusQueue(sessionId: String, taskId: String, plannedSeconds: Int64?, nowMs: Int64)throws   {try rustCallWithError(FfiConverterTypeCoreError_lift) {
@@ -3895,6 +3937,18 @@ open func latestSyncOutboxSeq()throws  -> Int64?  {
 }
     
     /**
+     * Every task with a link: what a client marks on its rows.
+     */
+open func linkedTaskIds()throws  -> [String]  {
+    return try  FfiConverterSequenceString.lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_linked_task_ids(
+            self.uniffiCloneHandle(),uniffiCallStatus
+    )
+})
+}
+    
+    /**
      * One list, if it exists.
      */
 open func list(id: String)throws  -> ListRow?  {
@@ -4435,6 +4489,22 @@ open func removeTaskBlocker(taskId: String, blockedByTaskId: String)throws  -> B
 }
     
     /**
+     * Takes `url` off the task's links as one "Remove Link" step. Returns
+     * whether it was there.
+     */
+open func removeTaskLink(taskId: String, url: String, nowMs: Int64)throws  -> Bool  {
+    return try  FfiConverterBool.lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_remove_task_link(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(taskId),
+        FfiConverterString.lower(url),
+        FfiConverterInt64.lower(nowMs),uniffiCallStatus
+    )
+})
+}
+    
+    /**
      * Files every condition under `from` under `to`, as one "Rename
      * Category" step; returns how many moved. Location cannot be renamed.
      */
@@ -4954,6 +5024,19 @@ open func taskBlockers(taskId: String)throws  -> [TaskRow]  {
     return try  FfiConverterSequenceTypeTaskRow.lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
         uniffiCallStatus in
     uniffi_takt_core_fn_method_coreworkspace_task_blockers(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(taskId),uniffiCallStatus
+    )
+})
+}
+    
+    /**
+     * The task's links, described for drawing (`links::task_links`).
+     */
+open func taskLinks(taskId: String)throws  -> [TaskLink]  {
+    return try  FfiConverterSequenceTypeTaskLink.lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_task_links(
             self.uniffiCloneHandle(),
         FfiConverterString.lower(taskId),uniffiCallStatus
     )
@@ -6525,6 +6608,11 @@ public struct CaptureParts: Equatable, Hashable {
      * Who it waits on, from `wait:Sam`.
      */
     public var waitingOn: String?
+    /**
+     * Addresses typed or pasted at the end, filed as the task's links
+     * (`links::link_from_text`): a Drive file, an Obsidian note, a page.
+     */
+    public var links: [String]
 
     // Default memberwise initializers are never public by default, so we
     // declare one manually.
@@ -6541,13 +6629,18 @@ public struct CaptureParts: Equatable, Hashable {
          */priority: Int64?, 
         /**
          * Who it waits on, from `wait:Sam`.
-         */waitingOn: String?) {
+         */waitingOn: String?, 
+        /**
+         * Addresses typed or pasted at the end, filed as the task's links
+         * (`links::link_from_text`): a Drive file, an Obsidian note, a page.
+         */links: [String]) {
         self.title = title
         self.estimateSeconds = estimateSeconds
         self.dueAtMs = dueAtMs
         self.tags = tags
         self.priority = priority
         self.waitingOn = waitingOn
+        self.links = links
     }
 
     
@@ -6571,7 +6664,8 @@ public struct FfiConverterTypeCaptureParts: FfiConverterRustBuffer {
                 dueAtMs: FfiConverterOptionInt64.read(from: &buf), 
                 tags: FfiConverterSequenceString.read(from: &buf), 
                 priority: FfiConverterOptionInt64.read(from: &buf), 
-                waitingOn: FfiConverterOptionString.read(from: &buf)
+                waitingOn: FfiConverterOptionString.read(from: &buf), 
+                links: FfiConverterSequenceString.read(from: &buf)
         )
     }
 
@@ -6582,6 +6676,7 @@ public struct FfiConverterTypeCaptureParts: FfiConverterRustBuffer {
         FfiConverterSequenceString.write(value.tags, into: &buf)
         FfiConverterOptionInt64.write(value.priority, into: &buf)
         FfiConverterOptionString.write(value.waitingOn, into: &buf)
+        FfiConverterSequenceString.write(value.links, into: &buf)
     }
 }
 
@@ -18611,6 +18706,111 @@ public func FfiConverterTypeTaskCounts_lower(_ value: TaskCounts) -> RustBuffer 
 
 
 /**
+ * A link as a client draws it.
+ */
+public struct TaskLink: Equatable, Hashable {
+    /**
+     * The address, as stored and as opened.
+     */
+    public var url: String
+    public var kind: LinkKind
+    /**
+     * The stored name when there is one, else one read from the address:
+     * a note's file name, a folder's last component, "Google Sheet", a host.
+     */
+    public var title: String
+    /**
+     * What it is and where: "Google Sheet", "Life · Projects", a host.
+     */
+    public var subtitle: String
+    /**
+     * One of `doc`, `sheet`, `slides`, `form`, `pdf`, `image`, `file`,
+     * `folder`, `note`, `web`: each client maps it to its own symbol.
+     */
+    public var icon: String
+    public var mimeType: String?
+    public var isFolder: Bool
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(
+        /**
+         * The address, as stored and as opened.
+         */url: String, kind: LinkKind, 
+        /**
+         * The stored name when there is one, else one read from the address:
+         * a note's file name, a folder's last component, "Google Sheet", a host.
+         */title: String, 
+        /**
+         * What it is and where: "Google Sheet", "Life · Projects", a host.
+         */subtitle: String, 
+        /**
+         * One of `doc`, `sheet`, `slides`, `form`, `pdf`, `image`, `file`,
+         * `folder`, `note`, `web`: each client maps it to its own symbol.
+         */icon: String, mimeType: String?, isFolder: Bool) {
+        self.url = url
+        self.kind = kind
+        self.title = title
+        self.subtitle = subtitle
+        self.icon = icon
+        self.mimeType = mimeType
+        self.isFolder = isFolder
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension TaskLink: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeTaskLink: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> TaskLink {
+        return
+            try TaskLink(
+                url: FfiConverterString.read(from: &buf), 
+                kind: FfiConverterTypeLinkKind.read(from: &buf), 
+                title: FfiConverterString.read(from: &buf), 
+                subtitle: FfiConverterString.read(from: &buf), 
+                icon: FfiConverterString.read(from: &buf), 
+                mimeType: FfiConverterOptionString.read(from: &buf), 
+                isFolder: FfiConverterBool.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: TaskLink, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.url, into: &buf)
+        FfiConverterTypeLinkKind.write(value.kind, into: &buf)
+        FfiConverterString.write(value.title, into: &buf)
+        FfiConverterString.write(value.subtitle, into: &buf)
+        FfiConverterString.write(value.icon, into: &buf)
+        FfiConverterOptionString.write(value.mimeType, into: &buf)
+        FfiConverterBool.write(value.isFolder, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeTaskLink_lift(_ buf: RustBuffer) throws -> TaskLink {
+    return try FfiConverterTypeTaskLink.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeTaskLink_lower(_ value: TaskLink) -> RustBuffer {
+    return FfiConverterTypeTaskLink.lower(value)
+}
+
+
+/**
  * One task's planning, as `taskPlanningValues` maps it.
  */
 public struct TaskPlanningEntry: Equatable, Hashable {
@@ -22481,6 +22681,91 @@ public func FfiConverterTypeKeymapKeyError_lift(_ buf: RustBuffer) throws -> Key
 public func FfiConverterTypeKeymapKeyError_lower(_ value: KeymapKeyError) -> RustBuffer {
     return FfiConverterTypeKeymapKeyError.lower(value)
 }
+
+
+/**
+ * Where a link points.
+ */
+
+public enum LinkKind: Equatable, Hashable {
+    
+    /**
+     * A Google Drive file or folder, a Doc, Sheet, Slides or Form.
+     */
+    case drive
+    /**
+     * A note or folder in an Obsidian vault (`obsidian://`).
+     */
+    case obsidian
+    /**
+     * Anything else with an address.
+     */
+    case web
+
+
+
+
+
+}
+
+#if compiler(>=6)
+extension LinkKind: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeLinkKind: FfiConverterRustBuffer {
+    typealias SwiftType = LinkKind
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> LinkKind {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .drive
+        
+        case 2: return .obsidian
+        
+        case 3: return .web
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: LinkKind, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case .drive:
+            writeInt(&buf, Int32(1))
+        
+        
+        case .obsidian:
+            writeInt(&buf, Int32(2))
+        
+        
+        case .web:
+            writeInt(&buf, Int32(3))
+        
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeLinkKind_lift(_ buf: RustBuffer) throws -> LinkKind {
+    return try FfiConverterTypeLinkKind.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeLinkKind_lower(_ value: LinkKind) -> RustBuffer {
+    return FfiConverterTypeLinkKind.lower(value)
+}
+
 
 
 /**
@@ -27492,6 +27777,31 @@ fileprivate struct FfiConverterSequenceTypeSyncAccountDevice: FfiConverterRustBu
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterSequenceTypeTaskLink: FfiConverterRustBuffer {
+    typealias SwiftType = [TaskLink]
+
+    public static func write(_ value: [TaskLink], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeTaskLink.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [TaskLink] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [TaskLink]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeTaskLink.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterSequenceTypeTaskPlanningEntry: FfiConverterRustBuffer {
     typealias SwiftType = [TaskPlanningEntry]
 
@@ -29262,6 +29572,48 @@ public func workspaceCommandCatalog() -> [CommandEntry]  {
 })
 }
 /**
+ * Describes `url` for drawing, with the name and type the picker stored
+ * when it made the link, if any.
+ */
+public func linkDescribe(url: String, title: String?, mimeType: String?) -> TaskLink  {
+    return try!  FfiConverterTypeTaskLink_lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_link_describe(
+        FfiConverterString.lower(url),
+        FfiConverterOptionString.lower(title),
+        FfiConverterOptionString.lower(mimeType),uniffiCallStatus
+    )
+})
+}
+/**
+ * The address in `text` if the whole of it, trimmed, is one a task can
+ * link to: `http`, `https` or `obsidian`, with something after the scheme
+ * and no spaces. What pasting into an add field or a link field accepts.
+ */
+public func linkFromText(text: String) -> String?  {
+    return try!  FfiConverterOptionString.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_link_from_text(
+        FfiConverterString.lower(text),uniffiCallStatus
+    )
+})
+}
+/**
+ * The address that opens `path` (relative to the vault, with or without
+ * `.md`) in the Obsidian vault named `vault`. A folder opens as a search
+ * scoped to it, the one way Obsidian's URI scheme can show a folder.
+ */
+public func obsidianLinkUrl(vault: String, path: String, isFolder: Bool) -> String  {
+    return try!  FfiConverterString.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_obsidian_link_url(
+        FfiConverterString.lower(vault),
+        FfiConverterString.lower(path),
+        FfiConverterBool.lower(isFolder),uniffiCallStatus
+    )
+})
+}
+/**
  * How well `needle` matches `haystack` as a subsequence, or `None` when it
  * does not. Each matched character scores; one that starts a word, or the
  * text, scores more; one that follows the previous match directly scores
@@ -30910,6 +31262,15 @@ private let initializationResult: InitializationResult = {
     if (uniffi_takt_core_checksum_func_workspace_command_catalog() != 5765) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_takt_core_checksum_func_link_describe() != 46270) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_link_from_text() != 9444) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_obsidian_link_url() != 43525) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_takt_core_checksum_func_palette_fuzzy_score() != 11885) {
         return InitializationResult.apiChecksumMismatch
     }
@@ -31480,6 +31841,9 @@ private let initializationResult: InitializationResult = {
     if (uniffi_takt_core_checksum_method_coreworkspace_add_task_blocker() != 26156) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_takt_core_checksum_method_coreworkspace_add_task_link() != 4160) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_takt_core_checksum_method_coreworkspace_add_to_focus_queue() != 31877) {
         return InitializationResult.apiChecksumMismatch
     }
@@ -31627,6 +31991,9 @@ private let initializationResult: InitializationResult = {
     if (uniffi_takt_core_checksum_method_coreworkspace_latest_sync_outbox_seq() != 11156) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_takt_core_checksum_method_coreworkspace_linked_task_ids() != 1512) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_takt_core_checksum_method_coreworkspace_list() != 60638) {
         return InitializationResult.apiChecksumMismatch
     }
@@ -31738,6 +32105,9 @@ private let initializationResult: InitializationResult = {
     if (uniffi_takt_core_checksum_method_coreworkspace_remove_task_blocker() != 29980) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_takt_core_checksum_method_coreworkspace_remove_task_link() != 7121) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_takt_core_checksum_method_coreworkspace_rename_condition_category() != 26813) {
         return InitializationResult.apiChecksumMismatch
     }
@@ -31841,6 +32211,9 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_method_coreworkspace_task_blockers() != 53482) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_task_links() != 32690) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_method_coreworkspace_tasks_blocked_by() != 18723) {

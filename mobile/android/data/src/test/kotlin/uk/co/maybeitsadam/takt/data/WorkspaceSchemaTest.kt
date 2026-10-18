@@ -61,7 +61,7 @@ class WorkspaceSchemaTest {
             assertTrue("missing: ${expected - present}", present.containsAll(expected))
 
             val migrations = workspace.database.read { it.strings("SELECT identifier FROM grdb_migrations") }
-            assertEquals(30, migrations.size)
+            assertEquals(31, migrations.size)
             assertTrue("v17_sync" in migrations)
             assertTrue("v18_themes_and_preferences" in migrations)
             assertTrue("v19_habit_options" in migrations)
@@ -76,6 +76,7 @@ class WorkspaceSchemaTest {
             assertTrue("v28_synced_focus_context" in migrations)
             assertTrue("v29_daily_contribution_skips" in migrations)
             assertTrue("v30_google_calendar" in migrations)
+            assertTrue("v31_link_details" in migrations)
             assertEquals(listOf(0L to 0L), workspace.database.read { db ->
                 db.query("SELECT recording, applying FROM sync_control") { it.long("recording") to it.long("applying") }
             })
@@ -103,7 +104,19 @@ class WorkspaceSchemaTest {
     // install that lacks one migration lacks every later one too, since they
     // only ever apply in order, so each rewind takes the later ones off first.
 
+    private fun rewindV31(connection: SQLiteConnection) {
+        // The journal's and the outbox's metadata triggers name the new
+        // column, so they come off first; v31 reinstalls them.
+        for (op in listOf("insert", "update", "delete")) {
+            connection.execSQL("DROP TRIGGER IF EXISTS change_log_task_metadata_$op")
+            connection.execSQL("DROP TRIGGER IF EXISTS sync_outbox_task_metadata_$op")
+        }
+        connection.execSQL("ALTER TABLE task_metadata DROP COLUMN linkDetailsJSON")
+        connection.execSQL("DELETE FROM grdb_migrations WHERE identifier = 'v31_link_details'")
+    }
+
     private fun rewindV30(connection: SQLiteConnection) {
+        rewindV31(connection)
         for (op in listOf("insert", "update", "delete")) {
             connection.execSQL("DROP TRIGGER sync_outbox_calendar_event_links_$op")
         }
@@ -187,8 +200,8 @@ class WorkspaceSchemaTest {
     private fun rewindV22(connection: SQLiteConnection) {
         rewindV23(connection)
         for (op in listOf("insert", "update", "delete")) {
-            connection.execSQL("DROP TRIGGER change_log_task_metadata_$op")
-            connection.execSQL("DROP TRIGGER sync_outbox_task_metadata_$op")
+            connection.execSQL("DROP TRIGGER IF EXISTS change_log_task_metadata_$op")
+            connection.execSQL("DROP TRIGGER IF EXISTS sync_outbox_task_metadata_$op")
         }
         connection.execSQL("ALTER TABLE task_metadata DROP COLUMN matrixRank")
         connection.execSQL("DELETE FROM grdb_migrations WHERE identifier = 'v22_matrix_order'")
@@ -257,8 +270,8 @@ class WorkspaceSchemaTest {
         try {
             assertEquals(expected, upgraded.read { schema(it) })
             val migrations = upgraded.read { it.strings("SELECT identifier FROM grdb_migrations") }
-            assertEquals(30, migrations.size)
-            assertEquals(30, migrations.toSet().size)
+            assertEquals(31, migrations.size)
+            assertEquals(31, migrations.toSet().size)
         } finally {
             upgraded.close()
             dir.deleteRecursively()
@@ -268,6 +281,10 @@ class WorkspaceSchemaTest {
     /** A v25 database takes `stacksMissedFrom` on `dailies`. */
     @Test
     fun aV25DatabaseUpgradesToTheFixture() = assertUpgradesToTheFixture("v25", ::rewindV26)
+
+    /** A v30 database takes `linkDetailsJSON` on `task_metadata`. */
+    @Test
+    fun aV30DatabaseUpgradesToTheFixture() = assertUpgradesToTheFixture("v30", ::rewindV31)
 
     /** A v29 database takes the calendar links and sync tokens. */
     @Test

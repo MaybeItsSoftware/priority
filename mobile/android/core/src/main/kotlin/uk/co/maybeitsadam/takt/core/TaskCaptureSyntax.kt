@@ -22,10 +22,12 @@ data class TaskCapture(
     val priority: Int? = null,
     /** Who it waits on, from `wait:Sam`. */
     val waitingOn: String? = null,
+    /** Addresses typed or pasted at the end, filed as the task's links (docs/links.md). */
+    val links: List<String> = emptyList(),
 ) {
     val hasDetails: Boolean
         get() = estimateSeconds != null || dueAt != null || tags.isNotEmpty() || priority != null ||
-            waitingOn != null
+            waitingOn != null || links.isNotEmpty()
 
     /** Short labels for what was found: `45m`, `Fri 3 Oct`, `#work`, `!1`, `waiting on Sam`. */
     fun detailLabels(now: Instant = Instant.now(), zone: ZoneId = ZoneId.systemDefault()): List<String> =
@@ -39,6 +41,7 @@ data class TaskCapture(
             tags = tags,
             priority = priority?.toLong(),
             waitingOn = waitingOn,
+            links = links,
         )
 
     companion object {
@@ -52,6 +55,7 @@ data class TaskCapture(
                 tags = core.tags,
                 priority = core.priority?.toInt(),
                 waitingOn = core.waitingOn,
+                links = core.links,
             )
         }
     }

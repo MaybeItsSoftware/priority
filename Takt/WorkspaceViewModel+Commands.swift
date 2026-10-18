@@ -171,6 +171,7 @@ extension WorkspaceViewModel {
     case .taskPromoteList: if let task = sidebarOrSelectedTask { toggleListPromotion(task) }
     case .taskExtractBranch: if let task = selectedTask { moveDroppedItem(task.id, toFolderID: nil) }
     case .taskOpenLink: openFirstLinkOnSelection()
+    case .taskAddLink: presentLinkPicker()
     case .taskShowProgress: if selectedTask != nil { requestKeyboardFocus(.inspector) }
     case .taskToggleInspector: toggleInspector()
     case .taskIndent: if let task = selectedTask { indentTask(task) }

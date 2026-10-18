@@ -86,6 +86,8 @@ import SwiftUI
   var integrations: IntegrationCoordinator
 
   let dailyLog: DailyLogManager
+  /// Where tasks link to: Obsidian vaults and Google Drive (docs/links.md).
+  let links: any LinksIntegrationPlugin
   /// Which completion celebration is active, and the flourish the popover
   /// overlay is currently showing.
   let celebration: CompletionCelebrationManager
@@ -138,6 +140,9 @@ import SwiftUI
     let resolvedGoogleTasksPlugin =
       pluginRegistry.activeGoogleTasksPlugin
       ?? NativeGoogleTasksIntegrationPlugin(account: fallbackGoogleAccount)
+    let resolvedLinksPlugin =
+      pluginRegistry.activeLinksPlugin
+      ?? NativeLinksPlugin(account: fallbackGoogleAccount)
     let resolvedMCPIntegrationPlugin =
       pluginRegistry.activeMCPIntegrationPlugin
       ?? NativeMCPIntegrationPlugin()
@@ -220,6 +225,13 @@ import SwiftUI
       mcpIntegrationPlugin: resolvedMCPIntegrationPlugin
     )
     self.integrations = integrations
+    self.links = resolvedLinksPlugin
+    // The daily notes live in a vault, so that vault is linkable even when
+    // Obsidian's own list of vaults is somewhere else.
+    (resolvedLinksPlugin as? NativeLinksPlugin)?.vaultHints = { [weak resolvedDailyLogPlugin] in
+      guard let path = resolvedDailyLogPlugin?.dailiesFolderPath, !path.isEmpty else { return [] }
+      return [URL(fileURLWithPath: path, isDirectory: true)]
+    }
     integrations.dataSource = checkvist
 
     self.lifecycle = LifecycleController(coordinator: self)
@@ -279,6 +291,7 @@ extension AppCoordinator {
       integrations.googleTasksPlugin as any Plugin,
       integrations.mcpIntegrationPlugin as any Plugin,
       dailyLog.plugin as any Plugin,
+      links as any Plugin,
       // Only the *active* theme, not every registered one: themes are a menu,
       // and listing both would put two cards in the sidebar for one setting.
       // The card's page picks between them.

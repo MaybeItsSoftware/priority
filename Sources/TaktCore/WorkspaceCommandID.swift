@@ -28,7 +28,7 @@ public enum WorkspaceCommandID: String, CaseIterable, Sendable {
   case taskClearPriority, taskToggleDaily, taskHabit, taskWaiting, taskAddBlocker, taskConditions
   case taskAskAgent
   case taskTogglePlannedToday, taskStartFocus, taskMove
-  case taskConvertToList, taskPromoteList, taskExtractBranch, taskOpenLink
+  case taskConvertToList, taskPromoteList, taskExtractBranch, taskOpenLink, taskAddLink
   case taskShowProgress, taskToggleInspector
   case taskIndent, taskOutdent, taskMoveUp, taskMoveDown
   case taskMoveToPreviousList, taskMoveToNextList

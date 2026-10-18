@@ -106,6 +106,7 @@ something you already have to know.
 | `f` / `Shift+F` then a letter, `;` | Vim's find: the next / previous task (in the sidebar, list) whose title starts with that letter; `;` repeats it |
 | `gg` / `Shift+G`, `Ctrl+D` / `Ctrl+U` | First / last task, eight down / up (vim) |
 | `gx` / `Cmd+O` | Open the task's first link (vim's open-the-URL-under-the-cursor) |
+| `pl` / `Cmd+Ctrl+L` | Link…: find a note or folder in your Obsidian vaults or, with Drive search on, a file in Google Drive, or paste any address — `↑` `↓` choose, `Return` links, `Tab` narrows to Obsidian or Drive. Rows with links show a small link mark; see [Links](docs/links.md) |
 | `]` / `[` | Open the task's subtasks / leave them |
 | `→` / `←` | In the outline, show a task's subtasks and step into them / hide them and step out — without opening the task. Elsewhere, open and leave it. At the top level of a list, `←` goes back to the list in the sidebar |
 | `za` / `Cmd+←` / `Cmd+→` | Fold or unfold the task you are on (outline or board) / fold / unfold the whole outline |
@@ -194,6 +195,7 @@ afterwards:
 | `#work` | A tag — it has to start with a letter, so `#12` stays in the title |
 | `!1`–`!4` | The priority — 1 is the most urgent, 4 the least |
 | `wait:Sam` | Waiting on Sam — filed in the Waiting on column straight away |
+| `https://…`, `obsidian://…` | A link — a Drive file or folder, a Doc or Sheet, an Obsidian note, a page. An address on its own names the task for what it points at. See [Links](docs/links.md) |
 
 `Write the release notes 45m #work @fri !1` files a task called "Write the
 release notes", estimated at 45 minutes, tagged `work`, due on Friday, at

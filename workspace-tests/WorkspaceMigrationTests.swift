@@ -40,6 +40,7 @@ final class WorkspaceMigrationTests: XCTestCase {
     "v28_synced_focus_context",
     "v29_daily_contribution_skips",
     "v30_google_calendar",
+    "v31_link_details",
   ]
 
   private var directoryURL: URL!

@@ -11,6 +11,7 @@ final class PluginRegistry {
   private(set) var dailyLogPluginsByIdentifier: [String: any DailyLogPlugin] = [:]
   private(set) var celebrationPluginsByIdentifier: [String: any CompletionCelebrationPlugin] = [:]
   private(set) var themePluginsByIdentifier: [String: any ThemePlugin] = [:]
+  private(set) var linksPluginsByIdentifier: [String: any LinksIntegrationPlugin] = [:]
   /// Registration order, so the settings picker lists presets the way
   /// `nativeFirst()` writes them rather than in dictionary order.
   private(set) var celebrationPluginOrder: [String] = []
@@ -25,6 +26,12 @@ final class PluginRegistry {
   private(set) var activeDailyLogPluginIdentifier: String?
   private(set) var activeCelebrationPluginIdentifier: String?
   private(set) var activeThemePluginIdentifier: String?
+  private(set) var activeLinksPluginIdentifier: String?
+
+  var activeLinksPlugin: (any LinksIntegrationPlugin)? {
+    guard let activeLinksPluginIdentifier else { return nil }
+    return linksPluginsByIdentifier[activeLinksPluginIdentifier]
+  }
 
   var activeCheckvistSyncPlugin: (any CheckvistSyncPlugin)? {
     guard let activeCheckvistSyncPluginIdentifier else { return nil }
@@ -102,6 +109,13 @@ final class PluginRegistry {
     mcpIntegrationPluginsByIdentifier[plugin.pluginIdentifier] = plugin
     if activate || activeMCPIntegrationPluginIdentifier == nil {
       activeMCPIntegrationPluginIdentifier = plugin.pluginIdentifier
+    }
+  }
+
+  func register(_ plugin: any LinksIntegrationPlugin, activate: Bool = false) {
+    linksPluginsByIdentifier[plugin.pluginIdentifier] = plugin
+    if activate || activeLinksPluginIdentifier == nil {
+      activeLinksPluginIdentifier = plugin.pluginIdentifier
     }
   }
 
@@ -190,6 +204,7 @@ final class PluginRegistry {
     let googleAccount = GoogleAccount()
     registry.register(NativeGoogleCalendarIntegrationPlugin(account: googleAccount), activate: true)
     registry.register(NativeGoogleTasksIntegrationPlugin(account: googleAccount), activate: true)
+    registry.register(NativeLinksPlugin(account: googleAccount), activate: true)
     registry.register(NativeMCPIntegrationPlugin(), activate: true)
     registry.register(NativeDailyLogPlugin(), activate: true)
     // Celebrations are a menu, not a single integration: all presets register,

@@ -193,3 +193,21 @@ protocol MCPIntegrationPlugin: Plugin {
   func serverEnvironment(listId: String) -> [String: String]
   func makeClientConfigurationJSON(listId: String) -> String
 }
+
+/// Where a task can link to: the Obsidian vaults on this Mac and, when it is
+/// switched on and granted, Google Drive searched by name. The addresses and
+/// what they are drawn as are the Rust core's (`core/src/links.rs`); see
+/// docs/links.md.
+@MainActor
+protocol LinksIntegrationPlugin: Plugin {
+  /// The vaults the picker searches, found afresh on each `reloadObsidianIndex`.
+  var obsidianVaults: [ObsidianVault] { get }
+  /// Every note and folder in those vaults, as of the last reload.
+  var obsidianEntries: [LinkCandidate] { get }
+  /// Walks the vaults again, off the main thread.
+  func reloadObsidianIndex() async
+  /// Whether Drive search is switched on and the Google sign-in grants it.
+  var canSearchDrive: Bool { get }
+  /// Files and folders in Drive whose name contains `text`.
+  func searchDrive(matching text: String) async throws -> [LinkCandidate]
+}

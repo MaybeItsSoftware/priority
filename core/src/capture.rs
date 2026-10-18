@@ -42,6 +42,9 @@ pub struct CaptureParts {
     pub priority: Option<i64>,
     /// Who it waits on, from `wait:Sam`.
     pub waiting_on: Option<String>,
+    /// Addresses typed or pasted at the end, filed as the task's links
+    /// (`links::link_from_text`): a Drive file, an Obsidian note, a page.
+    pub links: Vec<String>,
 }
 
 impl CaptureParts {
@@ -51,6 +54,7 @@ impl CaptureParts {
             || !self.tags.is_empty()
             || self.priority.is_some()
             || self.waiting_on.is_some()
+            || !self.links.is_empty()
     }
 }
 
@@ -62,6 +66,7 @@ enum Token {
     Tag(String),
     Priority(i64),
     Waiting(String),
+    Link(String),
 }
 
 /// Parses `text` as typed into an add field. See the module for the rules.
@@ -78,6 +83,17 @@ pub fn parse(text: &str, now_ms: i64, zone: Tz) -> CaptureParts {
         ..CaptureParts::default()
     };
     let mut tags: Vec<String> = Vec::new();
+    let mut links: Vec<String> = Vec::new();
+
+    // An address alone is a link to file, not a title to keep: the task is
+    // named for what it points at, as the link is drawn.
+    if let [only] = words.as_slice()
+        && let Some(url) = crate::links::parse_link(only)
+    {
+        capture.title = crate::links::link_describe(url.to_string(), None, None).title;
+        capture.links = vec![url.to_string()];
+        return capture;
+    }
 
     // The first word is always the title's, so the scan cannot leave it empty.
     while words.len() > 1 {
@@ -120,15 +136,21 @@ pub fn parse(text: &str, now_ms: i64, zone: Tz) -> CaptureParts {
                 tags.retain(|t| t.to_lowercase() != folded);
                 tags.insert(0, tag);
             }
+            Token::Link(url) => {
+                if !links.contains(&url) {
+                    links.insert(0, url);
+                }
+            }
         }
         words.pop();
     }
 
-    if !capture.has_details() && tags.is_empty() {
+    if !capture.has_details() && tags.is_empty() && links.is_empty() {
         return capture;
     }
     capture.title = words.join(" ");
     capture.tags = tags;
+    capture.links = links;
     capture
 }
 
@@ -154,6 +176,12 @@ pub fn detail_labels(capture: &CaptureParts, now_ms: i64, zone: Tz) -> Vec<Strin
     if let Some(name) = &capture.waiting_on {
         labels.push(format!("waiting on {name}"));
     }
+    labels.extend(capture.links.iter().map(|url| {
+        format!(
+            "link: {}",
+            crate::links::link_describe(url.clone(), None, None).title
+        )
+    }));
     labels
 }
 
@@ -200,6 +228,9 @@ fn start_of(day: NaiveDate, zone: Tz) -> i64 {
 }
 
 fn token(word: &str, now_ms: i64, zone: Tz) -> Option<Token> {
+    if let Some(url) = crate::links::parse_link(word) {
+        return Some(Token::Link(url.to_string()));
+    }
     let lower = word.to_lowercase();
     if let Some(seconds) = estimate(&lower) {
         return Some(Token::Estimate(seconds));

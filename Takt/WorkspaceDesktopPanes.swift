@@ -236,6 +236,7 @@ struct WorkspaceOutlineRow: View {
           .foregroundStyle(item.task.status == .open ? theme.ink : theme.muted)
       }
       WorkspacePriorityBadge(taskID: item.task.id)
+      WorkspaceLinkMark(taskID: item.task.id)
       WorkspaceWaitingBadges(task: item.task)
       WorkspaceTaskPlanningBadges(task: item.task, isExpanded: isSelected)
         .frame(maxWidth: 170, alignment: .leading)

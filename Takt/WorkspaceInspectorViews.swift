@@ -416,12 +416,7 @@ struct LocalTaskInspector: View {
   }
 
   private func links(_ draft: TaskEditorDraft) -> some View {
-    InspectorRow("Links") {
-      InspectorTextEditor(
-        add: "Add links", text: binding(\.links, fallback: draft.values.links), stop: "links",
-        minHeight: 44, maxHeight: 90)
-      .commandHelp(.taskOpenLink, note: "One link per line; the first opens")
-    }
+    WorkspaceLinksInspectorSection(task: task, addresses: binding(\.links, fallback: draft.values.links))
   }
 
   /// The task's periodic commitments, each with a way to edit or stop it, and

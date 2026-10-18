@@ -30,7 +30,7 @@ extension WorkspaceStore {
       listId: listId, title: capture.title, parentTaskId: parentTaskId, kanbanColumn: kanbanColumn,
       startAt: startAt, atTop: atTop, adjacentTaskId: adjacentTaskId, above: above,
       dueAt: capture.dueAt ?? defaultDueAt, estimateSeconds: capture.estimateSeconds, tags: capture.tags,
-      priority: capture.priority, waitingOn: capture.waitingOn, now: now)
+      priority: capture.priority, waitingOn: capture.waitingOn, externalLinks: capture.links, now: now)
   }
 
   /// A typed task with what the add field's slots hold: a due day and an
@@ -51,7 +51,7 @@ extension WorkspaceStore {
       listId: listId, title: capture.title, parentTaskId: parentTaskId, kind: WorkspaceItemKind.task.rawValue,
       notes: "", kanbanColumn: nil, startAtMs: nil, dueAtMs: (dueAt ?? capture.dueAt)?.coreMilliseconds,
       estimateSeconds: (estimateSeconds ?? capture.estimateSeconds).map(Int64.init), tags: capture.tags,
-      priority: capture.priority.map(Int64.init), waitingOn: capture.waitingOn, externalLinks: [], atTop: false,
+      priority: capture.priority.map(Int64.init), waitingOn: capture.waitingOn, externalLinks: capture.links, atTop: false,
       adjacentTaskId: nil, above: false)
     let id = try coreWrite {
       try core.createTaskRequiring(

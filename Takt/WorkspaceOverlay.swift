@@ -27,6 +27,8 @@ enum WorkspaceOverlay: Identifiable {
   case waiting(WorkspaceWaitingRequest)
   /// Blocked by: the finder for a task to wait on.
   case blocker(WorkspaceBlockerRequest)
+  /// Link…: the picker for a note, a Drive file or an address to link.
+  case link(WorkspaceLinkRequest)
   /// The conditions a task needs, ticked: `cc`.
   case conditions(WorkspaceConditionPickerRequest)
   /// The category a condition is filed under, or the new-condition row's.
@@ -59,6 +61,7 @@ enum WorkspaceOverlay: Identifiable {
     case .commitment(let request): "commitment:\(request.id)"
     case .waiting(let request): "waiting:\(request.id)"
     case .blocker(let request): "blocker:\(request.id)"
+    case .link(let request): "link:\(request.id)"
     case .conditions(let request): "conditions:\(request.id)"
     case .conditionCategory(let request): "condition-category:\(request.id)"
     case .conditionFinder(let request): "condition-finder:\(request.id)"

@@ -857,6 +857,12 @@ internal object IntegrityCheckingUniffiLib {
     ): Int
     external fun uniffi_takt_core_checksum_func_workspace_command_catalog(
     ): Int
+    external fun uniffi_takt_core_checksum_func_link_describe(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_link_from_text(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_obsidian_link_url(
+    ): Int
     external fun uniffi_takt_core_checksum_func_palette_fuzzy_score(
     ): Int
     external fun uniffi_takt_core_checksum_func_palette_rank(
@@ -1237,6 +1243,8 @@ internal object IntegrityCheckingUniffiLib {
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_add_task_blocker(
     ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_add_task_link(
+    ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_add_to_focus_queue(
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_all_commitments(
@@ -1335,6 +1343,8 @@ internal object IntegrityCheckingUniffiLib {
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_latest_sync_outbox_seq(
     ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_linked_task_ids(
+    ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_list(
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_lists(
@@ -1409,6 +1419,8 @@ internal object IntegrityCheckingUniffiLib {
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_remove_task_blocker(
     ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_remove_task_link(
+    ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_rename_condition_category(
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_rename_folder(
@@ -1478,6 +1490,8 @@ internal object IntegrityCheckingUniffiLib {
     external fun uniffi_takt_core_checksum_method_coreworkspace_task(
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_task_blockers(
+    ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_task_links(
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_tasks_blocked_by(
     ): Int
@@ -1731,6 +1745,8 @@ internal object UniffiLib {
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_method_coreworkspace_add_task_blocker(`ptr`: Long,`taskId`: RustBuffer.ByValue,`blockedByTaskId`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): Byte
+    external fun uniffi_takt_core_fn_method_coreworkspace_add_task_link(`ptr`: Long,`taskId`: RustBuffer.ByValue,`url`: RustBuffer.ByValue,`title`: RustBuffer.ByValue,`mimeType`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Byte
     external fun uniffi_takt_core_fn_method_coreworkspace_add_to_focus_queue(`ptr`: Long,`sessionId`: RustBuffer.ByValue,`taskId`: RustBuffer.ByValue,`plannedSeconds`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
     external fun uniffi_takt_core_fn_method_coreworkspace_all_commitments(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus, 
@@ -1829,6 +1845,8 @@ internal object UniffiLib {
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_method_coreworkspace_latest_sync_outbox_seq(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_method_coreworkspace_linked_task_ids(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_method_coreworkspace_list(`ptr`: Long,`id`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_method_coreworkspace_lists(`ptr`: Long,`workspaceId`: RustBuffer.ByValue,`includingArchived`: Byte,uniffi_out_err: UniffiRustCallStatus, 
@@ -1903,6 +1921,8 @@ internal object UniffiLib {
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_method_coreworkspace_remove_task_blocker(`ptr`: Long,`taskId`: RustBuffer.ByValue,`blockedByTaskId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): Byte
+    external fun uniffi_takt_core_fn_method_coreworkspace_remove_task_link(`ptr`: Long,`taskId`: RustBuffer.ByValue,`url`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Byte
     external fun uniffi_takt_core_fn_method_coreworkspace_rename_condition_category(`ptr`: Long,`workspaceId`: RustBuffer.ByValue,`from`: RustBuffer.ByValue,`to`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): Int
     external fun uniffi_takt_core_fn_method_coreworkspace_rename_folder(`ptr`: Long,`id`: RustBuffer.ByValue,`name`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
@@ -1972,6 +1992,8 @@ internal object UniffiLib {
     external fun uniffi_takt_core_fn_method_coreworkspace_task(`ptr`: Long,`id`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_method_coreworkspace_task_blockers(`ptr`: Long,`taskId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_method_coreworkspace_task_links(`ptr`: Long,`taskId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_method_coreworkspace_tasks_blocked_by(`ptr`: Long,`taskId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
@@ -2188,6 +2210,12 @@ internal object UniffiLib {
     external fun uniffi_takt_core_fn_func_keymap_surface_named(`name`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_func_workspace_command_catalog(uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_link_describe(`url`: RustBuffer.ByValue,`title`: RustBuffer.ByValue,`mimeType`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_link_from_text(`text`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_obsidian_link_url(`vault`: RustBuffer.ByValue,`path`: RustBuffer.ByValue,`isFolder`: Byte,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_func_palette_fuzzy_score(`needle`: RustBuffer.ByValue,`haystack`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
@@ -2787,6 +2815,15 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
     if ((lib.uniffi_takt_core_checksum_func_workspace_command_catalog() and 0xFFFF) != 5765) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if ((lib.uniffi_takt_core_checksum_func_link_describe() and 0xFFFF) != 46270) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_link_from_text() and 0xFFFF) != 9444) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_obsidian_link_url() and 0xFFFF) != 43525) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if ((lib.uniffi_takt_core_checksum_func_palette_fuzzy_score() and 0xFFFF) != 11885) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
@@ -3357,6 +3394,9 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_add_task_blocker() and 0xFFFF) != 26156) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_add_task_link() and 0xFFFF) != 4160) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_add_to_focus_queue() and 0xFFFF) != 31877) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
@@ -3504,6 +3544,9 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_latest_sync_outbox_seq() and 0xFFFF) != 11156) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_linked_task_ids() and 0xFFFF) != 1512) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_list() and 0xFFFF) != 60638) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
@@ -3615,6 +3658,9 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_remove_task_blocker() and 0xFFFF) != 29980) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_remove_task_link() and 0xFFFF) != 7121) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_rename_condition_category() and 0xFFFF) != 26813) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
@@ -3718,6 +3764,9 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_task_blockers() and 0xFFFF) != 53482) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_task_links() and 0xFFFF) != 32690) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_tasks_blocked_by() and 0xFFFF) != 18723) {
@@ -5170,6 +5219,13 @@ public interface CoreWorkspaceInterface {
     fun `addTaskBlocker`(`taskId`: kotlin.String, `blockedByTaskId`: kotlin.String, `nowMs`: kotlin.Long): kotlin.Boolean
     
     /**
+     * Links `url` to the task as one "Add Link" step, naming it `title`
+     * with the file type `mime_type` when the picker knew them. Returns
+     * whether the address is new; an address already there is renamed.
+     */
+    fun `addTaskLink`(`taskId`: kotlin.String, `url`: kotlin.String, `title`: kotlin.String?, `mimeType`: kotlin.String?, `nowMs`: kotlin.Long): kotlin.Boolean
+    
+    /**
      * Queues a task in a focus session.
      */
     fun `addToFocusQueue`(`sessionId`: kotlin.String, `taskId`: kotlin.String, `plannedSeconds`: kotlin.Long?, `nowMs`: kotlin.Long)
@@ -5428,6 +5484,11 @@ public interface CoreWorkspaceInterface {
     fun `latestSyncOutboxSeq`(): kotlin.Long?
     
     /**
+     * Every task with a link: what a client marks on its rows.
+     */
+    fun `linkedTaskIds`(): List<kotlin.String>
+    
+    /**
      * One list, if it exists.
      */
     fun `list`(`id`: kotlin.String): ListRow?
@@ -5627,6 +5688,12 @@ public interface CoreWorkspaceInterface {
     fun `removeTaskBlocker`(`taskId`: kotlin.String, `blockedByTaskId`: kotlin.String): kotlin.Boolean
     
     /**
+     * Takes `url` off the task's links as one "Remove Link" step. Returns
+     * whether it was there.
+     */
+    fun `removeTaskLink`(`taskId`: kotlin.String, `url`: kotlin.String, `nowMs`: kotlin.Long): kotlin.Boolean
+    
+    /**
      * Files every condition under `from` under `to`, as one "Rename
      * Category" step; returns how many moved. Location cannot be renamed.
      */
@@ -5810,6 +5877,11 @@ public interface CoreWorkspaceInterface {
      * The tasks `task_id` waits on, open ones first.
      */
     fun `taskBlockers`(`taskId`: kotlin.String): List<TaskRow>
+    
+    /**
+     * The task's links, described for drawing (`links::task_links`).
+     */
+    fun `taskLinks`(`taskId`: kotlin.String): List<TaskLink>
     
     /**
      * The tasks waiting on `task_id`, open ones first.
@@ -7427,6 +7499,30 @@ open class CoreWorkspace: Disposable, AutoCloseable, CoreWorkspaceInterface
 
     
     /**
+     * Links `url` to the task as one "Add Link" step, naming it `title`
+     * with the file type `mime_type` when the picker knew them. Returns
+     * whether the address is new; an address already there is renamed.
+     */
+    @Throws(CoreException::class)override fun `addTaskLink`(`taskId`: kotlin.String, `url`: kotlin.String, `title`: kotlin.String?, `mimeType`: kotlin.String?, `nowMs`: kotlin.Long): kotlin.Boolean {
+            return FfiConverterBoolean.lift(
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_add_task_link(
+        it,
+        
+        FfiConverterString.lower(`taskId`),
+        FfiConverterString.lower(`url`),
+        FfiConverterOptionalString.lower(`title`),
+        FfiConverterOptionalString.lower(`mimeType`),
+        FfiConverterLong.lower(`nowMs`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
      * Queues a task in a focus session.
      */
     @Throws(CoreException::class)override fun `addToFocusQueue`(`sessionId`: kotlin.String, `taskId`: kotlin.String, `plannedSeconds`: kotlin.Long?, `nowMs`: kotlin.Long)
@@ -8364,6 +8460,23 @@ open class CoreWorkspace: Disposable, AutoCloseable, CoreWorkspaceInterface
 
     
     /**
+     * Every task with a link: what a client marks on its rows.
+     */
+    @Throws(CoreException::class)override fun `linkedTaskIds`(): List<kotlin.String> {
+            return FfiConverterSequenceString.lift(
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_linked_task_ids(
+        it,
+        _status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
      * One list, if it exists.
      */
     @Throws(CoreException::class)override fun `list`(`id`: kotlin.String): ListRow? {
@@ -9089,6 +9202,27 @@ open class CoreWorkspace: Disposable, AutoCloseable, CoreWorkspaceInterface
 
     
     /**
+     * Takes `url` off the task's links as one "Remove Link" step. Returns
+     * whether it was there.
+     */
+    @Throws(CoreException::class)override fun `removeTaskLink`(`taskId`: kotlin.String, `url`: kotlin.String, `nowMs`: kotlin.Long): kotlin.Boolean {
+            return FfiConverterBoolean.lift(
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_remove_task_link(
+        it,
+        
+        FfiConverterString.lower(`taskId`),
+        FfiConverterString.lower(`url`),
+        FfiConverterLong.lower(`nowMs`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
      * Files every condition under `from` under `to`, as one "Rename
      * Category" step; returns how many moved. Location cannot be renamed.
      */
@@ -9779,6 +9913,24 @@ open class CoreWorkspace: Disposable, AutoCloseable, CoreWorkspaceInterface
     callWithHandle {
     uniffiRustCallWithError(CoreException) { _status ->
     UniffiLib.uniffi_takt_core_fn_method_coreworkspace_task_blockers(
+        it,
+        
+        FfiConverterString.lower(`taskId`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * The task's links, described for drawing (`links::task_links`).
+     */
+    @Throws(CoreException::class)override fun `taskLinks`(`taskId`: kotlin.String): List<TaskLink> {
+            return FfiConverterSequenceTypeTaskLink.lift(
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_task_links(
         it,
         
         FfiConverterString.lower(`taskId`),_status)
@@ -11347,6 +11499,12 @@ data class CaptureParts (
      * Who it waits on, from `wait:Sam`.
      */
     var `waitingOn`: kotlin.String?
+    , 
+    /**
+     * Addresses typed or pasted at the end, filed as the task's links
+     * (`links::link_from_text`): a Drive file, an Obsidian note, a page.
+     */
+    var `links`: List<kotlin.String>
     
 ){
     
@@ -11369,6 +11527,7 @@ public object FfiConverterTypeCaptureParts: FfiConverterRustBuffer<CaptureParts>
             FfiConverterSequenceString.read(buf),
             FfiConverterOptionalLong.read(buf),
             FfiConverterOptionalString.read(buf),
+            FfiConverterSequenceString.read(buf),
         )
     }
 
@@ -11378,7 +11537,8 @@ public object FfiConverterTypeCaptureParts: FfiConverterRustBuffer<CaptureParts>
             FfiConverterOptionalLong.allocationSize(value.`dueAtMs`) +
             FfiConverterSequenceString.allocationSize(value.`tags`) +
             FfiConverterOptionalLong.allocationSize(value.`priority`) +
-            FfiConverterOptionalString.allocationSize(value.`waitingOn`)
+            FfiConverterOptionalString.allocationSize(value.`waitingOn`) +
+            FfiConverterSequenceString.allocationSize(value.`links`)
     )
 
     override fun write(value: CaptureParts, buf: ByteBuffer) {
@@ -11388,6 +11548,7 @@ public object FfiConverterTypeCaptureParts: FfiConverterRustBuffer<CaptureParts>
             FfiConverterSequenceString.write(value.`tags`, buf)
             FfiConverterOptionalLong.write(value.`priority`, buf)
             FfiConverterOptionalString.write(value.`waitingOn`, buf)
+            FfiConverterSequenceString.write(value.`links`, buf)
     }
 }
 
@@ -20618,6 +20779,86 @@ public object FfiConverterTypeTaskCounts: FfiConverterRustBuffer<TaskCounts> {
 
 
 /**
+ * A link as a client draws it.
+ */
+data class TaskLink (
+    /**
+     * The address, as stored and as opened.
+     */
+    var `url`: kotlin.String
+    , 
+    var `kind`: LinkKind
+    , 
+    /**
+     * The stored name when there is one, else one read from the address:
+     * a note's file name, a folder's last component, "Google Sheet", a host.
+     */
+    var `title`: kotlin.String
+    , 
+    /**
+     * What it is and where: "Google Sheet", "Life · Projects", a host.
+     */
+    var `subtitle`: kotlin.String
+    , 
+    /**
+     * One of `doc`, `sheet`, `slides`, `form`, `pdf`, `image`, `file`,
+     * `folder`, `note`, `web`: each client maps it to its own symbol.
+     */
+    var `icon`: kotlin.String
+    , 
+    var `mimeType`: kotlin.String?
+    , 
+    var `isFolder`: kotlin.Boolean
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeTaskLink: FfiConverterRustBuffer<TaskLink> {
+    override fun read(buf: ByteBuffer): TaskLink {
+        return TaskLink(
+            FfiConverterString.read(buf),
+            FfiConverterTypeLinkKind.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterOptionalString.read(buf),
+            FfiConverterBoolean.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: TaskLink) = (
+            FfiConverterString.allocationSize(value.`url`) +
+            FfiConverterTypeLinkKind.allocationSize(value.`kind`) +
+            FfiConverterString.allocationSize(value.`title`) +
+            FfiConverterString.allocationSize(value.`subtitle`) +
+            FfiConverterString.allocationSize(value.`icon`) +
+            FfiConverterOptionalString.allocationSize(value.`mimeType`) +
+            FfiConverterBoolean.allocationSize(value.`isFolder`)
+    )
+
+    override fun write(value: TaskLink, buf: ByteBuffer) {
+            FfiConverterString.write(value.`url`, buf)
+            FfiConverterTypeLinkKind.write(value.`kind`, buf)
+            FfiConverterString.write(value.`title`, buf)
+            FfiConverterString.write(value.`subtitle`, buf)
+            FfiConverterString.write(value.`icon`, buf)
+            FfiConverterOptionalString.write(value.`mimeType`, buf)
+            FfiConverterBoolean.write(value.`isFolder`, buf)
+    }
+}
+
+
+
+/**
  * One task's planning, as `taskPlanningValues` maps it.
  */
 data class TaskPlanningEntry (
@@ -24508,6 +24749,53 @@ public object FfiConverterTypeKeymapKeyError : FfiConverterRustBuffer<KeymapKeyE
     }
 
 }
+
+
+
+/**
+ * Where a link points.
+ */
+
+enum class LinkKind {
+    
+    /**
+     * A Google Drive file or folder, a Doc, Sheet, Slides or Form.
+     */
+    DRIVE,
+    /**
+     * A note or folder in an Obsidian vault (`obsidian://`).
+     */
+    OBSIDIAN,
+    /**
+     * Anything else with an address.
+     */
+    WEB;
+
+    
+
+
+    companion object
+}
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeLinkKind: FfiConverterRustBuffer<LinkKind> {
+    override fun read(buf: ByteBuffer) = try {
+        LinkKind.values()[buf.getInt() - 1]
+    } catch (e: IndexOutOfBoundsException) {
+        throw RuntimeException("invalid enum value, something is very wrong!!", e)
+    }
+
+    override fun allocationSize(value: LinkKind) = 4UL
+
+    override fun write(value: LinkKind, buf: ByteBuffer) {
+        buf.putInt(value.ordinal + 1)
+    }
+}
+
+
 
 
 
@@ -30622,6 +30910,34 @@ public object FfiConverterSequenceTypeSyncAccountDevice: FfiConverterRustBuffer<
 /**
  * @suppress
  */
+public object FfiConverterSequenceTypeTaskLink: FfiConverterRustBuffer<List<TaskLink>> {
+    override fun read(buf: ByteBuffer): List<TaskLink> {
+        val len = buf.getInt()
+        return List<TaskLink>(len) {
+            FfiConverterTypeTaskLink.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<TaskLink>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeTaskLink.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<TaskLink>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeTaskLink.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
 public object FfiConverterSequenceTypeTaskPlanningEntry: FfiConverterRustBuffer<List<TaskPlanningEntry>> {
     override fun read(buf: ByteBuffer): List<TaskPlanningEntry> {
         val len = buf.getInt()
@@ -32780,6 +33096,57 @@ public object FfiConverterMapStringTypeSyncValue: FfiConverterRustBuffer<Map<kot
     UniffiLib.uniffi_takt_core_fn_func_workspace_command_catalog(
     
         _status)
+}
+    )
+    }
+    
+
+        /**
+         * Describes `url` for drawing, with the name and type the picker stored
+         * when it made the link, if any.
+         */ fun `linkDescribe`(`url`: kotlin.String, `title`: kotlin.String?, `mimeType`: kotlin.String?): TaskLink {
+            return FfiConverterTypeTaskLink.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_link_describe(
+    
+        
+        FfiConverterString.lower(`url`),
+        FfiConverterOptionalString.lower(`title`),
+        FfiConverterOptionalString.lower(`mimeType`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * The address in `text` if the whole of it, trimmed, is one a task can
+         * link to: `http`, `https` or `obsidian`, with something after the scheme
+         * and no spaces. What pasting into an add field or a link field accepts.
+         */ fun `linkFromText`(`text`: kotlin.String): kotlin.String? {
+            return FfiConverterOptionalString.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_link_from_text(
+    
+        
+        FfiConverterString.lower(`text`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * The address that opens `path` (relative to the vault, with or without
+         * `.md`) in the Obsidian vault named `vault`. A folder opens as a search
+         * scoped to it, the one way Obsidian's URI scheme can show a folder.
+         */ fun `obsidianLinkUrl`(`vault`: kotlin.String, `path`: kotlin.String, `isFolder`: kotlin.Boolean): kotlin.String {
+            return FfiConverterString.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_obsidian_link_url(
+    
+        
+        FfiConverterString.lower(`vault`),
+        FfiConverterString.lower(`path`),
+        FfiConverterBoolean.lower(`isFolder`),_status)
 }
     )
     }
