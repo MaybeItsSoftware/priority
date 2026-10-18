@@ -33,18 +33,23 @@ struct SettingsScreen: View {
         .listRowBackground(theme.raised)
 
         Section {
-          Picker("Celebration", selection: $celebration) {
-            ForEach(CelebrationStyle.allCases) { style in
-              VStack(alignment: .leading, spacing: theme.space.xxs) {
-                Text(style.title).font(theme.type.body)
-                Text(style.detail).font(theme.type.footnote).foregroundStyle(theme.muted)
+          // Every style with its explanation is a screen of rows; folded, the
+          // section is the choice and the haptic switch.
+          SettingsDisclosure("Celebration", value: celebration.title, key: "celebration") {
+            Picker("Celebration", selection: $celebration) {
+              ForEach(CelebrationStyle.allCases) { style in
+                VStack(alignment: .leading, spacing: theme.space.xxs) {
+                  Text(style.title).font(theme.type.body)
+                  Text(style.detail).font(theme.type.footnote).foregroundStyle(theme.muted)
+                }
+                .tag(style)
               }
-              .tag(style)
             }
+            .pickerStyle(.inline)
+            .labelsHidden()
+            CelebrationPreview(style: celebration)
           }
-          .pickerStyle(.inline)
-          .labelsHidden()
-          CelebrationPreview(style: celebration)
+          .accessibilityIdentifier("settings.celebration")
           Toggle("Haptic on complete", isOn: $haptics)
             .toggleStyle(ThemedToggleStyle())
             .font(theme.type.body)

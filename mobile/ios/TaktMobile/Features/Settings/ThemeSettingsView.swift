@@ -38,9 +38,13 @@ struct ThemeSettingsView: View {
       .listRowBackground(theme.raised)
 
       Section {
-        ForEach(themes.available, id: \.identifier) { specification in
-          ThemeRow(specification: specification, isSelected: specification.identifier == theme.specification.identifier) {
-            themes.select(specification.identifier)
+        // The whole library is a screen of swatches; folded, the row says
+        // which theme is on and opens onto the rest.
+        SettingsDisclosure("All themes", value: theme.specification.name, key: "themes") {
+          ForEach(themes.available, id: \.identifier) { specification in
+            ThemeRow(specification: specification, isSelected: specification.identifier == theme.specification.identifier) {
+              themes.select(specification.identifier)
+            }
           }
         }
       } header: {

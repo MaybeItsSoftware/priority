@@ -86,14 +86,18 @@ struct CalendarSettingsView: View {
         .listRowBackground(theme.raised)
 
         Section {
-          ForEach(calendar.calendars) { choice in
-            Toggle(isOn: agendaBinding(choice.id)) {
-              HStack(spacing: theme.space.sm) {
-                CalendarSwatch(hex: choice.colorHex)
-                Text(choice.summary).font(theme.type.body)
+          // An account can hold dozens of calendars; folded, the row counts
+          // the ones Today shows.
+          SettingsDisclosure("Calendars", value: shownSummary, key: "calendar.agenda") {
+            ForEach(calendar.calendars) { choice in
+              Toggle(isOn: agendaBinding(choice.id)) {
+                HStack(spacing: theme.space.sm) {
+                  CalendarSwatch(hex: choice.colorHex)
+                  Text(choice.summary).font(theme.type.body)
+                }
               }
+              .toggleStyle(ThemedToggleStyle())
             }
-            .toggleStyle(ThemedToggleStyle())
           }
         } header: {
           header("Shown in Today")
@@ -118,6 +122,11 @@ struct CalendarSettingsView: View {
     Binding(
       get: { calendar.preferences.importEvents },
       set: { value in calendar.update { $0.importEvents = value } })
+  }
+
+  private var shownSummary: String {
+    let shown = calendar.calendars.filter { calendar.preferences.agendaCalendarIDs.contains($0.id) }.count
+    return shown == 0 ? "None" : "\(shown) of \(calendar.calendars.count)"
   }
 
   private func agendaBinding(_ id: String) -> Binding<Bool> {

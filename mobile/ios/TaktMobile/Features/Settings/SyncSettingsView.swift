@@ -235,39 +235,43 @@ private struct SyncSettingsForm: View {
     .listRowBackground(theme.raised)
 
     Section {
-      TextField("Email", text: $email)
-        .textContentType(.username)
-        .keyboardType(.emailAddress)
-        .textInputAutocapitalization(.never)
-        .autocorrectionDisabled()
-        .accessibilityIdentifier("sync.email")
-      SecureField("Password", text: $password)
-        .textContentType(.password)
-        .submitLabel(.go)
-        .onSubmit { signIn() }
-        .accessibilityIdentifier("sync.password")
-      Button("Sign in") { signIn() }
-        .disabled(!canSubmit)
-        .accessibilityIdentifier("sync.signIn")
-      Button("Create account") {
-        guard let server = chosenServer() else { return }
-        notice = nil
-        Task {
-          notice = await controller.signUp(email: email, password: password, serverURL: server)
-          if controller.signInError == nil { password = "" }
+      // Apple and Google above are the usual way in; the email form is six
+      // rows, so it waits behind one until it is wanted.
+      SettingsDisclosure("Email and password", key: "sync.email") {
+        TextField("Email", text: $email)
+          .textContentType(.username)
+          .keyboardType(.emailAddress)
+          .textInputAutocapitalization(.never)
+          .autocorrectionDisabled()
+          .accessibilityIdentifier("sync.email")
+        SecureField("Password", text: $password)
+          .textContentType(.password)
+          .submitLabel(.go)
+          .onSubmit { signIn() }
+          .accessibilityIdentifier("sync.password")
+        Button("Sign in") { signIn() }
+          .disabled(!canSubmit)
+          .accessibilityIdentifier("sync.signIn")
+        Button("Create account") {
+          guard let server = chosenServer() else { return }
+          notice = nil
+          Task {
+            notice = await controller.signUp(email: email, password: password, serverURL: server)
+            if controller.signInError == nil { password = "" }
+          }
         }
-      }
-      .disabled(!canSubmit)
-      .accessibilityIdentifier("sync.signUp")
-      Button("Forgot password?") { requestPasswordReset() }
-        .font(theme.type.callout)
-        .foregroundStyle(theme.muted)
-        .accessibilityIdentifier("sync.forgotPassword")
-      if let notice {
-        Text(notice)
-          .font(theme.type.caption)
+        .disabled(!canSubmit)
+        .accessibilityIdentifier("sync.signUp")
+        Button("Forgot password?") { requestPasswordReset() }
+          .font(theme.type.callout)
           .foregroundStyle(theme.muted)
-          .accessibilityIdentifier("sync.notice")
+          .accessibilityIdentifier("sync.forgotPassword")
+        if let notice {
+          Text(notice)
+            .font(theme.type.caption)
+            .foregroundStyle(theme.muted)
+            .accessibilityIdentifier("sync.notice")
+        }
       }
     } header: {
       header("Or with email")
