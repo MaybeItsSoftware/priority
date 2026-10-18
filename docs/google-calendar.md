@@ -142,8 +142,8 @@ Calendar and pick it, or pick any calendar you own.
 - **iPhone**: `ASWebAuthenticationSession` + PKCE against an **iOS** OAuth
   client, redirecting to its reversed client id. The completion closure is
   `@Sendable` (the `SyncAuth.swift` crash). The client id is the
-  `GOOGLE_IOS_CLIENT_ID` build setting; without it the section says it is
-  not configured. Tokens live in the keychain.
+  `GOOGLE_IOS_CLIENT_ID` build setting; without it the Calendar row is
+  hidden. Tokens live in the keychain.
 - **Android**: `Identity.getAuthorizationClient(…).authorize(…)` for the two
   scopes, which grants against the package's existing Android OAuth clients
   (per package and SHA-1) and returns a short-lived access token silently
@@ -158,6 +158,10 @@ then only test users can grant them.
 
 | | Two-way sync | Today agenda | Settings |
 | --- | --- | --- | --- |
-| Mac | `GoogleCalendarSyncService`, every 5 min while signed in | — (the desktop has its own day) | the Google Calendar plugin page |
-| iPhone | on foreground and every 5 min while open | `CalendarAgendaSection` | Settings → Google Calendar |
-| Android | on foreground and every 5 min while open | `CalendarAgendaSection` | Settings → Google Calendar |
+| Mac | `GoogleCalendarTwoWayService`: after a local change, every 5 min and at launch | — (the desktop has its own day) | the Google Calendar plugin page |
+| iPhone | `GoogleCalendarController`: on foreground and every 15 min while open | `CalendarAgendaSection` | Settings → Calendar |
+| Android | `GoogleCalendarController`: on foreground and every 5 min while open | `CalendarAgenda` | Settings → Calendar |
+
+The Apple transport (`GoogleCalendarClient`, in `TaktWorkspace`) is shared by
+the Mac and the iPhone; Android's is `GoogleCalendarRepository` in `:data`.
+Both only send what the core built and hand back what Google answered.
