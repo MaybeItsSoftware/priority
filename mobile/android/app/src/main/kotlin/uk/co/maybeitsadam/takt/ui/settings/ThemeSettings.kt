@@ -75,8 +75,10 @@ internal fun ThemeSection(model: SettingsViewModel) {
         }
     }
 
-    Section(
+    CollapsibleSection(
         "Theme",
+        key = "theme",
+        summary = state.specification.name,
         footer = "A theme is a JSON file: colours for light and dark, and sizes. Anything it leaves out comes from Priority, the default. See docs/themes.md.",
     ) {
         val outcomes = state.library.outcomes.associateBy { it.source }

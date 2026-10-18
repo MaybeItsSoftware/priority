@@ -58,8 +58,10 @@ internal fun TypeSection(model: SettingsViewModel) {
     val themeType = state.themeSpecification.structure.typography
     var picking by rememberSaveable { mutableStateOf<ThemeFontRole?>(null) }
 
-    Section(
+    CollapsibleSection(
         "Type",
+        key = "type",
+        summary = if (override.isEmpty) "The theme's" else "Your own",
         footer = "Inter, Geist, IBM Plex Sans, Arvo, Lilex, JetBrains Mono and Geist Mono ship with Takt, so they " +
             "look the same on every device. Your choices are kept on this device and apply over every theme.",
     ) {

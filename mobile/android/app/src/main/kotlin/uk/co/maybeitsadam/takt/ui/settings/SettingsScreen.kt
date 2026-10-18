@@ -147,7 +147,7 @@ private fun CelebrationSection(model: SettingsViewModel) {
     val style by model.celebration.collectAsStateWithLifecycle()
     // Each choice, and Preview, plays the chosen celebration on a sample row.
     var play by rememberSaveable { mutableStateOf(0) }
-    Section("Completing a task") {
+    CollapsibleSection("Completing a task", key = "celebration", summary = style.title) {
         CelebrationStyle.entries.forEachIndexed { index, option ->
             if (index > 0) Hairline(color = TaktTheme.colors.borderMuted)
             ChoiceRow(option.title, option == style, detail = option.detail, tag = "settings_celebration_${option.raw}") {
@@ -180,7 +180,7 @@ private fun FocusSection(model: SettingsViewModel) {
 private fun AboutSection(model: SettingsViewModel) {
     val licences by produceState(emptyList<Pair<String, String>>()) { value = model.licences() }
     var open by rememberSaveable { mutableStateOf<String?>(null) }
-    Section("About") {
+    CollapsibleSection("About", key = "about", summary = remember { model.versionName() }) {
         Row(Modifier.fillMaxWidth().heightIn(min = Metrics.touchTarget).padding(horizontal = Metrics.md), verticalAlignment = Alignment.CenterVertically) {
             Text("Version", style = TaktTheme.type.body, color = TaktTheme.colors.ink, modifier = Modifier.weight(1f))
             MonoText(remember { model.versionName() })
@@ -310,8 +310,13 @@ private fun SignedInSync(sync: SyncController, status: SyncUiState, credentials:
         }
     }
 
-    Section("Devices", footer = "Every device signed in to this account. To add one, sign in on it with the same account.") {
-        val devices = account?.devices.orEmpty()
+    val devices = account?.devices.orEmpty()
+    CollapsibleSection(
+        "Devices",
+        key = "devices",
+        summary = if (devices.isEmpty()) null else "${devices.size}",
+        footer = "Every device signed in to this account. To add one, sign in on it with the same account.",
+    ) {
         when {
             devices.isNotEmpty() -> devices.forEachIndexed { index, device ->
                 if (index > 0) Hairline(color = TaktTheme.colors.borderMuted)

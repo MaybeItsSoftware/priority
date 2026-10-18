@@ -83,8 +83,10 @@ internal fun CalendarSection(calendar: GoogleCalendarController) {
     val current = settings
     val writable = calendars.filter { it.canWrite }
 
-    Section(
+    CollapsibleSection(
         "Google Calendar",
+        key = "calendar",
+        summary = calendars.firstOrNull { it.id == current?.calendarId }?.summary ?: "Connected",
         footer = "Only one device writes to the calendar at a time. Make a calendar called Takt in Google Calendar to keep tasks apart.",
     ) {
         Text(
@@ -121,7 +123,8 @@ internal fun CalendarSection(calendar: GoogleCalendarController) {
     }
 
     if (calendars.isNotEmpty()) {
-        Section("Shown in Today") {
+        val shown = calendars.count { current?.agendaCalendarIds.orEmpty().contains(it.id) }
+        CollapsibleSection("Shown in Today", key = "calendar_agenda", summary = if (shown == 0) "None" else "$shown of ${calendars.size}") {
             calendars.forEachIndexed { index, info ->
                 if (index > 0) Hairline(color = TaktTheme.colors.borderMuted)
                 val shown = current?.agendaCalendarIds.orEmpty().contains(info.id)
