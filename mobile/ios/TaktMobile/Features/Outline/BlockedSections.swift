@@ -10,10 +10,21 @@ enum BlockedSections {
   /// The outline rows to draw the label above: in each sibling group, the
   /// first of the blocked run it ends with.
   static func outlineLabels(rows: [OutlineRow], blocked: Set<String>) -> Set<String> {
-    guard !blocked.isEmpty else { return [] }
+    outlineLabels(rows: rows, blocked: blocked, buried: []).blocked
+  }
+
+  /// The outline rows to draw the "Blocked" and "Buried" labels above:
+  /// siblings run open, then blocked, then buried (the core's order), and
+  /// each run's first row carries its label. A task that is both is buried.
+  static func outlineLabels(
+    rows: [OutlineRow], blocked: Set<String>, buried: Set<String>
+  ) -> (blocked: Set<String>, buried: Set<String>) {
+    guard !blocked.isEmpty || !buried.isEmpty else { return ([], []) }
+    let open = rows.lazy.filter { $0.status == .open }
     return BlockedSection.labelledIDs(
       rows.map { (id: $0.id, group: "\($0.listID)/\($0.parentID ?? "")") },
-      blocked: Set(rows.lazy.filter { $0.status == .open && blocked.contains($0.id) }.map(\.id)))
+      blocked: Set(open.filter { blocked.contains($0.id) }.map(\.id)),
+      buried: Set(open.filter { buried.contains($0.id) }.map(\.id)))
   }
 
   /// The card in a column to draw the label above, if the column ends with
@@ -33,23 +44,26 @@ enum BlockedSections {
 enum OutlineEntry: Identifiable, Equatable {
   case row(OutlineRow)
   /// The label above the row with this id.
-  case blockedLabel(before: String, depth: Int)
+  case blockedLabel(before: String, depth: Int, isBuried: Bool = false)
 
   var id: String {
     switch self {
     case .row(let row): row.id
-    case .blockedLabel(let rowID, _): "blocked-label.\(rowID)"
+    case .blockedLabel(let rowID, _, let isBuried): "\(isBuried ? "buried" : "blocked")-label.\(rowID)"
     }
   }
 
   /// The rows, with a label entry before each one that starts a blocked run.
-  static func entries(rows: [OutlineRow], blocked: Set<String>) -> [OutlineEntry] {
-    let labelled = BlockedSections.outlineLabels(rows: rows, blocked: blocked)
-    guard !labelled.isEmpty else { return rows.map(OutlineEntry.row) }
+  static func entries(rows: [OutlineRow], blocked: Set<String>, buried: Set<String> = []) -> [OutlineEntry] {
+    let labelled = BlockedSections.outlineLabels(rows: rows, blocked: blocked, buried: buried)
+    guard !labelled.blocked.isEmpty || !labelled.buried.isEmpty else { return rows.map(OutlineEntry.row) }
     var entries: [OutlineEntry] = []
-    entries.reserveCapacity(rows.count + labelled.count)
+    entries.reserveCapacity(rows.count + labelled.blocked.count + labelled.buried.count)
     for row in rows {
-      if labelled.contains(row.id) { entries.append(.blockedLabel(before: row.id, depth: row.depth)) }
+      if labelled.blocked.contains(row.id) { entries.append(.blockedLabel(before: row.id, depth: row.depth)) }
+      if labelled.buried.contains(row.id) {
+        entries.append(.blockedLabel(before: row.id, depth: row.depth, isBuried: true))
+      }
       entries.append(.row(row))
     }
     return entries

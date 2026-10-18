@@ -26,6 +26,20 @@ extension WorkspaceStore {
     Set(try Self.mappingCoreErrors { try core.blockedTaskIds() })
   }
 
+  /// The open tasks whose start is still to come at `now` (the core's
+  /// `buried::buried_task_ids`), each with its start: what a client draws
+  /// greyed, with the day it starts, in the buried section.
+  public func buriedStarts(now: Date = Date()) throws -> [String: Date] {
+    let ids = try Self.mappingCoreErrors { try core.buriedTaskIds(nowMs: now.coreMilliseconds) }
+    var starts: [String: Date] = [:]
+    for id in ids {
+      if let start = try Self.mappingCoreErrors({ try core.metadata(taskId: id) })?.startAtMs {
+        starts[id] = Date(coreMilliseconds: start)
+      }
+    }
+    return starts
+  }
+
   /// Whether `taskId` is open and waits on an open task.
   public func isTaskBlocked(_ taskId: String) throws -> Bool {
     try Self.mappingCoreErrors { try core.isTaskBlocked(taskId: taskId) }

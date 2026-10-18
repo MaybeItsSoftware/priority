@@ -25,6 +25,7 @@ import kotlinx.coroutines.flow.stateIn
 import uk.co.maybeitsadam.takt.app.AppContainer
 import uk.co.maybeitsadam.takt.data.workspace.TaskSearchResult
 import uk.co.maybeitsadam.takt.data.workspace.blockedTaskIds
+import uk.co.maybeitsadam.takt.data.workspace.buriedStarts
 import uk.co.maybeitsadam.takt.data.workspace.observeSidebar
 
 @Immutable
@@ -34,6 +35,8 @@ data class SearchState(
     val results: ImmutableList<TaskSearchResult> = persistentListOf(),
     /** Results waiting on an open task, drawn greyed. */
     val blockedIds: Set<String> = emptySet(),
+    /** Results whose start is still to come, and when: drawn greyed, with the day they start. */
+    val buriedStarts: Map<String, java.time.Instant> = emptyMap(),
 )
 
 /** Search: FTS through the repository, debounced, re-run when tasks change under it. */
@@ -59,13 +62,18 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
         container.withSession { session ->
             val repository = session.repository
             repository.database.invalidations
-                .filter { "tasks" in it || "task_lists" in it || "task_dependencies" in it }
+                .filter { "tasks" in it || "task_lists" in it || "task_dependencies" in it || "task_metadata" in it }
                 .map { }
                 .onStart { emit(Unit) }
                 .map {
                     val results = repository.searchTasks(session.workspace.id, query, includingCompleted = include)
                     val blocked = repository.blockedTaskIds()
-                    SearchState(query, results.toImmutableList(), results.mapNotNullTo(HashSet()) { r -> r.task.id.takeIf { it in blocked } })
+                    SearchState(
+                        query,
+                        results.toImmutableList(),
+                        results.mapNotNullTo(HashSet()) { r -> r.task.id.takeIf { it in blocked } },
+                        repository.buriedStarts(results.map { it.task.id }),
+                    )
                 }
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SearchState())

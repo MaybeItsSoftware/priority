@@ -31,10 +31,12 @@ struct SectionLabel: View {
 /// there.
 struct BlockedDivider: View {
   @Environment(\.theme) private var theme
+  /// Over tasks whose start is still to come rather than ones waiting on others.
+  var isBuried = false
 
   var body: some View {
     HStack(spacing: theme.space.sm) {
-      Text("Blocked")
+      Text(isBuried ? "Buried" : "Blocked")
         .microLabel()
         .fixedSize()
       Hairline()
@@ -42,7 +44,7 @@ struct BlockedDivider: View {
     .allowsHitTesting(false)
     .focusable(false)
     .accessibilityElement(children: .ignore)
-    .accessibilityLabel("Blocked: these tasks wait on others")
+    .accessibilityLabel(isBuried ? "Buried: these tasks start later" : "Blocked: these tasks wait on others")
     .accessibilityAddTraits(.isStaticText)
   }
 }

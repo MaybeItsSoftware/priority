@@ -28,6 +28,8 @@ struct TaktApp: App {
             .onChange(of: scenePhase) { _, phase in
               if phase == .active {
                 model.startWatchingExternalWrites()
+                // A start may have arrived while the app was away.
+                model.refreshBlockedTaskIDs()
                 Task { await model.checkExternalWrites() }
                 SyncController.shared?.sceneBecameActive()
               } else {

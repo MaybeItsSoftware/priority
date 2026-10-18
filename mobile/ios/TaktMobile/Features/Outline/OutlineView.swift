@@ -23,7 +23,8 @@ struct OutlineView: View {
       if outline.composer?.anchorRowID == nil, outline.composer != nil {
         composerRow
       }
-      let entries = OutlineEntry.entries(rows: outline.rows, blocked: model.blockedTaskIDs)
+      let entries = OutlineEntry.entries(
+        rows: outline.rows, blocked: model.blockedTaskIDs, buried: Set(model.buriedStarts.keys))
       ForEach(entries) { entry in
         switch entry {
         case .row(let row):
@@ -31,8 +32,8 @@ struct OutlineView: View {
           if outline.composer?.anchorRowID == row.id {
             composerRow
           }
-        case .blockedLabel(_, let depth):
-          blockedLabelRow(depth: depth)
+        case .blockedLabel(_, let depth, let isBuried):
+          blockedLabelRow(depth: depth, isBuried: isBuried)
         }
       }
       .onMove { source, destination in
@@ -91,7 +92,10 @@ struct OutlineView: View {
       if outline.editingTaskID == row.id {
         renameRow(row)
       } else {
-        OutlineRowView(row: row, isSelected: isSelected, isBlocked: model.isBlocked(row.id, status: row.status)) {
+        OutlineRowView(
+          row: row, isSelected: isSelected, isBlocked: model.isBlocked(row.id, status: row.status),
+          starts: model.startsLabel(row.id, status: row.status)
+        ) {
           outline.toggleFold(row.id)
         }
           .equatable()
@@ -137,8 +141,8 @@ struct OutlineView: View {
   /// The label over a sibling group's blocked tail, its text in the title
   /// column of the rows it heads: past their indent, disclosure and mark.
   /// A row of its own that cannot be selected, dragged or swiped.
-  private func blockedLabelRow(depth: Int) -> some View {
-    BlockedDivider()
+  private func blockedLabelRow(depth: Int, isBuried: Bool = false) -> some View {
+    BlockedDivider(isBuried: isBuried)
       .padding(.leading, CGFloat(depth) * Metrics.indent + 22 + 32 + theme.space.xs * 3)
       .padding(.top, theme.space.sm)
       .padding(.bottom, theme.space.xxs)
@@ -277,10 +281,14 @@ struct OutlineRowView: View, Equatable {
   let isSelected: Bool
   /// Open and still waiting on an open task: the whole row steps back.
   var isBlocked = false
+  /// Open with its start still to come ("starts Mon"): the row steps back
+  /// too, and says when it comes back.
+  var starts: String?
   let onFold: () -> Void
 
   static func == (lhs: OutlineRowView, rhs: OutlineRowView) -> Bool {
     lhs.row == rhs.row && lhs.isSelected == rhs.isSelected && lhs.isBlocked == rhs.isBlocked
+      && lhs.starts == rhs.starts
   }
 
   var body: some View {
@@ -328,7 +336,7 @@ struct OutlineRowView: View, Equatable {
     }
     // Blocked, the whole row — mark, title and badges — steps back, not only
     // its title's colour; the selection behind it keeps its weight.
-    .opacity(isBlocked ? Theme.disabledOpacity : 1)
+    .opacity(isBlocked || starts != nil ? Theme.disabledOpacity : 1)
     .celebrationRow(row.id)
   }
 
@@ -356,6 +364,9 @@ struct OutlineRowView: View, Equatable {
   @ViewBuilder
   private var badges: some View {
     HStack(spacing: theme.space.xs) {
+      if let starts {
+        Text(starts).font(theme.type.numeral).foregroundStyle(theme.warning).lineLimit(1)
+      }
       if row.isPlanned {
         Image(systemName: "sun.max").font(theme.type.glyph(12)).foregroundStyle(theme.warning)
           .accessibilityLabel("Planned for today")

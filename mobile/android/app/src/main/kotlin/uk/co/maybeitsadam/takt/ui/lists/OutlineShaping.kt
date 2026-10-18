@@ -205,11 +205,14 @@ object OutlineShaping {
         isBlocked = isBlocked && task.status == TaskStatus.OPEN,
         isBuried = isBuried && task.status == TaskStatus.OPEN,
         starts = decoration?.startAt?.takeIf { isBuried && task.status == TaskStatus.OPEN }
-            ?.let { start ->
-                val day = Format.day(start.atZone(zone).toLocalDate(), today)
-                "starts ${if (day == "Today" || day == "Tomorrow") day.lowercase() else day}"
-            },
+            ?.let { startsLabel(it, zone, today) },
     )
+
+    /** What a buried task says beside it: `starts Mon`, `starts tomorrow`. */
+    fun startsLabel(start: java.time.Instant, zone: ZoneId, today: LocalDate): String {
+        val day = Format.day(start.atZone(zone).toLocalDate(), today)
+        return "starts ${if (day == "Today" || day == "Tomorrow") day.lowercase() else day}"
+    }
 
     /**
      * The drawn outline: closed rows (with their branches) gone when

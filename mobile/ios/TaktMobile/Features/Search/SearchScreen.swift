@@ -156,6 +156,10 @@ struct SearchScreen: View {
 
   private func resultRow(_ result: TaskSearchResult) -> some View {
     let task = result.task
+    // Waiting on another task, or starting later: greyed as in the lists,
+    // and saying which.
+    let isBlocked = model.isBlocked(task.id, status: task.status)
+    let starts = model.startsLabel(task.id, status: task.status)
     return Button {
       reveal(result)
     } label: {
@@ -164,7 +168,7 @@ struct SearchScreen: View {
         VStack(alignment: .leading, spacing: theme.space.xxs) {
           Text(task.title)
             .font(theme.type.body)
-            .foregroundStyle(task.status == .open ? theme.ink : theme.muted)
+            .foregroundStyle(task.status == .open && !isBlocked && starts == nil ? theme.ink : theme.muted)
             .strikethrough(task.status != .open, color: theme.dim)
             .lineLimit(2)
           if let snippet = result.notesSnippet, !snippet.isEmpty {
@@ -173,6 +177,12 @@ struct SearchScreen: View {
           HStack(spacing: theme.space.xs) {
             Image(systemName: "list.bullet").font(theme.type.glyph(10))
             Text(result.list.name)
+            if isBlocked {
+              Text("Blocked").foregroundStyle(theme.dim)
+            }
+            if let starts {
+              Text(starts).font(theme.type.numeral).foregroundStyle(theme.warning).lineLimit(1)
+            }
           }
           .font(theme.type.footnote)
           .foregroundStyle(ListColor.color(hex: result.list.colorHex) ?? theme.muted)

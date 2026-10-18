@@ -48,6 +48,17 @@ suspend fun WorkspaceRepository.blocking(taskId: String): List<WorkspaceTask> =
 /** Every open task waiting on an open task: what the screens draw greyed. */
 suspend fun WorkspaceRepository.blockedTaskIds(): Set<String> = coreRead { it.blockedTaskIds().toSet() }
 
+/**
+ * Of [among], the open tasks whose start is still to come (the Rust core's
+ * `buried::buried_task_ids`) and when each starts: what a screen draws greyed
+ * with `starts Mon` beside it.
+ */
+suspend fun WorkspaceRepository.buriedStarts(among: Collection<String>, now: Instant = now()): Map<String, Instant> =
+    database.read { db ->
+        val buried = db.core.buriedTaskIds(now.toEpochMilli()).toHashSet()
+        among.filter { it in buried }.mapNotNull { id -> db.metadata(id)?.startAt?.let { id to it } }.toMap()
+    }
+
 /** [blockedTaskIds], re-read when tasks or their dependencies change (a completion unblocks). */
 fun WorkspaceRepository.observeBlockedTaskIds(): Flow<Set<String>> =
     database.observe(TASK_ORDER_TABLES) { it.core.blockedTaskIds().toSet() }

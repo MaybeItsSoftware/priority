@@ -44,6 +44,21 @@ enum Format {
     }
   }
 
+  /// What a buried task's row says: "starts 14:00" today, "starts tomorrow",
+  /// "starts Mon" within the week, "starts 3 Nov" beyond it. The Mac's
+  /// wording (`WorkspaceTaskPlanningBadges.startsText`).
+  static func starts(_ start: Date, now: Date = .now, calendar: Calendar = .current) -> String {
+    if calendar.isDate(start, inSameDayAs: now) {
+      return "starts \(start.formatted(date: .omitted, time: .shortened))"
+    }
+    let days = calendar.dateComponents(
+      [.day], from: calendar.startOfDay(for: now), to: calendar.startOfDay(for: start)
+    ).day ?? 0
+    if days == 1 { return "starts tomorrow" }
+    if days < 7 { return "starts \(start.formatted(.dateTime.weekday(.abbreviated)))" }
+    return "starts \(start.formatted(.dateTime.day().month(.abbreviated)))"
+  }
+
   static func isOverdue(_ date: Date, now: Date = .now, calendar: Calendar = .current) -> Bool {
     let hasTime = !calendar.isDate(date, equalTo: calendar.startOfDay(for: date), toGranularity: .minute)
     return hasTime ? date < now : calendar.startOfDay(for: date) < calendar.startOfDay(for: now)

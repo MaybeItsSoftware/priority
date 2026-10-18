@@ -113,6 +113,10 @@ final class WorkspaceModel {
   /// The open tasks still waiting on an open task, drawn greyed. Where they
   /// sort is the core's; this only says which to dim. Read after every write.
   private(set) var blockedTaskIDs: Set<String> = []
+  /// The open tasks whose start is still to come, with their starts: drawn
+  /// greyed below the blocked ones (the core's order), with the day they
+  /// start. Read after every write and when the app comes forward.
+  private(set) var buriedStarts: [String: Date] = [:]
   var errorMessage: String?
   /// Moves when something is completed, so a view can play the haptic.
   private(set) var completionCount = 0
@@ -253,9 +257,15 @@ final class WorkspaceModel {
   }
 
   /// One small query: the ids of the blocked open tasks.
-  private func refreshBlockedTaskIDs() {
-    guard let blocked = try? store.blockedTaskIds(), blocked != blockedTaskIDs else { return }
-    blockedTaskIDs = blocked
+  func refreshBlockedTaskIDs() {
+    if let blocked = try? store.blockedTaskIds(), blocked != blockedTaskIDs { blockedTaskIDs = blocked }
+    if let buried = try? store.buriedStarts(), buried != buriedStarts { buriedStarts = buried }
+  }
+
+  /// "starts Mon" while the task is open and its start is still to come.
+  func startsLabel(_ taskID: String, status: TaskStatus = .open) -> String? {
+    guard status == .open, let start = buriedStarts[taskID], start > .now else { return nil }
+    return Format.starts(start)
   }
 
   /// Whether the task is open and still waiting on an open task.
