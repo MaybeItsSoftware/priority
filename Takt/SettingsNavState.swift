@@ -91,6 +91,15 @@ import Observation
   enum Destination: Hashable {
     case pane(Pane)
     case integration(String)
+
+    /// A name for the page that outlives a launch, for what it remembers —
+    /// which of its sections are open.
+    var storageKey: String {
+      switch self {
+      case .pane(let pane): pane.rawValue
+      case .integration(let id): "integration.\(id)"
+      }
+    }
   }
 
   var destination: Destination = .pane(.general)

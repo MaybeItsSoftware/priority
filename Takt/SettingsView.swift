@@ -387,6 +387,7 @@ struct SettingsView: View {
         SettingsPageHeader(title: pageTitle, summary: pageSummary)
         Form { pageContent }
           .settingsChrome()
+          .environment(\.settingsPageKey, navState.destination.storageKey)
       }
       .padding(.horizontal, theme.space.xl + theme.space.md)
       .padding(.top, theme.space.lg)

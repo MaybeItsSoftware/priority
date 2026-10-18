@@ -38,15 +38,12 @@ private struct DailyLogPluginSettingsView: View {
     let dailyLog = manager.dailyLog
 
     Section {
-      Text(
-        "Completions, focus sessions and the day's plan are always recorded locally — "
-          + "that's what the Daily view reads. This section controls the Obsidian half."
-      )
-      .font(theme.captionFont)
-      .foregroundStyle(theme.muted)
-
       dailiesEditor
+    } header: {
+      Text("Dailies")
+    }
 
+    Section {
       SettingsRow(
         "Day starts at",
         detail: "Work finished before this hour counts towards the previous day. "
@@ -60,6 +57,17 @@ private struct DailyLogPluginSettingsView: View {
         .labelsHidden()
         .fixedSize()
       }
+    } header: {
+      Text("The day")
+    }
+
+    Section {
+      Text(
+        "Completions, focus sessions and the day's plan are always recorded locally — "
+          + "that's what the Daily view reads. This section controls the Obsidian half."
+      )
+      .font(theme.captionFont)
+      .foregroundStyle(theme.muted)
 
       // Configuration comes before the switch that acts on it. Hiding the folder
       // picker behind the enable toggle would mean turning writing on before
@@ -140,7 +148,7 @@ private struct DailyLogPluginSettingsView: View {
         }
       }
     } header: {
-      Text("Daily log plugin")
+      Text("Obsidian daily notes")
     }
     .onAppear {
       fileNameFormat = dailyLog.plugin.noteFormat.fileNameFormat
