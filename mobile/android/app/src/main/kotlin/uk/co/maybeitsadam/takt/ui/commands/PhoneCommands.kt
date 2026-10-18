@@ -15,7 +15,7 @@ object PhoneCommands {
     val HANDLED: Set<String> = setOf(
         "taskNew", "goToday", "goInbox", "goEverything", "goFocus", "goTimeline",
         "listNew", "folderNew", "windowUndo", "windowRedo",
-        "androidHabitNew", "phoneGoLists", "phoneHistory", "phoneSettings",
+        "phoneHabitNew", "phoneGoLists", "phoneHistory", "phoneSettings",
     )
 
     /** Runs [id]; false for an id this build does not know. */
@@ -35,7 +35,7 @@ object PhoneCommands {
             }
             "windowUndo" -> container.undo.undo()
             "windowRedo" -> container.undo.redo()
-            "androidHabitNew" ->container.habits.open(null)
+            "phoneHabitNew" -> container.habits.open(null)
             "phoneHistory" -> shell.showHistory()
             "phoneSettings" -> navigator.openSettings()
             else -> return false

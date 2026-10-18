@@ -70,7 +70,7 @@ enum PhoneCommandRunner {
   static let handled: Set<String> = [
     "taskNew", "goToday", "goInbox", "goEverything", "goFocus", "goTimeline",
     "listNew", "folderNew", "windowUndo", "windowRedo",
-    "phoneGoLists", "phoneHistory", "phoneSettings",
+    "phoneHabitNew", "phoneGoLists", "phoneHistory", "phoneSettings",
   ]
 
   static func run(_ id: String, model: WorkspaceModel, isPad: Bool) {
@@ -91,6 +91,7 @@ enum PhoneCommandRunner {
     case "folderNew": navigation.namePrompt = .newFolder(parentID: nil)
     case "windowUndo": model.undo()
     case "windowRedo": model.redo()
+    case "phoneHabitNew": navigation.habitRequest = HabitRequest(taskID: nil)
     case "phoneGoLists": navigation.go(to: .lists, isPad: isPad)
     case "phoneHistory": navigation.isHistoryPresented = true
     case "phoneSettings": navigation.isSettingsPresented = true

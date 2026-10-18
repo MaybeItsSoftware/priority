@@ -36,6 +36,9 @@ struct RootView: View {
     .sheet(isPresented: $navigation.isHistoryPresented) {
       HistorySheet().environment(model)
     }
+    .sheet(item: $navigation.habitRequest) { request in
+      HabitSheet(request: request).environment(model)
+    }
     .sheet(isPresented: $navigation.isSettingsPresented) {
       SettingsScreen().environment(model)
     }

@@ -143,6 +143,8 @@ final class AppNavigation {
   /// A command for the outline on screen, from the toolbar or a hardware key.
   var outlineCommand: OutlineCommand?
   var isHistoryPresented = false
+  /// The habit form, on a task or (no task) for a standalone habit.
+  var habitRequest: HabitRequest?
   var isSettingsPresented = false
   /// Settings opened on its Sync page — where a link from a Supabase email lands.
   var isSyncSettingsPresented = false

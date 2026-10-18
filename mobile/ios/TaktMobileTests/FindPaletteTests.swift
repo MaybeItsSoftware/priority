@@ -29,6 +29,9 @@ final class FindPaletteTests: XCTestCase {
     XCTAssertTrue(model.navigation.isSettingsPresented)
     PhoneCommandRunner.run("goEverything", model: model, isPad: false)
     XCTAssertEqual(model.navigation.listPath, [.everything])
+    PhoneCommandRunner.run("phoneHabitNew", model: model, isPad: false)
+    XCTAssertNotNil(model.navigation.habitRequest)
+    XCTAssertNil(model.navigation.habitRequest?.taskID)
   }
 
   func testAnEditOffersUndoAndTheUndoOffersRedo() throws {

@@ -5,7 +5,6 @@ import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
 import uniffi.takt_core.CommandEntry
-import uniffi.takt_core.CommandSurface
 import uniffi.takt_core.PaletteCandidate
 import uniffi.takt_core.paletteRank
 import uniffi.takt_core.paletteRankCommands
@@ -36,15 +35,8 @@ object FindModel {
     const val COMMAND_LIMIT = 5
     const val PLACE_LIMIT = 6
 
-    /** Android's one command beyond the core's list: only Android has the habit form so far. */
-    const val HABIT_NEW = "androidHabitNew"
-
-    /** The commands the phones offer, read once from the core, and [HABIT_NEW]. */
-    val commands: List<CommandEntry> by lazy {
-        phonePaletteCommands() + CommandEntry(
-            HABIT_NEW, "New habit", "Task", emptyList(), emptyList(), CommandSurface.ANYWHERE, false, null,
-        )
-    }
+    /** The commands the phones offer, read once from the core. */
+    val commands: List<CommandEntry> by lazy { phonePaletteCommands() }
 
     fun palette(query: String, recents: List<String>, places: List<FindPlace>): FindPalette {
         val trimmed = query.trim()

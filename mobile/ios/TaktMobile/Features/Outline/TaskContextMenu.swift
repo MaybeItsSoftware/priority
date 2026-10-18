@@ -51,6 +51,9 @@ struct TaskContextMenu: View {
       return context.allowsStructure && onNewAbove != nil
     case .taskPromoteList:
       return context.isList
+    case .taskHabit:
+      // A list is not a habit's task; the Find command makes a standalone one.
+      return !context.isList
     case .taskStartFocus:
       return !context.isList && context.status == .open
     case .taskToggleInspector:
@@ -80,6 +83,7 @@ struct TaskContextMenu: View {
     case .taskInvalidate: return context.status == .cancelled ? "Reopen" : "Invalidate"
     case .taskTogglePlannedToday: return context.isPlanned ? "Take off today" : "Plan for today"
     case .taskToggleDaily: return model.isDaily(context.taskID) ? "Stop daily progress" : "Make daily progress"
+    case .taskHabit: return model.isDaily(context.taskID) ? "Habit options…" : "Make a habit…"
     case .taskConvertToList: return context.isList ? "Convert to task" : "Convert to list"
     case .taskPromoteList: return context.isPromoted ? "Unpin from lists" : "Pin to lists"
     case .taskNewChild: return "New subtask"
@@ -126,6 +130,7 @@ struct TaskContextMenu: View {
     case .taskExtractBranch: model.extractBranch(taskID)
     case .taskTogglePlannedToday: model.togglePlannedToday(taskID)
     case .taskToggleDaily: model.toggleDaily(taskID)
+    case .taskHabit: model.navigation.habitRequest = HabitRequest(taskID: taskID)
     case .taskOpenLink: model.openFirstLink(taskID)
     case .taskShowProgress: model.showProgress(taskID)
     case .taskClearPriority: model.clearPriority(taskID)
@@ -166,6 +171,7 @@ struct TaskContextMenu: View {
     case .taskExtractBranch: "arrow.up.right.square"
     case .taskTogglePlannedToday: "sun.max.circle"
     case .taskToggleDaily: "repeat.circle"
+    case .taskHabit: "repeat"
     case .taskOpenLink: "link"
     case .taskShowProgress: "chart.bar"
     case .taskClearPriority: "flag.slash"

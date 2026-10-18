@@ -228,9 +228,12 @@ const PHONE_CATALOGUE: [(&str, Option<&str>); 10] = [
     ("windowRedo", None),
 ];
 
-/// The phones' own commands: what the Mac does through a window or its menu
-/// bar rather than a catalogue row.
-const PHONE_OWN: [(&str, &str, &str); 3] = [
+/// The phones' own commands: what the Mac does through a window, a key or
+/// its menu bar rather than a catalogue row. `phoneHabitNew` is the Mac's
+/// standalone habit (the habit form with no task), which the Mac reaches
+/// through `gb` on nothing selected rather than a command of its own.
+const PHONE_OWN: [(&str, &str, &str); 4] = [
+    ("phoneHabitNew", "New habit", "Task"),
     ("phoneGoLists", "Go to Lists", "Go"),
     ("phoneHistory", "Show the undo history", "Window"),
     ("phoneSettings", "Open settings", "Window"),
@@ -349,5 +352,7 @@ mod tests {
         assert_eq!(goal[0], "goFocus");
         let undo = rank_ids("undo", &commands, &[]);
         assert_eq!(undo[0], "windowUndo");
+        let habit = rank_ids("habit", &commands, &[]);
+        assert_eq!(habit[0], "phoneHabitNew");
     }
 }
