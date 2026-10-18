@@ -172,7 +172,7 @@ cargo fmt --manifest-path sync-server/Cargo.toml --all --check
 
 ## Working Loop
 
-Three things happen on every piece of work here without being asked for.
+These happen on every piece of work here without being asked for.
 
 **Commit as you go, straight onto `main`.** Not one commit at the end — one per
 coherent change, each of them green. This is a deliberate override of the
@@ -203,6 +203,33 @@ completion: what the user actually runs is the installed bundle, and until it
 is replaced every fix is still only a claim. Check the output for
 `** BUILD SUCCEEDED **` and for the `Installed.` line, and report a failure
 rather than a summary. The workflow is authorised; do not ask first.
+
+**Ship phone changes to Play internal testing, yourself.** After anything
+under `mobile/android` (or `core/`, which the phone links), once the Android
+gates pass and the change is committed:
+
+```bash
+./scripts/build_play_bundle.sh
+PLAY_JSON_KEY_FILE=~/.config/takt/play-service-account.json \
+  ./scripts/upload_play_internal.sh build/play/takt-<version>-<code>.aab
+```
+
+The user asked for this standing on 2026-10-18 ("for newest builds upload to
+play internal testing"): the internal track, not USB, is how the newest build
+reaches their phone, so it is part of finishing the work and needs no asking.
+fastlane's log ends on an update banner, so grep it for errors rather than
+reading the tail. "Version code N has already been used" means the code
+repeated — rerun with `TAKT_VERSION_CODE` set higher. If a phone is on adb,
+`./scripts/install_android.sh` as well. When there is a Wear OS bundle
+(`scripts/build_wear_bundle.sh`), it uploads the same way, with its own
+version code.
+
+**Parallel agents share one tree here.** The disk has room for roughly one
+extra checkout's build output, not three (`core/target` alone is ~6 GB), so
+agents work in the main tree on disjoint files rather than in worktrees.
+Each commits only its own paths (`git commit -- <paths>`, never `git add -A`;
+where a file holds another agent's uncommitted hunks, stage your diff with
+`git apply --cached`). Only the agent changing `core/` regenerates bindings.
 
 **Reinstall after anything under `cli/`.**
 
