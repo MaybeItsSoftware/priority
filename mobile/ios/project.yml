@@ -31,6 +31,15 @@ packages:
   Takt:
     path: ../..
 
+# The Apple Watch companion (`watch.yml`), embedded in the iPhone app when
+# generated with `TAKT_WATCH=YES xcodegen generate`. Opt-in because
+# embedding a watch app makes every build of the iPhone scheme need the
+# watchOS platform installed (Xcode > Settings > Components), and signing it
+# needs the watch's bundle ids registered.
+include:
+  - path: watch.yml
+    enable: ${TAKT_WATCH}
+
 targets:
   TaktMobile:
     type: application

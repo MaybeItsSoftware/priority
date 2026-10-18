@@ -6,3 +6,7 @@ TaktMobile/Info.plist
 TaktWidgets/Info.plist
 TaktMobile/TaktMobile.entitlements
 TaktWidgets/TaktWidgets.entitlements
+TaktWatch/Info.plist
+TaktWatchWidgets/Info.plist
+TaktWatch/TaktWatch.entitlements
+TaktWatchWidgets/TaktWatchWidgets.entitlements

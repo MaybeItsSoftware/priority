@@ -1,0 +1,60 @@
+# The Apple Watch companion, included by project.yml when generated with
+#
+#   TAKT_WATCH=YES xcodegen generate
+#
+# Today's tasks and the running block, drawn from what the iPhone sends over
+# WatchConnectivity (`TaktMobile/Bridge/WatchBridge.swift`). The watch holds
+# no workspace and does not link the Rust core: the contract it shares with
+# the phone is `WatchShared/Contract`.
+
+options:
+  deploymentTarget:
+    watchOS: "11.0"
+
+targets:
+  # Embedded in the iPhone app as its companion (Embed Watch Content).
+  TaktMobile:
+    dependencies:
+      - target: TaktWatch
+
+  TaktWatch:
+    type: application
+    platform: watchOS
+    sources:
+      - path: TaktWatch
+      - path: WatchShared
+    dependencies:
+      - sdk: WatchConnectivity.framework
+      - sdk: WidgetKit.framework
+    entitlements:
+      path: TaktWatch/TaktWatch.entitlements
+      properties:
+        # Where the app leaves the last snapshot for its complications.
+        com.apple.security.application-groups:
+          - group.uk.co.maybeitssoftware.takt
+    info:
+      path: TaktWatch/Info.plist
+      properties:
+        CFBundleDisplayName: Takt
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        WKApplication: true
+        WKCompanionAppBundleIdentifier: uk.co.maybeitssoftware.takt
+    settings:
+      base:
+        PRODUCT_NAME: TaktWatch
+        PRODUCT_BUNDLE_IDENTIFIER: uk.co.maybeitssoftware.takt.watchkitapp
+        TARGETED_DEVICE_FAMILY: "4"
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+        SKIP_INSTALL: YES
+
+schemes:
+  TaktWatch:
+    build:
+      targets:
+        TaktWatch: all
+    run:
+      config: Debug
+    archive:
+      config: Release
