@@ -490,3 +490,57 @@ fn a_due_day_moves_by_whole_days_with_its_start() {
         Some("2023-11-19")
     );
 }
+
+fn root_order(connection: &Connection) -> Vec<String> {
+    connection
+        .prepare("SELECT id FROM tasks WHERE parentTaskId IS NULL ORDER BY sortOrder, id")
+        .unwrap()
+        .query_map([], |row| row.get(0))
+        .unwrap()
+        .collect::<Result<_, _>>()
+        .unwrap()
+}
+
+fn set_priority(connection: &mut Connection, id: &str, priority: Option<i64>) {
+    journalled(connection, "Edit Task Details", |tx| {
+        update_editor_metadata(
+            tx,
+            id,
+            &EditorMetadata {
+                priority,
+                ..Default::default()
+            },
+            NOW,
+        )
+    })
+    .unwrap();
+}
+
+#[test]
+fn setting_a_priority_moves_the_task_to_the_top_of_its_list() {
+    let mut connection = workspace();
+    connection
+        .execute_batch(&format!(
+            "INSERT INTO tasks (id, listId, parentTaskId, title, sortOrder, createdAt, updatedAt) VALUES
+               ('q', 'l', NULL, 'Second', 1, '{T}', '{T}'),
+               ('r', 'l', NULL, 'Third', 2, '{T}', '{T}');"
+        ))
+        .unwrap();
+    set_priority(&mut connection, "r", Some(2));
+    assert_eq!(root_order(&connection), ["r", "p", "q"]);
+    // Changing it moves it again; setting the same one does not.
+    set_priority(&mut connection, "q", Some(3));
+    assert_eq!(root_order(&connection), ["q", "r", "p"]);
+    set_priority(&mut connection, "r", Some(2));
+    assert_eq!(root_order(&connection), ["q", "r", "p"]);
+    set_priority(&mut connection, "r", Some(1));
+    assert_eq!(root_order(&connection), ["r", "q", "p"]);
+    // Clearing leaves it where it is.
+    set_priority(&mut connection, "r", None);
+    assert_eq!(root_order(&connection), ["r", "q", "p"]);
+    // One undo takes back the priority and the move together.
+    set_priority(&mut connection, "p", Some(4));
+    assert_eq!(root_order(&connection), ["p", "r", "q"]);
+    undo(&mut connection).unwrap();
+    assert_eq!(root_order(&connection), ["r", "q", "p"]);
+}

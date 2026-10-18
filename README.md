@@ -94,7 +94,7 @@ something you already have to know.
 | `Return` | **Always** add a task, as in Checkvist — below the selection — on the board, below the card a selected subtask is drawn on — and at the foot of the day on Today. On a subtask's own card in another column than its parent's, the new task is a plain card of that column, at the foot of its plain cards, rather than another subtask of the parent |
 | `Space` / `x` | **Always** complete the task (or reopen it) — unless you are typing |
 | `Shift+Space` | Cancel the task, or reinstate it — it stopped mattering, rather than got done |
-| `1`–`4` / `0` | Set the task's priority at once (1 is the most urgent), as `!1`–`!4` does when you type a task, or clear it — on the outline, the board, the matrix and Today. The number shows in a small box beside the title; one undo step each |
+| `1`–`4` / `0` | Set the task's priority at once (1 is the most urgent), as `!1`–`!4` does when you type a task, or clear it — on the outline, the board, the matrix and Today. Setting or changing a priority moves the task to the top of its list (row `:1`); clearing one leaves it where it is. The number shows in a small box beside the title; one undo step each |
 | `tc` | Hide or show completed tasks — a completed task stays put for three seconds and then leaves the list; `tc` shows them all again |
 | `bu` | Bury the task: it starts tomorrow, so until then it sinks, greyed and subtasks and all, to the **Buried** section below its blocked siblings in the outline, on the board and in the matrix — and Today picks it up the morning it arrives. `start <value>` buries it until any other time; `clear start` digs it up |
 | `tl` | Hide or show buried tasks — anything whose start is still to come. Shown by default; `tl` hides them, with their subtasks. A filter list with a start-date rule always shows what it matches, and jumping to a buried task from search shows them again |
@@ -193,7 +193,7 @@ afterwards:
 | `30m`, `1h`, `1.5h`, `1h30m` | The estimate (up to a day) |
 | `@today`, `@tomorrow`, `@fri`, `@3d`, `@2w`, `@2026-10-02` | The day it is due — a weekday means the next one, today included. `^` works as well as `@`, as in Checkvist (`^fri`) |
 | `#work` | A tag — it has to start with a letter, so `#12` stays in the title |
-| `!1`–`!4` | The priority — 1 is the most urgent, 4 the least |
+| `!1`–`!4` | The priority — 1 is the most urgent, 4 the least. A task added with one goes to the top of its list |
 | `wait:Sam` | Waiting on Sam — filed in the Waiting on column straight away |
 | `https://…`, `obsidian://…` | A link — a Drive file or folder, a Doc or Sheet, an Obsidian note, a page. An address on its own names the task for what it points at. See [Links](docs/links.md) |
 

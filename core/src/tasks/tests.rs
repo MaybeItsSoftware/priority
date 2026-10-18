@@ -433,7 +433,7 @@ fn new_task(list: &str, title: &str) -> NewTask {
 }
 
 #[test]
-fn a_new_task_goes_last_with_what_the_add_field_read_in_the_same_step() {
+fn a_new_task_with_a_priority_goes_first_with_what_the_add_field_read_in_the_same_step() {
     let mut connection = workspace();
     let new = NewTask {
         tags: vec![" Home ".into(), "home".into(), "".into(), "Errand".into()],
@@ -444,7 +444,8 @@ fn a_new_task_goes_last_with_what_the_add_field_read_in_the_same_step() {
         ..new_task("l", "  Buy milk ")
     };
     let id = journalled(&mut connection, "New Task", |tx| create_task(tx, &new, NOW)).unwrap();
-    assert_eq!(children(&connection, "l", None), ["p", "o", id.as_str()]);
+    // A priority puts it at `:1`; without one it would have gone last.
+    assert_eq!(children(&connection, "l", None), [id.as_str(), "p", "o"]);
     let (title, estimate, kind): (String, Option<i64>, String) = connection
         .query_row(
             "SELECT title, estimateSeconds, itemKind FROM tasks WHERE id = ?1",

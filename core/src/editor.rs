@@ -240,7 +240,29 @@ pub fn update_task(
 
 /// Sets a task's priority, tags, links and repeat rule.
 /// `WorkspaceStore.updateTaskEditorMetadata`.
+///
+/// A priority set or changed puts the task first among its siblings — row
+/// `:1` of its list. Clearing one leaves it where it is.
 pub fn update_editor_metadata(
+    transaction: &Transaction,
+    task_id: &str,
+    metadata: &EditorMetadata,
+    now_ms: i64,
+) -> Result<(), CoreError> {
+    let before = stored_metadata(transaction, task_id)?.and_then(|stored| stored.editor.priority);
+    write_editor_metadata(transaction, task_id, metadata, now_ms)?;
+    let after = metadata
+        .priority
+        .filter(|priority| (1..=4).contains(priority));
+    if after.is_some() && after != before {
+        crate::tasks::move_task_to_start(transaction, task_id, now_ms)?;
+    }
+    Ok(())
+}
+
+/// [`update_editor_metadata`] without the move: a board's rule column sets a
+/// priority as part of a drop, and the drop has already said where it goes.
+pub(crate) fn write_editor_metadata(
     transaction: &Transaction,
     task_id: &str,
     metadata: &EditorMetadata,

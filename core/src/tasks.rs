@@ -156,6 +156,11 @@ pub fn create_task(
         siblings.insert(insertion, id.clone());
         persist_task_order(transaction, &siblings, now_ms)?;
     }
+    // A priority puts it first among its siblings, wherever it was added:
+    // setting one is saying it comes before the rest.
+    if priority.is_some() {
+        move_task_to_start(transaction, &id, now_ms)?;
+    }
     Ok(id)
 }
 

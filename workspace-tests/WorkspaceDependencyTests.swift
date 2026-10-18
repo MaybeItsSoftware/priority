@@ -108,9 +108,10 @@ final class WorkspaceDependencyTests: XCTestCase {
     XCTAssertEqual(data.listId, list.id)
     XCTAssertEqual(data.parentTaskId, parent.id)
     XCTAssertEqual(try store.blockers(of: report.id).map(\.id), [data.id])
-    // In the blocked task's place, which then sinks below its siblings.
+    // Its priority puts it first among its siblings; the blocked task then
+    // sinks below them.
     XCTAssertEqual(
-      try store.listTree(in: list.id).children(of: parent.id).map(\.id), [first.id, data.id, last.id, report.id])
+      try store.listTree(in: list.id).children(of: parent.id).map(\.id), [data.id, first.id, last.id, report.id])
 
     XCTAssertEqual(try store.undo(), "New Blocker")
     XCTAssertNil(try store.task(id: data.id))

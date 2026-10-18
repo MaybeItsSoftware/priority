@@ -827,7 +827,7 @@ fn apply(
         }
     }
     if metadata_changed {
-        editor::update_editor_metadata(transaction, id, &metadata, now_ms)?;
+        editor::write_editor_metadata(transaction, id, &metadata, now_ms)?;
     }
     Ok(())
 }
