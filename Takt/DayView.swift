@@ -66,12 +66,10 @@ struct DayView: View {
         // panel to itself rather than sitting under a list it cannot act on.
         ScrollView { WorkspaceFocusQualityPrompt(pending: pending, fixedWidth: nil) }
       } else if surface.isPanel {
+        // No tallies and no conditions line under the header: the panel is
+        // for finding and working tasks, and the window's status bar and
+        // Conditions tab already say both.
         header
-        summary
-        FocusPanelContextLine {
-          onClose?(.toWindow)
-          AppDelegate.shared.showMainWindow()
-        }
         field
         FocusRule()
         content(rows)
@@ -199,56 +197,6 @@ struct DayView: View {
           .lineLimit(1)
           .help(forecast.helpText)
       }
-    }
-  }
-
-  /// The day in one quiet line: how far through it is, and what it has cost.
-  ///
-  /// It was two rows of capitals and a bar — "No estimates yet", "Nothing
-  /// logged yet", a week line — over a list that had not started. Now each
-  /// half appears only once it has something to say, the bar only once there
-  /// are estimates to measure against, and the week is in the tooltip.
-  @ViewBuilder private var summary: some View {
-    let estimated = dayTasks.reduce(0) { $0 + ($1.estimateSeconds ?? 0) }
-    let logged = loggedToday
-    let progress = model.workProgress
-    let done = progress.today.completed
-    if estimated > 0 || logged > 0 || done > 0 {
-      let fraction = estimated > 0 ? min(1, Double(logged) / Double(estimated)) : 0
-      let week = "\(duration(progress.week.seconds)) this week · \(duration(progress.averageSecondsPerDay))/day"
-      VStack(alignment: .leading, spacing: theme.space.xs) {
-        // The finish time rides on the estimate it came from, and ticks for
-        // the same reason the window's tally does.
-        TimelineView(.periodic(from: .now, by: model.isFocusBlockTicking ? 30 : 60)) { context in
-          let forecast = model.dayForecast(for: dayTasks, now: context.date)
-          HStack(spacing: 0) {
-            if estimated > 0 {
-              MicroLabel(forecast.panelLine).lineLimit(1).help(forecast.helpText)
-            } else if done > 0 {
-              MicroLabel(done == 1 ? "1 done" : "\(done) done").lineLimit(1)
-            }
-            Spacer(minLength: theme.space.sm)
-            if logged > 0 {
-              MicroLabel("\(duration(logged)) logged").lineLimit(1).help(week)
-            }
-          }
-        }
-        // Square-ended: a bar is a length, and a rounded end makes the last
-        // few percent read as decoration rather than progress.
-        if estimated > 0 {
-          GeometryReader { proxy in
-            ZStack(alignment: .leading) {
-              Rectangle().fill(theme.well)
-              Rectangle()
-                .fill(theme.primary)
-                .frame(width: max(fraction > 0 ? theme.emphasisBorder : 0, proxy.size.width * fraction))
-            }
-          }
-          .frame(height: theme.space.xxs)
-        }
-      }
-      .padding(.horizontal, theme.space.lg)
-      .padding(.bottom, theme.space.md)
     }
   }
 

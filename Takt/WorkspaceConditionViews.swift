@@ -42,49 +42,6 @@ struct WorkspaceFocusContextIndicator: View {
   }
 }
 
-/// The focus panel's one line about where you are, above its field. Quiet
-/// until there are conditions to talk about: a workspace without any has
-/// nothing for it to say. Clicking it hands over to the window's Conditions
-/// tab, which is where they are set.
-struct FocusPanelContextLine: View {
-  @Environment(WorkspaceViewModel.self) private var model
-  @Environment(\.theme) private var theme
-  /// Hands the panel back so the window can take over.
-  let onOpenWindow: () -> Void
-
-  var body: some View {
-    if !model.focusConditions.isEmpty {
-      let summary = model.focusContextSummary
-      Button {
-        onOpenWindow()
-        model.openConditionsTab()
-      } label: {
-        HStack(spacing: theme.space.xs) {
-          Image(systemName: summary == nil ? "location.slash" : "location.fill")
-            .foregroundStyle(summary == nil ? theme.dim : theme.primary)
-          Text(summary ?? "Anywhere — only tasks with no conditions")
-            .foregroundStyle(summary == nil ? theme.muted : theme.ink)
-            .lineLimit(1)
-            .truncationMode(.tail)
-          if !model.suggestedContextIDs.isEmpty {
-            Text("· last context waiting").foregroundStyle(theme.warning)
-          }
-          Spacer(minLength: theme.space.sm)
-          Text(WorkspaceCommandHelpText.firstKey(for: .focusSetAvailable))
-            .font(theme.monoCaptionFont)
-            .foregroundStyle(theme.dim)
-        }
-        .font(theme.captionFont)
-        .contentShape(Rectangle())
-      }
-      .buttonStyle(.plain)
-      .focusable(false)
-      .commandHelp(.focusSetAvailable, note: "What is available now, in the window's Conditions tab")
-      .padding(.horizontal, theme.space.lg)
-      .padding(.bottom, theme.space.sm)
-    }
-  }
-}
 
 /// One quiet line under the day: how many open tasks a condition is holding
 /// back, and the conditions they wait on, most-waited-on first — "4 waiting

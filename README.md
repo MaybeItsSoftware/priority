@@ -442,9 +442,8 @@ keeps the rest on.
 Saying what holds now, and managing the conditions themselves, live in the right dock's **Conditions** tab.
 `Cmd+Alt+8` (or `ga`, or **Set what's available now…** in the palette) opens
 it with the keyboard in it; so does clicking the status bar's indicator, which
-shows the active conditions (or *Anywhere*). The focus panel has the same line
-above its field: clicking it, or `Cmd+Alt+8` there, hands over to the window's
-tab. When a condition is holding tasks back, Today (and the panel) ends with
+shows the active conditions (or *Anywhere*); in the focus panel, `Cmd+Alt+8`
+hands over to the window's tab. When a condition is holding tasks back, Today (and the panel) ends with
 one line saying how many and on what — *4 waiting on Campus 3 · Library 1*;
 clicking it opens the tab.
 
