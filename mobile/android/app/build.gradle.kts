@@ -183,7 +183,12 @@ kotlin {
 }
 
 tasks.withType<Test>().configureEach {
-    dependsOn(":data:buildRustCore")
+    dependsOn(":data:buildRustCore", ":data:unpackSqliteHostNatives")
+    // The desktop SQLite natives :data unpacks, for the tests that open a real workspace.
+    systemProperty(
+        "java.library.path",
+        project(":data").layout.buildDirectory.dir("sqliteHostNatives").get().asFile.absolutePath,
+    )
     // The host build of the core scripts/build_core_android.sh leaves in core/target.
     systemProperty("jna.library.path", rootProject.file("../../core/target/release").absolutePath)
 }

@@ -12,8 +12,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import kotlinx.coroutines.launch
 import uk.co.maybeitsadam.takt.ui.AppShell
 import uk.co.maybeitsadam.takt.app.ThemeLibraryState
+import uk.co.maybeitsadam.takt.debug.DemoSeed
 import uk.co.maybeitsadam.takt.core.theme.ThemeAppearance
 import uk.co.maybeitsadam.takt.ui.theme.TaktTheme
 import uk.co.maybeitsadam.takt.ui.theme.ResolvedTheme
@@ -30,6 +32,12 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         if (savedInstanceState == null) pendingIntent = intent
         val container = appContainer
+        if (BuildConfig.DEBUG && intent.getBooleanExtra(DemoSeed.EXTRA_DEMO, false)) {
+            container.scope.launch {
+                val session = container.awaitSession()
+                DemoSeed.seedIfEmpty(session.repository, session.workspace.id)
+            }
+        }
         setContent {
             // The theme is state, not configuration: choosing or editing one
             // recomposes in place, with no activity restart.
