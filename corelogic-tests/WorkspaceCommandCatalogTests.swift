@@ -67,7 +67,7 @@ final class WorkspaceCommandCatalogTests: XCTestCase {
         .focusManageConditions,
         // A column header's menu, done rarely: the palette and the header's
         // right-click reach them.
-        .planBoardRenameColumn, .planBoardMoveColumnLeft, .planBoardMoveColumnRight,
+        .planBoardRenameColumn,
         .planBoardAddColumnLeft, .planBoardAddColumnRight, .planBoardEditColumnRules,
         .planBoardMakeDefaultColumns, .planBoardResetColumns,
         .windowOpenKeymap, .windowReloadKeymap, .windowShowDiagnostics,

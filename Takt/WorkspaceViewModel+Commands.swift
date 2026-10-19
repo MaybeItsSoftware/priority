@@ -175,6 +175,7 @@ extension WorkspaceViewModel {
     case .taskAddLink: presentLinkPicker()
     case .taskShowProgress: if selectedTask != nil { requestKeyboardFocus(.inspector) }
     case .taskToggleInspector: toggleInspector()
+    case .taskGoToList: if let task = selectedTask { goToTaskList(task) }
     case .taskIndent: if let task = selectedTask { indentTask(task) }
     case .taskOutdent: if let task = selectedTask { outdentTask(task) }
     case .taskMoveUp: moveSelectionWithinSiblings(by: -1)

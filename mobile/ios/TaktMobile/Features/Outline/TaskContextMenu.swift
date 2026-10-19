@@ -58,6 +58,9 @@ struct TaskContextMenu: View {
       return !context.isList && context.status == .open
     case .taskToggleInspector:
       return false
+    case .taskGoToList:
+      // Only where the row is away from its list: Today, Find, a combined scope.
+      return !context.allowsStructure
     default:
       return true
     }
@@ -117,6 +120,7 @@ struct TaskContextMenu: View {
     case .taskBury: model.bury(taskID)
     case .taskClearDue: model.clearDue(taskID)
     case .taskClearStart: model.editValues(taskID) { $0.startAt = nil }
+    case .taskGoToList: if let task = model.task(taskID) { model.revealInList(task, isPad: isPad) }
     case .taskClearNotes: model.editValues(taskID) { $0.notes = "" }
     case .taskClearTags: model.editValues(taskID) { $0.tags = "" }
     case .taskIndent: model.indent(taskID)
@@ -159,6 +163,7 @@ struct TaskContextMenu: View {
     case .taskBury: "moon.zzz"
     case .taskClearDue: "calendar.badge.minus"
     case .taskClearStart: "clock.badge.xmark"
+    case .taskGoToList: "arrow.right.circle"
     case .taskClearNotes: "text.badge.minus"
     case .taskClearTags: "tag.slash"
     case .taskIndent: "increase.indent"

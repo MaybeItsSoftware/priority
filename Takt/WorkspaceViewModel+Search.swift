@@ -68,6 +68,16 @@ extension WorkspaceViewModel {
   /// is on screen; its list, in the same mode; the level it sits at, on a
   /// board or matrix that only draws the top; and only then the outline, which
   /// can show anything — Today, say, for a task not planned for the day.
+  /// `go`: the list the task belongs to, opened with the task selected.
+  /// Unlike `showInPlace`, which leaves a task where it already shows, this
+  /// always leaves Today, a filter list, Everything or a folder for the list.
+  func goToTaskList(_ task: WorkspaceTask) {
+    let isInItsList = task.listId == selectedListID && !isEverythingSelected
+      && selectedFilterListID == nil && selectedFolderID == nil && viewMode != .today
+    if !isInItsList { selectList(task.listId) }
+    showInPlace(task)
+  }
+
   func showInPlace(_ task: WorkspaceTask) {
     // Something ticked off is invisible in a view that hides completions.
     if task.status != .open { hidesCompletedTasks = false }

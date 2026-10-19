@@ -81,6 +81,8 @@ something you already have to know.
 | `Alt+↑` / `Alt+↓` | Move the task up / down (Zed's move line) — on Today, earlier or later in the day |
 | `Alt+←` / `Alt+→` | Outdent / indent the task — out of, or under, the task above |
 | `Cmd+←` / `Cmd+→`, or `Shift+Alt+←` / `Shift+Alt+→` | Move the card, or the subtask row you are on, a board column left / right — a subtask moved past its parent's column becomes a card of its own there (in the outline `Cmd+←` / `Cmd+→` still fold and unfold everything) |
+| `Cmd+Shift+←` / `Cmd+Shift+→` | Move the board column you are in left / right, taking its cards with it |
+| `go` / `Cmd+Shift+O` | Go to the task's list: leave Today, a filter list, Everything or a folder for the list the task belongs to, with it selected. In the focus panel it opens the window there; on the phones it is **Go to list** in the task's menu |
 | `Cmd+Alt+↑` / `Cmd+Alt+↓`, or `Cmd+Shift+{` / `Cmd+Shift+}` | The list above / below in the sidebar — Zed's previous / next tab (in the sidebar itself `Cmd+Alt+↑` / `↓` still move a folder; `Cmd+Alt+←` / `→` outdent and indent the task, as `Alt+←` / `→` do) |
 | `Ctrl+-` / `Ctrl+Shift+-` | Back / forward through the lists you have been in — Zed's go back / go forward |
 | `Shift+Alt+↑` / `Shift+Alt+↓` | Move the task to the list above / below in the sidebar (`mm` picks any list; type, and below the lists it offers every open task that matches, from any list, to file the task under as its last subtask — one undo step) |

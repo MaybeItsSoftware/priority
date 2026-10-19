@@ -186,7 +186,10 @@ fun TodayScreen() {
                                 onTick = { finish(card, kind, index) },
                                 onStart = { gate { vm.start(card) } },
                                 menu = { dismiss ->
-                                    CardMenu(card, vm, dismiss, onStart = { gate { vm.start(card) } }, onHabit = { container.habits.open(card.id) })
+                                    CardMenu(
+                                    card, vm, dismiss, onStart = { gate { vm.start(card) } }, onHabit = { container.habits.open(card.id) },
+                                    onGoToList = { listId -> shell.navigator.openList(listId, card.id) },
+                                )
                                 },
                                 handle = if (card.isPlanned && plannedIds.size > 1) {
                                     Modifier.plannedDragHandle(drag, card.id, plannedIds, vm::arrange)
@@ -413,7 +416,14 @@ private fun CardCost(card: DayCard) {
 }
 
 @Composable
-private fun CardMenu(card: DayCard, vm: TodayViewModel, dismiss: () -> Unit, onStart: () -> Unit, onHabit: () -> Unit) {
+private fun CardMenu(
+    card: DayCard,
+    vm: TodayViewModel,
+    dismiss: () -> Unit,
+    onStart: () -> Unit,
+    onHabit: () -> Unit,
+    onGoToList: (String) -> Unit,
+) {
     ChalkMenuItem(if (card.isPlanned) "Take off today" else "Plan for today") { dismiss(); vm.togglePlanned(card) }
     if (card.isPlanned) {
         ChalkMenuItem("Move up in the day") { dismiss(); vm.movePlanned(card.id, -1) }
@@ -425,6 +435,7 @@ private fun CardMenu(card: DayCard, vm: TodayViewModel, dismiss: () -> Unit, onS
     ChalkMenuItem("Start focus") { dismiss(); onStart() }
     ChalkMenuItem("Habit…") { dismiss(); onHabit() }
     ChalkMenuItem("Open inspector") { dismiss(); vm.inspect(card) }
+    card.listId?.let { listId -> ChalkMenuItem("Go to list") { dismiss(); onGoToList(listId) } }
 }
 
 /** The card you are on, grown: a live mono clock and the controls that only apply to it. */

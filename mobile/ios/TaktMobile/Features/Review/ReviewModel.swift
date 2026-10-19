@@ -235,21 +235,9 @@ final class ReviewModel {
     model.perform { try $0.setStatus(.open, for: taskID) }
   }
 
-  /// Opens the task's list in the outline with completed tasks showing and
-  /// its branch unfolded, and selects it.
+  /// Opens the task's list in the outline and selects it; see
+  /// `WorkspaceModel.revealInList`.
   func reveal(_ task: WorkspaceTask, isPad: Bool) {
-    let scope = ListScope.list(task.listId)
-    UserDefaults.standard.set(false, forKey: "outlineHidesCompleted")
-    let foldKey = "outlineFolds.\(scope.storageKey)"
-    var folds = Set(UserDefaults.standard.stringArray(forKey: foldKey) ?? [])
-    var parent = task.parentTaskId
-    while let id = parent, let ancestor = model.task(id) {
-      folds.remove(id)
-      parent = ancestor.parentTaskId
-    }
-    UserDefaults.standard.set(Array(folds).sorted(), forKey: foldKey)
-    model.navigation.viewMode = .outline
-    model.navigation.open(scope, isPad: isPad)
-    model.navigation.selectedTaskID = task.id
+    model.revealInList(task, isPad: isPad)
   }
 }

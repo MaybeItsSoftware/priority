@@ -197,6 +197,10 @@ fn task() -> Vec<Spec> {
             .note("Type to find a note in your vaults or a file in Drive, or paste an address"),
         c("taskShowProgress", "Show the task's progress", "Task", &["pc"]),
         c("taskToggleInspector", "Open or close the inspector", "Task", &["i", "sd"]),
+        // `go`, as `o` opens a task where it lives from the done rail and the
+        // timeline; `g` started only `ga gb gf gg gh gl gw gx`.
+        c("taskGoToList", "Go to the task's list", "Task", &["go", "cmd+shift+o"])
+            .note("Opens the list it belongs to with the task selected — from Today, a filter list, Everything or a folder"),
         // The modifier says what kind of move it is. Bare arrows move the cursor
         // and ⌘ moves it far; ⌥ moves the task within its list (↑↓ among its
         // siblings, ←→ out of or into the one above, as an outliner does); ⇧⌥
@@ -340,14 +344,14 @@ fn plan() -> Vec<Spec> {
             "planBoardMoveColumnLeft",
             "Move this board column left",
             "Plan",
-            &[],
+            &["cmd+shift+left"],
         )
         .on(Board),
         c(
             "planBoardMoveColumnRight",
             "Move this board column right",
             "Plan",
-            &[],
+            &["cmd+shift+right"],
         )
         .on(Board),
         c(

@@ -33,6 +33,8 @@ data class DayCard(
     val isRunning: Boolean,
     /** Planned, but waiting on an open task: drawn greyed. */
     val isBlocked: Boolean = false,
+    /** The list it belongs to, for "Go to list". */
+    val listId: String? = null,
 ) {
     val isPlanned: Boolean get() = reason == DayPlanReason.PLANNED
 }
@@ -200,6 +202,7 @@ object DayShaping {
                 id = id,
                 title = task.title,
                 listName = list?.name,
+                listId = task.listId,
                 listColorHex = list?.colorHex,
                 reason = reason,
                 estimateSeconds = task.estimateSeconds,
