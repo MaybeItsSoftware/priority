@@ -61,7 +61,7 @@ class WorkspaceSchemaTest {
             assertTrue("missing: ${expected - present}", present.containsAll(expected))
 
             val migrations = workspace.database.read { it.strings("SELECT identifier FROM grdb_migrations") }
-            assertEquals(31, migrations.size)
+            assertEquals(32, migrations.size)
             assertTrue("v17_sync" in migrations)
             assertTrue("v18_themes_and_preferences" in migrations)
             assertTrue("v19_habit_options" in migrations)
@@ -77,6 +77,7 @@ class WorkspaceSchemaTest {
             assertTrue("v29_daily_contribution_skips" in migrations)
             assertTrue("v30_google_calendar" in migrations)
             assertTrue("v31_link_details" in migrations)
+            assertTrue("v32_follow_up_repeat" in migrations)
             assertEquals(listOf(0L to 0L), workspace.database.read { db ->
                 db.query("SELECT recording, applying FROM sync_control") { it.long("recording") to it.long("applying") }
             })
@@ -104,7 +105,21 @@ class WorkspaceSchemaTest {
     // install that lacks one migration lacks every later one too, since they
     // only ever apply in order, so each rewind takes the later ones off first.
 
+    private fun rewindV32(connection: SQLiteConnection) {
+        // The journal's and the outbox's metadata triggers name the new
+        // columns, so they come off first; v32 reinstalls them.
+        for (op in listOf("insert", "update", "delete")) {
+            connection.execSQL("DROP TRIGGER IF EXISTS change_log_task_metadata_$op")
+            connection.execSQL("DROP TRIGGER IF EXISTS sync_outbox_task_metadata_$op")
+        }
+        for (column in listOf("waitingFollowUpEveryDays", "waitingFollowUpCount")) {
+            connection.execSQL("ALTER TABLE task_metadata DROP COLUMN $column")
+        }
+        connection.execSQL("DELETE FROM grdb_migrations WHERE identifier = 'v32_follow_up_repeat'")
+    }
+
     private fun rewindV31(connection: SQLiteConnection) {
+        rewindV32(connection)
         // The journal's and the outbox's metadata triggers name the new
         // column, so they come off first; v31 reinstalls them.
         for (op in listOf("insert", "update", "delete")) {
@@ -270,8 +285,8 @@ class WorkspaceSchemaTest {
         try {
             assertEquals(expected, upgraded.read { schema(it) })
             val migrations = upgraded.read { it.strings("SELECT identifier FROM grdb_migrations") }
-            assertEquals(31, migrations.size)
-            assertEquals(31, migrations.toSet().size)
+            assertEquals(32, migrations.size)
+            assertEquals(32, migrations.toSet().size)
         } finally {
             upgraded.close()
             dir.deleteRecursively()
@@ -281,6 +296,10 @@ class WorkspaceSchemaTest {
     /** A v25 database takes `stacksMissedFrom` on `dailies`. */
     @Test
     fun aV25DatabaseUpgradesToTheFixture() = assertUpgradesToTheFixture("v25", ::rewindV26)
+
+    /** A v31 database takes the follow-up repeat and count on `task_metadata`. */
+    @Test
+    fun aV31DatabaseUpgradesToTheFixture() = assertUpgradesToTheFixture("v31", ::rewindV32)
 
     /** A v30 database takes `linkDetailsJSON` on `task_metadata`. */
     @Test

@@ -61,6 +61,8 @@ class WaitingFollowUpTest {
         assertEquals("Follow up: Invoice paid", WaitingFollowUp.title("Invoice paid", null))
         assertEquals("Follow up: Invoice paid", WaitingFollowUp.title("Invoice paid", "  "))
         assertEquals("Follow up with Legal: Invoice paid", WaitingFollowUp.title("Invoice paid", " Legal "))
+        assertEquals("Follow up #2 with Sam: Contract signed", WaitingFollowUp.title("Contract signed", "Sam", 2))
+        assertEquals("Follow up #3: Contract signed", WaitingFollowUp.title("Contract signed", null, 3))
     }
 
     @Test fun aTagIsTrimmedAndClipped() {
@@ -87,11 +89,38 @@ class WaitingFollowUpTest {
         assertEquals("↻ Today 14:00", WaitingFollowUp.label(date(2026, 10, 6, 14), now, UTC))
         assertEquals("↻ Tomorrow 09:00", WaitingFollowUp.label(date(2026, 10, 7, 9), now, UTC))
         assertEquals("↻ Thu 14:00", WaitingFollowUp.label(date(2026, 10, 8, 14), now, UTC))
+        assertEquals(
+            "↻ Thu 14:00 · #3 · every 3d",
+            WaitingFollowUp.label(date(2026, 10, 8, 14), now.atZone(UTC).toLocalDate(), UTC, "#3 · every 3d"),
+        )
         assertEquals("↻ Mon 08:30", WaitingFollowUp.label(date(2026, 10, 12, 8, 30), now, UTC))
         assertEquals("↻ 20 Oct 14:00", WaitingFollowUp.label(date(2026, 10, 20, 14), now, UTC))
         assertEquals("↻ 20 Oct 2027 14:00", WaitingFollowUp.label(date(2027, 10, 20, 14), now, UTC))
         // A time already gone shows its date, as the Mac's does.
         assertEquals("↻ 5 Oct 14:00", WaitingFollowUp.label(date(2026, 10, 5, 14), now, UTC))
         assertEquals("2026-10-08 14:05", WaitingFollowUp.editableText(date(2026, 10, 8, 14, 5), UTC))
+    }
+
+    @Test
+    fun theChaseNumbersTheFollowUpAtTheTimeShownAndNamesItsRepeat() {
+        val at = date(2026, 10, 8, 14)
+        val made = WaitingFollowUp.followUpTaskId("S", at)
+        assertEquals(null, WaitingFollowUp.chase("S", at, null, 0, null))
+        assertEquals("every 3d", WaitingFollowUp.chase("S", at, made, 1, 3))
+        assertEquals("#3 · every 3d", WaitingFollowUp.chase("S", at, "older", 2, 3))
+        assertEquals("every day", WaitingFollowUp.chase("S", at, null, 0, 1))
+    }
+
+    @Test
+    fun theRepeatStepsByDaysThenWeeksWithinAYear() {
+        assertEquals("Once", WaitingFollowUp.repeatText(null))
+        assertEquals("Every day", WaitingFollowUp.repeatText(1))
+        assertEquals("Every 3 days", WaitingFollowUp.repeatText(3))
+        assertEquals(4, WaitingFollowUp.stepEveryDays(3, 1))
+        assertEquals(14, WaitingFollowUp.stepEveryDays(7, 1))
+        assertEquals(6, WaitingFollowUp.stepEveryDays(7, -1))
+        assertEquals(7, WaitingFollowUp.stepEveryDays(14, -1))
+        assertEquals(1, WaitingFollowUp.stepEveryDays(1, -1))
+        assertEquals(365, WaitingFollowUp.stepEveryDays(364, 1))
     }
 }

@@ -2,6 +2,15 @@
 //! waits on and when to chase them, and the follow-up task made when that
 //! time comes. Replaces `WorkspaceStore+Waiting.swift`'s writes and
 //! `WaitingFollowUp`'s policy in TaktCore, and their Kotlin ports.
+//!
+//! A follow-up can repeat every N days (`v32_follow_up_repeat`). Completing
+//! the follow-up, while its source is still open and waiting, moves the
+//! source's follow-up time N days on from whichever is later, the completion
+//! or the time it was for, keeping the time of day; the next one is then made
+//! by [`make_due_follow_ups`] like any other. One never completed makes no
+//! more, so they cannot pile up. The source counts the follow-ups of this
+//! spell of waiting, and the second on are numbered: "Follow up #2 with Sam:
+//! Contract signed".
 
 use rusqlite::{OptionalExtension, Transaction, params};
 use sha2::{Digest, Sha256};
@@ -9,6 +18,11 @@ use unicode_segmentation::UnicodeSegmentation;
 
 use crate::CoreError;
 use crate::time::{parse_stored, stored};
+
+/// The fewest days a follow-up can repeat after.
+pub const MINIMUM_EVERY_DAYS: u32 = 1;
+/// The most days a follow-up can repeat after: a year.
+pub const MAXIMUM_EVERY_DAYS: u32 = 365;
 
 /// The column a waiting task sits in.
 pub const WAITING_COLUMN: &str = "waiting-on";
@@ -36,6 +50,8 @@ pub struct WaitingState {
     pub follow_up_at_ms: Option<i64>,
     /// The follow-up already made for it, if any.
     pub made_follow_up_task_id: Option<String>,
+    /// How many follow-ups this spell of waiting has already made.
+    pub follow_up_count: u32,
 }
 
 /// The follow-up to make: "Follow up with Sam: Contract signed", due at the
@@ -46,6 +62,8 @@ pub struct FollowUpPlan {
     pub source_task_id: String,
     pub title: String,
     pub due_at_ms: i64,
+    /// Which follow-up of the spell it is, from 1.
+    pub number: u32,
 }
 
 /// The follow-up to make for `task` at `now_ms`, if one is due: the task is
@@ -61,21 +79,71 @@ pub fn due_follow_up(task: &WaitingState, now_ms: i64) -> Option<FollowUpPlan> {
     if task.made_follow_up_task_id.as_deref() == Some(id.as_str()) {
         return None;
     }
+    let number = task.follow_up_count.saturating_add(1);
     Some(FollowUpPlan {
-        title: follow_up_title(&task.title, task.waiting_on.as_deref()),
+        title: follow_up_title(&task.title, task.waiting_on.as_deref(), number),
         task_id: id,
         source_task_id: task.task_id.clone(),
         due_at_ms: at_ms,
+        number,
     })
 }
 
 /// "Follow up with Sam: Contract signed", or "Follow up: ..." when nobody is
-/// named.
-pub fn follow_up_title(title: &str, waiting_on: Option<&str>) -> String {
+/// named. The first follow-up of a spell is unnumbered; the second on say
+/// which they are: "Follow up #2 with Sam: Contract signed".
+pub fn follow_up_title(title: &str, waiting_on: Option<&str>, number: u32) -> String {
     let source = title.trim();
+    let follow_up = if number > 1 {
+        format!("Follow up #{number}")
+    } else {
+        "Follow up".to_string()
+    };
     match normalized_tag(waiting_on) {
-        Some(tag) => format!("Follow up with {tag}: {source}"),
-        None => format!("Follow up: {source}"),
+        Some(tag) => format!("{follow_up} with {tag}: {source}"),
+        None => format!("{follow_up}: {source}"),
+    }
+}
+
+/// What a waiting card adds after its follow-up time: which follow-up that
+/// time is, from the second on, and how often it repeats — `#3 · every 3d`,
+/// `every day`, `#2`. Nothing for a first follow-up that happens once.
+///
+/// The number is the follow-up at `follow_up_at_ms`: the latest one made
+/// when that time's has been made, the next one when it has not.
+pub fn chase_label(
+    source_task_id: &str,
+    follow_up_at_ms: i64,
+    made_follow_up_task_id: Option<&str>,
+    follow_up_count: u32,
+    every_days: Option<u32>,
+) -> Option<String> {
+    let made =
+        made_follow_up_task_id == Some(follow_up_task_id(source_task_id, follow_up_at_ms).as_str());
+    let number = if made {
+        follow_up_count.max(1)
+    } else {
+        follow_up_count.saturating_add(1)
+    };
+    let mut parts = Vec::new();
+    if number > 1 {
+        parts.push(format!("#{number}"));
+    }
+    match every_days {
+        Some(1) => parts.push("every day".to_string()),
+        Some(days) => parts.push(format!("every {days}d")),
+        None => {}
+    }
+    (!parts.is_empty()).then(|| parts.join(" · "))
+}
+
+/// A repeat kept to 1 to 365 days, or an error naming the range.
+fn checked_every_days(every_days: Option<u32>) -> Result<Option<u32>, CoreError> {
+    match every_days {
+        Some(days) if !(MINIMUM_EVERY_DAYS..=MAXIMUM_EVERY_DAYS).contains(&days) => {
+            Err(CoreError::InvalidFollowUpRepeat { days })
+        }
+        other => Ok(other),
     }
 }
 
@@ -102,17 +170,25 @@ pub fn follow_up_task_id(source_task_id: &str, follow_up_at_ms: i64) -> String {
     )
 }
 
-/// Sets what a task waits on and when to chase it, and files it in Waiting
-/// on if it is not there. `None` clears either. A follow-up time is kept to
-/// the whole minute, and one already passed makes its follow-up in the same
-/// step. Replaces `WorkspaceStore.setWaiting`.
+/// Sets what a task waits on, when to chase it and how often to chase again,
+/// and files it in Waiting on if it is not there. `None` clears any of them;
+/// a repeat needs a follow-up time and is dropped without one. A follow-up
+/// time is kept to the whole minute, and one already passed makes its
+/// follow-up in the same step.
+///
+/// Naming someone other than the task waited on, or clearing both who and
+/// when, starts a new spell of waiting: the count of follow-ups goes back to
+/// nought. Naming someone where nobody was named keeps it. Replaces
+/// `WorkspaceStore.setWaiting`.
 pub fn set_waiting(
     transaction: &Transaction,
     task_id: &str,
     waiting_on: Option<&str>,
     follow_up_at_ms: Option<i64>,
+    every_days: Option<u32>,
     now_ms: i64,
 ) -> Result<(), CoreError> {
+    let every_days = checked_every_days(every_days)?;
     let exists: bool = transaction.query_row(
         "SELECT EXISTS(SELECT 1 FROM tasks WHERE id = ?1)",
         [task_id],
@@ -125,23 +201,30 @@ pub fn set_waiting(
     }
     let tag = normalized_tag(waiting_on);
     let follow_up = follow_up_at_ms.map(|ms| ms.div_euclid(60_000) * 60_000);
-    let column: Option<String> = transaction
+    let every_days = every_days.filter(|_| follow_up.is_some());
+    let (column, previous_tag, count): (Option<String>, Option<String>, u32) = transaction
         .query_row(
-            "SELECT kanbanColumn FROM task_metadata WHERE taskId = ?1",
+            "SELECT kanbanColumn, waitingOn, waitingFollowUpCount FROM task_metadata WHERE taskId = ?1",
             [task_id],
-            |row| row.get(0),
+            |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
         )
         .optional()?
-        .flatten();
+        .unwrap_or((None, None, 0));
+    let someone_else = previous_tag.is_some() && normalized_tag(previous_tag.as_deref()) != tag;
+    let cleared = tag.is_none() && follow_up.is_none();
+    let count = if someone_else || cleared { 0 } else { count };
     // Leaving Today drops the place in the day, as planning for today does.
     let clears_rank = column.as_deref() == Some("today");
     transaction.execute(
-        "INSERT INTO task_metadata (taskId, tagsJSON, externalLinksJSON, kanbanColumn, waitingOn, waitingFollowUpAt, updatedAt)
-         VALUES (?1, '[]', '[]', ?2, ?3, ?4, ?5)
+        "INSERT INTO task_metadata (taskId, tagsJSON, externalLinksJSON, kanbanColumn, waitingOn, waitingFollowUpAt,
+                                    waitingFollowUpEveryDays, waitingFollowUpCount, updatedAt)
+         VALUES (?1, '[]', '[]', ?2, ?3, ?4, ?7, ?8, ?5)
          ON CONFLICT(taskId) DO UPDATE SET
            kanbanColumn = excluded.kanbanColumn,
            focusRank = CASE WHEN ?6 THEN NULL ELSE focusRank END,
            waitingOn = excluded.waitingOn, waitingFollowUpAt = excluded.waitingFollowUpAt,
+           waitingFollowUpEveryDays = excluded.waitingFollowUpEveryDays,
+           waitingFollowUpCount = excluded.waitingFollowUpCount,
            updatedAt = excluded.updatedAt",
         params![
             task_id,
@@ -149,7 +232,9 @@ pub fn set_waiting(
             tag,
             follow_up.map(stored),
             stored(now_ms),
-            clears_rank
+            clears_rank,
+            every_days,
+            count
         ],
     )?;
     make_due_follow_ups(transaction, Some(task_id), now_ms)?;
@@ -164,7 +249,8 @@ fn due_follow_ups(
     now_ms: i64,
 ) -> Result<Vec<(WaitingRow, String, i64)>, CoreError> {
     let mut statement = connection.prepare(
-        "SELECT t.id, t.title, t.listId, t.parentTaskId, m.waitingOn, m.waitingFollowUpAt, m.waitingFollowUpTaskId
+        "SELECT t.id, t.title, t.listId, t.parentTaskId, m.waitingOn, m.waitingFollowUpAt, m.waitingFollowUpTaskId,
+                m.waitingFollowUpCount
          FROM task_metadata m JOIN tasks t ON t.id = m.taskId
          WHERE m.waitingFollowUpAt IS NOT NULL AND m.kanbanColumn = ?1 AND t.status = 'open'
            AND (?2 IS NULL OR t.id = ?2)",
@@ -179,6 +265,7 @@ fn due_follow_ups(
                 waiting_on: row.get(4)?,
                 follow_up_at: row.get(5)?,
                 made: row.get(6)?,
+                count: row.get(7)?,
             })
         })?
         .collect::<Result<_, _>>()?;
@@ -195,6 +282,7 @@ fn due_follow_ups(
             waiting_on: None,
             follow_up_at_ms: Some(follow_up_at.timestamp_millis()),
             made_follow_up_task_id: row.made.clone(),
+            follow_up_count: row.count,
         };
         if let Some(plan) = due_follow_up(&state, now_ms) {
             due.push((row, plan.task_id, plan.due_at_ms));
@@ -220,6 +308,7 @@ pub fn make_due_follow_ups(
     let now = stored(now_ms);
     let mut made_any = false;
     for (row, id, at_ms) in due_follow_ups(transaction, task_id, now_ms)? {
+        let number = row.count.saturating_add(1);
         let exists: bool = transaction.query_row(
             "SELECT EXISTS(SELECT 1 FROM tasks WHERE id = ?1)",
             [&id],
@@ -241,7 +330,7 @@ pub fn make_due_follow_ups(
                     id,
                     row.list_id,
                     row.parent,
-                    follow_up_title(&row.title, row.waiting_on.as_deref()),
+                    follow_up_title(&row.title, row.waiting_on.as_deref(), number),
                     order,
                     stored(at_ms),
                     now
@@ -257,12 +346,86 @@ pub fn make_due_follow_ups(
             )?;
         }
         transaction.execute(
-            "UPDATE task_metadata SET waitingFollowUpTaskId = ?1, updatedAt = ?2 WHERE taskId = ?3",
-            params![id, now, row.id],
+            "UPDATE task_metadata SET waitingFollowUpTaskId = ?1, waitingFollowUpCount = ?4, updatedAt = ?2
+             WHERE taskId = ?3",
+            params![id, now, row.id, number],
         )?;
         made_any = true;
     }
     Ok(made_any)
+}
+
+/// When `follow_up_id`, just completed at `completed_ms`, is the follow-up of
+/// a task still open, still waiting and set to repeat, moves that task's
+/// follow-up time on: `every` days after the local day of whichever is
+/// later, the completion or the time it was for, at the time of day it had.
+/// Returns whether it did.
+///
+/// Only the follow-up for the source's current time counts: completing an
+/// older one, or one whose source has since been given a new time by hand,
+/// leaves the source alone. Called from `tasks::set_status` inside the
+/// completion's own step, so one undo takes back both.
+pub(crate) fn schedule_next_follow_up(
+    transaction: &Transaction,
+    follow_up_id: &str,
+    completed_ms: i64,
+    zone: chrono_tz::Tz,
+) -> Result<bool, CoreError> {
+    let source: Option<(String, Option<String>, Option<u32>)> = transaction
+        .query_row(
+            "SELECT s.id, sm.waitingFollowUpAt, sm.waitingFollowUpEveryDays
+             FROM task_metadata f
+             JOIN tasks s ON s.id = f.followUpOfTaskId
+             JOIN task_metadata sm ON sm.taskId = s.id
+             WHERE f.taskId = ?1 AND s.status = 'open' AND sm.kanbanColumn = ?2",
+            params![follow_up_id, WAITING_COLUMN],
+            |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
+        )
+        .optional()?;
+    let Some((source_id, Some(at), Some(every))) = source else {
+        return Ok(false);
+    };
+    let Some(at) = parse_stored(&at) else {
+        return Ok(false);
+    };
+    let at_ms = at.timestamp_millis();
+    if follow_up_task_id(&source_id, at_ms) != follow_up_id {
+        return Ok(false);
+    }
+    let next_ms = next_follow_up_ms(at_ms, completed_ms, every, zone);
+    transaction.execute(
+        "UPDATE task_metadata SET waitingFollowUpAt = ?1, updatedAt = ?2 WHERE taskId = ?3",
+        params![stored(next_ms), stored(completed_ms), source_id],
+    )?;
+    Ok(true)
+}
+
+/// `every` days after the local day of the later of `at_ms` and
+/// `completed_ms`, at `at_ms`'s local time of day, to the minute. A time the
+/// clocks skip that day is taken an hour later.
+pub fn next_follow_up_ms(at_ms: i64, completed_ms: i64, every: u32, zone: chrono_tz::Tz) -> i64 {
+    use chrono::{Days, TimeZone};
+    let local = |ms: i64| {
+        zone.timestamp_millis_opt(ms)
+            .single()
+            .expect("a timestamp is one instant")
+    };
+    let time = local(at_ms).time();
+    let day = local(at_ms.max(completed_ms)).date_naive();
+    let next_day = day
+        .checked_add_days(Days::new(u64::from(every)))
+        .unwrap_or(day);
+    let naive = next_day.and_time(time);
+    let resolved = zone
+        .from_local_datetime(&naive)
+        .earliest()
+        .or_else(|| {
+            zone.from_local_datetime(&(naive + chrono::Duration::hours(1)))
+                .earliest()
+        })
+        .map(|moment| moment.timestamp_millis())
+        .unwrap_or(at_ms.max(completed_ms) + i64::from(every) * 86_400_000);
+    resolved.div_euclid(60_000) * 60_000
 }
 
 struct WaitingRow {
@@ -273,6 +436,7 @@ struct WaitingRow {
     waiting_on: Option<String>,
     follow_up_at: Option<String>,
     made: Option<String>,
+    count: u32,
 }
 
 #[cfg(test)]

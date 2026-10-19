@@ -24,6 +24,8 @@ data class TaskDecoration(
     val waitingOn: String? = null,
     /** When to chase it. */
     val followUpAt: java.time.Instant? = null,
+    /** What the follow-up time carries after it: `#3 · every 3d`, or null. */
+    val followUpChase: String? = null,
     /** When it starts; while that is still to come it is buried. */
     val startAt: java.time.Instant? = null,
 )
@@ -92,6 +94,7 @@ private fun Db.decorations(listIds: Collection<String>): Map<String, TaskDecorat
                 matrixRank = m.matrixRank,
                 waitingOn = m.waitingOn,
                 followUpAt = m.waitingFollowUpAt,
+                followUpChase = m.followUpChase,
                 startAt = m.startAt,
             )
         }

@@ -77,6 +77,8 @@ internal fun Row.toMetadata() = TaskMetadata(
     waitingOn = stringOrNull("waitingOn"), waitingFollowUpAt = instantOrNull("waitingFollowUpAt"),
     waitingFollowUpTaskId = stringOrNull("waitingFollowUpTaskId"), followUpOfTaskId = stringOrNull("followUpOfTaskId"),
     matrixRank = intOrNull("matrixRank"),
+    waitingFollowUpEveryDays = intOrNull("waitingFollowUpEveryDays"),
+    waitingFollowUpCount = intOrNull("waitingFollowUpCount") ?: 0,
 )
 
 internal fun Row.toSession() = FocusSession(
@@ -189,6 +191,7 @@ internal fun MetadataRow.toMetadata() = TaskMetadata(
     updatedAt = updatedAtMs.instant(), planningJSON = planningJson, waitingOn = waitingOn,
     waitingFollowUpAt = waitingFollowUpAtMs?.instant(), waitingFollowUpTaskId = waitingFollowUpTaskId,
     followUpOfTaskId = followUpOfTaskId, matrixRank = matrixRank?.toInt(),
+    waitingFollowUpEveryDays = waitingFollowUpEveryDays?.toInt(), waitingFollowUpCount = waitingFollowUpCount.toInt(),
 )
 
 internal fun SessionRow.toSession() = FocusSession(

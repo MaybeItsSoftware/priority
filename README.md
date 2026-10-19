@@ -811,13 +811,14 @@ is the four that ask genuinely different questions.
 ## Waiting on
 
 The board's **Waiting on** column holds what is out of your hands. `ww` on a
-task opens a small form with two fields, and saving moves the task into that
+task opens a small form with three fields, and saving moves the task into that
 column if it is not there already:
 
 | Field | What it takes |
 | --- | --- |
 | Waiting on | Who or what — `Sam`, `Legal`, `invoice`. Shown as a small tag on the card, the outline row and in the inspector |
 | Follow up | When to chase it: the add field's date words (`@fri`, `tomorrow`, `3d`, `2026-10-08`) with or without a time (`9am`, `2:30pm`, `14:00`, `noon`), in either order — `tomorrow 9am`, `fri at 2pm`, `2026-10-08 14:00`. A day on its own is 9:00; a time on its own is the next one to come. Shown as `↻ Thu 14:00` |
+| Repeat | Empty or `once` for one follow-up, or every so many days, 1 to 365: `3`, `3d`, `every 3 days`, `every day`, `weekly`. Needs a follow-up time |
 
 `Tab` and the arrows move between the fields, the line under Follow up says
 what it read, `Return` saves, and emptying a field clears it.
@@ -833,9 +834,27 @@ once. The app checks every quarter-minute while it runs, and on the first poll
 of a new day; Android checks too, and both give the follow-up the same id, so
 a phone and a Mac that both notice it make one task between them.
 
-The inspector edits both in place under **Waiting on**. From `takt`,
-`takt ws update <id> --waiting-on Sam --follow-up "2026-10-08 14:00"` does the
-same (the MCP tool takes `waiting_on` and `follow_up_at`); the app makes the
+**Chasing again.** With a repeat, completing the follow-up while the task is
+still open and still in Waiting on sets its next follow-up time: that many
+days after the later of when you completed it and the time it was for, at the
+same time of day. Done on Saturday evening, a Thursday 14:00 follow-up that
+repeats every 3 days comes back on Tuesday at 14:00. That one is made like
+the first, and numbered: "Follow up #2 with Sam: Contract signed", then #3.
+A follow-up you never complete makes no more, so they do not pile up;
+cancelling or deleting one stops the chain there, and so do completing the
+task itself, taking it out of Waiting on and clearing it. Completing the
+follow-up and moving the time on are one step, so one undo takes back both.
+The card shows which follow-up is next and how often:
+`↻ Tue 14:00 · #2 · every 3d`. The count belongs to one spell of waiting:
+naming someone else, or clearing both who and when, starts again from the
+first. The add field's `waiting on Sam` stays as it was; the repeat is set in
+the form, the inspector (a **Repeat** menu on the Mac, Once / Every few days
+on Android) or from `takt`. The iPhone does not edit waiting yet.
+
+The inspector edits all three in place under **Waiting on**. From `takt`,
+`takt ws update <id> --waiting-on Sam --follow-up "2026-10-08 14:00" --every 3`
+does the same (the MCP tool takes `waiting_on`, `follow_up_at` and
+`follow_up_every_days`; `--every 0` or null is once); the app makes the
 follow-up when it next looks.
 
 ## Blocked by

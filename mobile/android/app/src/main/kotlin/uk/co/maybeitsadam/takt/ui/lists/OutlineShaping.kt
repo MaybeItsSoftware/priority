@@ -201,7 +201,7 @@ object OutlineShaping {
         hasNotes = task.notes.isNotBlank(),
         waitingOn = decoration?.takeIf { it.kanbanColumn == WaitingFollowUp.WAITING_COLUMN_ID }?.waitingOn,
         followUp = decoration?.takeIf { it.kanbanColumn == WaitingFollowUp.WAITING_COLUMN_ID && task.status == TaskStatus.OPEN }
-            ?.followUpAt?.let { WaitingFollowUp.label(it, today, zone) },
+            ?.let { d -> d.followUpAt?.let { WaitingFollowUp.label(it, today, zone, d.followUpChase) } },
         isBlocked = isBlocked && task.status == TaskStatus.OPEN,
         isBuried = isBuried && task.status == TaskStatus.OPEN,
         starts = decoration?.startAt?.takeIf { isBuried && task.status == TaskStatus.OPEN }

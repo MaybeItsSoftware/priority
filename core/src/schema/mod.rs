@@ -146,6 +146,10 @@ pub const MIGRATIONS: &[(&str, &str)] = &[
         "v31_link_details",
         include_str!("migrations/v31_link_details.sql"),
     ),
+    (
+        "v32_follow_up_repeat",
+        include_str!("migrations/v32_follow_up_repeat.sql"),
+    ),
 ];
 
 /// Brings the database at `path` up to date, creating it if it does not

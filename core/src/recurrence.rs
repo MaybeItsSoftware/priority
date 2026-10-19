@@ -257,10 +257,30 @@ pub fn waiting_due_follow_up(task: WaitingState, now_ms: i64) -> Option<FollowUp
     waiting::due_follow_up(&task, now_ms)
 }
 
-/// "Follow up with Sam: Contract signed". `WaitingFollowUp.title`.
+/// "Follow up with Sam: Contract signed", or "Follow up #2 with Sam: ..."
+/// from the second follow-up of a spell on. `WaitingFollowUp.title`.
 #[uniffi::export]
-pub fn waiting_follow_up_title(title: String, waiting_on: Option<String>) -> String {
-    waiting::follow_up_title(&title, waiting_on.as_deref())
+pub fn waiting_follow_up_title(title: String, waiting_on: Option<String>, number: u32) -> String {
+    waiting::follow_up_title(&title, waiting_on.as_deref(), number)
+}
+
+/// What a waiting card adds after `↻ Thu 14:00`: `#3 · every 3d`, or
+/// nothing for a first follow-up that happens once.
+#[uniffi::export]
+pub fn waiting_chase_label(
+    source_task_id: String,
+    follow_up_at_ms: i64,
+    made_follow_up_task_id: Option<String>,
+    follow_up_count: u32,
+    every_days: Option<u32>,
+) -> Option<String> {
+    waiting::chase_label(
+        &source_task_id,
+        follow_up_at_ms,
+        made_follow_up_task_id.as_deref(),
+        follow_up_count,
+        every_days,
+    )
 }
 
 /// Who a task waits on, trimmed and clipped, or nothing.

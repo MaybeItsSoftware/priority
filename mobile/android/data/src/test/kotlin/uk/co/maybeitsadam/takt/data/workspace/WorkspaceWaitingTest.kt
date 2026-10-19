@@ -36,7 +36,7 @@ class WorkspaceWaitingTest {
     @Test
     fun settingWaitingFilesTheTaskInWaitingOnWithItsTagAndTime() = fixture {
         val task = store.createTask(listId = list.id, title = "Contract signed", kanbanColumn = "today")
-        store.setWaiting(task.id, "  Sam ", at(14).plusSeconds(42), now = at(10))
+        store.setWaiting(task.id, "  Sam ", at(14).plusSeconds(42), null, now = at(10))
 
         assertEquals("waiting-on", store.kanbanColumn(task.id))
         val details = store.waitingDetails()[task.id]
@@ -53,7 +53,7 @@ class WorkspaceWaitingTest {
     @Test
     fun atItsTimeAStillWaitingTaskGetsOneFollowUpInToday() = fixture {
         val task = store.createTask(listId = list.id, title = "Contract signed")
-        store.setWaiting(task.id, "Sam", at(14), now = at(10))
+        store.setWaiting(task.id, "Sam", at(14), null, now = at(10))
 
         assertFalse(store.reconcileWaitingFollowUps(now = at(13, 59)))
         assertTrue(store.reconcileWaitingFollowUps(now = at(14)))
@@ -74,7 +74,7 @@ class WorkspaceWaitingTest {
         assertFalse(store.reconcileWaitingFollowUps(now = at(15)))
 
         // A new time is a new follow-up.
-        store.setWaiting(task.id, "Sam", at(16), now = at(15))
+        store.setWaiting(task.id, "Sam", at(16), null, now = at(15))
         assertTrue(store.reconcileWaitingFollowUps(now = at(16)))
         assertEquals(1, followUps(task.id).size)
     }
@@ -82,12 +82,12 @@ class WorkspaceWaitingTest {
     @Test
     fun aTaskThatLeftWaitingBeforeItsTimeGetsNone() = fixture {
         val task = store.createTask(listId = list.id, title = "Invoice paid")
-        store.setWaiting(task.id, null, at(14), now = at(10))
+        store.setWaiting(task.id, null, at(14), null, now = at(10))
         store.setKanbanColumn("in-progress", task.id)
         assertFalse(store.reconcileWaitingFollowUps(now = at(15)))
 
         val closed = store.createTask(listId = list.id, title = "Parcel arrived")
-        store.setWaiting(closed.id, null, at(14), now = at(10))
+        store.setWaiting(closed.id, null, at(14), null, now = at(10))
         store.setStatus(TaskStatus.COMPLETED, closed.id)
         assertFalse(store.reconcileWaitingFollowUps(now = at(15)))
     }
@@ -95,7 +95,7 @@ class WorkspaceWaitingTest {
     @Test
     fun aFollowUpOutlivesItsSourceLeavingWaiting() = fixture {
         val task = store.createTask(listId = list.id, title = "Invoice paid")
-        store.setWaiting(task.id, null, at(14), now = at(10))
+        store.setWaiting(task.id, null, at(14), null, now = at(10))
         assertTrue(store.reconcileWaitingFollowUps(now = at(14)))
         val id = followUps(task.id).first()
         assertEquals("Follow up: Invoice paid", store.task(id)?.title)
@@ -109,7 +109,7 @@ class WorkspaceWaitingTest {
     @Test
     fun aTimeAlreadyPastMakesTheFollowUpAtOnce() = fixture {
         val task = store.createTask(listId = list.id, title = "Quote back")
-        store.setWaiting(task.id, "Legal", at(9), now = at(10))
+        store.setWaiting(task.id, "Legal", at(9), null, now = at(10))
         assertEquals(1, followUps(task.id).size)
         store.undo()
         assertTrue(followUps(task.id).isEmpty())
@@ -119,7 +119,7 @@ class WorkspaceWaitingTest {
     @Test
     fun theReconcilePassIsNotAnUndoStep() = fixture {
         val task = store.createTask(listId = list.id, title = "Quote back")
-        store.setWaiting(task.id, "Legal", at(14), now = at(10))
+        store.setWaiting(task.id, "Legal", at(14), null, now = at(10))
         assertTrue(store.reconcileWaitingFollowUps(now = at(14)))
         assertEquals("Waiting On", store.undoableLabel())
     }
@@ -135,7 +135,7 @@ class WorkspaceWaitingTest {
                 source, list.id, at(9), at(9),
             )
         }
-        store.setWaiting(source, "Sam", epoch(1_791_291_600), now = at(10))
+        store.setWaiting(source, "Sam", epoch(1_791_291_600), null, now = at(10))
         assertTrue(store.reconcileWaitingFollowUps(now = at(13)))
         assertEquals(listOf("D2D0E044-BDD3-5ED3-95C6-C687611541D1"), followUps(source))
     }
@@ -144,7 +144,7 @@ class WorkspaceWaitingTest {
     @Test
     fun aFollowUpThatArrivedBySyncIsRecordedNotDuplicated() = fixture {
         val task = store.createTask(listId = list.id, title = "Contract signed")
-        store.setWaiting(task.id, "Sam", at(14), now = at(10))
+        store.setWaiting(task.id, "Sam", at(14), null, now = at(10))
         val id = WaitingFollowUp.followUpTaskId(task.id, at(14))
         w.database.write { db ->
             db.execute(
@@ -159,5 +159,26 @@ class WorkspaceWaitingTest {
         assertEquals(7, store.task(id)?.sortOrder)
         assertFalse(store.reconcileWaitingFollowUps(now = at(14, 2)))
         assertNotNull(store.task(id))
+    }
+
+    /** A repeat: doing the follow-up moves the source's time on, and the next is numbered. */
+    @Test
+    fun doingARepeatingFollowUpSetsTheNextAndNumbersIt() = fixture {
+        val task = store.createTask(listId = list.id, title = "Contract signed")
+        store.setWaiting(task.id, "Sam", at(14), 3, now = at(10))
+        assertEquals("every 3d", store.waitingDetails()[task.id]?.chase)
+        assertTrue(store.reconcileWaitingFollowUps(now = at(14)))
+        val first = followUps(task.id).single()
+
+        store.setStatus(TaskStatus.COMPLETED, first, now = at(14))
+        val next = at(14).plusSeconds(3 * 86_400L)
+        val details = store.waitingDetails()[task.id]
+        assertEquals(next, details?.followUpAt)
+        assertEquals(3, details?.followUpEveryDays)
+        assertEquals("#2 · every 3d", details?.chase)
+
+        assertTrue(store.reconcileWaitingFollowUps(now = next))
+        val second = WaitingFollowUp.followUpTaskId(task.id, next)
+        assertEquals("Follow up #2 with Sam: Contract signed", store.task(second)?.title)
     }
 }

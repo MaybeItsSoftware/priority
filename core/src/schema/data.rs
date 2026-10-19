@@ -38,7 +38,8 @@ pub(super) fn finish(transaction: &Transaction, identifier: &str) -> Result<(), 
         | "v26_commitment_missed_stack"
         | "v29_daily_contribution_skips"
         | "v30_google_calendar"
-        | "v31_link_details" => Ok(super::triggers::reinstall(transaction)?),
+        | "v31_link_details"
+        | "v32_follow_up_repeat" => Ok(super::triggers::reinstall(transaction)?),
         "v24_condition_categories" => {
             super::triggers::reinstall(transaction)?;
             file_places_under_location(transaction)

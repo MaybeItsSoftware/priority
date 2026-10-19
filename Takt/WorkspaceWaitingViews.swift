@@ -8,12 +8,14 @@ struct WorkspaceWaitingRequest: Identifiable {
   let details: TaskWaitingDetails?
 }
 
-/// The Waiting on form: `ww`. Who or what the task waits on, and when to
-/// follow up. Saving files the task in Waiting on; at the follow-up time, if
-/// it is still there and still open, "Follow up with Sam: …" lands in Today.
+/// The Waiting on form: `ww`. Who or what the task waits on, when to follow
+/// up, and every how many days to follow up again. Saving files the task in
+/// Waiting on; at the follow-up time, if it is still there and still open,
+/// "Follow up with Sam: …" lands in Today. With a repeat, completing that
+/// follow-up sets the next, "Follow up #2 with Sam: …".
 ///
-/// Tab, ⇧Tab, ↑ and ↓ move between the two fields; Return saves; Escape is the
-/// host's and cancels.
+/// Tab, ⇧Tab, ↑ and ↓ move between the three fields; Return saves; Escape is
+/// the host's and cancels.
 struct WorkspaceWaitingOverlay: View {
   let overlayID: String
   let request: WorkspaceWaitingRequest
@@ -21,10 +23,11 @@ struct WorkspaceWaitingOverlay: View {
   @Environment(\.theme) private var theme
   @State private var tag = ""
   @State private var followUp = ""
+  @State private var every = ""
   @State private var error: String?
   @FocusState private var field: Field?
 
-  enum Field: Hashable { case tag, followUp }
+  enum Field: Hashable, CaseIterable { case tag, followUp, every }
 
   var body: some View {
     VStack(alignment: .leading, spacing: 0) {
@@ -42,6 +45,14 @@ struct WorkspaceWaitingOverlay: View {
               .foregroundStyle(parsedFollowUp == nil && !followUpIsEmpty ? theme.danger : theme.muted)
           }
         }
+        row(.every, label: "Repeat") {
+          VStack(alignment: .leading, spacing: theme.space.xxs) {
+            textField("once, or every 3d", text: $every, field: .every)
+            Text(repeatPreview)
+              .font(theme.captionFont)
+              .foregroundStyle(parsedEvery == nil ? theme.danger : theme.muted)
+          }
+        }
         if let error {
           Text(error)
             .font(theme.captionFont)
@@ -56,6 +67,7 @@ struct WorkspaceWaitingOverlay: View {
     .onAppear {
       tag = request.details?.waitingOn ?? ""
       followUp = request.details?.followUpAt.map { WaitingFollowUp.editableText($0) } ?? ""
+      every = WaitingFollowUp.editableRepeatText(request.details?.followUpEveryDays)
       DispatchQueue.main.async { field = .tag }
     }
     .overlayKeys(model, id: overlayID) { key in handle(key) }
@@ -119,13 +131,27 @@ struct WorkspaceWaitingOverlay: View {
     return WaitingFollowUp.label(date) + (date <= .now ? " — lands in Today now" : "")
   }
 
+  /// 0 for once, the days for a repeat, nil for a field that is neither.
+  private var parsedEvery: Int? {
+    WaitingFollowUp.everyDays(from: every)
+  }
+
+  private var repeatPreview: String {
+    guard let days = parsedEvery else { return "1 to 365 days, or once" }
+    if days > 0, followUpIsEmpty { return "Needs a follow-up time" }
+    return days == 0 ? "Once" : WaitingFollowUp.repeatText(days) + ", from when each follow-up is done"
+  }
+
   private func handle(_ key: String) -> Bool {
     switch key {
     case "enter", "cmd+enter":
       save()
       return true
     case "tab", "down", "shift+tab", "up":
-      field = field == .tag ? .followUp : .tag
+      let fields = Field.allCases
+      let index = field.flatMap { fields.firstIndex(of: $0) } ?? 0
+      let step = key == "tab" || key == "down" ? 1 : fields.count - 1
+      field = fields[(index + step) % fields.count]
       return true
     default:
       return false
@@ -142,7 +168,12 @@ struct WorkspaceWaitingOverlay: View {
       }
       date = parsed
     }
-    if let failure = model.setWaiting(request.task, waitingOn: tag, followUpAt: date) {
+    guard let days = parsedEvery else {
+      error = "Write the repeat as once, 3, 3d or every 3 days, from 1 to 365."
+      field = .every
+      return
+    }
+    if let failure = model.setWaiting(request.task, waitingOn: tag, followUpAt: date, everyDays: days == 0 ? nil : days) {
       error = failure
       return
     }
@@ -168,16 +199,24 @@ struct WorkspaceWaitingBadges: View {
             .accessibilityLabel("Waiting on \(tag)")
         }
         if let at = details.followUpAt, task.status == .open {
-          Text(WaitingFollowUp.label(at))
+          Text(WaitingFollowUp.label(at, chase: details.chase))
             .font(theme.captionFont)
             .monospacedDigit()
             .foregroundStyle(theme.muted)
             .lineLimit(1)
-            .help("Follow up \(WaitingFollowUp.dateTimeText(at)) if it is still waiting")
+            .help(followUpHelp(at, details))
         }
       }
       .accessibilityElement(children: .combine)
     }
+  }
+
+  private func followUpHelp(_ at: Date, _ details: TaskWaitingDetails) -> String {
+    var help = "Follow up \(WaitingFollowUp.dateTimeText(at)) if it is still waiting"
+    if let days = details.followUpEveryDays {
+      help += "; then \(WaitingFollowUp.repeatText(days).lowercased()) after each follow-up is done"
+    }
+    return help
   }
 }
 
@@ -222,6 +261,9 @@ struct WorkspaceWaitingInspectorSection: View {
             }
           })
         .commandHelp(.taskWaiting, note: "Edit who and when to follow up in the Waiting on form")
+        if details?.followUpAt != nil {
+          InspectorRow("Repeat") { repeatMenu }
+        }
       } else {
         InspectorRow("Waiting on") {
           Button("Add who or what") { model.presentWaitingForm() }
@@ -244,6 +286,26 @@ struct WorkspaceWaitingInspectorSection: View {
     .onChange(of: details?.waitingOn) { _, saved in if !tagFocused { tag = saved ?? "" } }
   }
 
+  /// Once, or every so many days: the presets, and the task's own repeat if
+  /// it is none of them. Arrow keys step through them.
+  private var repeatMenu: some View {
+    let current = details?.followUpEveryDays ?? 0
+    let values = (WaitingFollowUp.everyDaysPresets + (WaitingFollowUp.everyDaysPresets.contains(current) ? [] : [current]))
+      .sorted()
+    let options = values.map { ThemedPickerOption(WaitingFollowUp.repeatText($0), value: $0) }
+    let selection = Binding(get: { current }, set: { saveRepeat($0) })
+    return InspectorMenu(WaitingFollowUp.repeatText(current), tone: current == 0 ? .dim : .ink) {
+      Picker("Repeat", selection: selection) {
+        ForEach(options) { Text($0.title).tag($0.value) }
+      }
+      .pickerStyle(.inline)
+      .labelsHidden()
+    }
+    .inspectorStop("waiting.repeat") { selection.step(by: $0, through: options) }
+    .help("After each follow-up is done, follow up again this many days later. ww sets any number of days.")
+    .accessibilityLabel("Repeat follow-up")
+  }
+
   /// Tomorrow at nine: the follow-up you would most often have typed.
   static func defaultFollowUp(now: Date = .now) -> Date {
     TaskCapture.dateTime(from: "tomorrow", now: now) ?? now.addingTimeInterval(86_400)
@@ -252,10 +314,19 @@ struct WorkspaceWaitingInspectorSection: View {
   private func saveTag() {
     let trimmed = WaitingFollowUp.normalizedTag(tag)
     guard trimmed != details?.waitingOn else { return }
-    model.setWaiting(task, waitingOn: trimmed, followUpAt: details?.followUpAt)
+    model.setWaiting(
+      task, waitingOn: trimmed, followUpAt: details?.followUpAt, everyDays: details?.followUpEveryDays)
   }
 
   private func save(followUpAt: Date?) {
-    model.setWaiting(task, waitingOn: WaitingFollowUp.normalizedTag(tag), followUpAt: followUpAt)
+    model.setWaiting(
+      task, waitingOn: WaitingFollowUp.normalizedTag(tag), followUpAt: followUpAt,
+      everyDays: details?.followUpEveryDays)
+  }
+
+  private func saveRepeat(_ days: Int) {
+    guard days != (details?.followUpEveryDays ?? 0) else { return }
+    model.setWaiting(
+      task, waitingOn: details?.waitingOn, followUpAt: details?.followUpAt, everyDays: days == 0 ? nil : days)
   }
 }

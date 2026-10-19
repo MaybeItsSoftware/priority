@@ -980,16 +980,25 @@ impl CoreWorkspace {
         })
     }
 
-    /// Sets what a task waits on and when to chase it, as one "Waiting On" step.
+    /// Sets what a task waits on, when to chase it and every how many days
+    /// to chase again (`None` for once), as one "Waiting On" step.
     pub fn set_waiting(
         &self,
         task_id: String,
         waiting_on: Option<String>,
         follow_up_at_ms: Option<i64>,
+        follow_up_every_days: Option<u32>,
         now_ms: i64,
     ) -> Result<(), CoreError> {
         journal::journalled(&mut self.lock(), "Waiting On", |tx| {
-            waiting::set_waiting(tx, &task_id, waiting_on.as_deref(), follow_up_at_ms, now_ms)
+            waiting::set_waiting(
+                tx,
+                &task_id,
+                waiting_on.as_deref(),
+                follow_up_at_ms,
+                follow_up_every_days,
+                now_ms,
+            )
         })
     }
 

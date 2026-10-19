@@ -16,11 +16,15 @@ public struct WaitingTaskState: Equatable, Sendable {
   /// the current follow-up time would make, so a follow-up is made once per
   /// time set, and setting a new time makes a new one.
   public var madeFollowUpTaskId: String?
+  /// How many follow-ups this spell of waiting has already made; the next is
+  /// numbered from the second on.
+  public var followUpCount: Int
 
   public init(
     taskId: String, title: String, isOpen: Bool, column: String?, waitingOn: String?,
-    followUpAt: Date?, madeFollowUpTaskId: String?
+    followUpAt: Date?, madeFollowUpTaskId: String?, followUpCount: Int = 0
   ) {
+    self.followUpCount = followUpCount
     self.taskId = taskId
     self.title = title
     self.isOpen = isOpen
@@ -78,7 +82,7 @@ public enum WaitingFollowUp {
         task: WaitingState(
           taskId: task.taskId, title: task.title, isOpen: task.isOpen, column: task.column,
           waitingOn: task.waitingOn, followUpAtMs: followUpAt.flooredMilliseconds,
-          madeFollowUpTaskId: task.madeFollowUpTaskId),
+          madeFollowUpTaskId: task.madeFollowUpTaskId, followUpCount: UInt32(clamping: task.followUpCount)),
         nowMs: now.flooredMilliseconds)
     else { return nil }
     return WaitingFollowUpPlan(
@@ -86,9 +90,60 @@ public enum WaitingFollowUp {
   }
 
   /// "Follow up with Sam: Contract signed", or "Follow up: Contract signed"
-  /// when nothing is named.
-  public static func title(for title: String, waitingOn: String?) -> String {
-    waitingFollowUpTitle(title: title, waitingOn: waitingOn)
+  /// when nothing is named; from the second follow-up of a spell on,
+  /// "Follow up #2 with Sam: Contract signed".
+  public static func title(for title: String, waitingOn: String?, number: Int = 1) -> String {
+    waitingFollowUpTitle(title: title, waitingOn: waitingOn, number: UInt32(clamping: number))
+  }
+
+  /// What a card adds after the follow-up time: which follow-up it is, from
+  /// the second on, and how often it repeats — `#3 · every 3d`, `every day`,
+  /// `#2` — or nil for a first follow-up that happens once. The core's
+  /// `waiting::chase_label`.
+  public static func chase(
+    sourceTaskId: String, followUpAt: Date, madeFollowUpTaskId: String?, count: Int, everyDays: Int?
+  ) -> String? {
+    waitingChaseLabel(
+      sourceTaskId: sourceTaskId, followUpAtMs: followUpAt.flooredMilliseconds, madeFollowUpTaskId: madeFollowUpTaskId,
+      followUpCount: UInt32(clamping: count), everyDays: everyDays.map { UInt32(clamping: $0) })
+  }
+
+  /// The fewest and most days a follow-up can repeat after.
+  public static let everyDaysRange = 1...365
+
+  /// The repeats offered by a menu: once, then every 1, 2, 3, 7, 14 and 30
+  /// days. 0 is once.
+  public static let everyDaysPresets = [0, 1, 2, 3, 7, 14, 30]
+
+  /// The repeat a form field reads: empty or `once` is 0, once; `3`, `3d`,
+  /// `3 days`, `every 3d` or `every day` is that many days. Nil for anything
+  /// else, or a number outside `everyDaysRange`.
+  public static func everyDays(from text: String) -> Int? {
+    var words = text.trimmingCharacters(in: .whitespaces).lowercased()
+    if words.isEmpty || words == "once" || words == "never" { return 0 }
+    if words.hasPrefix("every") { words = String(words.dropFirst(5)).trimmingCharacters(in: .whitespaces) }
+    if words == "day" || words == "daily" { return 1 }
+    if words == "week" || words == "weekly" { return 7 }
+    for suffix in ["days", "day", "d"] where words.hasSuffix(suffix) {
+      words = String(words.dropLast(suffix.count)).trimmingCharacters(in: .whitespaces)
+      break
+    }
+    guard let days = Int(words), everyDaysRange.contains(days) else { return nil }
+    return days
+  }
+
+  /// `Once`, `Every day`, `Every 3 days`: a repeat as a form shows it.
+  public static func repeatText(_ everyDays: Int?) -> String {
+    switch everyDays {
+    case nil, 0?: return "Once"
+    case 1?: return "Every day"
+    case let days?: return "Every \(days) days"
+    }
+  }
+
+  /// `3` or empty: what the form's repeat field reads back.
+  public static func editableRepeatText(_ everyDays: Int?) -> String {
+    everyDays.map(String.init) ?? ""
   }
 
   /// A tag trimmed and clipped to `maximumTagLength` characters, or nil when
@@ -106,8 +161,11 @@ public enum WaitingFollowUp {
 
   /// `↻ Thu 14:00` — the follow-up time as a card shows it. Today and
   /// tomorrow are named; a date past the coming week shows its day and month.
-  public static func label(_ date: Date, now: Date = .now, calendar: Calendar = .current) -> String {
-    "↻ " + dateTimeText(date, now: now, calendar: calendar)
+  /// With `chase`, its number and repeat after it: `↻ Thu 14:00 · #3 · every 3d`.
+  public static func label(
+    _ date: Date, chase: String? = nil, now: Date = .now, calendar: Calendar = .current
+  ) -> String {
+    "↻ " + dateTimeText(date, now: now, calendar: calendar) + (chase.map { " · " + $0 } ?? "")
   }
 
   /// `Today 14:00`, `Tomorrow 09:00`, `Thu 14:00`, `8 Oct 14:00`.

@@ -431,6 +431,36 @@ fn waiting_on_and_a_follow_up_file_the_task_in_waiting_on() {
 }
 
 #[test]
+fn a_follow_up_repeats_every_n_days_and_left_out_keeps_its_repeat() {
+    let fixture = Fixture::new();
+    let task = fixture.add(PROJECTS, "Contract signed", None);
+    let updated = fixture.call(
+        "workspace_task_update",
+        json!({ "task_id": task, "waiting_on": "Sam", "follow_up_at": "2099-10-08 14:00", "follow_up_every_days": 3 }),
+    );
+    assert_eq!(updated["follow_up_every_days"], json!(3));
+    // A new time alone keeps the repeat.
+    let updated = fixture.call(
+        "workspace_task_update",
+        json!({ "task_id": task, "follow_up_at": "2099-10-09 14:00" }),
+    );
+    assert_eq!(updated["follow_up_every_days"], json!(3));
+    // Null makes it once.
+    let updated = fixture.call(
+        "workspace_task_update",
+        json!({ "task_id": task, "follow_up_every_days": null }),
+    );
+    assert_eq!(updated.get("follow_up_every_days"), None);
+    let error = fixture
+        .try_call(
+            "workspace_task_update",
+            json!({ "task_id": task, "follow_up_every_days": 400 }),
+        )
+        .unwrap_err();
+    assert!(error.contains("1 to 365"), "{error}");
+}
+
+#[test]
 fn due_start_priority_and_estimate_set_and_clear() {
     let fixture = Fixture::new();
     let id = fixture.add(PROJECTS, "File the report", None);

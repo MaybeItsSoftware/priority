@@ -19,16 +19,23 @@ data class TaskWaitingDetails(
     val followUpAt: Instant? = null,
     /** On a follow-up task: the waiting task it chases. */
     val followUpOfTaskId: String? = null,
+    /** Chase again every this many days after a follow-up is done; null is once. */
+    val followUpEveryDays: Int? = null,
+    /** What a card adds after the follow-up time: `#3 · every 3d`, or null. */
+    val chase: String? = null,
 )
 
 private fun readWaitingDetails(db: Db): Map<String, TaskWaitingDetails> =
     db.core.allMetadata()
         .filter { it.waitingOn != null || it.waitingFollowUpAtMs != null || it.followUpOfTaskId != null }
-        .associate {
-            it.taskId to TaskWaitingDetails(
-                waitingOn = it.waitingOn,
-                followUpAt = it.waitingFollowUpAtMs?.let(Instant::ofEpochMilli),
-                followUpOfTaskId = it.followUpOfTaskId,
+        .associate { row ->
+            val metadata = row.toMetadata()
+            row.taskId to TaskWaitingDetails(
+                waitingOn = metadata.waitingOn,
+                followUpAt = metadata.waitingFollowUpAt,
+                followUpOfTaskId = metadata.followUpOfTaskId,
+                followUpEveryDays = metadata.waitingFollowUpEveryDays,
+                chase = metadata.followUpChase,
             )
         }
 
@@ -39,19 +46,23 @@ fun WorkspaceRepository.observeWaitingDetails(): Flow<Map<String, TaskWaitingDet
     database.observe(setOf("task_metadata"), ::readWaitingDetails)
 
 /**
- * Sets what a task waits on and when to chase it, and files it in Waiting on
- * if it is not there already. Null clears either. One undo step, which
- * includes the follow-up when the time set has already passed.
+ * Sets what a task waits on, when to chase it and every how many days to chase
+ * again (null for once), and files it in Waiting on if it is not there
+ * already. Null clears any of them. One undo step, which includes the
+ * follow-up when the time set has already passed. The repeat has no default,
+ * so a caller changing only the tag has to pass the one it has.
  */
 suspend fun WorkspaceRepository.setWaiting(
     taskId: String,
     waitingOn: String?,
     followUpAt: Instant?,
+    everyDays: Int?,
     now: Instant = now(),
 ) {
     // The Rust core's `waiting::set_waiting`, which keeps the follow-up time
-    // to the minute and makes a follow-up already due in the same step.
-    coreWrite { it.setWaiting(taskId, waitingOn, followUpAt?.toEpochMilli(), now.toEpochMilli()) }
+    // to the minute, refuses a repeat outside 1 to 365 days, and makes a
+    // follow-up already due in the same step.
+    coreWrite { it.setWaiting(taskId, waitingOn, followUpAt?.toEpochMilli(), everyDays?.toUInt(), now.toEpochMilli()) }
 }
 
 /**

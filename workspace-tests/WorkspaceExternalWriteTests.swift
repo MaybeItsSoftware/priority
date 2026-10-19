@@ -56,7 +56,7 @@ final class WorkspaceExternalWriteTests: XCTestCase {
     let task = try store.createTask(listId: listID, title: "Mine")
     let afterWrite = try store.changeStamp()
     XCTAssertNotEqual(afterWrite, start)
-    try store.setWaiting(taskId: task.id, waitingOn: "Sam", followUpAt: nil)
+    try store.setWaiting(taskId: task.id, waitingOn: "Sam", followUpAt: nil, everyDays: nil)
     XCTAssertEqual(try store.waitingDetails()[task.id]?.waitingOn, "Sam")
     _ = try store.undo()
     XCTAssertNotEqual(try store.changeStamp(), afterWrite)

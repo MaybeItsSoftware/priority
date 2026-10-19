@@ -280,6 +280,7 @@ fn waiting(at: Option<i64>) -> WaitingState {
         waiting_on: Some("Sam".into()),
         follow_up_at_ms: at,
         made_follow_up_task_id: None,
+        follow_up_count: 0,
     }
 }
 
@@ -349,16 +350,24 @@ fn a_follow_up_is_made_once_per_time_set() {
 #[test]
 fn the_title_names_the_tag_only_when_there_is_one() {
     assert_eq!(
-        waiting_follow_up_title("Invoice paid".into(), None),
+        waiting_follow_up_title("Invoice paid".into(), None, 1),
         "Follow up: Invoice paid"
     );
     assert_eq!(
-        waiting_follow_up_title("Invoice paid".into(), Some("  ".into())),
+        waiting_follow_up_title("Invoice paid".into(), Some("  ".into()), 1),
         "Follow up: Invoice paid"
     );
     assert_eq!(
-        waiting_follow_up_title("Invoice paid".into(), Some(" Legal ".into())),
+        waiting_follow_up_title("Invoice paid".into(), Some(" Legal ".into()), 1),
         "Follow up with Legal: Invoice paid"
+    );
+    assert_eq!(
+        waiting_follow_up_title("Invoice paid".into(), Some("Legal".into()), 2),
+        "Follow up #2 with Legal: Invoice paid"
+    );
+    assert_eq!(
+        waiting_follow_up_title("Invoice paid".into(), None, 3),
+        "Follow up #3: Invoice paid"
     );
 }
 

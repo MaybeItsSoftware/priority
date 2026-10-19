@@ -73,6 +73,9 @@ pub enum CoreError {
     /// one (`editor_draft.rs`).
     #[error("Enter a non-negative number of minutes within the supported range.")]
     InvalidEstimate,
+    /// A follow-up repeat outside 1 to 365 days (`waiting.rs`).
+    #[error("A follow-up repeats every 1 to 365 days, not {days}.")]
+    InvalidFollowUpRepeat { days: u32 },
     /// A Google Calendar answer the core could not read
     /// (`google_calendar.rs`).
     #[error("{detail}")]

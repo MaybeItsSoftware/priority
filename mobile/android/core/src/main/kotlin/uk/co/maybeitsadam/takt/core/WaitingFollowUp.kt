@@ -25,6 +25,8 @@ data class WaitingTaskState(
      * time set, and setting a new time makes a new one.
      */
     val madeFollowUpTaskId: String?,
+    /** How many follow-ups this spell of waiting has already made; the next is numbered from the second on. */
+    val followUpCount: Int = 0,
 )
 
 /** The follow-up task to make: "Follow up with Sam: Contract signed". */
@@ -75,13 +77,44 @@ object WaitingFollowUp {
             waitingOn = task.waitingOn,
             followUpAtMs = followUpAt.toEpochMilli(),
             madeFollowUpTaskId = task.madeFollowUpTaskId,
+            followUpCount = task.followUpCount.coerceAtLeast(0).toUInt(),
         )
         val plan = uniffi.takt_core.waitingDueFollowUp(state, now.toEpochMilli()) ?: return null
         return WaitingFollowUpPlan(plan.taskId, plan.sourceTaskId, plan.title, followUpAt)
     }
 
-    /** "Follow up with Sam: Contract signed", or "Follow up: Contract signed" when nothing is named. */
-    fun title(title: String, waitingOn: String?): String = uniffi.takt_core.waitingFollowUpTitle(title, waitingOn)
+    /**
+     * "Follow up with Sam: Contract signed", or "Follow up: Contract signed" when nothing is named;
+     * from the second follow-up of a spell on, "Follow up #2 with Sam: Contract signed".
+     */
+    fun title(title: String, waitingOn: String?, number: Int = 1): String =
+        uniffi.takt_core.waitingFollowUpTitle(title, waitingOn, number.coerceAtLeast(1).toUInt())
+
+    /** The fewest and most days a follow-up can repeat after. */
+    val EVERY_DAYS_RANGE = 1..365
+
+    /**
+     * What a card adds after the follow-up time: which follow-up it is, from the second on, and how often
+     * it repeats — `#3 · every 3d`, `every day`, `#2` — or null for a first follow-up that happens once.
+     * The Rust core's `waiting::chase_label`.
+     */
+    fun chase(sourceTaskId: String, followUpAt: Instant, madeFollowUpTaskId: String?, count: Int, everyDays: Int?): String? =
+        uniffi.takt_core.waitingChaseLabel(
+            sourceTaskId, followUpAt.toEpochMilli(), madeFollowUpTaskId, count.coerceAtLeast(0).toUInt(), everyDays?.toUInt(),
+        )
+
+    /** `Once`, `Every day`, `Every 3 days`. */
+    fun repeatText(everyDays: Int?): String = when (everyDays) {
+        null, 0 -> "Once"
+        1 -> "Every day"
+        else -> "Every $everyDays days"
+    }
+
+    /** [days] moved [by] a step: a day at a time to a week, then a week at a time, kept to [EVERY_DAYS_RANGE]. */
+    fun stepEveryDays(days: Int, by: Int): Int {
+        val step = if (days > 7 || (days == 7 && by > 0)) 7 else 1
+        return (days + by * step).coerceIn(EVERY_DAYS_RANGE)
+    }
 
     /**
      * A tag trimmed and clipped to [MAXIMUM_TAG_LENGTH] characters, as Swift
@@ -103,8 +136,12 @@ object WaitingFollowUp {
     fun label(date: Instant, now: Instant = Instant.now(), zone: ZoneId = ZoneId.systemDefault()): String =
         "↻ " + dateTimeText(date, now.atZone(zone).toLocalDate(), zone)
 
-    /** [label] against a [today] the caller already has, as row shaping does. */
-    fun label(date: Instant, today: LocalDate, zone: ZoneId): String = "↻ " + dateTimeText(date, today, zone)
+    /**
+     * [label] against a [today] the caller already has, as row shaping does; with [chase], its number
+     * and repeat after it: `↻ Thu 14:00 · #3 · every 3d`.
+     */
+    fun label(date: Instant, today: LocalDate, zone: ZoneId, chase: String? = null): String =
+        "↻ " + dateTimeText(date, today, zone) + (chase?.let { " · $it" } ?: "")
 
     /** `Today 14:00`, `Tomorrow 09:00`, `Thu 14:00`, `8 Oct 14:00`, `8 Oct 2027 14:00`. */
     fun dateTimeText(date: Instant, today: LocalDate, zone: ZoneId): String {

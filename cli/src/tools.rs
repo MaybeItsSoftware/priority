@@ -435,6 +435,13 @@ impl Tools {
                     follow_up_at: arguments
                         .get("follow_up_at")
                         .map(|value| as_string(Some(value))),
+                    // Null (or 0) makes it once; absent leaves it.
+                    follow_up_every_days: arguments
+                        .get("follow_up_every_days")
+                        .map(|value| {
+                            as_optional_int(Some(value)).map(|days| days.filter(|d| *d != 0))
+                        })
+                        .transpose()?,
                     // Each of these: present-but-null (or empty) clears;
                     // absent leaves it.
                     due: arguments.get("due").map(|value| as_string(Some(value))),

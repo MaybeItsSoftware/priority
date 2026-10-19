@@ -1983,9 +1983,10 @@ public protocol CoreWorkspaceProtocol: AnyObject, Sendable {
     func setTaskRequirements(taskId: String, groups: [[String]], nowMs: Int64) throws  -> Bool
     
     /**
-     * Sets what a task waits on and when to chase it, as one "Waiting On" step.
+     * Sets what a task waits on, when to chase it and every how many days
+     * to chase again (`None` for once), as one "Waiting On" step.
      */
-    func setWaiting(taskId: String, waitingOn: String?, followUpAtMs: Int64?, nowMs: Int64) throws 
+    func setWaiting(taskId: String, waitingOn: String?, followUpAtMs: Int64?, followUpEveryDays: UInt32?, nowMs: Int64) throws 
     
     /**
      * What the sidebar draws beneath the given lists, walked here so only
@@ -4961,15 +4962,17 @@ open func setTaskRequirements(taskId: String, groups: [[String]], nowMs: Int64)t
 }
     
     /**
-     * Sets what a task waits on and when to chase it, as one "Waiting On" step.
+     * Sets what a task waits on, when to chase it and every how many days
+     * to chase again (`None` for once), as one "Waiting On" step.
      */
-open func setWaiting(taskId: String, waitingOn: String?, followUpAtMs: Int64?, nowMs: Int64)throws   {try rustCallWithError(FfiConverterTypeCoreError_lift) {
+open func setWaiting(taskId: String, waitingOn: String?, followUpAtMs: Int64?, followUpEveryDays: UInt32?, nowMs: Int64)throws   {try rustCallWithError(FfiConverterTypeCoreError_lift) {
         uniffiCallStatus in
     uniffi_takt_core_fn_method_coreworkspace_set_waiting(
             self.uniffiCloneHandle(),
         FfiConverterString.lower(taskId),
         FfiConverterOptionString.lower(waitingOn),
         FfiConverterOptionInt64.lower(followUpAtMs),
+        FfiConverterOptionUInt32.lower(followUpEveryDays),
         FfiConverterInt64.lower(nowMs),uniffiCallStatus
     )
 }
@@ -12392,14 +12395,22 @@ public struct FollowUpPlan: Equatable, Hashable {
     public var sourceTaskId: String
     public var title: String
     public var dueAtMs: Int64
+    /**
+     * Which follow-up of the spell it is, from 1.
+     */
+    public var number: UInt32
 
     // Default memberwise initializers are never public by default, so we
     // declare one manually.
-    public init(taskId: String, sourceTaskId: String, title: String, dueAtMs: Int64) {
+    public init(taskId: String, sourceTaskId: String, title: String, dueAtMs: Int64, 
+        /**
+         * Which follow-up of the spell it is, from 1.
+         */number: UInt32) {
         self.taskId = taskId
         self.sourceTaskId = sourceTaskId
         self.title = title
         self.dueAtMs = dueAtMs
+        self.number = number
     }
 
     
@@ -12421,7 +12432,8 @@ public struct FfiConverterTypeFollowUpPlan: FfiConverterRustBuffer {
                 taskId: FfiConverterString.read(from: &buf), 
                 sourceTaskId: FfiConverterString.read(from: &buf), 
                 title: FfiConverterString.read(from: &buf), 
-                dueAtMs: FfiConverterInt64.read(from: &buf)
+                dueAtMs: FfiConverterInt64.read(from: &buf), 
+                number: FfiConverterUInt32.read(from: &buf)
         )
     }
 
@@ -12430,6 +12442,7 @@ public struct FfiConverterTypeFollowUpPlan: FfiConverterRustBuffer {
         FfiConverterString.write(value.sourceTaskId, into: &buf)
         FfiConverterString.write(value.title, into: &buf)
         FfiConverterInt64.write(value.dueAtMs, into: &buf)
+        FfiConverterUInt32.write(value.number, into: &buf)
     }
 }
 
@@ -15623,13 +15636,29 @@ public struct MetadataRow: Equatable, Hashable {
     public var waitingFollowUpAtMs: Int64?
     public var waitingFollowUpTaskId: String?
     public var followUpOfTaskId: String?
+    /**
+     * Chase again every this many days after a follow-up is done; `None`
+     * is once (`v32_follow_up_repeat`).
+     */
+    public var waitingFollowUpEveryDays: UInt32?
+    /**
+     * How many follow-ups this spell of waiting has made.
+     */
+    public var waitingFollowUpCount: UInt32
 
     // Default memberwise initializers are never public by default, so we
     // declare one manually.
     public init(taskId: String, priority: Int64?, startAtMs: Int64?, tagsJson: String, recurrenceRule: String?, matrixUrgency: Int64?, matrixImportance: Int64?, 
         /**
          * The task's place within its matrix quadrant, lowest first.
-         */matrixRank: Int64?, kanbanColumn: String?, externalLinksJson: String, focusRank: Int64?, updatedAtMs: Int64, planningJson: String?, waitingOn: String?, waitingFollowUpAtMs: Int64?, waitingFollowUpTaskId: String?, followUpOfTaskId: String?) {
+         */matrixRank: Int64?, kanbanColumn: String?, externalLinksJson: String, focusRank: Int64?, updatedAtMs: Int64, planningJson: String?, waitingOn: String?, waitingFollowUpAtMs: Int64?, waitingFollowUpTaskId: String?, followUpOfTaskId: String?, 
+        /**
+         * Chase again every this many days after a follow-up is done; `None`
+         * is once (`v32_follow_up_repeat`).
+         */waitingFollowUpEveryDays: UInt32?, 
+        /**
+         * How many follow-ups this spell of waiting has made.
+         */waitingFollowUpCount: UInt32) {
         self.taskId = taskId
         self.priority = priority
         self.startAtMs = startAtMs
@@ -15647,6 +15676,8 @@ public struct MetadataRow: Equatable, Hashable {
         self.waitingFollowUpAtMs = waitingFollowUpAtMs
         self.waitingFollowUpTaskId = waitingFollowUpTaskId
         self.followUpOfTaskId = followUpOfTaskId
+        self.waitingFollowUpEveryDays = waitingFollowUpEveryDays
+        self.waitingFollowUpCount = waitingFollowUpCount
     }
 
     
@@ -15681,7 +15712,9 @@ public struct FfiConverterTypeMetadataRow: FfiConverterRustBuffer {
                 waitingOn: FfiConverterOptionString.read(from: &buf), 
                 waitingFollowUpAtMs: FfiConverterOptionInt64.read(from: &buf), 
                 waitingFollowUpTaskId: FfiConverterOptionString.read(from: &buf), 
-                followUpOfTaskId: FfiConverterOptionString.read(from: &buf)
+                followUpOfTaskId: FfiConverterOptionString.read(from: &buf), 
+                waitingFollowUpEveryDays: FfiConverterOptionUInt32.read(from: &buf), 
+                waitingFollowUpCount: FfiConverterUInt32.read(from: &buf)
         )
     }
 
@@ -15703,6 +15736,8 @@ public struct FfiConverterTypeMetadataRow: FfiConverterRustBuffer {
         FfiConverterOptionInt64.write(value.waitingFollowUpAtMs, into: &buf)
         FfiConverterOptionString.write(value.waitingFollowUpTaskId, into: &buf)
         FfiConverterOptionString.write(value.followUpOfTaskId, into: &buf)
+        FfiConverterOptionUInt32.write(value.waitingFollowUpEveryDays, into: &buf)
+        FfiConverterUInt32.write(value.waitingFollowUpCount, into: &buf)
     }
 }
 
@@ -19719,6 +19754,10 @@ public struct WaitingState: Equatable, Hashable {
      * The follow-up already made for it, if any.
      */
     public var madeFollowUpTaskId: String?
+    /**
+     * How many follow-ups this spell of waiting has already made.
+     */
+    public var followUpCount: UInt32
 
     // Default memberwise initializers are never public by default, so we
     // declare one manually.
@@ -19728,7 +19767,10 @@ public struct WaitingState: Equatable, Hashable {
          */column: String?, waitingOn: String?, followUpAtMs: Int64?, 
         /**
          * The follow-up already made for it, if any.
-         */madeFollowUpTaskId: String?) {
+         */madeFollowUpTaskId: String?, 
+        /**
+         * How many follow-ups this spell of waiting has already made.
+         */followUpCount: UInt32) {
         self.taskId = taskId
         self.title = title
         self.isOpen = isOpen
@@ -19736,6 +19778,7 @@ public struct WaitingState: Equatable, Hashable {
         self.waitingOn = waitingOn
         self.followUpAtMs = followUpAtMs
         self.madeFollowUpTaskId = madeFollowUpTaskId
+        self.followUpCount = followUpCount
     }
 
     
@@ -19760,7 +19803,8 @@ public struct FfiConverterTypeWaitingState: FfiConverterRustBuffer {
                 column: FfiConverterOptionString.read(from: &buf), 
                 waitingOn: FfiConverterOptionString.read(from: &buf), 
                 followUpAtMs: FfiConverterOptionInt64.read(from: &buf), 
-                madeFollowUpTaskId: FfiConverterOptionString.read(from: &buf)
+                madeFollowUpTaskId: FfiConverterOptionString.read(from: &buf), 
+                followUpCount: FfiConverterUInt32.read(from: &buf)
         )
     }
 
@@ -19772,6 +19816,7 @@ public struct FfiConverterTypeWaitingState: FfiConverterRustBuffer {
         FfiConverterOptionString.write(value.waitingOn, into: &buf)
         FfiConverterOptionInt64.write(value.followUpAtMs, into: &buf)
         FfiConverterOptionString.write(value.madeFollowUpTaskId, into: &buf)
+        FfiConverterUInt32.write(value.followUpCount, into: &buf)
     }
 }
 
@@ -20913,6 +20958,11 @@ enum CoreError: Swift.Error, Equatable, Hashable, Foundation.LocalizedError {
      */
     case InvalidEstimate
     /**
+     * A follow-up repeat outside 1 to 365 days (`waiting.rs`).
+     */
+    case InvalidFollowUpRepeat(days: UInt32
+    )
+    /**
      * A Google Calendar answer the core could not read
      * (`google_calendar.rs`).
      */
@@ -21004,7 +21054,10 @@ public struct FfiConverterTypeCoreError: FfiConverterRustBuffer {
             detail: try FfiConverterString.read(from: &buf)
             )
         case 30: return .InvalidEstimate
-        case 31: return .GoogleCalendar(
+        case 31: return .InvalidFollowUpRepeat(
+            days: try FfiConverterUInt32.read(from: &buf)
+            )
+        case 32: return .GoogleCalendar(
             detail: try FfiConverterString.read(from: &buf)
             )
 
@@ -21153,8 +21206,13 @@ public struct FfiConverterTypeCoreError: FfiConverterRustBuffer {
             writeInt(&buf, Int32(30))
         
         
-        case let .GoogleCalendar(detail):
+        case let .InvalidFollowUpRepeat(days):
             writeInt(&buf, Int32(31))
+            FfiConverterUInt32.write(days, into: &buf)
+            
+        
+        case let .GoogleCalendar(detail):
+            writeInt(&buf, Int32(32))
             FfiConverterString.write(detail, into: &buf)
             
         }
@@ -30245,6 +30303,22 @@ public func pluginDailyIsDue(archived: Bool, weekdays: [UInt32], intervalDays: I
 })
 }
 /**
+ * What a waiting card adds after `↻ Thu 14:00`: `#3 · every 3d`, or
+ * nothing for a first follow-up that happens once.
+ */
+public func waitingChaseLabel(sourceTaskId: String, followUpAtMs: Int64, madeFollowUpTaskId: String?, followUpCount: UInt32, everyDays: UInt32?) -> String?  {
+    return try!  FfiConverterOptionString.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_waiting_chase_label(
+        FfiConverterString.lower(sourceTaskId),
+        FfiConverterInt64.lower(followUpAtMs),
+        FfiConverterOptionString.lower(madeFollowUpTaskId),
+        FfiConverterUInt32.lower(followUpCount),
+        FfiConverterOptionUInt32.lower(everyDays),uniffiCallStatus
+    )
+})
+}
+/**
  * The follow-up to make for `task` at `now_ms`, if one is due.
  * `WaitingFollowUp.dueFollowUp`.
  */
@@ -30271,14 +30345,16 @@ public func waitingFollowUpTaskId(sourceTaskId: String, followUpAtMs: Int64) -> 
 })
 }
 /**
- * "Follow up with Sam: Contract signed". `WaitingFollowUp.title`.
+ * "Follow up with Sam: Contract signed", or "Follow up #2 with Sam: ..."
+ * from the second follow-up of a spell on. `WaitingFollowUp.title`.
  */
-public func waitingFollowUpTitle(title: String, waitingOn: String?) -> String  {
+public func waitingFollowUpTitle(title: String, waitingOn: String?, number: UInt32) -> String  {
     return try!  FfiConverterString.lift(try! rustCall() {
         uniffiCallStatus in
     uniffi_takt_core_fn_func_waiting_follow_up_title(
         FfiConverterString.lower(title),
-        FfiConverterOptionString.lower(waitingOn),uniffiCallStatus
+        FfiConverterOptionString.lower(waitingOn),
+        FfiConverterUInt32.lower(number),uniffiCallStatus
     )
 })
 }
@@ -31541,13 +31617,16 @@ private let initializationResult: InitializationResult = {
     if (uniffi_takt_core_checksum_func_plugin_daily_is_due() != 41192) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_takt_core_checksum_func_waiting_chase_label() != 1033) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_takt_core_checksum_func_waiting_due_follow_up() != 49290) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_func_waiting_follow_up_task_id() != 47083) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_takt_core_checksum_func_waiting_follow_up_title() != 64566) {
+    if (uniffi_takt_core_checksum_func_waiting_follow_up_title() != 37290) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_func_waiting_normalized_tag() != 48749) {
@@ -32363,7 +32442,7 @@ private let initializationResult: InitializationResult = {
     if (uniffi_takt_core_checksum_method_coreworkspace_set_task_requirements() != 10531) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_takt_core_checksum_method_coreworkspace_set_waiting() != 1116) {
+    if (uniffi_takt_core_checksum_method_coreworkspace_set_waiting() != 62353) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_method_coreworkspace_sidebar_index() != 50190) {

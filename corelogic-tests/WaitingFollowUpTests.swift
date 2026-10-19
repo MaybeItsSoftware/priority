@@ -69,6 +69,33 @@ final class WaitingFollowUpTests: XCTestCase {
     XCTAssertEqual(WaitingFollowUp.title(for: "Invoice paid", waitingOn: " Legal "), "Follow up with Legal: Invoice paid")
   }
 
+  func testFromTheSecondFollowUpOnTheTitleIsNumbered() {
+    XCTAssertEqual(
+      WaitingFollowUp.title(for: "Contract signed", waitingOn: "Sam", number: 1), "Follow up with Sam: Contract signed")
+    XCTAssertEqual(
+      WaitingFollowUp.title(for: "Contract signed", waitingOn: "Sam", number: 2), "Follow up #2 with Sam: Contract signed")
+    XCTAssertEqual(WaitingFollowUp.title(for: "Contract signed", waitingOn: nil, number: 3), "Follow up #3: Contract signed")
+  }
+
+  func testTheLabelCarriesTheChaseAfterTheTime() {
+    XCTAssertEqual(
+      WaitingFollowUp.label(date(2026, 10, 8, 14), chase: "#3 · every 3d", now: now, calendar: calendar),
+      "↻ Thu 14:00 · #3 · every 3d")
+  }
+
+  func testTheRepeatFieldReadsOnceOrANumberOfDays() {
+    for text in ["", " once ", "Never"] { XCTAssertEqual(WaitingFollowUp.everyDays(from: text), 0, text) }
+    for text in ["3", "3d", "3 days", "every 3d", "Every 3 days"] {
+      XCTAssertEqual(WaitingFollowUp.everyDays(from: text), 3, text)
+    }
+    XCTAssertEqual(WaitingFollowUp.everyDays(from: "every day"), 1)
+    XCTAssertEqual(WaitingFollowUp.everyDays(from: "weekly"), 7)
+    for text in ["0", "366", "soon", "-2"] { XCTAssertNil(WaitingFollowUp.everyDays(from: text), text) }
+    XCTAssertEqual(WaitingFollowUp.repeatText(nil), "Once")
+    XCTAssertEqual(WaitingFollowUp.repeatText(1), "Every day")
+    XCTAssertEqual(WaitingFollowUp.repeatText(3), "Every 3 days")
+  }
+
   /// The same vector is asserted by the Android port, so both platforms make
   /// one row that sync merges rather than two.
   func testTheFollowUpIdIsDeterministicAndUUIDShaped() {

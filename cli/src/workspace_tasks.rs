@@ -89,6 +89,12 @@ const WAITING_COLUMNS: &str = "m.waitingOn, m.waitingFollowUpAt, m.followUpOfTas
 const NO_WAITING_COLUMNS: &str = "NULL, NULL, NULL";
 const WAITING_MIGRATION: &str = "v20_waiting_follow_ups";
 
+/// What `v32_follow_up_repeat` adds: how often to chase again, and how many
+/// follow-ups this spell of waiting has made.
+const REPEAT_COLUMNS: &str = "m.waitingFollowUpEveryDays, COALESCE(m.waitingFollowUpCount, 0)";
+const NO_REPEAT_COLUMNS: &str = "NULL, 0";
+const REPEAT_MIGRATION: &str = "v32_follow_up_repeat";
+
 /// What adds `task_dependencies`. Before it, the dependency reads come back
 /// empty and the dependency writes are refused.
 const DEPENDENCIES_MIGRATION: &str = "v21_task_dependencies";
@@ -114,6 +120,8 @@ struct TaskRow {
     waiting_on: Option<String>,
     follow_up_at: Option<String>,
     follow_up_of: Option<String>,
+    follow_up_every_days: Option<u32>,
+    follow_up_count: u32,
     planning_json: Option<String>,
     priority: Option<i64>,
     start_at: Option<String>,
@@ -147,6 +155,8 @@ impl TaskRow {
             planning_json: row.get(20)?,
             priority: row.get(21)?,
             start_at: row.get(22)?,
+            follow_up_every_days: row.get(23)?,
+            follow_up_count: row.get(24)?,
             requires: Vec::new(),
         })
     }
@@ -218,6 +228,12 @@ impl TaskRow {
                 "follow_up_at".into(),
                 json!(local_string(&self.follow_up_at)),
             );
+        }
+        if let Some(days) = self.follow_up_every_days {
+            object.insert("follow_up_every_days".into(), json!(days));
+        }
+        if self.follow_up_count > 0 {
+            object.insert("follow_up_count".into(), json!(self.follow_up_count));
         }
         if let Some(source) = &self.follow_up_of {
             object.insert("follow_up_of".into(), json!(source));
@@ -299,6 +315,9 @@ pub struct TaskEdit {
     /// When to chase it, as typed: `2026-10-08 14:00`, local time, or RFC 3339.
     /// `Some(None)` clears it. The app makes the follow-up task when it is due.
     pub follow_up_at: Option<Option<String>>,
+    /// Chase again every this many days (1 to 365) after a follow-up is
+    /// done. `Some(None)` makes it once.
+    pub follow_up_every_days: Option<Option<i64>>,
     /// When it is due, as typed: `2026-10-17` for any time that day (the
     /// editor's due date), `2026-10-17 17:00` local or RFC 3339 for a due
     /// time. `Some(None)` clears both.
@@ -313,6 +332,13 @@ pub struct TaskEdit {
 }
 
 impl TaskEdit {
+    /// Whether it sets anything `setWaiting` writes.
+    fn waits(&self) -> bool {
+        self.waiting_on.is_some()
+            || self.follow_up_at.is_some()
+            || self.follow_up_every_days.is_some()
+    }
+
     fn is_empty(&self) -> bool {
         self.changes() == 0
     }
@@ -325,7 +351,7 @@ impl TaskEdit {
             self.kanban_column.is_some(),
             self.kind.is_some(),
             self.pinned.is_some(),
-            self.waiting_on.is_some() || self.follow_up_at.is_some(),
+            self.waits(),
             self.due.is_some(),
             self.start.is_some(),
             self.priority.is_some(),
@@ -348,7 +374,7 @@ impl TaskEdit {
         if self.kanban_column.is_some() {
             return "Move Task";
         }
-        if self.waiting_on.is_some() || self.follow_up_at.is_some() {
+        if self.waits() {
             return "Waiting On";
         }
         if self.due.is_some() {
@@ -582,7 +608,7 @@ impl Workspace {
         if edit.is_empty() {
             return Err(ToolError::new(
                 "No updates provided. Pass title, notes, external_links, status, kanban_column, \
-                 kind, pinned, waiting_on, follow_up_at, due, start, priority and/or \
+                 kind, pinned, waiting_on, follow_up_at, follow_up_every_days, due, start, priority and/or \
                  estimate_minutes.",
             ));
         }
@@ -606,6 +632,24 @@ impl Workspace {
         let follow_up_at = match edit.follow_up_at.as_ref() {
             Some(Some(text)) if !text.trim().is_empty() => Some(Some(parse_follow_up(text)?)),
             Some(_) => Some(None),
+            None => None,
+        };
+        let every_days = match edit.follow_up_every_days {
+            Some(Some(days)) => Some(Some(
+                u32::try_from(days)
+                    .ok()
+                    .filter(|days| {
+                        (takt_core::waiting::MINIMUM_EVERY_DAYS
+                            ..=takt_core::waiting::MAXIMUM_EVERY_DAYS)
+                            .contains(days)
+                    })
+                    .ok_or_else(|| {
+                        ToolError::new(format!(
+                            "follow_up_every_days must be 1 to 365, not {days}. Null makes it once."
+                        ))
+                    })?,
+            )),
+            Some(None) => Some(None),
             None => None,
         };
         let due = match edit.due.as_ref() {
@@ -734,7 +778,7 @@ impl Workspace {
                 }
             }
 
-            if edit.waiting_on.is_some() || follow_up_at.is_some() {
+            if edit.waits() {
                 // A field left out keeps what the task already has.
                 let waiting_on = match &edit.waiting_on {
                     Some(tag) => tag.clone(),
@@ -744,11 +788,13 @@ impl Workspace {
                     Some(at) => stored_ms(at.as_deref()),
                     None => stored_ms(task.follow_up_at.as_deref()),
                 };
+                let every_days = every_days.unwrap_or(task.follow_up_every_days);
                 takt_core::waiting::set_waiting(
                     tx,
                     &task.id,
                     waiting_on.as_deref(),
                     follow_up,
+                    every_days,
                     now_ms,
                 )
                 .map_err(map_core_error)?;
@@ -1213,9 +1259,14 @@ fn task_rows<P: rusqlite::Params>(
     } else {
         NO_WAITING_COLUMNS
     };
+    let repeat = if has_migration(connection, REPEAT_MIGRATION)? {
+        REPEAT_COLUMNS
+    } else {
+        NO_REPEAT_COLUMNS
+    };
     let mut statement = connection
         .prepare(&format!(
-            "SELECT {TASK_COLUMNS}, {waiting}, m.planningJSON, m.priority, m.startAt FROM tasks t \
+            "SELECT {TASK_COLUMNS}, {waiting}, m.planningJSON, m.priority, m.startAt, {repeat} FROM tasks t \
              LEFT JOIN task_metadata m ON m.taskId = t.id \
              WHERE {filter} ORDER BY t.sortOrder, t.createdAt, t.id"
         ))

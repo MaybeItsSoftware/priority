@@ -931,6 +931,8 @@ internal object IntegrityCheckingUniffiLib {
     ): Int
     external fun uniffi_takt_core_checksum_func_plugin_daily_is_due(
     ): Int
+    external fun uniffi_takt_core_checksum_func_waiting_chase_label(
+    ): Int
     external fun uniffi_takt_core_checksum_func_waiting_due_follow_up(
     ): Int
     external fun uniffi_takt_core_checksum_func_waiting_follow_up_task_id(
@@ -1987,7 +1989,7 @@ internal object UniffiLib {
     ): Unit
     external fun uniffi_takt_core_fn_method_coreworkspace_set_task_requirements(`ptr`: Long,`taskId`: RustBuffer.ByValue,`groups`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): Byte
-    external fun uniffi_takt_core_fn_method_coreworkspace_set_waiting(`ptr`: Long,`taskId`: RustBuffer.ByValue,`waitingOn`: RustBuffer.ByValue,`followUpAtMs`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    external fun uniffi_takt_core_fn_method_coreworkspace_set_waiting(`ptr`: Long,`taskId`: RustBuffer.ByValue,`waitingOn`: RustBuffer.ByValue,`followUpAtMs`: RustBuffer.ByValue,`followUpEveryDays`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
     external fun uniffi_takt_core_fn_method_coreworkspace_sidebar_index(`ptr`: Long,`listIds`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
@@ -2297,11 +2299,13 @@ internal object UniffiLib {
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_func_plugin_daily_is_due(`archived`: Byte,`weekdays`: RustBuffer.ByValue,`intervalDays`: RustBuffer.ByValue,`anchorMs`: Long,`dayMs`: Long,`zone`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): Byte
+    external fun uniffi_takt_core_fn_func_waiting_chase_label(`sourceTaskId`: RustBuffer.ByValue,`followUpAtMs`: Long,`madeFollowUpTaskId`: RustBuffer.ByValue,`followUpCount`: Int,`everyDays`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_func_waiting_due_follow_up(`task`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_func_waiting_follow_up_task_id(`sourceTaskId`: RustBuffer.ByValue,`followUpAtMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
-    external fun uniffi_takt_core_fn_func_waiting_follow_up_title(`title`: RustBuffer.ByValue,`waitingOn`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    external fun uniffi_takt_core_fn_func_waiting_follow_up_title(`title`: RustBuffer.ByValue,`waitingOn`: RustBuffer.ByValue,`number`: Int,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_func_waiting_normalized_tag(`text`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
@@ -2938,13 +2942,16 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
     if ((lib.uniffi_takt_core_checksum_func_plugin_daily_is_due() and 0xFFFF) != 41192) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if ((lib.uniffi_takt_core_checksum_func_waiting_chase_label() and 0xFFFF) != 1033) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if ((lib.uniffi_takt_core_checksum_func_waiting_due_follow_up() and 0xFFFF) != 49290) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_func_waiting_follow_up_task_id() and 0xFFFF) != 47083) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if ((lib.uniffi_takt_core_checksum_func_waiting_follow_up_title() and 0xFFFF) != 64566) {
+    if ((lib.uniffi_takt_core_checksum_func_waiting_follow_up_title() and 0xFFFF) != 37290) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_func_waiting_normalized_tag() and 0xFFFF) != 48749) {
@@ -3760,7 +3767,7 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_set_task_requirements() and 0xFFFF) != 10531) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_set_waiting() and 0xFFFF) != 1116) {
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_set_waiting() and 0xFFFF) != 62353) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_sidebar_index() and 0xFFFF) != 50190) {
@@ -5869,9 +5876,10 @@ public interface CoreWorkspaceInterface {
     fun `setTaskRequirements`(`taskId`: kotlin.String, `groups`: List<List<kotlin.String>>, `nowMs`: kotlin.Long): kotlin.Boolean
     
     /**
-     * Sets what a task waits on and when to chase it, as one "Waiting On" step.
+     * Sets what a task waits on, when to chase it and every how many days
+     * to chase again (`None` for once), as one "Waiting On" step.
      */
-    fun `setWaiting`(`taskId`: kotlin.String, `waitingOn`: kotlin.String?, `followUpAtMs`: kotlin.Long?, `nowMs`: kotlin.Long)
+    fun `setWaiting`(`taskId`: kotlin.String, `waitingOn`: kotlin.String?, `followUpAtMs`: kotlin.Long?, `followUpEveryDays`: kotlin.UInt?, `nowMs`: kotlin.Long)
     
     /**
      * What the sidebar draws beneath the given lists, walked here so only
@@ -9845,9 +9853,10 @@ open class CoreWorkspace: Disposable, AutoCloseable, CoreWorkspaceInterface
 
     
     /**
-     * Sets what a task waits on and when to chase it, as one "Waiting On" step.
+     * Sets what a task waits on, when to chase it and every how many days
+     * to chase again (`None` for once), as one "Waiting On" step.
      */
-    @Throws(CoreException::class)override fun `setWaiting`(`taskId`: kotlin.String, `waitingOn`: kotlin.String?, `followUpAtMs`: kotlin.Long?, `nowMs`: kotlin.Long)
+    @Throws(CoreException::class)override fun `setWaiting`(`taskId`: kotlin.String, `waitingOn`: kotlin.String?, `followUpAtMs`: kotlin.Long?, `followUpEveryDays`: kotlin.UInt?, `nowMs`: kotlin.Long)
         = 
     callWithHandle {
     uniffiRustCallWithError(CoreException) { _status ->
@@ -9857,6 +9866,7 @@ open class CoreWorkspace: Disposable, AutoCloseable, CoreWorkspaceInterface
         FfiConverterString.lower(`taskId`),
         FfiConverterOptionalString.lower(`waitingOn`),
         FfiConverterOptionalLong.lower(`followUpAtMs`),
+        FfiConverterOptionalUInt.lower(`followUpEveryDays`),
         FfiConverterLong.lower(`nowMs`),_status)
 }
     }
@@ -15986,6 +15996,11 @@ data class FollowUpPlan (
     var `title`: kotlin.String
     , 
     var `dueAtMs`: kotlin.Long
+    , 
+    /**
+     * Which follow-up of the spell it is, from 1.
+     */
+    var `number`: kotlin.UInt
     
 ){
     
@@ -16006,6 +16021,7 @@ public object FfiConverterTypeFollowUpPlan: FfiConverterRustBuffer<FollowUpPlan>
             FfiConverterString.read(buf),
             FfiConverterString.read(buf),
             FfiConverterLong.read(buf),
+            FfiConverterUInt.read(buf),
         )
     }
 
@@ -16013,7 +16029,8 @@ public object FfiConverterTypeFollowUpPlan: FfiConverterRustBuffer<FollowUpPlan>
             FfiConverterString.allocationSize(value.`taskId`) +
             FfiConverterString.allocationSize(value.`sourceTaskId`) +
             FfiConverterString.allocationSize(value.`title`) +
-            FfiConverterLong.allocationSize(value.`dueAtMs`)
+            FfiConverterLong.allocationSize(value.`dueAtMs`) +
+            FfiConverterUInt.allocationSize(value.`number`)
     )
 
     override fun write(value: FollowUpPlan, buf: ByteBuffer) {
@@ -16021,6 +16038,7 @@ public object FfiConverterTypeFollowUpPlan: FfiConverterRustBuffer<FollowUpPlan>
             FfiConverterString.write(value.`sourceTaskId`, buf)
             FfiConverterString.write(value.`title`, buf)
             FfiConverterLong.write(value.`dueAtMs`, buf)
+            FfiConverterUInt.write(value.`number`, buf)
     }
 }
 
@@ -18498,6 +18516,17 @@ data class MetadataRow (
     var `waitingFollowUpTaskId`: kotlin.String?
     , 
     var `followUpOfTaskId`: kotlin.String?
+    , 
+    /**
+     * Chase again every this many days after a follow-up is done; `None`
+     * is once (`v32_follow_up_repeat`).
+     */
+    var `waitingFollowUpEveryDays`: kotlin.UInt?
+    , 
+    /**
+     * How many follow-ups this spell of waiting has made.
+     */
+    var `waitingFollowUpCount`: kotlin.UInt
     
 ){
     
@@ -18531,6 +18560,8 @@ public object FfiConverterTypeMetadataRow: FfiConverterRustBuffer<MetadataRow> {
             FfiConverterOptionalLong.read(buf),
             FfiConverterOptionalString.read(buf),
             FfiConverterOptionalString.read(buf),
+            FfiConverterOptionalUInt.read(buf),
+            FfiConverterUInt.read(buf),
         )
     }
 
@@ -18551,7 +18582,9 @@ public object FfiConverterTypeMetadataRow: FfiConverterRustBuffer<MetadataRow> {
             FfiConverterOptionalString.allocationSize(value.`waitingOn`) +
             FfiConverterOptionalLong.allocationSize(value.`waitingFollowUpAtMs`) +
             FfiConverterOptionalString.allocationSize(value.`waitingFollowUpTaskId`) +
-            FfiConverterOptionalString.allocationSize(value.`followUpOfTaskId`)
+            FfiConverterOptionalString.allocationSize(value.`followUpOfTaskId`) +
+            FfiConverterOptionalUInt.allocationSize(value.`waitingFollowUpEveryDays`) +
+            FfiConverterUInt.allocationSize(value.`waitingFollowUpCount`)
     )
 
     override fun write(value: MetadataRow, buf: ByteBuffer) {
@@ -18572,6 +18605,8 @@ public object FfiConverterTypeMetadataRow: FfiConverterRustBuffer<MetadataRow> {
             FfiConverterOptionalLong.write(value.`waitingFollowUpAtMs`, buf)
             FfiConverterOptionalString.write(value.`waitingFollowUpTaskId`, buf)
             FfiConverterOptionalString.write(value.`followUpOfTaskId`, buf)
+            FfiConverterOptionalUInt.write(value.`waitingFollowUpEveryDays`, buf)
+            FfiConverterUInt.write(value.`waitingFollowUpCount`, buf)
     }
 }
 
@@ -21628,6 +21663,11 @@ data class WaitingState (
      * The follow-up already made for it, if any.
      */
     var `madeFollowUpTaskId`: kotlin.String?
+    , 
+    /**
+     * How many follow-ups this spell of waiting has already made.
+     */
+    var `followUpCount`: kotlin.UInt
     
 ){
     
@@ -21651,6 +21691,7 @@ public object FfiConverterTypeWaitingState: FfiConverterRustBuffer<WaitingState>
             FfiConverterOptionalString.read(buf),
             FfiConverterOptionalLong.read(buf),
             FfiConverterOptionalString.read(buf),
+            FfiConverterUInt.read(buf),
         )
     }
 
@@ -21661,7 +21702,8 @@ public object FfiConverterTypeWaitingState: FfiConverterRustBuffer<WaitingState>
             FfiConverterOptionalString.allocationSize(value.`column`) +
             FfiConverterOptionalString.allocationSize(value.`waitingOn`) +
             FfiConverterOptionalLong.allocationSize(value.`followUpAtMs`) +
-            FfiConverterOptionalString.allocationSize(value.`madeFollowUpTaskId`)
+            FfiConverterOptionalString.allocationSize(value.`madeFollowUpTaskId`) +
+            FfiConverterUInt.allocationSize(value.`followUpCount`)
     )
 
     override fun write(value: WaitingState, buf: ByteBuffer) {
@@ -21672,6 +21714,7 @@ public object FfiConverterTypeWaitingState: FfiConverterRustBuffer<WaitingState>
             FfiConverterOptionalString.write(value.`waitingOn`, buf)
             FfiConverterOptionalLong.write(value.`followUpAtMs`, buf)
             FfiConverterOptionalString.write(value.`madeFollowUpTaskId`, buf)
+            FfiConverterUInt.write(value.`followUpCount`, buf)
     }
 }
 
@@ -22948,6 +22991,17 @@ sealed class CoreException: kotlin.Exception() {
     }
     
     /**
+     * A follow-up repeat outside 1 to 365 days (`waiting.rs`).
+     */
+    class InvalidFollowUpRepeat(
+        
+        val `days`: kotlin.UInt
+        ) : CoreException() {
+        override val message
+            get() = "days=${ `days` }"
+    }
+    
+    /**
      * A Google Calendar answer the core could not read
      * (`google_calendar.rs`).
      */
@@ -23035,7 +23089,10 @@ public object FfiConverterTypeCoreError : FfiConverterRustBuffer<CoreException> 
                 FfiConverterString.read(buf),
                 )
             30 -> CoreException.InvalidEstimate()
-            31 -> CoreException.GoogleCalendar(
+            31 -> CoreException.InvalidFollowUpRepeat(
+                FfiConverterUInt.read(buf),
+                )
+            32 -> CoreException.GoogleCalendar(
                 FfiConverterString.read(buf),
                 )
             else -> throw RuntimeException("invalid error enum value, something is very wrong!!")
@@ -23177,6 +23234,11 @@ public object FfiConverterTypeCoreError : FfiConverterRustBuffer<CoreException> 
             is CoreException.InvalidEstimate -> (
                 // Add the size for the Int that specifies the variant plus the size needed for all fields
                 4UL
+            )
+            is CoreException.InvalidFollowUpRepeat -> (
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                4UL
+                + FfiConverterUInt.allocationSize(value.`days`)
             )
             is CoreException.GoogleCalendar -> (
                 // Add the size for the Int that specifies the variant plus the size needed for all fields
@@ -23322,8 +23384,13 @@ public object FfiConverterTypeCoreError : FfiConverterRustBuffer<CoreException> 
                 buf.putInt(30)
                 Unit
             }
-            is CoreException.GoogleCalendar -> {
+            is CoreException.InvalidFollowUpRepeat -> {
                 buf.putInt(31)
+                FfiConverterUInt.write(value.`days`, buf)
+                Unit
+            }
+            is CoreException.GoogleCalendar -> {
+                buf.putInt(32)
                 FfiConverterString.write(value.`detail`, buf)
                 Unit
             }
@@ -33911,6 +33978,25 @@ public object FfiConverterMapStringTypeSyncValue: FfiConverterRustBuffer<Map<kot
     
 
         /**
+         * What a waiting card adds after `↻ Thu 14:00`: `#3 · every 3d`, or
+         * nothing for a first follow-up that happens once.
+         */ fun `waitingChaseLabel`(`sourceTaskId`: kotlin.String, `followUpAtMs`: kotlin.Long, `madeFollowUpTaskId`: kotlin.String?, `followUpCount`: kotlin.UInt, `everyDays`: kotlin.UInt?): kotlin.String? {
+            return FfiConverterOptionalString.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_waiting_chase_label(
+    
+        
+        FfiConverterString.lower(`sourceTaskId`),
+        FfiConverterLong.lower(`followUpAtMs`),
+        FfiConverterOptionalString.lower(`madeFollowUpTaskId`),
+        FfiConverterUInt.lower(`followUpCount`),
+        FfiConverterOptionalUInt.lower(`everyDays`),_status)
+}
+    )
+    }
+    
+
+        /**
          * The follow-up to make for `task` at `now_ms`, if one is due.
          * `WaitingFollowUp.dueFollowUp`.
          */ fun `waitingDueFollowUp`(`task`: WaitingState, `nowMs`: kotlin.Long): FollowUpPlan? {
@@ -33943,15 +34029,17 @@ public object FfiConverterMapStringTypeSyncValue: FfiConverterRustBuffer<Map<kot
     
 
         /**
-         * "Follow up with Sam: Contract signed". `WaitingFollowUp.title`.
-         */ fun `waitingFollowUpTitle`(`title`: kotlin.String, `waitingOn`: kotlin.String?): kotlin.String {
+         * "Follow up with Sam: Contract signed", or "Follow up #2 with Sam: ..."
+         * from the second follow-up of a spell on. `WaitingFollowUp.title`.
+         */ fun `waitingFollowUpTitle`(`title`: kotlin.String, `waitingOn`: kotlin.String?, `number`: kotlin.UInt): kotlin.String {
             return FfiConverterString.lift(
     uniffiRustCall() { _status ->
     UniffiLib.uniffi_takt_core_fn_func_waiting_follow_up_title(
     
         
         FfiConverterString.lower(`title`),
-        FfiConverterOptionalString.lower(`waitingOn`),_status)
+        FfiConverterOptionalString.lower(`waitingOn`),
+        FfiConverterUInt.lower(`number`),_status)
 }
     )
     }

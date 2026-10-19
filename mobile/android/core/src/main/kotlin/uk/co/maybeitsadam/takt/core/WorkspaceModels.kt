@@ -125,7 +125,17 @@ data class TaskMetadata(
     val followUpOfTaskId: String? = null,
     /** Its place within its matrix quadrant, lowest first (`v22_matrix_order`). */
     val matrixRank: Int? = null,
-)
+    /** Chase again every this many days after a follow-up is done; null is once (`v32_follow_up_repeat`). */
+    val waitingFollowUpEveryDays: Int? = null,
+    /** How many follow-ups this spell of waiting has made. */
+    val waitingFollowUpCount: Int = 0,
+) {
+    /** What a card adds after the follow-up time: `#3 · every 3d`, or null. See [WaitingFollowUp.chase]. */
+    val followUpChase: String?
+        get() = waitingFollowUpAt?.let {
+            WaitingFollowUp.chase(taskId, it, waitingFollowUpTaskId, waitingFollowUpCount, waitingFollowUpEveryDays)
+        }
+}
 
 data class TaskEditorMetadata(
     val priority: Int? = null,

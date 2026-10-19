@@ -24,6 +24,10 @@ data class TaskInspectorFacts(
     val waitingOn: String? = null,
     /** When to chase it. */
     val followUpAt: java.time.Instant? = null,
+    /** Chase again every this many days after a follow-up is done; null is once. */
+    val followUpEveryDays: Int? = null,
+    /** What the follow-up time carries after it: `#3 · every 3d`, or null. */
+    val followUpChase: String? = null,
 ) {
     val isPlannedToday: Boolean get() = kanbanColumn == NextUpSelector.todayColumnID
 }
@@ -48,5 +52,7 @@ private fun inspectorFacts(db: Db, taskId: String): TaskInspectorFacts {
         workBlockCount = work.workBlocks.toInt(),
         waitingOn = metadata?.waitingOn,
         followUpAt = metadata?.waitingFollowUpAt,
+        followUpEveryDays = metadata?.waitingFollowUpEveryDays,
+        followUpChase = metadata?.followUpChase,
     )
 }

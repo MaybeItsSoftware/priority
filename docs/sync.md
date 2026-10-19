@@ -204,6 +204,19 @@ the next link write (`core/src/links.rs`). It reinstalls every journal and
 outbox trigger. A client older than v31 drops the column on pull and draws
 its links from the address alone. See `docs/links.md`.
 
+`v32_follow_up_repeat` adds two columns to `task_metadata`:
+`waitingFollowUpEveryDays INTEGER` (chase again every so many days, 1 to 365,
+after a follow-up is completed; NULL is once) and `waitingFollowUpCount
+INTEGER NOT NULL DEFAULT 0` (how many follow-ups this spell of waiting has
+made, which numbers the next: "Follow up #2 with Sam: …"). Completing a
+follow-up moves its source's `waitingFollowUpAt` on in the same step, so the
+next follow-up's id — still SHA-256 of the source and the time — is the same
+on every device that makes it. Each column merges on its own like the rest
+of the row. It reinstalls every journal and outbox trigger. A client older
+than v32 drops both on pull, makes unnumbered follow-ups, and never moves the
+time on; a repeat set elsewhere still applies when a newer client completes
+the follow-up. See `core/src/waiting.rs`.
+
 The following are not synced: the undo journal (`undo_control`, `change_log`), the FTS index
 (rebuilt by its own triggers as synced rows land), `grdb_migrations`, and the
 sync tables themselves. Day-log files stay per device. Theme *files* do

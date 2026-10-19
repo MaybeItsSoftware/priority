@@ -387,6 +387,10 @@ pub enum WsCommand {
         /// When to follow up, e.g. "2026-10-08 14:00". Empty clears.
         #[arg(long, value_name = "WHEN")]
         follow_up: Option<String>,
+        /// Chase again every N days after a follow-up is done (1-365); 0
+        /// makes it once.
+        #[arg(long, value_name = "DAYS")]
+        every: Option<u32>,
         /// Due on a day ("2026-10-17") or by a time ("2026-10-17 17:00").
         /// Empty clears.
         #[arg(long, short = 'd', value_name = "WHEN")]
@@ -1062,6 +1066,7 @@ fn resolve_workspace(
             unpin,
             waiting_on,
             follow_up,
+            every,
             due,
             start,
             priority,
@@ -1081,6 +1086,9 @@ fn resolve_workspace(
             }
             insert_if_some(arguments, "waiting_on", waiting_on.as_deref());
             insert_if_some(arguments, "follow_up_at", follow_up.as_deref());
+            if let Some(days) = every {
+                arguments.insert("follow_up_every_days".into(), json!(days));
+            }
             insert_if_some(arguments, "due", due.as_deref());
             insert_if_some(arguments, "start", start.as_deref());
             if let Some(priority) = priority {

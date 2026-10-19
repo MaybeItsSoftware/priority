@@ -278,10 +278,13 @@ class TaskInspectorViewModel(private val container: AppContainer) : ViewModel() 
         container.undo.perform { it.setKanbanColumn(column, id) }
     }
 
-    /** Files the task in Waiting on with [tag] and [followUpAt] (either may be null), as one undo step. */
-    fun setWaiting(tag: String?, followUpAt: java.time.Instant?) {
+    /**
+     * Files the task in Waiting on with [tag] and [followUpAt] (either may be null), following up again
+     * every [everyDays] days after each follow-up is done (null for once), as one undo step.
+     */
+    fun setWaiting(tag: String?, followUpAt: java.time.Instant?, everyDays: Int?) {
         val id = taskId.value ?: return
-        container.undo.perform { it.setWaiting(id, tag, followUpAt) }
+        container.undo.perform { it.setWaiting(id, tag, followUpAt, everyDays) }
     }
 
     /** Makes the task wait on [blockerId], as one "Add Blocker" step; a cycle is refused with a message. */

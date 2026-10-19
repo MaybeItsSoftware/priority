@@ -771,6 +771,10 @@ fn workspace_tool_definitions() -> Vec<Value> {
                         "type": ["string", "null"],
                         "description": "When to chase it: 2026-10-08 14:00 (local) or RFC 3339. Files it in the waiting-on column; if it is still waiting then, Takt adds a 'Follow up' task to Today. Null or empty clears it.",
                     },
+                    "follow_up_every_days": {
+                        "type": ["integer", "null"],
+                        "description": "Chase again every this many days (1 to 365): when the follow-up task is completed while this task is still waiting, its next follow-up is set that many days on, at the same time of day, and the next follow-up is numbered ('Follow up #2 with Sam: ...'). One never completed makes no more. Null or 0 makes it once. Needs follow_up_at.",
+                    },
                     "due": {
                         "type": ["string", "null"],
                         "description": "When it is due. A date (2026-10-17) means any time that day; a date and time (2026-10-17 17:00, local, or RFC 3339) means by then. Replaces whichever it had. Null or empty clears it.",

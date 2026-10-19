@@ -531,10 +531,18 @@ private fun WaitingSection(
     var time by rememberSaveable(task.id, savedAt) {
         mutableStateOf(savedAt?.let { DateFieldMath.time(it, zone) } ?: LocalTime.of(9, 0))
     }
+    val savedEvery = facts.followUpEveryDays
+    var every by rememberSaveable(task.id, savedEvery) { mutableStateOf(savedEvery) }
     val followUpAt = day?.let { DateFieldMath.combine(it, time, zone) }
+    // A repeat needs a time; without one it is dropped, as the core drops it.
+    val everyDays = every.takeIf { followUpAt != null }
     val isWaiting = facts.kanbanColumn == WaitingFollowUp.WAITING_COLUMN_ID
-    val changed = WaitingFollowUp.normalizedTag(tag) != facts.waitingOn || followUpAt != savedAt
-    InspectorSection("Waiting on", detail = if (isWaiting) savedAt?.let { WaitingFollowUp.label(it, today, zone) } else null) {
+    val changed = WaitingFollowUp.normalizedTag(tag) != facts.waitingOn || followUpAt != savedAt ||
+        everyDays != savedEvery
+    InspectorSection(
+        "Waiting on",
+        detail = if (isWaiting) savedAt?.let { WaitingFollowUp.label(it, today, zone, facts.followUpChase) } else null,
+    ) {
         ChalkField(
             tag,
             onValueChange = { tag = it.take(WaitingFollowUp.MAXIMUM_TAG_LENGTH) },
@@ -554,20 +562,53 @@ private fun WaitingSection(
             onTime = { time = it },
             testTag = "inspector_follow_up",
         )
+        if (followUpAt != null) {
+            FollowUpRepeat(every, onChange = { every = it })
+        }
         Row(horizontalArrangement = Arrangement.spacedBy(Metrics.sm), verticalAlignment = Alignment.CenterVertically) {
             Spacer(Modifier.weight(1f))
             PButton(
                 if (isWaiting) "Save" else "Move to Waiting on",
                 primary = true,
                 enabled = changed || !isWaiting,
-                onClick = { vm.setWaiting(tag, followUpAt) },
+                onClick = { vm.setWaiting(tag, followUpAt, everyDays) },
                 modifier = Modifier.testTag("inspector_waiting_save"),
             )
         }
         Hint(
             if (followUpAt == null) "Files it in Waiting on. Pick a time to have a follow-up land in Today."
-            else "If it is still waiting then, “${WaitingFollowUp.title(task.title, tag)}” lands in Today.",
+            else if (everyDays == null) "If it is still waiting then, “${WaitingFollowUp.title(task.title, tag)}” lands in Today."
+            else "If it is still waiting then, “${WaitingFollowUp.title(task.title, tag)}” lands in Today; " +
+                "once that is done, the next lands ${WaitingFollowUp.repeatText(everyDays).lowercase()} later, numbered #2, #3.",
         )
+    }
+}
+
+/** Once, or every so many days: the follow-up's repeat, saved with the rest of the section. */
+@Composable
+private fun FollowUpRepeat(every: Int?, onChange: (Int?) -> Unit) {
+    val colors = TaktTheme.colors
+    FieldLabel("Repeat")
+    Segmented(
+        options = listOf(Segment("Once", false), Segment("Every few days", true)),
+        selected = every != null,
+        onSelect = { repeats -> onChange(if (repeats) every ?: 3 else null) },
+    )
+    if (every != null) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Metrics.sm)) {
+            StepButton(InspectorIcons.Minus, "Fewer days between follow-ups", enabled = every > WaitingFollowUp.EVERY_DAYS_RANGE.first) {
+                onChange(WaitingFollowUp.stepEveryDays(every, -1))
+            }
+            Text(
+                WaitingFollowUp.repeatText(every),
+                style = TaktTheme.type.mono.copy(fontSize = TaktTheme.type.body.fontSize),
+                color = colors.ink,
+                modifier = Modifier.weight(1f).testTag("inspector_follow_up_every"),
+            )
+            StepButton(Icons.Filled.Add, "More days between follow-ups", enabled = every < WaitingFollowUp.EVERY_DAYS_RANGE.last) {
+                onChange(WaitingFollowUp.stepEveryDays(every, 1))
+            }
+        }
     }
 }
 

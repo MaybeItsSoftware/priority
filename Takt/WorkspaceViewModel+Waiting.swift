@@ -63,15 +63,16 @@ extension WorkspaceViewModel {
     presentOverlay(.waiting(WorkspaceWaitingRequest(task: task, details: waitingDetails[task.id])))
   }
 
-  /// Sets what `task` waits on and when to follow up, filing it in Waiting
-  /// on. Returns an error message, or nil once saved.
+  /// Sets what `task` waits on, when to follow up and every how many days
+  /// to follow up again (nil for once), filing it in Waiting on. Returns an
+  /// error message, or nil once saved.
   @discardableResult
-  func setWaiting(_ task: WorkspaceTask, waitingOn: String?, followUpAt: Date?) -> String? {
+  func setWaiting(_ task: WorkspaceTask, waitingOn: String?, followUpAt: Date?, everyDays: Int?) -> String? {
     guard let store else { return "The workspace is not open." }
     var failure: String?
     perform {
       do {
-        try store.setWaiting(taskId: task.id, waitingOn: waitingOn, followUpAt: followUpAt)
+        try store.setWaiting(taskId: task.id, waitingOn: waitingOn, followUpAt: followUpAt, everyDays: everyDays)
       } catch {
         failure = error.localizedDescription
         throw error

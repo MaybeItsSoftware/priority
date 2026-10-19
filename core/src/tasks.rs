@@ -826,6 +826,16 @@ pub fn set_status(
         schedule_next_occurrence(transaction, task_id, now_ms, crate::periodic::zone(zone))?;
         expire_habits(transaction, task_id, now_ms)?;
     }
+    // Doing a follow-up whose task repeats its chase sets the next one; a
+    // follow-up cancelled or deleted sets nothing, so the chain stops there.
+    if status == "completed" && was_open {
+        crate::waiting::schedule_next_follow_up(
+            transaction,
+            task_id,
+            now_ms,
+            crate::periodic::zone(zone),
+        )?;
+    }
     if status != "open" {
         close_open_descendants(transaction, task_id, status, &now, now_ms)?;
     }

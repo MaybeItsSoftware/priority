@@ -98,6 +98,11 @@ pub struct MetadataRow {
     pub waiting_follow_up_at_ms: Option<i64>,
     pub waiting_follow_up_task_id: Option<String>,
     pub follow_up_of_task_id: Option<String>,
+    /// Chase again every this many days after a follow-up is done; `None`
+    /// is once (`v32_follow_up_repeat`).
+    pub waiting_follow_up_every_days: Option<u32>,
+    /// How many follow-ups this spell of waiting has made.
+    pub waiting_follow_up_count: u32,
 }
 
 /// A row of `focus_sessions`. `FocusSession`.
@@ -272,6 +277,8 @@ impl MetadataRow {
             waiting_follow_up_at_ms: optional_ms(row, "waitingFollowUpAt")?,
             waiting_follow_up_task_id: row.get("waitingFollowUpTaskId")?,
             follow_up_of_task_id: row.get("followUpOfTaskId")?,
+            waiting_follow_up_every_days: row.get("waitingFollowUpEveryDays")?,
+            waiting_follow_up_count: row.get("waitingFollowUpCount")?,
         })
     }
 }
