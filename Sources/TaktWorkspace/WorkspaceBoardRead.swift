@@ -25,12 +25,17 @@ public struct WorkspaceBoardRead: Sendable, Equatable {
   public var positions: [String: TaskMatrixPosition]
   /// When each open drawn task with a start starts.
   public var starts: [String: Date]
+  /// The cards the board draws as cards: `cards` less any another card
+  /// holds, which it draws in that card's tree (the core's `board_cards`).
+  public var boardCards: [WorkspaceTask]
 
   public init(
     cards: [WorkspaceTask], descendants: [String: [TaskOutlineItem]], parentIDs: [String: String],
-    columns: [String: String], positions: [String: TaskMatrixPosition], starts: [String: Date] = [:]
+    columns: [String: String], positions: [String: TaskMatrixPosition], starts: [String: Date] = [:],
+    boardCards: [WorkspaceTask]? = nil
   ) {
     self.cards = cards
+    self.boardCards = boardCards ?? cards
     self.descendants = descendants
     self.parentIDs = parentIDs
     self.columns = columns
@@ -115,6 +120,7 @@ extension WorkspaceStore {
     }
     return WorkspaceBoardRead(
       cards: Self.unpacked(read.cards).map { rows[Int($0)] }, descendants: descendants, parentIDs: parentIDs,
-      columns: columns, positions: positions, starts: starts)
+      columns: columns, positions: positions, starts: starts,
+      boardCards: Self.unpacked(read.boardCards).map { rows[Int($0)] })
   }
 }

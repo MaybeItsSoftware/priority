@@ -64,6 +64,14 @@ pub struct BoardRead {
     /// Packed: the cards in board order (sidebar order, then outline order),
     /// as indexes into `rows`.
     pub cards: Vec<u8>,
+    /// Packed: the cards a board draws as cards, in the same order — those
+    /// no other card holds. `cards` is every open task, at any depth, which
+    /// the flat outline and next up want; but a card draws its tree, so a
+    /// subtask standing beside its parent's card was the same task twice. A
+    /// list's board takes its top level the same way. A subtask filed in
+    /// another column than its card is still a card there: the clients'
+    /// cross-column rule (`board_rules::board_cross_column`) brings it back.
+    pub board_cards: Vec<u8>,
     /// Packed: each node's parent node, or `u32::MAX` for a task with no
     /// parent the walk reached. Covers every task the walk reached in a list
     /// that has a card.
@@ -243,6 +251,24 @@ pub fn combined_board_of(
 
     let mut placements = placements(connection)?;
     let other_ids = other.iter().map(|&index| tasks[index].id.clone()).collect();
+    let held_by_a_card = |card: usize| {
+        let mut at = parent_of.get(&card);
+        // Bounded, so a corrupt cycle ends rather than loops.
+        for _ in 0..tasks.len() {
+            match at {
+                Some(parent) if card_set.contains(parent) => return true,
+                Some(parent) => at = parent_of.get(parent),
+                None => return false,
+            }
+        }
+        false
+    };
+    let board_cards = packed(
+        cards
+            .iter()
+            .filter(|&&card| !held_by_a_card(card))
+            .map(|card| node_of[card]),
+    );
     let cards = packed(cards.iter().map(|card| node_of[card]));
     let placements = drawn
         .iter()
@@ -265,6 +291,7 @@ pub fn combined_board_of(
         placements,
         other_ids,
         cards,
+        board_cards,
         parents,
         tree_keys: packed(tree_keys),
         tree_rows: packed(tree_rows),

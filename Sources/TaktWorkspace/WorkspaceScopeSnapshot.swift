@@ -323,7 +323,11 @@ public enum WorkspaceScopeShaping {
       allPositions = positions
     case .combined(let board):
       parentTaskID = nil
-      cards = board.cards
+      // Not `board.cards`, which is every open task at any depth, for the
+      // flat outline: a subtask there stood beside its parent's card as well
+      // as on it. One filed in another column comes back below, as a list's
+      // board brings it back.
+      cards = board.boardCards
       later = Later(hides: options.hidesLaterTasks, now: now, read: read, parents: board.parentIDs)
       cards.removeAll { ($0.isList && $0.archivedAt != nil) || later.hides($0) || completions.hides($0) }
       allDescendants = board.descendants

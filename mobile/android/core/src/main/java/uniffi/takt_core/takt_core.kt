@@ -11373,6 +11373,17 @@ data class BoardRead (
     var `cards`: kotlin.ByteArray
     , 
     /**
+     * Packed: the cards a board draws as cards, in the same order — those
+     * no other card holds. `cards` is every open task, at any depth, which
+     * the flat outline and next up want; but a card draws its tree, so a
+     * subtask standing beside its parent's card was the same task twice. A
+     * list's board takes its top level the same way. A subtask filed in
+     * another column than its card is still a card there: the clients'
+     * cross-column rule (`board_rules::board_cross_column`) brings it back.
+     */
+    var `boardCards`: kotlin.ByteArray
+    , 
+    /**
      * Packed: each node's parent node, or `u32::MAX` for a task with no
      * parent the walk reached. Covers every task the walk reached in a list
      * that has a card.
@@ -11419,6 +11430,7 @@ public object FfiConverterTypeBoardRead: FfiConverterRustBuffer<BoardRead> {
             FfiConverterByteArray.read(buf),
             FfiConverterByteArray.read(buf),
             FfiConverterByteArray.read(buf),
+            FfiConverterByteArray.read(buf),
         )
     }
 
@@ -11427,6 +11439,7 @@ public object FfiConverterTypeBoardRead: FfiConverterRustBuffer<BoardRead> {
             FfiConverterSequenceTypeBoardPlacement.allocationSize(value.`placements`) +
             FfiConverterSequenceString.allocationSize(value.`otherIds`) +
             FfiConverterByteArray.allocationSize(value.`cards`) +
+            FfiConverterByteArray.allocationSize(value.`boardCards`) +
             FfiConverterByteArray.allocationSize(value.`parents`) +
             FfiConverterByteArray.allocationSize(value.`treeKeys`) +
             FfiConverterByteArray.allocationSize(value.`treeRows`) +
@@ -11438,6 +11451,7 @@ public object FfiConverterTypeBoardRead: FfiConverterRustBuffer<BoardRead> {
             FfiConverterSequenceTypeBoardPlacement.write(value.`placements`, buf)
             FfiConverterSequenceString.write(value.`otherIds`, buf)
             FfiConverterByteArray.write(value.`cards`, buf)
+            FfiConverterByteArray.write(value.`boardCards`, buf)
             FfiConverterByteArray.write(value.`parents`, buf)
             FfiConverterByteArray.write(value.`treeKeys`, buf)
             FfiConverterByteArray.write(value.`treeRows`, buf)

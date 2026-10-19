@@ -6397,6 +6397,16 @@ public struct BoardRead: Equatable, Hashable {
      */
     public var cards: Data
     /**
+     * Packed: the cards a board draws as cards, in the same order — those
+     * no other card holds. `cards` is every open task, at any depth, which
+     * the flat outline and next up want; but a card draws its tree, so a
+     * subtask standing beside its parent's card was the same task twice. A
+     * list's board takes its top level the same way. A subtask filed in
+     * another column than its card is still a card there: the clients'
+     * cross-column rule (`board_rules::board_cross_column`) brings it back.
+     */
+    public var boardCards: Data
+    /**
      * Packed: each node's parent node, or `u32::MAX` for a task with no
      * parent the walk reached. Covers every task the walk reached in a list
      * that has a card.
@@ -6437,6 +6447,15 @@ public struct BoardRead: Equatable, Hashable {
          * as indexes into `rows`.
          */cards: Data, 
         /**
+         * Packed: the cards a board draws as cards, in the same order — those
+         * no other card holds. `cards` is every open task, at any depth, which
+         * the flat outline and next up want; but a card draws its tree, so a
+         * subtask standing beside its parent's card was the same task twice. A
+         * list's board takes its top level the same way. A subtask filed in
+         * another column than its card is still a card there: the clients'
+         * cross-column rule (`board_rules::board_cross_column`) brings it back.
+         */boardCards: Data, 
+        /**
          * Packed: each node's parent node, or `u32::MAX` for a task with no
          * parent the walk reached. Covers every task the walk reached in a list
          * that has a card.
@@ -6456,6 +6475,7 @@ public struct BoardRead: Equatable, Hashable {
         self.placements = placements
         self.otherIds = otherIds
         self.cards = cards
+        self.boardCards = boardCards
         self.parents = parents
         self.treeKeys = treeKeys
         self.treeRows = treeRows
@@ -6482,6 +6502,7 @@ public struct FfiConverterTypeBoardRead: FfiConverterRustBuffer {
                 placements: FfiConverterSequenceTypeBoardPlacement.read(from: &buf), 
                 otherIds: FfiConverterSequenceString.read(from: &buf), 
                 cards: FfiConverterData.read(from: &buf), 
+                boardCards: FfiConverterData.read(from: &buf), 
                 parents: FfiConverterData.read(from: &buf), 
                 treeKeys: FfiConverterData.read(from: &buf), 
                 treeRows: FfiConverterData.read(from: &buf), 
@@ -6494,6 +6515,7 @@ public struct FfiConverterTypeBoardRead: FfiConverterRustBuffer {
         FfiConverterSequenceTypeBoardPlacement.write(value.placements, into: &buf)
         FfiConverterSequenceString.write(value.otherIds, into: &buf)
         FfiConverterData.write(value.cards, into: &buf)
+        FfiConverterData.write(value.boardCards, into: &buf)
         FfiConverterData.write(value.parents, into: &buf)
         FfiConverterData.write(value.treeKeys, into: &buf)
         FfiConverterData.write(value.treeRows, into: &buf)

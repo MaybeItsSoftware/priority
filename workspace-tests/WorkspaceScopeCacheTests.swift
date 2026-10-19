@@ -62,10 +62,28 @@ final class WorkspaceScopeCacheTests: XCTestCase {
     let board = try store.combinedBoard(listIds: ids, hidingCompletedBefore: nil)
     let read = try store.scopeRead(.combined(ids), hidingCompletedBefore: nil)
     let shape = WorkspaceScopeShaping.board(read, options: options, now: Date()).board
-    XCTAssertEqual(shape.cards, board.cards)
+    XCTAssertEqual(shape.cards, board.boardCards)
     XCTAssertEqual(shape.descendants, board.descendants)
     XCTAssertEqual(WorkspaceScopeShaping.outline(read, options: options, now: Date()).items.map(\.id),
       board.cards.map(\.id))
+  }
+
+  func testACombinedBoardDrawsASubtaskOnItsCardNotBesideIt() throws {
+    let work = try makeList("Work")
+    let home = try makeList("Home")
+    let card = try store.listTree(in: work.id).children(of: nil)[0]
+    let child = try store.listTree(in: work.id).children(of: card.id)[0]
+    let read = try store.scopeRead(.combined([work.id, home.id]), hidingCompletedBefore: nil)
+    let shape = WorkspaceScopeShaping.board(read, options: options, now: Date()).board
+    XCTAssertFalse(shape.cards.contains { $0.id == child.id }, "drawn on its card, not as one")
+    XCTAssertTrue(shape.descendants[card.id, default: []].contains { $0.id == child.id })
+    // Filed in a column other than its card's, it is a card there too.
+    try store.setKanbanColumn("doing", for: [child.id])
+    let filed = try store.scopeRead(.combined([work.id, home.id]), hidingCompletedBefore: nil)
+    let crossed = WorkspaceScopeShaping.board(filed, options: options, now: Date()).board
+    XCTAssertTrue(crossed.crossColumnTasks.contains { $0.id == child.id })
+    // The flat outline still lists every task.
+    XCTAssertTrue(WorkspaceScopeShaping.outline(read, options: options, now: Date()).items.contains { $0.id == child.id })
   }
 
   func testAFinishedTaskLingersUntilItsExpiryThenGoes() throws {

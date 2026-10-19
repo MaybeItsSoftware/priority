@@ -115,6 +115,10 @@ final class WorkspaceBoardReadTests: XCTestCase {
       .filter { seen.insert($0.id).inserted }.map(\.id))
     read.columns = read.columns.filter { ids.contains($0.key) }
     read.positions = read.positions.filter { ids.contains($0.key) }
+    // The trees never had the board's own cut (`boardCards`, tested in
+    // WorkspaceScopeCacheTests and the core's board tests), so it is left
+    // out of the comparison.
+    read.boardCards = read.cards
     return read
   }
 

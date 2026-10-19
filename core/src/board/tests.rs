@@ -130,6 +130,19 @@ fn cards_are_the_open_tasks_outside_closed_lists_and_the_visible_root() {
 }
 
 #[test]
+fn the_board_draws_only_the_cards_no_other_card_holds() {
+    let read = combined_board(&workspace(), &ids(), None).unwrap();
+    let board: Vec<&str> = unpacked(&read.board_cards)
+        .into_iter()
+        .map(|node| id(&read, node))
+        .collect();
+    // `detail` is under `project` (through its finished step), so it is drawn
+    // on that card rather than beside it; the outline still lists it.
+    assert_eq!(board, ["project", "paper", "chore"]);
+    assert!(cards(&read).contains(&"detail"));
+}
+
+#[test]
 fn the_actionable_read_carries_the_cards_alone_in_board_order() {
     let connection = workspace();
     let rows =
