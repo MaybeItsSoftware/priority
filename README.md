@@ -849,7 +849,13 @@ The card shows which follow-up is next and how often:
 naming someone else, or clearing both who and when, starts again from the
 first. The add field's `waiting on Sam` stays as it was; the repeat is set in
 the form, the inspector (a **Repeat** menu on the Mac, Once / Every few days
-on Android) or from `takt`. The iPhone does not edit waiting yet.
+on Android, and on the iPhone, with a − / + stepper that moves a day at a
+time up to a week, then a week at a time) or from `takt`. The iPhone's
+inspector section takes who, a follow-up time (off, a quick Tomorrow 9:00, In
+3 days or Next week, or a date and time picker) and the repeat, and saves them
+with its own **Save** — **Move to Waiting on** when the task is elsewhere —
+or empties them with **Clear**; its outline rows, Today cards, board cards,
+search results and inspector header show the tag and the `↻` time.
 
 The inspector edits all three in place under **Waiting on**. From `takt`,
 `takt ws update <id> --waiting-on Sam --follow-up "2026-10-08 14:00" --every 3`

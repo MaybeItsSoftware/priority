@@ -93,6 +93,7 @@ struct TodayScreen: View {
       } else {
         DayCardRow(
           card: card, index: index + 1, isSelected: isSelected, isBlocked: model.isBlocked(card.id),
+          waiting: model.waitingBadge(card.id),
           onTick: { today.tickOff(card, model: model) },
           onStart: { today.start(card, model: model) },
           onOpen: { model.navigation.inspect(card.id, isPad: isPad) })
@@ -252,13 +253,15 @@ struct DayCardRow: View, Equatable {
   let isSelected: Bool
   /// Waiting on an open task: drawn greyed.
   var isBlocked = false
+  /// Filed in Waiting on: who it waits on and when it is chased.
+  var waiting: WaitingBadge?
   let onTick: () -> Void
   let onStart: () -> Void
   let onOpen: () -> Void
 
   static func == (lhs: DayCardRow, rhs: DayCardRow) -> Bool {
     lhs.card == rhs.card && lhs.index == rhs.index && lhs.isSelected == rhs.isSelected
-      && lhs.isBlocked == rhs.isBlocked
+      && lhs.isBlocked == rhs.isBlocked && lhs.waiting == rhs.waiting
   }
 
   var body: some View {
@@ -293,6 +296,7 @@ struct DayCardRow: View, Equatable {
             if card.dailyID != nil {
               Image(systemName: "repeat").imageScale(.small)
             }
+            if let waiting { WaitingBadgeView(badge: waiting) }
             if let list = card.listName {
               Text(list).lineLimit(1)
             }

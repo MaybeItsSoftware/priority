@@ -94,7 +94,8 @@ struct OutlineView: View {
       } else {
         OutlineRowView(
           row: row, isSelected: isSelected, isBlocked: model.isBlocked(row.id, status: row.status),
-          starts: model.startsLabel(row.id, status: row.status)
+          starts: model.startsLabel(row.id, status: row.status),
+          waiting: model.waitingBadge(row.id, status: row.status)
         ) {
           outline.toggleFold(row.id)
         }
@@ -284,11 +285,13 @@ struct OutlineRowView: View, Equatable {
   /// Open with its start still to come ("starts Mon"): the row steps back
   /// too, and says when it comes back.
   var starts: String?
+  /// Filed in Waiting on: who it waits on and when it is chased.
+  var waiting: WaitingBadge?
   let onFold: () -> Void
 
   static func == (lhs: OutlineRowView, rhs: OutlineRowView) -> Bool {
     lhs.row == rhs.row && lhs.isSelected == rhs.isSelected && lhs.isBlocked == rhs.isBlocked
-      && lhs.starts == rhs.starts
+      && lhs.starts == rhs.starts && lhs.waiting == rhs.waiting
   }
 
   var body: some View {
@@ -371,6 +374,7 @@ struct OutlineRowView: View, Equatable {
         Image(systemName: "sun.max").font(theme.type.glyph(12)).foregroundStyle(theme.warning)
           .accessibilityLabel("Planned for today")
       }
+      if let waiting { WaitingBadgeView(badge: waiting) }
       if row.hasNotes {
         Image(systemName: "note.text").font(theme.type.glyph(11)).foregroundStyle(theme.dim)
       }

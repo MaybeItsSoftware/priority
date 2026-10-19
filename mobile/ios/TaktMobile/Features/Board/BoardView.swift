@@ -338,12 +338,15 @@ struct BoardCardView: View {
 
   @ViewBuilder
   private var badges: some View {
+    let waiting = model.waitingBadge(card.id, status: card.status)
     let hasBadges = card.isPlanned || card.dueAt != nil || (card.estimateSeconds ?? 0) > 0 || card.listName != nil
+      || waiting != nil
     if hasBadges {
       HStack(spacing: theme.space.xs) {
         if card.isPlanned {
           Image(systemName: "sun.max").font(theme.type.glyph(12)).foregroundStyle(theme.warning)
         }
+        if let waiting { WaitingBadgeView(badge: waiting) }
         if let estimate = card.estimateSeconds, estimate > 0 {
           Text(Format.duration(estimate)).font(theme.type.numeral).foregroundStyle(theme.muted)
         }

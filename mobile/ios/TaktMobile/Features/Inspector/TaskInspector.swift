@@ -37,6 +37,7 @@ struct TaskInspector: View {
             plan(task, values)
             notes(values)
             placement
+            WaitingSection(task: task, column: inspector.kanbanColumn)
             if !task.isList { BlockedBySection(task: task) }
             filing(values)
             actions(task)
@@ -108,6 +109,7 @@ struct TaskInspector: View {
         Tag(text: inspector.listName, systemImage: task.isList ? "list.bullet.indent" : "list.bullet")
         if task.status == .completed { Tag(text: "Done", tint: theme.success) }
         if task.status == .cancelled { Tag(text: "Invalidated", tint: theme.muted) }
+        if let waiting = model.waitingBadge(task.id, status: task.status) { WaitingBadgeView(badge: waiting) }
         if inspector.isDirty {
           Tag(text: "Saving…", tint: theme.primary)
             .accessibilityIdentifier("inspector.dirty")

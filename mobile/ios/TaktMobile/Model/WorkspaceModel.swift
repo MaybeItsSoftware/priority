@@ -117,6 +117,9 @@ final class WorkspaceModel {
   /// greyed below the blocked ones (the core's order), with the day they
   /// start. Read after every write and when the app comes forward.
   private(set) var buriedStarts: [String: Date] = [:]
+  /// The tasks filed in Waiting on that name who they wait on or when to
+  /// chase them, for their rows' chips. A small set, read after every write.
+  var waitingDetails: [String: TaskWaitingDetails] = [:]
   var errorMessage: String?
   /// A move of a repeating task onto its next turn, held until the person
   /// chooses what happens. See `WorkspaceModel+RecurrenceClash.swift`.
@@ -263,6 +266,7 @@ final class WorkspaceModel {
   func refreshBlockedTaskIDs() {
     if let blocked = try? store.blockedTaskIds(), blocked != blockedTaskIDs { blockedTaskIDs = blocked }
     if let buried = try? store.buriedStarts(), buried != buriedStarts { buriedStarts = buried }
+    refreshWaitingDetails()
   }
 
   /// "starts Mon" while the task is open and its start is still to come.

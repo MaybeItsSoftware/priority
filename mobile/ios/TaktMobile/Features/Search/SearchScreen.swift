@@ -160,6 +160,7 @@ struct SearchScreen: View {
     // and saying which.
     let isBlocked = model.isBlocked(task.id, status: task.status)
     let starts = model.startsLabel(task.id, status: task.status)
+    let waiting = model.waitingBadge(task.id, status: task.status)
     return Button {
       reveal(result)
     } label: {
@@ -183,6 +184,7 @@ struct SearchScreen: View {
             if let starts {
               Text(starts).font(theme.type.numeral).foregroundStyle(theme.warning).lineLimit(1)
             }
+            if let waiting { WaitingBadgeView(badge: waiting) }
           }
           .font(theme.type.footnote)
           .foregroundStyle(ListColor.color(hex: result.list.colorHex) ?? theme.muted)
