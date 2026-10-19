@@ -116,6 +116,15 @@ enum DeepLink {
       let url = URL(string: arguments[index + 1]) {
       handle(url, model: model)
     }
+    // `-inspect <title>` selects a task, so the iPad's inspector has one;
+    // after a beat, as switching root views clears the selection.
+    if let title = UserDefaults.standard.string(forKey: "inspect"),
+      let hit = try? model.store.searchTasks(in: model.workspace.id, matching: title).first(where: { $0.task.title == title }) {
+      Task {
+        try? await Task.sleep(for: .seconds(1))
+        model.navigation.inspect(hit.task.id, isPad: UIDevice.current.userInterfaceIdiom == .pad)
+      }
+    }
     #endif
   }
 
@@ -143,7 +152,11 @@ enum DeepLink {
       model.navigation.quickAddParentTaskID = nil
       model.navigation.isQuickAddPresented = true
     case "today": model.navigation.go(to: .today, isPad: isPad)
-    case "focus": model.navigation.go(to: .focus, isPad: isPad)
+    case "focus":
+      model.navigation.go(to: .focus, isPad: isPad)
+      #if DEBUG
+      if let title = query(url, "task") { startDemoBlock(title: title, model: model) }
+      #endif
     case "review": model.navigation.go(to: .review, isPad: isPad)
     case "search": model.navigation.go(to: .search, isPad: isPad)
     case "lists":
@@ -164,4 +177,24 @@ enum DeepLink {
     default: break
     }
   }
+
+  #if DEBUG
+  /// DEBUG: a query item off a `takt://` link, for the screenshot routes.
+  static func query(_ url: URL, _ name: String) -> String? {
+    URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems?.first { $0.name == name }?.value
+  }
+
+  /// DEBUG: `takt://focus?task=<title>` starts a block on the task with that
+  /// title, begun a minute and a half ago so the timer is visibly counting.
+  static func startDemoBlock(title: String, model: WorkspaceModel) {
+    let workspaceID = model.workspace.id
+    model.perform { store in
+      guard let hit = try store.searchTasks(in: workspaceID, matching: title).first(where: { $0.task.title == title })
+      else { return }
+      _ = try store.startFocusSession(
+        taskId: hit.task.id, plannedSeconds: hit.task.estimateSeconds ?? 1_500, overrideAvailability: true,
+        now: .now.addingTimeInterval(-95))
+    }
+  }
+  #endif
 }

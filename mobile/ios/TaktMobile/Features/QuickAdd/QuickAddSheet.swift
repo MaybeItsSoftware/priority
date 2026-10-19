@@ -58,6 +58,10 @@ struct QuickAddSheet: View {
     .presentationDragIndicator(.visible)
     .onAppear {
       quickAdd.prepare(model)
+      #if DEBUG
+      // `-quickAddText <text>` types a capture for screenshots.
+      if quickAdd.text.isEmpty, let text = UserDefaults.standard.string(forKey: "quickAddText") { quickAdd.text = text }
+      #endif
       fieldFocused = true
     }
     .onDisappear {

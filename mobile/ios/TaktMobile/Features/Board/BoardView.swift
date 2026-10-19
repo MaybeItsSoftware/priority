@@ -25,6 +25,10 @@ struct BoardView: View {
     }
   }
 
+  #if DEBUG
+  @State private var debugColumnID: String?
+  #endif
+
   init(scope: ListScope) {
     _board = State(initialValue: BoardModel(scope: scope))
   }
@@ -50,6 +54,13 @@ struct BoardView: View {
       }
       .scrollTargetBehavior(.viewAligned)
       .scrollIndicators(.hidden)
+      #if DEBUG
+      // `-boardColumn <id>` scrolls to a column, for screenshots.
+      .scrollPosition(id: $debugColumnID, anchor: .leading)
+      .onChange(of: board.isLoaded) {
+        debugColumnID = UserDefaults.standard.string(forKey: "boardColumn")
+      }
+      #endif
     }
     .background(theme.paper)
     .task(id: QueryKey(revision: model.revision, scope: board.scope)) {

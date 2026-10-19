@@ -63,10 +63,18 @@ extension WorkspaceModel {
       let design = try store.createTask(listId: work.id, title: "Polish the outline rows", parentTaskId: launch.id, dueAt: day(0), estimateSeconds: 2_700)
       _ = try store.createTask(listId: work.id, title: "Hairline separators", parentTaskId: design.id)
       _ = try store.createTask(listId: work.id, title: "Fold chevrons", parentTaskId: design.id)
-      _ = try store.createTask(listId: work.id, title: "Write the README", parentTaskId: launch.id, estimateSeconds: 1_800)
+      let readme = try store.createTask(listId: work.id, title: "Write the README", parentTaskId: launch.id, estimateSeconds: 1_800)
       let screenshots = try store.createTask(listId: work.id, title: "Take screenshots", parentTaskId: launch.id, dueAt: day(1))
-      _ = try store.createTask(listId: work.id, title: "Review sync protocol", dueAt: day(-1), estimateSeconds: 3_600, tags: ["sync"])
-      _ = try store.createTask(listId: work.id, title: "Reply to Sam about the roadmap", estimateSeconds: 900)
+      let sync = try store.createTask(listId: work.id, title: "Review sync protocol", dueAt: day(-1), estimateSeconds: 3_600, tags: ["sync"])
+      let reply = try store.createTask(listId: work.id, title: "Reply to Sam about the roadmap", estimateSeconds: 900)
+      let widget = try store.createTask(listId: work.id, title: "Fix the widget refresh", estimateSeconds: 2_700, tags: ["bug"])
+      let post = try store.createTask(listId: work.id, title: "Draft the launch post", dueAt: day(3), estimateSeconds: 3_600)
+      _ = try store.createTask(listId: work.id, title: "Outline the key points", parentTaskId: post.id)
+      _ = try store.createTask(listId: work.id, title: "Pick three screenshots", parentTaskId: post.id)
+      let appReview = try store.createTask(listId: work.id, title: "Hear back from App Review")
+      let legal = try store.createTask(listId: work.id, title: "Sign-off on the privacy policy", dueAt: day(4))
+      let pricing = try store.createTask(listId: work.id, title: "Price the Pro tier", estimateSeconds: 1_800)
+      let themes = try store.createTask(listId: work.id, title: "Explore a dark theme for the widgets")
       let quarterly = try store.createTask(listId: work.id, title: "Quarterly planning", kind: .list)
       _ = try store.createTask(listId: work.id, title: "Draft goals", parentTaskId: quarterly.id)
 
@@ -75,14 +83,21 @@ extension WorkspaceModel {
       _ = try store.createTask(listId: home.id, title: "Oat milk", parentTaskId: groceries.id)
       _ = try store.createTask(listId: home.id, title: "Coffee beans", parentTaskId: groceries.id)
       _ = try store.createTask(listId: home.id, title: "Water the plants", startAt: day(0))
-      _ = try store.createTask(listId: reading.id, title: "Finish ‘The Timeless Way of Building’", estimateSeconds: 3_600)
+      let book = try store.createTask(listId: reading.id, title: "Read ‘The Timeless Way of Building’", estimateSeconds: 3_600)
+      var planned = [screenshots.id, groceries.id, readme.id, reply.id]
       if let inbox = try store.inbox(in: workspaceID) {
-        _ = try store.createTask(listId: inbox.id, title: "Call the dentist", estimateSeconds: 600)
+        planned.append(try store.createTask(listId: inbox.id, title: "Call the dentist", estimateSeconds: 600).id)
         _ = try store.createTask(listId: inbox.id, title: "Idea: weekly review template")
       }
-      try store.setPlannedForToday(true, taskIds: [screenshots.id, groceries.id])
+      try store.setPlannedForToday(true, taskIds: planned)
       try store.makeDaily(taskId: design.id, targetSeconds: 1_800)
+      try store.makeDaily(taskId: book.id, targetSeconds: 1_200)
       try store.setMatrixPosition(TaskMatrixPosition(urgency: 1, importance: 1), for: launch.id)
+      // Spread the Work board over its columns.
+      try store.setKanbanColumn("in-progress", for: [launch.id, widget.id])
+      try store.setKanbanColumn("this-week", for: [sync.id, post.id])
+      try store.setKanbanColumn("waiting-on", for: [appReview.id, legal.id])
+      try store.setKanbanColumn("backlog", for: [pricing.id, themes.id])
     }
   }
 }
