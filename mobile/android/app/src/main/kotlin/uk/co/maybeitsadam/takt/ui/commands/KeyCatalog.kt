@@ -51,6 +51,7 @@ enum class KeyCommand(
     TASK_DUE_TODAY("taskDueToday"),
     TASK_DUE_TOMORROW("taskDueTomorrow"),
     TASK_CLEAR_DUE("taskClearDue"),
+    TASK_CLEAR_START("taskClearStart"),
     TASK_CLEAR_PRIORITY("taskClearPriority"),
     TASK_SET_PRIORITY("motionSetPriority"),
     TASK_TOGGLE_DAILY("taskToggleDaily"),

@@ -154,6 +154,9 @@ fn task() -> Vec<Spec> {
         c("taskBury", "Bury until tomorrow", "Task", &["bu"])
             .note("Starts it tomorrow: greyed below its siblings until then, and on Today when it arrives"),
         c("taskClearDue", "Clear the due date", "Task", &["cd"]),
+        // `c` starts only `cc`, `cd`, `cn` and `ct`, so `cs` was free.
+        c("taskClearStart", "Clear the start date", "Task", &["cs"])
+            .note("Unburies it: back among its siblings at once"),
         c("taskClearNotes", "Clear the notes", "Task", &["cn"]),
         c("taskClearTags", "Clear the tags", "Task", &["ct"]),
         c("taskClearPriority", "Clear the priority", "Task", &["0"])

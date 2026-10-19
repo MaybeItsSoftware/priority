@@ -178,6 +178,8 @@ final class FocusPanelKeyRouter {
       model.editTaskValues(of: task) { $0.dueAt = day; $0.dueDate = nil }
     case .clearDue:
       model.editTaskValues(of: task) { $0.dueAt = nil; $0.dueDate = nil }
+    case .clearStart:
+      model.editTaskValues(of: task) { $0.startAt = nil }
     case .delete:
       // Never the running block: that one ends through its own finish.
       guard task.id != model.activeFocusSession?.activeTaskId else { return }

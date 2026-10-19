@@ -69,6 +69,7 @@ class TaskActions(
     fun dueToday(id: String) = commands.dueToday(id)
     fun dueTomorrow(id: String) = commands.dueTomorrow(id)
     fun clearDue(id: String) = commands.clearDue(id)
+    fun clearStart(id: String) = commands.clearStart(id)
     fun setPriority(id: String, priority: Int?) = commands.setPriority(id, priority)
     fun togglePlannedToday(id: String) = commands.togglePlannedToday(id)
     fun toggleDaily(id: String) = commands.toggleDaily(id)
@@ -141,6 +142,7 @@ class TaskActions(
             KeyCommand.TASK_DUE_TODAY.palette { dueToday(id) },
             KeyCommand.TASK_DUE_TOMORROW.palette { dueTomorrow(id) },
             KeyCommand.TASK_CLEAR_DUE.palette { clearDue(id) },
+            KeyCommand.TASK_CLEAR_START.palette { clearStart(id) },
             KeyCommand.TASK_CLEAR_PRIORITY.palette { setPriority(id, null) },
             KeyCommand.TASK_TOGGLE_PLANNED_TODAY.palette { togglePlannedToday(id) },
             KeyCommand.TASK_TOGGLE_DAILY.palette { toggleDaily(id) },
@@ -194,6 +196,7 @@ internal fun ColumnScope.TaskMenuItems(
     PMenuItem("Due today", PIcons.Calendar, onClick = run { actions.dueToday(id) })
     PMenuItem("Due tomorrow", PIcons.Calendar, onClick = run { actions.dueTomorrow(id) })
     if (row.due != null) PMenuItem("Clear due date", Icons.Filled.Clear, onClick = run { actions.clearDue(id) })
+    if (row.starts != null) PMenuItem("Clear start date", Icons.Filled.Clear, onClick = run { actions.clearStart(id) })
     for (priority in 1..4) {
         PMenuItem("Priority $priority", PIcons.Flag, trailing = if (row.priority == priority) "Set" else null, onClick = run { actions.setPriority(id, priority) })
     }

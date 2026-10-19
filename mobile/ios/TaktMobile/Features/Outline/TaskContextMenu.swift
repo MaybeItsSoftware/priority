@@ -116,6 +116,7 @@ struct TaskContextMenu: View {
     case .taskDueTomorrow: model.setDue(taskID, daysFromToday: 1)
     case .taskBury: model.bury(taskID)
     case .taskClearDue: model.clearDue(taskID)
+    case .taskClearStart: model.editValues(taskID) { $0.startAt = nil }
     case .taskClearNotes: model.editValues(taskID) { $0.notes = "" }
     case .taskClearTags: model.editValues(taskID) { $0.tags = "" }
     case .taskIndent: model.indent(taskID)
@@ -157,6 +158,7 @@ struct TaskContextMenu: View {
     case .taskDueTomorrow: "sunrise"
     case .taskBury: "moon.zzz"
     case .taskClearDue: "calendar.badge.minus"
+    case .taskClearStart: "clock.badge.xmark"
     case .taskClearNotes: "text.badge.minus"
     case .taskClearTags: "tag.slash"
     case .taskIndent: "increase.indent"

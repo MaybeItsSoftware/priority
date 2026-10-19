@@ -91,6 +91,9 @@ class TaskCommands(private val container: AppContainer) {
 
     fun clearDue(taskId: String) = setDue(taskId, null)
 
+    /** cs: no start date, so a buried task is back among its siblings at once. */
+    fun clearStart(taskId: String) = undo.perform { it.scheduleTask(taskId, null) }
+
     /** A repeating task moved onto the day it comes round again asks first (`RecurrenceClashes`). */
     fun setDue(taskId: String, dueAt: Instant?) = container.clashes.move(
         taskId,

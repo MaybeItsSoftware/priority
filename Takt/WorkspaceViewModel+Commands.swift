@@ -154,6 +154,7 @@ extension WorkspaceViewModel {
     case .taskDueTomorrow: setDue(daysFromToday: 1)
     case .taskBury: burySelectedTask()
     case .taskClearDue: editTaskValues { $0.dueAt = nil; $0.dueDate = nil }
+    case .taskClearStart: editTaskValues { $0.startAt = nil }
     case .taskClearNotes: editTaskValues { $0.notes = "" }
     case .taskClearTags: editTaskValues { $0.tags = "" }
     case .taskClearPriority: editTaskValues { $0.priority = 0 }

@@ -35,6 +35,7 @@ public enum FocusPanelAction: Equatable, Sendable {
   /// Due today (0) or tomorrow (1).
   case due(days: Int)
   case clearDue
+  case clearStart
   case delete
   /// `/`: back to the field to search.
   case search
@@ -62,6 +63,7 @@ public enum FocusPanelKeys {
     .taskEditNotes: .edit(.notes), .taskEditTags: .edit(.tags), .taskEditRecurrence: .edit(.recurrence),
     .taskClearPriority: .priority(0), .taskConditions: .conditions,
     .taskDueToday: .due(days: 0), .taskDueTomorrow: .due(days: 1), .taskClearDue: .clearDue,
+    .taskClearStart: .clearStart,
     .taskDelete: .delete, .goSearch: .search, .taskNew: .add,
     .windowUndo: .undo, .windowRedo: .redo,
     .goToday: .goToday, .goListNavigator: .chooseList,
@@ -99,7 +101,7 @@ public enum FocusPanelKeys {
     let isFunctionKey = key.hasPrefix("f") && key.count > 1 && key.dropFirst().allSatisfy(\.isNumber)
     guard WorkspaceCommandCatalog.isChord(key) || key.hasPrefix("option+") || isFunctionKey else { return false }
     switch action {
-    case .edit, .due, .clearDue, .goToday, .chooseList, .place: return true
+    case .edit, .due, .clearDue, .clearStart, .goToday, .chooseList, .place: return true
     default: return false
     }
   }

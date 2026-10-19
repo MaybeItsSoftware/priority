@@ -637,6 +637,7 @@ the field the arrows only choose, so you can keep refining a search.
 | `Alt+S` / `Alt+T` | Edit the start date / the time estimate |
 | `nn`, `tt`, `dr` | Edit the notes, the tags, how it repeats |
 | `td` / `tm` / `cd` | Due today / tomorrow / clear the due date |
+| `cs` | Clear the start date, so a buried task is back among its siblings at once. `⌫` in the `⌥S` editor does the same |
 | `1`–`4` / `0` | Set the priority (which moves the task to the top of its list) / clear it |
 | `cc` | Conditions: what the task needs |
 | `Delete` / `Cmd+Delete` | Delete, then `Return` to confirm |

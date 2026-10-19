@@ -143,7 +143,7 @@ struct WorkspaceTaskQuickEditOverlay: View {
 
   private var hints: String {
     switch request.kind {
-    case .due, .start: "arrows day/week · ⇧←→ month · tab time · ↩ save · esc cancel"
+    case .due, .start: "arrows day/week · ⇧←→ month · tab time · ⌫ clear · ↩ save · esc cancel"
     case .estimate: "minutes · ↑↓ ±5 · ⇧↑↓ ±30 · ↩ save · esc cancel"
     case .notes: "↩ save · ⇧↩ new line · esc cancel"
     case .tags: "comma separated · ↩ save · esc cancel"
