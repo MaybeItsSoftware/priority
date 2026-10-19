@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <rect width="1024" height="1024" fill="#faf8f4"/>
+  <!-- One bar of four beats: three kept, the fourth ticked off. -->
+  <rect x="168" y="292" width="40" height="440" fill="#444054"/>
+  <rect x="816" y="292" width="40" height="440" fill="#444054"/>
+  <rect x="264" y="420" width="56" height="184" fill="#444054"/>
+  <rect x="376" y="420" width="56" height="184" fill="#444054"/>
+  <rect x="488" y="420" width="56" height="184" fill="#444054"/>
+  <path d="M600 524 L654 578 L752 450" fill="none" stroke="#007fff" stroke-width="56" stroke-linecap="square"/>
+</svg>

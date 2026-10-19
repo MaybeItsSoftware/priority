@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <rect width="1024" height="1024" fill="#faf8f4"/>
+  <!-- Solid body, a window onto the swing, the pendulum caught mid-beat. -->
+  <path d="M404 224 H620 L752 816 H272 Z" fill="#444054"/>
+  <path d="M432 292 H592 L668 640 H356 Z" fill="#faf8f4"/>
+  <path d="M424 404 A190 190 0 0 1 600 404" fill="none" stroke="#d8d5dd" stroke-width="14" stroke-dasharray="2 34" stroke-linecap="square"/>
+  <line x1="512" y1="612" x2="586" y2="320" stroke="#007fff" stroke-width="40" stroke-linecap="square"/>
+  <rect x="514" y="420" width="92" height="56" fill="#007fff" transform="rotate(14.2 560 448)"/>
+  <rect x="486" y="612" width="52" height="52" fill="#444054"/>
+</svg>

@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <rect width="1024" height="1024" fill="#faf8f4"/>
+  <!-- Takt is the beat: a metronome, its pendulum mid-swing. -->
+  <path d="M400 232 H624 L744 808 H280 Z" fill="none" stroke="#444054" stroke-width="56"/>
+  <line x1="300" y1="696" x2="724" y2="696" stroke="#444054" stroke-width="40"/>
+  <line x1="512" y1="676" x2="588" y2="352" stroke="#007fff" stroke-width="44" stroke-linecap="square"/>
+  <rect x="512" y="436" width="96" height="60" fill="#007fff" transform="rotate(13.2 560 466)"/>
+</svg>

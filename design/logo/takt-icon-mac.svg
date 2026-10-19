@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <!-- macOS draws the tile itself: the 824 grid square, a hairline instead of a shadow. -->
+  <rect x="100" y="100" width="824" height="824" rx="185" fill="#faf8f4" stroke="#e6e4ea" stroke-width="6"/>
+  <g transform="translate(512 512) scale(0.8) translate(-512 -520)">
+  <path fill-rule="evenodd" fill="#444054" d="M404 224 H620 L752 816 H272 Z M436 288 H588 L676 704 H348 Z"/>
+  <g fill="#b6b3bf">
+    <rect x="440" y="360" width="32" height="12"/>
+    <rect x="428" y="432" width="32" height="12"/>
+    <rect x="416" y="504" width="32" height="12"/>
+    <rect x="404" y="576" width="32" height="12"/>
+  </g>
+  <path fill="#007fff" d="M490.27 668.57 L533.73 675.43 L587.73 333.43 L544.27 326.57 Z"/>
+  <rect x="496" y="442" width="96" height="56" fill="#007fff" transform="rotate(9 544 470)"/>
+  <rect x="476" y="656" width="72" height="48" fill="#444054"/>
+  </g>
+</svg>

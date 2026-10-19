@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <rect width="1024" height="1024" fill="#faf8f4"/>
+  <!-- Takt is the beat: a metronome, solid body and an open face, its
+       pendulum caught mid-swing against the scale. -->
+  <path d="M404 224 H620 L752 816 H272 Z" fill="#444054"/>
+  <path d="M436 288 H588 L676 704 H348 Z" fill="#faf8f4"/>
+  <g fill="#b6b3bf">
+    <rect x="440" y="360" width="32" height="12"/>
+    <rect x="428" y="432" width="32" height="12"/>
+    <rect x="416" y="504" width="32" height="12"/>
+    <rect x="404" y="576" width="32" height="12"/>
+  </g>
+  <line x1="512" y1="672" x2="566" y2="330" stroke="#007fff" stroke-width="44"/>
+  <rect x="496" y="442" width="96" height="56" fill="#007fff" transform="rotate(9 544 470)"/>
+  <rect x="476" y="656" width="72" height="48" fill="#444054"/>
+</svg>

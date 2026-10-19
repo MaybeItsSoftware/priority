@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <rect width="1024" height="1024" fill="#faf8f4"/>
+  <!-- The current mark, kept: a tick held up on a stand, the ink and the accent split. -->
+  <rect x="352" y="736" width="320" height="48" fill="#444054"/>
+  <rect x="488" y="468" width="48" height="292" fill="#444054"/>
+  <path d="M352 352 L512 496 L736 248" fill="none" stroke="#007fff" stroke-width="64" stroke-linecap="square"/>
+</svg>
