@@ -156,13 +156,21 @@ class ListViewModel(
         _scrollTo.value = null
     }
 
-    /** Unfolds [taskId]'s ancestors, then selects it and asks the outline to scroll to it. */
+    /**
+     * Unfolds [taskId]'s ancestors, shows completed tasks when it or one of
+     * them is finished (as the iPhone's `revealInList` does), then selects it
+     * and asks the outline to scroll to it.
+     */
     fun reveal(taskId: String) {
         viewModelScope.launch {
-            val data = snapshot.filterNotNull().first().data
-            val ancestors = OutlineShaping.ancestors(data, taskId)
+            val s = snapshot.filterNotNull().first()
+            val ancestors = OutlineShaping.ancestors(s.data, taskId)
             val folds = folded.first()
             if (folds.any { it in ancestors }) container.folds.set(foldKey, folds - ancestors)
+            val hidden = (ancestors + taskId).any { id -> s.tasks[id]?.let { it.status != TaskStatus.OPEN } == true }
+            if (hidden && container.settings.string(HIDE_COMPLETED).first() == "true") {
+                container.settings.putString(HIDE_COMPLETED, "false")
+            }
             _selectedId.value = taskId
             _scrollTo.value = taskId
         }
