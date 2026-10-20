@@ -54,7 +54,7 @@ class TodayViewModel(private val container: AppContainer) : ViewModel() {
     /** An order written but not yet read back, shown straight away so a drag does not snap back. */
     private val pendingOrder = MutableStateFlow<List<String>?>(null)
 
-    private val _pending = MutableStateFlow<PendingCompletion?>(null)
+    private val _pending get() = container.pendingBlock
     val pendingCompletion: StateFlow<PendingCompletion?> = _pending.asStateFlow()
 
     private val stored: Flow<DayState> = container.withSession { session ->

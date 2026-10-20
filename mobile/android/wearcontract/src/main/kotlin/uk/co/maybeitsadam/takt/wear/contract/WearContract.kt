@@ -145,9 +145,26 @@ data class WearAction(
     val id: String,
     val action: WearActionKind,
     val taskId: String? = null,
-    /** Epoch millis it was done on the watch. */
+    /** Epoch millis it was done on the watch: the day a queued daily is logged against. */
     val issuedAt: Long,
-)
+) {
+    /**
+     * Whether the action still makes sense at [nowMillis]. A pause tapped an
+     * hour ago, landing now, would stop a block the user has since got on
+     * with; ticking a task off stays true however late it arrives. The
+     * iPhone's `WatchAction.isCurrent(at:)`.
+     */
+    fun isCurrent(nowMillis: Long): Boolean = when (action) {
+        WearActionKind.COMPLETE, WearActionKind.LOG_DAILY -> true
+        WearActionKind.START, WearActionKind.PAUSE, WearActionKind.RESUME, WearActionKind.STOP, WearActionKind.DONE ->
+            nowMillis - issuedAt <= TIMER_ACTION_LIFETIME_MILLIS
+    }
+
+    companion object {
+        /** How long a queued timer action stays worth applying. */
+        const val TIMER_ACTION_LIFETIME_MILLIS = 10 * 60 * 1000L
+    }
+}
 
 /** The one encoding both sides use: JSON, tolerant of fields a newer side adds. */
 object WearCodec {

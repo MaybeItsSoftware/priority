@@ -9,6 +9,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import uk.co.maybeitsadam.takt.ui.focus.PendingCompletion
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.emptyFlow
@@ -87,6 +88,12 @@ class AppContainer(
     val scoresEachFocusBlock: StateFlow<Boolean> =
         settings.scoresEachFocusBlock.stateIn(scope, SharingStarted.Eagerly, true)
     val folds = FoldStore(context)
+    /**
+     * The block the phone is asking about (pressed Done, or ran out), held
+     * here rather than in one screen so Today, Focus and the watch's actions
+     * see the same question: a Done or Resume from the watch answers it.
+     */
+    val pendingBlock = MutableStateFlow<PendingCompletion?>(null)
     val inspector = InspectorController()
     val quickAdd = QuickAddController()
     val habits = HabitFormController()

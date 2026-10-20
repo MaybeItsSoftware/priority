@@ -138,4 +138,15 @@ class WearContractTest {
         assertEquals("1:02:03", clock(3723))
         assertEquals("-0:30", clock(-30))
     }
+
+    @Test
+    fun timerActionsGoStaleAfterTenMinutesAndTicksNever() {
+        val tenMinutes = WearAction.TIMER_ACTION_LIFETIME_MILLIS
+        for (kind in listOf(WearActionKind.START, WearActionKind.PAUSE, WearActionKind.RESUME, WearActionKind.STOP, WearActionKind.DONE)) {
+            assertTrue(action(kind).isCurrent(10_000 + tenMinutes))
+            assertFalse(action(kind).isCurrent(10_000 + tenMinutes + 1))
+        }
+        assertTrue(action(WearActionKind.COMPLETE, "a").isCurrent(10_000 + 24 * 60 * tenMinutes))
+        assertTrue(action(WearActionKind.LOG_DAILY, "b").isCurrent(10_000 + 24 * 60 * tenMinutes))
+    }
 }

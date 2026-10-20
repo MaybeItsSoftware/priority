@@ -146,7 +146,7 @@ class FocusViewModel(private val container: AppContainer) : ViewModel() {
     /** The "Focus points" setting: off hides every points display. */
     val scoresEachFocusBlock: StateFlow<Boolean> = container.scoresEachFocusBlock
 
-    private val _pending = MutableStateFlow<PendingCompletion?>(null)
+    private val _pending get() = container.pendingBlock
     val pendingCompletion: StateFlow<PendingCompletion?> = _pending.asStateFlow()
 
     private val _override = MutableStateFlow<StartOverride?>(null)

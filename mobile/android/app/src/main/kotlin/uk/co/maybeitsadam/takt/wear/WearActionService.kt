@@ -37,9 +37,20 @@ class WearActionService : WearableListenerService() {
                     return
                 }
                 if (WearBridge.isHandled(action.id)) return WearBridge.refresh(container)
+                // A timer action queued too long ago is dropped, not applied:
+                // handled, so the watch lets it go, but nothing done.
+                if (!action.isCurrent(System.currentTimeMillis())) {
+                    WearBridge.markHandled(action.id)
+                    return WearBridge.refresh(container)
+                }
                 // Messages arrive one at a time on this thread; waiting here keeps a queue
                 // flushed from the watch in the order it was made.
-                runBlocking { withTimeoutOrNull(TIMEOUT_MILLIS) { WearActions(container).perform(action) } }
+                val done = runBlocking { withTimeoutOrNull(TIMEOUT_MILLIS) { WearActions(container).perform(action) } }
+                // Timed out, it may not have landed: left unhandled, the watch sends it again.
+                if (done == null) {
+                    Log.w(TAG, "Watch action ${action.action} timed out; left for the watch to resend")
+                    return
+                }
                 WearBridge.markHandled(action.id)
             }
         }
@@ -60,39 +71,54 @@ class WearActionService : WearableListenerService() {
 class WearActions(private val container: AppContainer) {
     private val undo get() = container.undo
 
+    /** Applies [action]; returns once it has, so the caller can tell a finished one from a timed-out one. */
     suspend fun perform(action: WearAction) {
         val repo = container.repository()
         val session = repo.activeFocusSession()?.takeIf { it.phase != FocusSessionPhase.FINISHED }
         val taskId = action.taskId
+        val issuedAt = Instant.ofEpochMilli(action.issuedAt)
         when (action.action) {
-            WearActionKind.COMPLETE -> taskId?.let { complete(repo, it, session) }
-            WearActionKind.LOG_DAILY -> taskId?.let { logDaily(repo, it) }
+            WearActionKind.COMPLETE -> taskId?.let { complete(repo, it, session, issuedAt) }
+            WearActionKind.LOG_DAILY -> taskId?.let { logDaily(repo, it, issuedAt) }
             WearActionKind.START -> taskId?.let { start(repo, it, session) }
-            WearActionKind.PAUSE -> if (session != null && session.activeTaskId != null && session.pausedAt == null) {
+            // The phone asking how the block went has the clock stopped already.
+            WearActionKind.PAUSE -> if (
+                session != null && session.activeTaskId != null && session.pausedAt == null && container.pendingBlock.value == null
+            ) {
                 undo.performNow(announce = false) { it.pauseFocusSession(session.id) }
             }
             WearActionKind.RESUME -> if (session != null && session.pausedAt != null) {
+                // Resuming answers the phone's question "not finished yet",
+                // which is what Cancel on that prompt does.
+                container.pendingBlock.value = null
                 undo.performNow(announce = false) { it.resumeFocusSession(session.id) }
             }
-            WearActionKind.STOP -> session?.let { stop(it) }
+            WearActionKind.STOP -> session?.let {
+                container.pendingBlock.value = null
+                stop(it)
+            }
             WearActionKind.DONE -> session?.let { done(it) }
         }
     }
 
     /** Today's tick: the running task is Done; a daily or habit logs today; anything else completes. */
-    private suspend fun complete(repo: WorkspaceRepository, taskId: String, session: FocusSession?) {
+    private suspend fun complete(repo: WorkspaceRepository, taskId: String, session: FocusSession?, issuedAt: Instant) {
         if (session != null && session.activeTaskId == taskId) return done(session)
-        if (logDaily(repo, taskId)) return
+        if (logDaily(repo, taskId, issuedAt)) return
         val task = repo.task(taskId) ?: return
         if (task.status != TaskStatus.OPEN) return
         undo.performNow { it.setStatus(TaskStatus.COMPLETED, taskId) }
     }
 
-    /** Logs today's contribution to [taskId]'s daily unless it is already in; false when the task is no daily. */
-    private suspend fun logDaily(repo: WorkspaceRepository, taskId: String): Boolean {
-        val today = repo.dailies().firstOrNull { it.task.id == taskId }
-        val daily = today?.daily ?: repo.daily(taskId)?.takeIf { it.isHabit } ?: return false
-        if (today?.isDoneToday != true) undo.performNow { it.logContribution(daily.id) }
+    /**
+     * Logs [taskId]'s daily against the day it was tapped ([issuedAt]: a tick
+     * queued before midnight is yesterday's), unless that day is already in;
+     * false when the task is no daily.
+     */
+    private suspend fun logDaily(repo: WorkspaceRepository, taskId: String, issuedAt: Instant): Boolean {
+        val owed = repo.dailies(issuedAt).firstOrNull { it.task.id == taskId }
+        val daily = owed?.daily ?: repo.daily(taskId)?.takeIf { it.isHabit } ?: return false
+        if (owed?.isDoneToday != true) undo.performNow { it.logContribution(daily.id, now = issuedAt) }
         return true
     }
 
@@ -132,15 +158,21 @@ class WearActions(private val container: AppContainer) {
         }
     }
 
-    /** The focus notification's Done: the block is credited, unscored, and its task completed. */
+    /**
+     * The focus notification's Done: the block is credited, unscored, and its
+     * task completed. A question already up on the phone about this block is
+     * answered by it, with the seconds taken when that was asked.
+     */
     private suspend fun done(session: FocusSession) {
         if (session.activeTaskId == null) return
+        val asked = container.pendingBlock.value?.takeIf { it.sessionId == session.id }
+        if (asked != null) container.pendingBlock.value = null
         undo.performNow { repo ->
             repo.completeActiveFocusTask(
                 sessionId = session.id,
-                elapsedSeconds = session.elapsedSeconds(Instant.now()),
+                elapsedSeconds = asked?.seconds ?: session.elapsedSeconds(Instant.now()),
                 completeTask = true,
-                expectedBlockId = session.activeBlockId,
+                expectedBlockId = asked?.blockId ?: session.activeBlockId,
             )
         }
     }
