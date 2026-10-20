@@ -91,8 +91,10 @@ to sync; that's still "collected" for Apple's purposes.
 **Export compliance:** already answered in the build
 (`ITSAppUsesNonExemptEncryption = NO`; it uses only HTTPS).
 
-**Sign-in for review:** App Review needs a working account. Create one
-(e.g. `appreview@…` with a password) and put it under App Review Information.
+**Sign-in for review:** App Review needs a working account.
+`scripts/review_account.sh` creates `appreview@maybeitssoftware.co.uk` with a
+password (confirmed, so it never needs mail) and prints the password; put it
+under App Review Information.
 
 **Account deletion:** Settings → Sync → Delete account (guideline 5.1.1(v)).
 
