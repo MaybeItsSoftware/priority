@@ -132,4 +132,16 @@ class DayModelTest {
         assertEquals(listOf("met"), day.cards.map { it.id })
         assertTrue(day.dailies.isEmpty())
     }
+
+    @Test fun aLeavingRowIsPutBackWhereItStood() {
+        val rows = withLeaving(listOf("a", "c"), listOf(Leaving("b", DaySectionKind.PLANNED, 1)), { it })
+        assertEquals(listOf("a", "b", "c"), rows)
+    }
+
+    @Test fun aLeavingRowTheDayShowsElsewhereIsNotPutBackTwice() {
+        val leaving = listOf(Leaving("b", DaySectionKind.PLANNED, 0))
+        // b moved from Planned to Overdue while it was crossing out.
+        assertEquals(listOf("a"), withLeaving(listOf("a"), leaving, { it }, elsewhere = setOf("a", "b")))
+        assertEquals(listOf("b", "a"), withLeaving(listOf("a"), leaving, { it }, elsewhere = setOf("a")))
+    }
 }

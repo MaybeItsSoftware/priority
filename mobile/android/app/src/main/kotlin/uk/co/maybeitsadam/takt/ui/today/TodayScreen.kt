@@ -101,7 +101,10 @@ fun TodayScreen() {
     // before they go, so a swipe reads as done rather than as vanished.
     val leavingCards = remember { mutableStateMapOf<String, Leaving<DayCard>>() }
     val leavingDailies = remember { mutableStateMapOf<String, Leaving<DayDaily>>() }
+    // A row on its way out has been finished already: a second tap or swipe
+    // on it would log it again.
     fun finish(card: DayCard, kind: DaySectionKind, index: Int) {
+        if (card.id in leavingCards) return
         if (!card.isRunning && !card.isDailyDoneToday) {
             leavingCards[card.id] = Leaving(card, kind, index)
             scope.launch { delay(LEAVE_MILLIS); leavingCards.remove(card.id) }
@@ -109,6 +112,7 @@ fun TodayScreen() {
         vm.tickOff(card)
     }
     fun finish(daily: DayDaily, index: Int) {
+        if (daily.id in leavingDailies) return
         if (!daily.isDone) {
             leavingDailies[daily.id] = Leaving(daily, null, index)
             scope.launch { delay(LEAVE_MILLIS); leavingDailies.remove(daily.id) }
@@ -124,9 +128,12 @@ fun TodayScreen() {
 
     Column(Modifier.fillMaxSize().background(TaktTheme.colors.paper)) {
         TaktTopBar("Today", subtitle = longDay(LocalDate.now()), actions = { SettingsAction() })
+        // A leaving card the day now shows in another section stays there:
+        // put back in its old one too, it would be the same key twice.
+        val onTheDay = day.cards.mapTo(HashSet()) { it.id }
         val sections = DaySectionKind.entries.mapNotNull { kind ->
             val cards = day.sections.firstOrNull { it.kind == kind }?.cards.orEmpty()
-            withLeaving(cards, leavingCards.values.filter { it.kind == kind }, DayCard::id)
+            withLeaving(cards, leavingCards.values.filter { it.kind == kind }, DayCard::id, onTheDay)
                 .takeIf { it.isNotEmpty() }?.let { kind to it }
         }
         val dailies = withLeaving(day.dailies, leavingDailies.values, DayDaily::id)
@@ -169,19 +176,20 @@ fun TodayScreen() {
                             modifier = itemModifier,
                         )
                     } else {
+                        val isLeaving = card.id in leavingCards
                         SwipeRow(
-                            start = SwipeAction(
+                            start = if (isLeaving) null else SwipeAction(
                                 if (card.dailyId != null) "Log today" else "Done",
                                 Icons.Filled.Check,
                                 TaktTheme.colors.success,
                             ) { finish(card, kind, index) },
-                            end = SwipeAction("Tomorrow", PIcons.Calendar, TaktTheme.colors.warning) { vm.deferToTomorrow(card) },
+                            end = if (isLeaving) null else SwipeAction("Tomorrow", PIcons.Calendar, TaktTheme.colors.warning) { vm.deferToTomorrow(card) },
                             modifier = itemModifier,
                         ) {
                             DayCardRow(
                                 card = card,
                                 isDragging = isDragging,
-                                isLeaving = card.id in leavingCards,
+                                isLeaving = isLeaving,
                                 canStart = true,
                                 onTick = { finish(card, kind, index) },
                                 onStart = { gate { vm.start(card) } },
@@ -207,14 +215,15 @@ fun TodayScreen() {
                 }
                 items(dailies, key = { "daily-${it.id}" }, contentType = { "daily" }) { daily ->
                     val index = dailies.indexOf(daily)
+                    val isLeaving = daily.id in leavingDailies
                     SwipeRow(
-                        start = SwipeAction("Log today", Icons.Filled.Check, TaktTheme.colors.success) { finish(daily, index) },
+                        start = if (isLeaving) null else SwipeAction("Log today", Icons.Filled.Check, TaktTheme.colors.success) { finish(daily, index) },
                         end = null,
                         modifier = Modifier.animateItem(),
                     ) {
                         DailyRow(
                             daily,
-                            isLeaving = daily.id in leavingDailies,
+                            isLeaving = isLeaving,
                             onToggle = { finish(daily, index) },
                             onOpen = { container.inspector.open(daily.taskId) },
                         )
@@ -244,12 +253,20 @@ private fun longDay(date: LocalDate): String =
 private const val LEAVE_MILLIS = 900L
 
 /** A row just finished, and where it stood: its section, and its place in it. */
-private data class Leaving<T>(val item: T, val kind: DaySectionKind?, val index: Int)
+internal data class Leaving<T>(val item: T, val kind: DaySectionKind?, val index: Int)
 
-/** [items] with the rows still leaving put back where they stood, once the day has dropped them. */
-private fun <T> withLeaving(items: List<T>, leaving: Collection<Leaving<T>>, id: (T) -> String): List<T> {
+/**
+ * [items] with the rows still leaving put back where they stood, once the day
+ * has dropped them; not one [elsewhere] still shows, in another section.
+ */
+internal fun <T> withLeaving(
+    items: List<T>,
+    leaving: Collection<Leaving<T>>,
+    id: (T) -> String,
+    elsewhere: Set<String> = emptySet(),
+): List<T> {
     if (leaving.isEmpty()) return items
-    val present = items.mapTo(HashSet(), id)
+    val present = items.mapTo(HashSet(), id) + elsewhere
     val rows = items.toMutableList()
     for (row in leaving.sortedBy { it.index }) {
         if (id(row.item) !in present) rows.add(minOf(row.index, rows.size), row.item)
@@ -348,6 +365,7 @@ private fun DayCardRow(
                     .weight(1f)
                     .clip(Metrics.control)
                     .combinedClickable(
+                        enabled = !isLeaving,
                         onClick = onTick,
                         onClickLabel = "$verb ${card.title}",
                         onLongClick = { menuOpen = true },
@@ -494,7 +512,7 @@ private fun RunningDayCard(
             Spacer(Modifier.weight(1f))
             PButton(
                 "Done",
-                Modifier.widthIn(min = 96.dp).semantics { contentDescription = "Finish" },
+                Modifier.widthIn(min = 96.dp).semantics { contentDescription = "Done" },
                 primary = true,
                 icon = Icons.Filled.Check,
                 onClick = onDone,
@@ -516,7 +534,7 @@ private fun DailyRow(daily: DayDaily, isLeaving: Boolean, onToggle: () -> Unit, 
             Modifier
                 .fillMaxWidth()
                 .heightIn(min = Metrics.touchTarget)
-                .clickable(onClickLabel = "Log today ${daily.title}", onClick = onToggle)
+                .clickable(enabled = !isLeaving, onClickLabel = "Log today ${daily.title}", onClick = onToggle)
                 .padding(start = Metrics.lg, end = Metrics.xs),
             verticalAlignment = Alignment.CenterVertically,
         ) {
