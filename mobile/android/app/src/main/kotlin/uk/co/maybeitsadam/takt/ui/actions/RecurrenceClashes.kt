@@ -89,8 +89,9 @@ open class RecurrenceClashQuestions {
 class RecurrenceClashes(private val container: AppContainer) : RecurrenceClashQuestions() {
     /**
      * A move written straight away: asks first if [find] names a clash, then
-     * runs [move] as one step, then [then], and, for Keep both, the copy as
-     * another step. Cancel writes nothing.
+     * runs [move] as one step, then [then], and, for Keep both, the copy,
+     * which the core joins to the move's step so one undo takes both back.
+     * Cancel writes nothing.
      */
     fun move(
         taskId: String,

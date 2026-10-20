@@ -82,7 +82,7 @@ class TaskCommands(private val container: AppContainer) {
         repo.setItemKind(if (task.isList) WorkspaceItemKind.TASK else WorkspaceItemKind.LIST, task.id)
     }
 
-    /** xx: the branch becomes a standalone list in [folderId]. */
+    /** ex: the branch becomes a standalone list in [folderId]. */
     fun extractBranch(taskId: String, folderId: String? = null) = undo.perform { it.moveTaskToFolder(taskId, folderId) }
 
     fun dueToday(taskId: String) = setDue(taskId, startOfDay(0))
