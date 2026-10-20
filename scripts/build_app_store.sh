@@ -64,12 +64,12 @@ echo "Archiving Takt for iPhone, build $build_number"
 rm -rf "$archive"
 xcodebuild -project "$ios/TaktMobile.xcodeproj" -scheme TaktMobile \
   -configuration Release -destination 'generic/platform=iOS' \
-  -archivePath "$archive" -allowProvisioningUpdates "${auth[@]}" \
+  -archivePath "$archive" -allowProvisioningUpdates ${auth[@]+"${auth[@]}"} \
   CURRENT_PROJECT_VERSION="$build_number" \
   archive -quiet
 
 xcodebuild -exportArchive -archivePath "$archive" -exportPath "$out" \
-  -exportOptionsPlist "$options" -allowProvisioningUpdates "${auth[@]}" -quiet
+  -exportOptionsPlist "$options" -allowProvisioningUpdates ${auth[@]+"${auth[@]}"} -quiet
 
 if [[ "$destination" == "upload" ]]; then
   echo "Uploaded build $build_number to App Store Connect; it appears in TestFlight once processed."
