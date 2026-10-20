@@ -13,7 +13,7 @@ extension SettingsView {
         prompt: "e.g. Write task titles as verbs. I work Monday to Thursday.",
         text: Binding(get: { instructions.account }, set: { instructions.account = $0 }))
     } header: {
-      Text("Instructions for every thread")
+      SettingsHeader("Instructions for every thread")
     } footer: {
       Text(
         "Sent ahead of your first message in a thread, and again whenever they change. "
@@ -27,7 +27,7 @@ extension SettingsView {
         "Ask before changing tasks",
         isOn: Binding(get: { agent.asksBeforeChangesSetting }, set: { agent.asksBeforeChangesSetting = $0 }))
     } header: {
-      Text("Changes")
+      SettingsHeader("Changes")
     } footer: {
       Text(
         agent.asksBeforeChangesSetting
@@ -48,7 +48,7 @@ extension SettingsView {
           }
         }
       } header: {
-        Text("Written for folders and lists")
+        SettingsHeader("Written for folders and lists")
       }
     }
   }

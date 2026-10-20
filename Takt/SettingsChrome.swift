@@ -28,6 +28,7 @@ struct SettingsFormStyle: FormStyle {
 private struct SettingsFormBody<Content: View>: View {
   @Environment(\.theme) private var theme
   @Environment(\.settingsPageKey) private var pageKey
+  @Environment(\.settingsSearchQuery) private var searchQuery
   let content: Content
 
   var body: some View {
@@ -41,10 +42,14 @@ private struct SettingsFormBody<Content: View>: View {
       VStack(alignment: .leading, spacing: collapsible ? theme.space.sm : theme.space.lg) {
         ForEach(Array(sections.enumerated()), id: \.element.id) { index, section in
           if collapsible && !section.header.isEmpty {
+            // Remembered by its title, so a section that comes and goes —
+            // signed in or not — does not hand its state to the next one.
+            let title = section.header.first?.containerValues.settingsSectionTitle
             SettingsDisclosureSection(
               section: section,
-              key: "\(pageKey)#\(index)",
-              opensByDefault: index == firstTitled)
+              key: "\(pageKey)#\(title ?? String(index))",
+              opensByDefault: index == firstTitled,
+              matchesSearch: title.map { Self.matches($0, searchQuery) } ?? false)
           } else {
             SettingsSectionPanel(section: section)
           }
@@ -52,6 +57,13 @@ private struct SettingsFormBody<Content: View>: View {
       }
     }
     .frame(maxWidth: .infinity, alignment: .leading)
+  }
+
+  /// Whether the sidebar's search names this section, so the page it opened
+  /// onto shows the section rather than its heading.
+  private static func matches(_ title: String, _ query: String) -> Bool {
+    let needle = query.trimmingCharacters(in: .whitespaces)
+    return !needle.isEmpty && title.localizedCaseInsensitiveContains(needle)
   }
 }
 
@@ -71,6 +83,28 @@ enum SettingsDisclosurePolicy {
 /// state per page. Set by the window round each page's `Form`.
 extension EnvironmentValues {
   @Entry var settingsPageKey: String = "settings"
+  /// What the sidebar's search holds, so a section it names opens.
+  @Entry var settingsSearchQuery: String = ""
+}
+
+/// A settings section's title, as its header carries it to the form style.
+extension ContainerValues {
+  @Entry var settingsSectionTitle: String?
+}
+
+/// A settings section's header: its title, drawn as the eyebrow, and named to
+/// the form style, which remembers a folded section by it.
+struct SettingsHeader: View {
+  let title: String
+
+  init(_ title: String) {
+    self.title = title
+  }
+
+  var body: some View {
+    Text(LocalizedStringKey(title))
+      .containerValue(\.settingsSectionTitle, title)
+  }
 }
 
 /// The disclosures the reader opened or closed, by page and section, kept in
@@ -105,10 +139,12 @@ private struct SettingsDisclosureSection: View {
   let section: SectionConfiguration
   let key: String
   let opensByDefault: Bool
+  /// Named by the settings search: open while it is, without remembering so.
+  let matchesSearch: Bool
   private var memory: SettingsDisclosureMemory { .shared }
 
   var body: some View {
-    let isOpen = memory.isOpen(key, default: opensByDefault)
+    let isOpen = matchesSearch || memory.isOpen(key, default: opensByDefault)
     VStack(alignment: .leading, spacing: theme.space.xs) {
       Button {
         withAnimation(reduceMotion ? nil : .easeOut(duration: 0.15)) {

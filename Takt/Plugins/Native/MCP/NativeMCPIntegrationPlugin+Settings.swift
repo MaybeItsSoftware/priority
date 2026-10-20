@@ -40,7 +40,7 @@ private struct MCPIntegrationPluginSettingsView: View {
           .font(theme.captionFont)
       }
     } header: {
-      Text("MCP Plugin")
+      SettingsHeader("MCP Plugin")
     }
     .onAppear {
       if manager.integrations.mcpIntegrationEnabled { integrations.refreshDetectedMCPClients() }

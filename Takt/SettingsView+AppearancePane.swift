@@ -23,7 +23,7 @@ extension SettingsView {
           options: AppearanceMode.allCases.map { ThemedPickerOption($0.title, value: $0) })
       }
     } header: {
-      Text("Light and dark")
+      SettingsHeader("Light and dark")
     }
 
     typeSection
@@ -70,7 +70,7 @@ extension SettingsView {
           .disabled(override.isEmpty)
       }
     } header: {
-      Text("Type")
+      SettingsHeader("Type")
     } footer: {
       Text(
         "Inter, Geist, IBM Plex Sans, Arvo, Lilex, JetBrains Mono and Geist Mono ship with Takt, so they look the same on every Mac. "

@@ -61,7 +61,7 @@ private struct GoogleCalendarIntegrationPluginSettingsView: View {
           .font(theme.captionFont)
       }
     } header: {
-      Text("Google Calendar plugin")
+      SettingsHeader("Google Calendar plugin")
     } footer: {
       if manager.integrations.googleCalendarIntegrationEnabled {
         Text(

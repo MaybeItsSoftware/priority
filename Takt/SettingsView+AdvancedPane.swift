@@ -29,7 +29,7 @@ extension SettingsView {
         .foregroundStyle(exportStatus.isError ? theme.danger : theme.success)
       }
     } header: {
-      Text("Your data")
+      SettingsHeader("Your data")
     } footer: {
       Text("Markdown reads anywhere; JSON keeps every field, for a backup or a script.")
     }
@@ -54,7 +54,7 @@ extension SettingsView {
         }
       }
     } header: {
-      Text("Support")
+      SettingsHeader("Support")
     }
 
     #if DEBUG
@@ -69,7 +69,7 @@ extension SettingsView {
           }
         }
       } header: {
-        Text("Debug")
+        SettingsHeader("Debug")
       }
     #endif
   }

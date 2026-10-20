@@ -69,7 +69,7 @@ private struct LinksPluginSettingsView: View {
           account: plugin.account, serviceName: "Google Drive", requiredScopes: GoogleAPIScope.driveSearch)
       }
     } header: {
-      Text("Links plugin")
+      SettingsHeader("Links plugin")
     } footer: {
       Text(
         """

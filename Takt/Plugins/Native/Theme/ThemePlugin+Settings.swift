@@ -80,7 +80,7 @@ struct ThemeSettingsPage: View {
           .foregroundStyle(theme.warning)
         }
       } header: {
-        Text("Theme")
+        SettingsHeader("Theme")
       } footer: {
         Text(footerText)
       }
@@ -129,7 +129,7 @@ struct ThemeSettingsPage: View {
         issueRow(issue.description, severity: issue.severity)
       }
     } header: {
-      Text("Your themes")
+      SettingsHeader("Your themes")
     } footer: {
       Text(
         "Any .json file in the themes folder is a theme, and it reloads as you save it. "
@@ -169,7 +169,7 @@ struct ThemeSettingsPage: View {
           .foregroundStyle(theme.ink)
       }
     } header: {
-      Text("Details")
+      SettingsHeader("Details")
     }
   }
 

@@ -53,7 +53,7 @@ private struct CheckvistSyncPluginSettingsView: View {
           )
         )
       } header: {
-        Text("Checkvist")
+        SettingsHeader("Checkvist")
       }
 
       if checkvist.isEnabled {
@@ -180,7 +180,7 @@ private struct CheckvistSyncPluginSettingsView: View {
           }
         }
       } header: {
-        Text("Connection")
+        SettingsHeader("Connection")
       }
       }
     }

@@ -388,6 +388,7 @@ struct SettingsView: View {
         Form { pageContent }
           .settingsChrome()
           .environment(\.settingsPageKey, navState.destination.storageKey)
+          .environment(\.settingsSearchQuery, filter)
       }
       .padding(.horizontal, theme.space.xl + theme.space.md)
       .padding(.top, theme.space.lg)
@@ -465,7 +466,7 @@ struct SettingsView: View {
           .foregroundStyle(theme.muted)
       }
     } header: {
-      Text("Plugins folder")
+      SettingsHeader("Plugins folder")
     }
     ForEach(manager.sortedInstalledPlugins, id: \.manifest.id) { plugin in
       Section {
@@ -485,7 +486,7 @@ struct SettingsView: View {
           Button("Remove plugin", role: .destructive) { manager.removePlugin(plugin) }
         }
       } header: {
-        Text(plugin.manifest.name)
+        SettingsHeader(plugin.manifest.name)
       }
     }
   }

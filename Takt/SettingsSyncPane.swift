@@ -45,7 +45,7 @@ struct SettingsSyncPane: View {
         Text("The workspace did not open, so there is nothing to sync.")
           .foregroundStyle(theme.muted)
       } header: {
-        Text("Sync")
+        SettingsHeader("Sync")
       }
     }
   }
@@ -145,7 +145,7 @@ struct SettingsSyncPane: View {
       }
       feedback(session)
     } header: {
-      Text("Sync")
+      SettingsHeader("Sync")
     }
     .onAppear { prefill(from: session) }
   }
@@ -265,7 +265,7 @@ struct SettingsSyncPane: View {
       }
       feedback(session)
     } header: {
-      Text("Sync")
+      SettingsHeader("Sync")
     }
     .task(id: session.credentials?.accountId) {
       try? await session.refreshAccount()
@@ -286,7 +286,7 @@ struct SettingsSyncPane: View {
             .buttonStyle(FocusActionButtonStyle())
         }
       } header: {
-        Text("Choose a new password")
+        SettingsHeader("Choose a new password")
       } footer: {
         Text("You signed in from a password-reset email. Set the password to use from now on.")
       }
@@ -299,7 +299,7 @@ struct SettingsSyncPane: View {
         Text("Loading…").foregroundStyle(theme.muted)
       }
     } header: {
-      Text("Devices")
+      SettingsHeader("Devices")
     }
 
     Section {
@@ -316,7 +316,7 @@ struct SettingsSyncPane: View {
           .disabled(isWorking)
       }
     } header: {
-      Text("Account")
+      SettingsHeader("Account")
     }
     .confirmationDialog("Delete your sync account?", isPresented: $isConfirmingDelete) {
       Button("Delete account", role: .destructive) {

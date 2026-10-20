@@ -40,7 +40,7 @@ private struct DailyLogPluginSettingsView: View {
     Section {
       dailiesEditor
     } header: {
-      Text("Dailies")
+      SettingsHeader("Dailies")
     }
 
     Section {
@@ -58,7 +58,7 @@ private struct DailyLogPluginSettingsView: View {
         .fixedSize()
       }
     } header: {
-      Text("The day")
+      SettingsHeader("The day")
     }
 
     Section {
@@ -148,7 +148,7 @@ private struct DailyLogPluginSettingsView: View {
         }
       }
     } header: {
-      Text("Obsidian daily notes")
+      SettingsHeader("Obsidian daily notes")
     }
     .onAppear {
       fileNameFormat = dailyLog.plugin.noteFormat.fileNameFormat

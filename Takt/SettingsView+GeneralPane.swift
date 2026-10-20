@@ -14,7 +14,7 @@ extension SettingsView {
         detail: "Start Takt when you log in, so the hotkeys and the menu bar are ready.",
         isOn: preferenceBinding(\.launchAtLogin))
     } header: {
-      Text("Startup")
+      SettingsHeader("Startup")
     }
 
     Section {
@@ -23,7 +23,7 @@ extension SettingsView {
         detail: "Ask before a delete. Undo works either way.",
         isOn: preferenceBinding(\.confirmBeforeDelete))
     } header: {
-      Text("Tasks")
+      SettingsHeader("Tasks")
     }
 
     completionCelebrationSection
@@ -54,7 +54,7 @@ extension SettingsView {
             + "no question at the end of a block, and no points anywhere.",
         isOn: preferenceBinding(\.scoresEachFocusBlock))
     } header: {
-      Text("Running a block")
+      SettingsHeader("Running a block")
     }
   }
 
@@ -86,7 +86,7 @@ extension SettingsView {
       // without finishing a real task.
       CelebrationPreview(celebration: celebration)
     } header: {
-      Text("Completing a task")
+      SettingsHeader("Completing a task")
     }
   }
 }

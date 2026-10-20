@@ -58,7 +58,7 @@ extension SettingsView {
         }
       }
     } header: {
-      Text("Global hotkeys")
+      SettingsHeader("Global hotkeys")
     }
 
     Section {
@@ -75,7 +75,7 @@ extension SettingsView {
             .map { ThemedPickerOption($0.name, value: $0.id) })
       }
     } header: {
-      Text("Quick capture")
+      SettingsHeader("Quick capture")
     }
 
     Section {
@@ -95,7 +95,7 @@ extension SettingsView {
       }
       KeyHint(WorkspaceCommandHelpText.firstKey(for: .goKeyboardReference), "Every key the window answers, in the window")
     } header: {
-      Text("Window keys")
+      SettingsHeader("Window keys")
     }
   }
 

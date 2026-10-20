@@ -41,7 +41,7 @@ private struct GoogleTasksIntegrationPluginSettingsView: View {
           .font(theme.captionFont)
       }
     } header: {
-      Text("Google Tasks plugin")
+      SettingsHeader("Google Tasks plugin")
     } footer: {
       if manager.integrations.googleTasksIntegrationEnabled {
         Text(
