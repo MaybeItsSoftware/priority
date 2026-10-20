@@ -63,8 +63,14 @@ No ads, no tracking, no analytics.
 **Keywords** (App Store) [100]:
 `tasks,to-do,todo,planner,priority,focus,timer,pomodoro,lists,outline,kanban,habits,daily,gtd`
 
-**Support URL:** a page or mailto you're happy to publish — the privacy page
-says "use the support link" until `CONTACT_EMAIL` is set on Railway.
+**Support URL:** https://github.com/MaybeItsSoftware/priority/issues — the
+privacy page sends people to "the support link" on the store page.
+
+**Uploading:** `scripts/upload_play_listing.sh` and
+`scripts/upload_app_store_listing.sh` send this text and the framed images in
+`design/store` (both take `--dry-run`). The App Store copy drops the Android
+mention, which Apple rejects. The App Store key is open-parliament's, kept in
+`~/.config/takt/asc.env`.
 
 ## App Store Connect
 
