@@ -12,7 +12,8 @@
 #   - an Apple ID signed in under Xcode → Settings → Accounts, or
 #   - an App Store Connect API key (Users and Access → Integrations → Keys,
 #     role App Manager), named by ASC_KEY_PATH (the .p8), ASC_KEY_ID and
-#     ASC_ISSUER_ID.
+#     ASC_ISSUER_ID — or, failing those, the key in ~/.config/takt/asc.env
+#     that scripts/upload_app_store_listing.sh reads.
 #
 # Uploading uses the same. The app has to exist in App Store Connect first,
 # with bundle id uk.co.maybeitssoftware.takt (its widgets extension is
@@ -33,6 +34,25 @@ archive="$out/TaktMobile.xcarchive"
 build_number="$(git -C "$root" rev-list --count HEAD)"
 destination="export"
 [[ "${1:-}" == "--upload" ]] && destination="upload"
+
+# With no key named, the one upload_app_store_listing.sh uses: written out
+# of ~/.config/takt/asc.env to a private temporary .p8 for xcodebuild.
+if [[ -z "${ASC_KEY_PATH:-}" && -f "$HOME/.config/takt/asc.env" ]]; then
+  set -a; source "$HOME/.config/takt/asc.env"; set +a
+  ASC_KEY_ID="${ASC_KEY_ID:-${APP_STORE_CONNECT_API_KEY_ID:-}}"
+  ASC_ISSUER_ID="${ASC_ISSUER_ID:-${APP_STORE_CONNECT_API_KEY_ISSUER_ID:-}}"
+  content="${ASC_KEY_CONTENT:-${APP_STORE_CONNECT_API_KEY_CONTENT:-}}"
+  if [[ -n "$content" ]]; then
+    key_dir="$(mktemp -d)"; chmod 700 "$key_dir"
+    trap 'rm -rf "$key_dir"' EXIT
+    ASC_KEY_PATH="$key_dir/AuthKey_$ASC_KEY_ID.p8"
+    if [[ "$content" == *"BEGIN PRIVATE KEY"* ]]; then
+      printf '%b\n' "$content" > "$ASC_KEY_PATH"
+    else
+      printf '%s' "$content" | base64 -D > "$ASC_KEY_PATH"
+    fi
+  fi
+fi
 
 auth=()
 if [[ -n "${ASC_KEY_PATH:-}" ]]; then
