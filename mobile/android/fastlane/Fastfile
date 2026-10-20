@@ -27,6 +27,27 @@ platform :android do
     )
   end
 
+  desc "Upload the store listing's text and images (scripts/upload_play_listing.sh assembles them)"
+  lane :listing do |options|
+    metadata = File.expand_path(options[:metadata].to_s)
+    UI.user_error!("pass metadata:/path/to/listing") unless File.directory?(metadata)
+
+    # supply hangs a listing off a release even with no changelog to send;
+    # the internal track's newest is left as it is.
+    code = google_play_track_version_codes(package_name: APP_ID, track: "internal", **play_credentials).max
+    upload_to_play_store(
+      package_name:            APP_ID,
+      metadata_path:           metadata,
+      track:                   "internal",
+      version_code:            code,
+      **play_credentials,
+      skip_upload_aab:         true,
+      skip_upload_apk:         true,
+      skip_upload_changelogs:  true,
+      sync_image_upload:       true,
+    )
+  end
+
   # The key's contents (CI, from the PLAY_STORE_SERVICE_ACCOUNT_JSON secret)
   # win over a path to it (a local machine).
   def play_credentials
