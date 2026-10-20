@@ -132,7 +132,9 @@ struct MainApp: App {
           AppDelegate.shared.workspace.toggleSidebar()
         }
         .commandShortcut(.windowToggleSidebar)
-        Button("Sidebar") {
+        // "Focus …" for the items that move the keyboard, beside the ones
+        // that show and hide the same panes.
+        Button("Focus Sidebar") {
           let workspace: WorkspaceViewModel = AppDelegate.shared.workspace
           // Focusing a collapsed sidebar has to open it first, or the
           // shortcut moves focus somewhere you cannot see.
@@ -144,7 +146,7 @@ struct MainApp: App {
           AppDelegate.shared.workspace.requestKeyboardFocus(.tasks)
         }
         .commandShortcut(.goTaskRegion)
-        Button("Inspector Pane") {
+        Button("Focus Inspector") {
           let workspace: WorkspaceViewModel = AppDelegate.shared.workspace
           if workspace.selectedTask == nil {
             workspace.selectedTaskID = workspace.visibleNavigationTasks.first?.id
