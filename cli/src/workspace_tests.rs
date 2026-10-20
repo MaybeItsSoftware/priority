@@ -2082,3 +2082,35 @@ fn conditions_are_listed_required_and_the_context_set() {
             .is_err()
     );
 }
+
+#[test]
+fn a_column_in_the_same_call_wins_and_clearing_who_and_when_stops_waiting() {
+    let fixture = Fixture::new();
+    let task = fixture.add(PROJECTS, "Contract signed", None);
+    let updated = fixture.call(
+        "workspace_task_update",
+        json!({ "task_id": task, "waiting_on": "Sam", "kanban_column": "today" }),
+    );
+    assert_eq!(updated["kanban_column"], json!("today"));
+    assert_eq!(updated["waiting_on"], json!("Sam"));
+
+    let updated = fixture.call(
+        "workspace_task_update",
+        json!({ "task_id": task, "kanban_column": "waiting-on" }),
+    );
+    assert_eq!(updated["kanban_column"], json!("waiting-on"));
+    let updated = fixture.call(
+        "workspace_task_update",
+        json!({ "task_id": task, "waiting_on": null, "follow_up_at": null }),
+    );
+    assert_eq!(updated["kanban_column"], Value::Null);
+
+    // A repeat with no follow-up time to repeat is refused, not dropped.
+    let error = fixture
+        .try_call(
+            "workspace_task_update",
+            json!({ "task_id": task, "follow_up_every_days": 3 }),
+        )
+        .unwrap_err();
+    assert!(error.contains("follow_up_at"), "{error}");
+}

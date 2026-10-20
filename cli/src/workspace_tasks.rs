@@ -766,19 +766,6 @@ impl Workspace {
                     .map_err(map_core_error)?;
             }
 
-            if let Some(column) = edit.kanban_column.as_ref() {
-                let column = normalized_column(column.as_deref());
-                if column != task.kanban_column {
-                    takt_core::tasks::set_kanban_column(
-                        tx,
-                        std::slice::from_ref(&task.id),
-                        column.as_deref(),
-                        now_ms,
-                    )
-                    .map_err(map_core_error)?;
-                }
-            }
-
             if edit.waits() {
                 // A field left out keeps what the task already has.
                 let waiting_on = match &edit.waiting_on {
@@ -790,6 +777,13 @@ impl Workspace {
                     None => stored_ms(task.follow_up_at.as_deref()),
                 };
                 let every_days = every_days.unwrap_or(task.follow_up_every_days);
+                // A repeat chases a follow-up time; on its own it has nothing
+                // to repeat, and the core would drop it without a word.
+                if every_days.is_some() && follow_up.is_none() {
+                    return Err(ToolError::new(
+                        "follow_up_every_days repeats a follow-up, and this task has no                          follow_up_at. Pass follow_up_at in the same call.",
+                    ));
+                }
                 takt_core::waiting::set_waiting(
                     tx,
                     &task.id,
@@ -799,6 +793,22 @@ impl Workspace {
                     now_ms,
                 )
                 .map_err(map_core_error)?;
+            }
+
+            // After the waiting fields, which file the task in Waiting on or
+            // take it out: a column named in the same call is where it goes.
+            if let Some(column) = edit.kanban_column.as_ref() {
+                let column = normalized_column(column.as_deref());
+                let current = task_row(tx, &task.id)?.kanban_column;
+                if column != current {
+                    takt_core::tasks::set_kanban_column(
+                        tx,
+                        std::slice::from_ref(&task.id),
+                        column.as_deref(),
+                        now_ms,
+                    )
+                    .map_err(map_core_error)?;
+                }
             }
 
             // Kind before pinning, so "make this a nested list and pin it" is

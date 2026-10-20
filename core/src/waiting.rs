@@ -176,10 +176,14 @@ pub fn follow_up_task_id(source_task_id: &str, follow_up_at_ms: i64) -> String {
 /// time is kept to the whole minute, and one already passed makes its
 /// follow-up in the same step.
 ///
+/// Clearing both who and when is no longer waiting: the task leaves Waiting
+/// on for no column (one filed anywhere else stays there), and a repeat given
+/// with neither is dropped with them rather than filing it.
+///
 /// Naming someone other than the task waited on, or clearing both who and
 /// when, starts a new spell of waiting: the count of follow-ups goes back to
-/// nought. Naming someone where nobody was named keeps it. Replaces
-/// `WorkspaceStore.setWaiting`.
+/// nought. Naming someone where nobody was named, or clearing only the name,
+/// keeps it. Replaces `WorkspaceStore.setWaiting`.
 pub fn set_waiting(
     transaction: &Transaction,
     task_id: &str,
@@ -210,11 +214,19 @@ pub fn set_waiting(
         )
         .optional()?
         .unwrap_or((None, None, 0));
-    let someone_else = previous_tag.is_some() && normalized_tag(previous_tag.as_deref()) != tag;
+    let someone_else =
+        tag.is_some() && previous_tag.is_some() && normalized_tag(previous_tag.as_deref()) != tag;
     let cleared = tag.is_none() && follow_up.is_none();
     let count = if someone_else || cleared { 0 } else { count };
+    let target = if !cleared {
+        Some(WAITING_COLUMN)
+    } else if column.as_deref() == Some(WAITING_COLUMN) {
+        None
+    } else {
+        column.as_deref()
+    };
     // Leaving Today drops the place in the day, as planning for today does.
-    let clears_rank = column.as_deref() == Some("today");
+    let clears_rank = column.as_deref() == Some("today") && target != Some("today");
     transaction.execute(
         "INSERT INTO task_metadata (taskId, tagsJSON, externalLinksJSON, kanbanColumn, waitingOn, waitingFollowUpAt,
                                     waitingFollowUpEveryDays, waitingFollowUpCount, updatedAt)
@@ -228,7 +240,7 @@ pub fn set_waiting(
            updatedAt = excluded.updatedAt",
         params![
             task_id,
-            WAITING_COLUMN,
+            target,
             tag,
             follow_up.map(stored),
             stored(now_ms),

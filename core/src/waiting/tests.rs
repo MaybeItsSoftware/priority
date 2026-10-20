@@ -427,3 +427,47 @@ fn the_chase_label_numbers_the_follow_up_at_the_time_shown() {
         Some("#2")
     );
 }
+
+#[test]
+fn clearing_only_the_name_keeps_the_spell_and_its_count() {
+    let at = london(2026, 10, 8, 14, 0);
+    let mut connection = workspace();
+    waiting_since_thursday(&mut connection, Some("Sam"), Some(3));
+    journalled(&mut connection, "Waiting On", |tx| {
+        set_waiting(tx, "SOURCE-1", None, Some(at), Some(3), AT)
+    })
+    .unwrap();
+    assert_eq!(source(&connection), (Some(at), Some(3), 1));
+}
+
+fn placement(connection: &Connection) -> (Option<String>, Option<i64>) {
+    connection
+        .query_row(
+            "SELECT kanbanColumn, focusRank FROM task_metadata WHERE taskId = 'SOURCE-1'",
+            [],
+            |row| Ok((row.get(0)?, row.get(1)?)),
+        )
+        .unwrap()
+}
+
+#[test]
+fn clearing_who_and_when_takes_it_out_of_waiting_on() {
+    let mut connection = workspace();
+    waiting_since_thursday(&mut connection, Some("Sam"), None);
+    assert_eq!(placement(&connection).0.as_deref(), Some(WAITING_COLUMN));
+    journalled(&mut connection, "Waiting On", |tx| {
+        set_waiting(tx, "SOURCE-1", None, None, None, AT)
+    })
+    .unwrap();
+    assert_eq!(placement(&connection), (None, None));
+
+    // A task that was never waiting stays where it is, its place in the day
+    // too, and a repeat on its own files nothing.
+    let mut connection = workspace();
+    journalled(&mut connection, "Waiting On", |tx| {
+        set_waiting(tx, "SOURCE-1", None, None, Some(3), AT)
+    })
+    .unwrap();
+    assert_eq!(placement(&connection), (Some("today".into()), Some(2)));
+    assert_eq!(source(&connection), (None, None, 0));
+}
