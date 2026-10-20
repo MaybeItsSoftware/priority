@@ -355,7 +355,7 @@ fn lists_folders_and_columns() {
     );
     assert_eq!(
         render("workspace_task_to_list", json!({"task_id": TASK})).as_deref(),
-        Some("[xx]")
+        Some("[ex]")
     );
     assert_eq!(
         render("workspace_filter_list_create", json!({"name": "Soon"})).as_deref(),

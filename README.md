@@ -62,10 +62,11 @@ are set up from their own pages under **Integrations**, when you want them.
 
 The window is keyboard-first: every mode, every surface and every task action
 has a key. The mode strip names the modes, and the View, Task and Workspace
-menus list what you can do with the key beside each item — every task action
-is in the Task menu, and the ones whose key is a two-letter sequence have a
-chord as well so the menu can show one. So none of it is reachable only by
-something you already have to know.
+menus list what you can do, with its chord beside each item that has one. A
+menu can only show a chord, so an item whose only key is a two-letter
+sequence (`ww`, `cc`, `bu`, `ex`…) is listed without its key; the table below
+and [`docs/keyboard-shortcuts.md`](docs/keyboard-shortcuts.md) have every one.
+So none of it is reachable only by something you already have to know.
 
 | Key | Action |
 | --- | --- |
@@ -91,6 +92,7 @@ something you already have to know.
 | `ww` | Waiting on: who or what, and when to follow up — moves the task to Waiting on; see [Waiting on](#waiting-on) |
 | `bb` / `Cmd+Shift+B` | Blocked by: find a task this one waits on, or type a new one and `Cmd+Return` to make it just above; see [Blocked by](#blocked-by) |
 | `cc` | Conditions: tick what the task needs (Home, Floor space…), or type a new one — `Space` or `Return` ticks, `Esc` closes; with no task selected, the Conditions tab. See [Conditions](#conditions) |
+| `ex` | Extract the branch as a list: the task and everything under it leave for a list of their own in the sidebar |
 | `aa` | Ask the agent: a one-line popup over the task — "due friday", "split it into steps" — that does it there, each change a card with Undo and the keys that would have done the same; see [Quick ask](#quick-ask) |
 | `Delete` / `Cmd+Delete` / `Cmd+Shift+K` | Delete the task — it asks, and `Return` confirms |
 | `Return` | **Always** add a task, as in Checkvist — below the selection — on the board, below the card a selected subtask is drawn on — and at the foot of the day on Today. On a subtask's own card in another column than its parent's, the new task is a plain card of that column, at the foot of its plain cards, rather than another subtask of the parent |
@@ -280,11 +282,12 @@ are on in the outline or on a board card, and every row with subtasks has a
 chevron. Folds are shared by the outline and the board and kept across
 launches — see [`docs/keyboard-shortcuts.md`](docs/keyboard-shortcuts.md#folding-subtasks-where-they-are).
 
-Checkvist's `ll`, `hc` and `hh` are `gl`, `tc` and `gb` here. A letter that begins a
-sequence and also means something on its own, which leaves only `x` (complete,
-or `xx`), waits up to 1.2 seconds for a second letter, then does its own job. Any other
-key ends the wait at once, and holding Shift (`⇧X`) skips it. A letter that
-begins no sequence where you are never waits.
+Checkvist's `ll`, `hc`, `hh` and `xx` are `gl`, `tc`, `gb` and `ex` here. A letter
+that begins a sequence and also means something on its own would wait up to 1.2
+seconds for a second letter, then do its own job; any other key ends the wait at
+once, and holding Shift skips it. No task key does that any more: `x` completes at
+once, since extracting a branch moved from `xx` to `ex`. A letter that begins no
+sequence where you are never waits.
 
 The one-letter root tabs that used to collide with those sequences are gone
 with the menu bar panel they belonged to, so a sequence no longer has to

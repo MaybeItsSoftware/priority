@@ -9,7 +9,7 @@ import Foundation
 /// the window's commands, because those act on the window's selection; each
 /// one the panel takes is translated here into an action on the panel's own
 /// cursor. A command with no translation is not the panel's, and its key
-/// does nothing there — `xx` is not held waiting for, so `x` ticks at once.
+/// does nothing there — `mm` is not held waiting for, so `m` waits for nothing.
 public enum FocusPanelAction: Equatable, Sendable {
   /// The quick-edit field a key opens, as the window's quick edit names them.
   public enum Field: String, Equatable, Sendable {

@@ -195,7 +195,11 @@ fn task() -> Vec<Spec> {
             .note("To any list, or under any task, with everything under it"),
         c("taskConvertToList", "Convert to a list, or back", "Task", &["cmd+shift+l"]),
         c("taskPromoteList", "Promote or unpin a nested list", "Task", &["cmd+option+p"]),
-        c("taskExtractBranch", "Extract the branch as a list", "Task", &["xx"]),
+        // `ex`, not Checkvist's `xx`: `x` completes, and as the first letter of
+        // `xx` it was held 1.2 s every time, and a second `x` to reopen a task
+        // ticked by mistake took its branch out with no question asked. `e`
+        // already starts `ee`, `ea` and `ei`, so `ex` holds nothing new.
+        c("taskExtractBranch", "Extract the branch as a list", "Task", &["ex"]),
         c("taskOpenLink", "Open the task's first link", "Task", &["gx", "cmd+o"]),
         // `p` starts only `pc`; `ll` would shadow Today's and the sidebar's `l`.
         c("taskAddLink", "Link…: a Drive file, an Obsidian note, a page", "Task", &["pl", "cmd+ctrl+l"])
@@ -469,7 +473,7 @@ fn window() -> Vec<Spec> {
         c("windowToggleSidebar", "Show or hide the sidebar", "Window", &["cmd+b", "cmd+ctrl+s"])
             .note("⌘B toggles the left dock, as in Zed"),
         c("windowToggleInspectorPane", "Show or hide the inspector", "Window", &["cmd+ctrl+i"])
-            .note("Same pane as ⌥⌘I on a task, without selecting one"),
+            .note("Same pane as i or sd on a task, without selecting one"),
         c("windowToggleRightDock", "Show or hide the right dock", "Window", &["cmd+r", "r", "cmd+option+b"])
             .note("On whichever tab it was on, with the keyboard in it. ⌘R works from inside a field too; ⌥⌘B is Zed's toggle right dock"),
         c("windowToggleDoneRail", "Show or hide what you have finished", "Window", &["cmd+ctrl+d"])

@@ -15,18 +15,18 @@ final class DesktopShortcutSequenceTests: XCTestCase {
   }
 
   /// The bug this type was rewritten for: `x` began `xx`, so it was held, and
-  /// nothing ever ran it on its own.
+  /// nothing ever ran it on its own. `e`, which begins `ee`, stands in for it.
   func testAHeldKeyRunsOnItsOwnWhenTheNextKeyIsNotItsSecondLetter() {
     var sequence = DesktopShortcutSequence()
-    XCTAssertEqual(sequence.advance("x", at: 1, sequences: outline), .pending)
-    XCTAssertEqual(sequence.advance("j", at: 1.1, sequences: outline), .flush("x"))
+    XCTAssertEqual(sequence.advance("e", at: 1, sequences: outline), .pending)
+    XCTAssertEqual(sequence.advance("j", at: 1.1, sequences: outline), .flush("e"))
     XCTAssertEqual(sequence.prefix, "")
   }
 
   func testAHeldKeyRunsOnItsOwnWhenTheHoldTimesOut() {
     var sequence = DesktopShortcutSequence()
-    XCTAssertEqual(sequence.advance("x", at: 1, sequences: outline), .pending)
-    XCTAssertEqual(sequence.expire(heldAt: 1), "x")
+    XCTAssertEqual(sequence.advance("e", at: 1, sequences: outline), .pending)
+    XCTAssertEqual(sequence.expire(heldAt: 1), "e")
     XCTAssertEqual(sequence.prefix, "")
     XCTAssertNil(sequence.expire(heldAt: 1), "a hold releases once")
   }
@@ -35,8 +35,8 @@ final class DesktopShortcutSequenceTests: XCTestCase {
   /// next hold short.
   func testAnOldTimerCannotReleaseANewerHold() {
     var sequence = DesktopShortcutSequence()
-    _ = sequence.advance("x", at: 1, sequences: outline)
-    XCTAssertEqual(sequence.advance("d", at: 1.5, sequences: outline), .flushAndHold("x"))
+    _ = sequence.advance("e", at: 1, sequences: outline)
+    XCTAssertEqual(sequence.advance("d", at: 1.5, sequences: outline), .flushAndHold("e"))
     XCTAssertNil(sequence.expire(heldAt: 1))
     XCTAssertEqual(sequence.expire(heldAt: 1.5), "d")
   }
@@ -71,14 +71,25 @@ final class DesktopShortcutSequenceTests: XCTestCase {
   }
 
   /// Where no sequence begins with a key, it runs at once. On the timeline
-  /// `x` means nothing and nothing there starts with it, so it must not wait
-  /// out the timeout the way it does on the outline, where `xx` exists.
+  /// `e` means nothing and nothing there starts with it, so it must not wait
+  /// out the timeout the way it does on the outline, where `ee` exists.
   func testAKeyIsOnlyHeldWhereASequenceBeginsWithIt() {
     var timeline = DesktopShortcutSequence()
     XCTAssertEqual(
-      timeline.advance("x", at: 1, sequences: WorkspaceCommandCatalog.sequences(on: .timeline)), .pass)
+      timeline.advance("e", at: 1, sequences: WorkspaceCommandCatalog.sequences(on: .timeline)), .pass)
     var list = DesktopShortcutSequence()
-    XCTAssertEqual(list.advance("x", at: 1, sequences: outline), .pending)
+    XCTAssertEqual(list.advance("e", at: 1, sequences: outline), .pending)
+  }
+
+  /// `x` completes, at once: extracting a branch moved from `xx` to `ex`, so
+  /// a second `x` cannot take a branch out and the first is never held.
+  func testCompletingIsNeverHeldOnTheTaskPanes() {
+    for surface in [WorkspaceCommandSurface.outline, .board, .today, .matrix] {
+      var sequence = DesktopShortcutSequence()
+      XCTAssertEqual(
+        sequence.advance("x", at: 1, sequences: WorkspaceCommandCatalog.sequences(on: surface)), .pass,
+        "x on \(surface)")
+    }
   }
 
   /// `l` and `h` open and leave a task's subtasks, the keys you navigate by;

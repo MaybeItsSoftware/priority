@@ -153,9 +153,9 @@ second list. A letter is held only where some sequence on the current surface
 begins with it, and a held letter is never lost: if the next key does not
 complete a sequence, the held letter runs its own binding first and the new
 key is then handled as usual (it may start a sequence of its own); if no key
-follows within 1.2 seconds, the held letter runs then. So `x` still
-completes — after the wait, or at once with Shift held,
-which is the way to skip it. A hold is dropped without running when focus
+follows within 1.2 seconds, the held letter runs then; holding Shift skips
+the wait. No task key is held now: `x` begins no sequence (extracting a branch
+is `ex`, not Checkvist's `xx`), so it completes at once. A hold is dropped without running when focus
 moves or text editing begins, because the key no longer means what it did.
 
 The chords that are how you leave a text field — the view and region keys,

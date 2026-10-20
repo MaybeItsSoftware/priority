@@ -71,15 +71,15 @@ final class FocusPanelKeysTests: XCTestCase {
     XCTAssertEqual(action("cmd+z"), .undo)
   }
 
-  /// `xx` extracts a branch in the window; the panel has no use for it, so
-  /// `x` must not wait to see whether a second follows.
+  /// `ex` extracts a branch in the window and `mm` moves a task; the panel
+  /// has no use for them, so neither is held for there.
   func testOnlyThePanelsOwnSequencesAreHeld() {
     let sequences = FocusPanelKeys.sequences(on: .outline)
     XCTAssertTrue(sequences.contains("dd"))
     XCTAssertTrue(sequences.contains("ee"))
     XCTAssertTrue(sequences.contains("cc"))
     XCTAssertTrue(sequences.contains("gg"))
-    XCTAssertFalse(sequences.contains("xx"))
+    XCTAssertFalse(sequences.contains("ex"))
     XCTAssertFalse(sequences.contains("mm"))
     XCTAssertFalse(sequences.contains("ww"))
   }
