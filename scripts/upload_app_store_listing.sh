@@ -7,8 +7,9 @@
 #   scripts/upload_app_store_listing.sh
 #
 # The key is an App Store Connect API key, the one open-parliament uses, read
-# from ~/.config/takt/asc.env (ASC_KEY_ID, ASC_ISSUER_ID, ASC_KEY_CONTENT as
-# base64 of the .p8) unless they are already in the environment.
+# from ~/.config/takt/asc.env (ASC_KEY_ID, ASC_ISSUER_ID, ASC_KEY_CONTENT, or
+# open-parliament's APP_STORE_CONNECT_API_KEY_* names; the .p8 raw or as
+# base64) unless they are already in the environment.
 set -euo pipefail
 root="$(cd "$(dirname "$0")/.." && pwd)"
 listing="$root/build/app-store/listing"
@@ -53,7 +54,16 @@ if [[ "${1:-}" == "--dry-run" ]]; then find "$listing" -type f | sort; exit 0; f
 if [[ -z "${ASC_KEY_ID:-}" && -f "$HOME/.config/takt/asc.env" ]]; then
   set -a; source "$HOME/.config/takt/asc.env"; set +a
 fi
+# open-parliament's .env names them APP_STORE_CONNECT_API_KEY_*; either works.
+export ASC_KEY_ID="${ASC_KEY_ID:-${APP_STORE_CONNECT_API_KEY_ID:-}}"
+export ASC_ISSUER_ID="${ASC_ISSUER_ID:-${APP_STORE_CONNECT_API_KEY_ISSUER_ID:-}}"
+export ASC_KEY_CONTENT="${ASC_KEY_CONTENT:-${APP_STORE_CONNECT_API_KEY_CONTENT:-}}"
 : "${ASC_KEY_ID:?set it, or put it in ~/.config/takt/asc.env}" "${ASC_ISSUER_ID:?}" "${ASC_KEY_CONTENT:?}"
+# fastlane is told the key is base64; a raw .p8 is encoded here.
+if [[ "$ASC_KEY_CONTENT" == *"BEGIN PRIVATE KEY"* ]]; then
+  ASC_KEY_CONTENT="$(printf '%s' "$ASC_KEY_CONTENT" | base64 | tr -d '\n')"
+  export ASC_KEY_CONTENT
+fi
 
 cd "$root/mobile/ios"
 bundle exec fastlane ios listing listing:"$listing"
