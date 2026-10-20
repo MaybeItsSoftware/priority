@@ -106,11 +106,6 @@ struct DaySnapshot: Equatable, Sendable {
     day.loggedToday = snapshot.workProgress.today.seconds
     let dailies = try store.dailies(on: now)
     let dailyByTask = Dictionary(dailies.map { ($0.task.id, $0) }, uniquingKeysWith: { first, _ in first })
-    day.dailies = dailies.map {
-      DayDaily(
-        id: $0.daily.id, taskID: $0.task.id, title: $0.task.title, isDone: $0.isDoneToday,
-        secondsToday: $0.secondsLoggedToday, targetSeconds: $0.daily.targetSeconds)
-    }
 
     let entries: [(String, DayPlanReason?)]
     if snapshot.todayPlan.isEmpty {
@@ -124,13 +119,26 @@ struct DaySnapshot: Equatable, Sendable {
     day.cards = entries.compactMap { id, reason in
       guard seen.insert(id).inserted, let task = snapshot.dayTasks[id] else { return nil }
       let daily = dailyByTask[id]
+      let isRunning = id == session?.activeTaskId && session?.phase == .running
+      // Finished is finished: a daily met today leaves the day as a
+      // completed task does, unless it is the one being timed.
+      if daily?.isDoneToday == true && !isRunning { return nil }
       let list = listsByID[task.listId]
       return DayCard(
         id: id, title: task.title, listName: list?.name, listColorHex: list?.colorHex, reason: reason,
         estimateSeconds: task.estimateSeconds, loggedSeconds: snapshot.loggedSeconds[id] ?? 0,
         dueAt: task.dueAt, isList: task.isList, dailyID: daily?.daily.id,
         isDailyDoneToday: daily?.isDoneToday ?? false,
-        isRunning: id == session?.activeTaskId && session?.phase == .running)
+        isRunning: isRunning)
+    }
+    // Only the dailies the day is not already showing, and only those still
+    // owed: a habit lands in Today as a card, and listing it again underneath
+    // was the same task twice. Android's `DayShaping.build` reads the same.
+    let onTheDay = Set(day.cards.map(\.id))
+    day.dailies = dailies.filter { !$0.isDoneToday && !onTheDay.contains($0.task.id) }.map {
+      DayDaily(
+        id: $0.daily.id, taskID: $0.task.id, title: $0.task.title, isDone: $0.isDoneToday,
+        secondsToday: $0.secondsLoggedToday, targetSeconds: $0.daily.targetSeconds)
     }
     return day
   }

@@ -11,6 +11,10 @@ struct TodayScreen: View {
   @Environment(\.isPadLayout) private var isPad
   @State private var today = TodayModel()
   @State private var conditions = NowConditionsModel()
+  /// Rows just finished, held where they stood and crossed out for a moment
+  /// before they go, so a tap reads as done rather than as vanished.
+  @State private var leavingCards: [String: Leaving<DayCard>] = [:]
+  @State private var leavingDailies: [String: Leaving<DayDaily>] = [:]
 
   var body: some View {
     @Bindable var navigation = model.navigation
@@ -31,20 +35,27 @@ struct TodayScreen: View {
       }
       CalendarAgendaSection()
       Section {
-        ForEach(Array(today.day.cards.enumerated()), id: \.element.id) { index, card in
+        ForEach(Array(cards.enumerated()), id: \.element.id) { index, card in
           cardRow(card, index: index)
         }
-        .onMove { source, destination in today.move(from: source, to: destination, model: model) }
+        .onMove { source, destination in
+          guard leavingCards.isEmpty else { return }
+          today.move(from: source, to: destination, model: model)
+        }
       } header: {
         if !today.day.cards.isEmpty && !today.day.isPlanned {
           Text("Nothing planned — the top of the ranking")
             .font(theme.type.caption).foregroundStyle(theme.muted).textCase(nil)
         }
       }
-      if !today.day.dailies.isEmpty {
+      if !dailies.isEmpty {
         Section {
-          ForEach(today.day.dailies) { daily in
-            DailyRow(daily: daily) { today.toggleDaily(daily, model: model) }
+          ForEach(Array(dailies.enumerated()), id: \.element.id) { index, daily in
+            DailyRow(
+              daily: daily, isLeaving: leavingDailies[daily.id] != nil,
+              onToggle: { finish(daily, index: index) },
+              onOpen: { model.navigation.inspect(daily.taskID, isPad: isPad) })
+              .listRowInsets(EdgeInsets(top: 0, leading: theme.space.lg, bottom: 0, trailing: theme.space.sm))
               .listRowBackground(theme.paper)
               .listRowSeparatorTint(theme.borderMuted)
               .moveDisabled(true)
@@ -78,6 +89,26 @@ struct TodayScreen: View {
     .accessibilityIdentifier("today.list")
   }
 
+  private var cards: [DayCard] { Leaving.merging(today.day.cards, leavingCards.values) }
+  private var dailies: [DayDaily] { Leaving.merging(today.day.dailies, leavingDailies.values) }
+
+  /// A tap on a row: crossed out where it stands, then gone once the day
+  /// has dropped it. The write lands at once, as Android's does.
+  private func finish(_ card: DayCard, index: Int) {
+    if !card.isRunning && !card.isDailyDoneToday {
+      leavingCards[card.id] = Leaving(item: card, index: index)
+      Task { try? await Task.sleep(for: Leaving<DayCard>.hold); leavingCards[card.id] = nil }
+    }
+    today.tickOff(card, model: model)
+  }
+
+  private func finish(_ daily: DayDaily, index: Int) {
+    guard leavingDailies[daily.id] == nil else { return }
+    leavingDailies[daily.id] = Leaving(item: daily, index: index)
+    Task { try? await Task.sleep(for: Leaving<DayDaily>.hold); leavingDailies[daily.id] = nil }
+    today.toggleDaily(daily, model: model)
+  }
+
   @ViewBuilder
   private func cardRow(_ card: DayCard, index: Int) -> some View {
     let isSelected = model.navigation.selectedTaskID == card.id
@@ -92,21 +123,23 @@ struct TodayScreen: View {
           onStop: { today.endSession(model: model) })
       } else {
         DayCardRow(
-          card: card, index: index + 1, isSelected: isSelected, isBlocked: model.isBlocked(card.id),
-          waiting: model.waitingBadge(card.id),
-          onTick: { today.tickOff(card, model: model) },
+          card: card, isSelected: isSelected, isBlocked: model.isBlocked(card.id),
+          isLeaving: leavingCards[card.id] != nil, waiting: model.waitingBadge(card.id),
+          onTick: { finish(card, index: index) },
           onStart: { today.start(card, model: model) },
-          onOpen: { model.navigation.inspect(card.id, isPad: isPad) })
+          menu: { cardMenu(card) })
           .equatable()
       }
     }
     .tag(card.id)
-    .listRowInsets(EdgeInsets(top: 0, leading: theme.space.lg, bottom: 0, trailing: theme.space.lg))
+    .listRowInsets(EdgeInsets(
+      top: 0, leading: card.isPlanned && !card.isRunning ? theme.space.xs : theme.space.lg, bottom: 0,
+      trailing: card.isRunning ? theme.space.lg : theme.space.sm))
     .listRowBackground(card.isRunning ? theme.primary.opacity(0.06) : (isSelected ? theme.primary.opacity(0.10) : theme.paper))
     .listRowSeparatorTint(theme.borderMuted)
     .moveDisabled(!card.isPlanned)
     .swipeActions(edge: .leading, allowsFullSwipe: true) {
-      Button { today.tickOff(card, model: model) } label: {
+      Button { finish(card, index: index) } label: {
         Label(card.dailyID != nil ? "Log today" : "Done", systemImage: "checkmark")
       }
       .tint(theme.success)
@@ -119,27 +152,36 @@ struct TodayScreen: View {
           .tint(theme.muted)
       }
     }
-    .contextMenu {
-      if card.isPlanned {
-        Section {
-          Button { today.movePlanned(card.id, by: -1, model: model) } label: {
-            Label("Move up in the day", systemImage: "arrow.up")
-          }
-          Button { today.movePlanned(card.id, by: 1, model: model) } label: {
-            Label("Move down in the day", systemImage: "arrow.down")
-          }
-        }
-      }
-      Section {
-        Button { today.start(card, model: model) } label: {
-          Label(card.isRunning ? "Done" : (today.day.session?.phase == .running ? "Queue next" : "Start"),
-            systemImage: card.isRunning ? "checkmark" : "play")
-        }
-        Button { today.deferToTomorrow(card, model: model) } label: { Label("Not today", systemImage: "sunrise") }
-      }
-      TaskContextMenu(context: card.menuContext)
-    }
+    .contextMenu { cardMenu(card) }
     .accessibilityIdentifier("today.card.\(card.title)")
+  }
+
+  /// The options button's menu, and a long press's.
+  @ViewBuilder
+  private func cardMenu(_ card: DayCard) -> some View {
+    Section {
+      Button { model.navigation.inspect(card.id, isPad: isPad) } label: {
+        Label("Details", systemImage: "info.circle")
+      }
+    }
+    if card.isPlanned {
+      Section {
+        Button { today.movePlanned(card.id, by: -1, model: model) } label: {
+          Label("Move up in the day", systemImage: "arrow.up")
+        }
+        Button { today.movePlanned(card.id, by: 1, model: model) } label: {
+          Label("Move down in the day", systemImage: "arrow.down")
+        }
+      }
+    }
+    Section {
+      Button { today.start(card, model: model) } label: {
+        Label(card.isRunning ? "Done" : (today.day.session?.phase == .running ? "Queue next" : "Start"),
+          systemImage: card.isRunning ? "checkmark" : "play")
+      }
+      Button { today.deferToTomorrow(card, model: model) } label: { Label("Not today", systemImage: "sunrise") }
+    }
+    TaskContextMenu(context: card.menuContext)
   }
 
   /// While a block runs, a write elsewhere (the Live Activity, an intent)
@@ -244,46 +286,45 @@ enum DayForecastText {
 
 // MARK: - Cards
 
-/// A card that is not running: a tick, the title and why it is here, its
-/// cost, and a play button.
-struct DayCardRow: View, Equatable {
+/// A card that is not running. No check circle: tapping the row finishes it,
+/// crossed out and then gone; play on the far right starts a block on it, the
+/// options sit just before play, and a planned card has a drag handle on its
+/// leading edge. Android's `DayCardRow`, for the iPhone.
+struct DayCardRow<Menu: View>: View, Equatable {
   @Environment(\.theme) private var theme
   let card: DayCard
-  let index: Int
   let isSelected: Bool
   /// Waiting on an open task: drawn greyed.
   var isBlocked = false
+  /// Just finished, and about to leave the day.
+  var isLeaving = false
   /// Filed in Waiting on: who it waits on and when it is chased.
   var waiting: WaitingBadge?
   let onTick: () -> Void
   let onStart: () -> Void
-  let onOpen: () -> Void
+  @ViewBuilder let menu: () -> Menu
 
   static func == (lhs: DayCardRow, rhs: DayCardRow) -> Bool {
-    lhs.card == rhs.card && lhs.index == rhs.index && lhs.isSelected == rhs.isSelected
-      && lhs.isBlocked == rhs.isBlocked && lhs.waiting == rhs.waiting
+    lhs.card == rhs.card && lhs.isSelected == rhs.isSelected && lhs.isBlocked == rhs.isBlocked
+      && lhs.isLeaving == rhs.isLeaving && lhs.waiting == rhs.waiting
   }
 
   var body: some View {
-    HStack(spacing: theme.space.sm) {
-      Text("\(index)")
-        .font(theme.type.numeral)
-        .foregroundStyle(theme.dim)
-        .frame(minWidth: 16, alignment: .trailing)
-      Button(action: onTick) {
-        TaskCheckbox(status: card.isDailyDoneToday ? .completed : .open, isList: card.isList)
-          .celebrationIcon(card.id)
+    HStack(spacing: 0) {
+      if card.isPlanned {
+        // The list drags a planned card on a long press; the handle says so.
+        Image(systemName: "line.3.horizontal")
+          .font(theme.type.glyph(13))
+          .foregroundStyle(theme.dim)
           .frame(width: 32, height: theme.touchTarget)
-          .contentShape(Rectangle())
+          .accessibilityHidden(true)
       }
-      .buttonStyle(.plain)
-      .accessibilityLabel(card.dailyID != nil ? "Log \(card.title) for today" : "Complete \(card.title)")
-      .accessibilityIdentifier("today.check.\(card.title)")
-      Button(action: onOpen) {
+      Button(action: onTick) {
         VStack(alignment: .leading, spacing: theme.space.xxs) {
           Text(card.title)
             .font(theme.type.body)
-            .foregroundStyle(isBlocked ? theme.muted : theme.ink)
+            .foregroundStyle(isBlocked || isLeaving ? theme.muted : theme.ink)
+            .strikethrough(isLeaving, color: theme.dim)
             .lineLimit(2)
             .celebrationStrike(card.id)
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -308,7 +349,21 @@ struct DayCardRow: View, Equatable {
         .contentShape(Rectangle())
       }
       .buttonStyle(.plain)
-      cost
+      .disabled(isLeaving)
+      .accessibilityLabel(card.title)
+      .accessibilityHint(card.dailyID != nil ? "Logs it for today" : "Completes it")
+      .accessibilityIdentifier("today.check.\(card.title)")
+      cost.padding(.leading, theme.space.sm)
+      SwiftUI.Menu(content: menu) {
+        Image(systemName: "ellipsis")
+          .font(theme.type.glyph(14))
+          .foregroundStyle(theme.muted)
+          .frame(width: 36, height: theme.touchTarget)
+          .contentShape(Rectangle())
+      }
+      .buttonStyle(.plain)
+      .accessibilityLabel("Options for \(card.title)")
+      .accessibilityIdentifier("today.options.\(card.title)")
       Button(action: onStart) {
         Image(systemName: "play.fill")
           .font(theme.type.glyph(13))
@@ -421,37 +476,72 @@ struct RunningDayCard: View {
   }
 }
 
-/// A daily expected today, ticked when today's contribution is in.
+/// A daily still owed today. Tapping it logs today's contribution, crossed
+/// out and then gone; the options open it.
 struct DailyRow: View {
   @Environment(\.theme) private var theme
   let daily: DayDaily
+  var isLeaving = false
   let onToggle: () -> Void
+  let onOpen: () -> Void
 
   var body: some View {
-    Button(action: onToggle) {
-      HStack(spacing: theme.space.sm) {
-        TaskCheckbox(status: daily.isDone ? .completed : .open)
-          .frame(width: 32, height: theme.touchTarget)
-        Text(daily.title)
-          .font(theme.type.body)
-          .foregroundStyle(daily.isDone ? theme.muted : theme.ink)
-          .strikethrough(daily.isDone, color: theme.dim)
-          .lineLimit(2)
-          .frame(maxWidth: .infinity, alignment: .leading)
-        if daily.secondsToday > 0 || daily.targetSeconds != nil {
-          Text(progress).font(theme.type.numeral).foregroundStyle(theme.muted)
+    HStack(spacing: 0) {
+      Button(action: onToggle) {
+        HStack(spacing: theme.space.sm) {
+          Text(daily.title)
+            .font(theme.type.body)
+            .foregroundStyle(isLeaving ? theme.muted : theme.ink)
+            .strikethrough(isLeaving, color: theme.dim)
+            .lineLimit(2)
+            .frame(maxWidth: .infinity, alignment: .leading)
+          if daily.secondsToday > 0 || daily.targetSeconds != nil {
+            Text(progress).font(theme.type.numeral).foregroundStyle(theme.muted)
+          }
         }
+        .frame(minHeight: theme.touchTarget)
+        .contentShape(Rectangle())
       }
-      .contentShape(Rectangle())
+      .buttonStyle(.plain)
+      .disabled(isLeaving)
+      .accessibilityLabel("Log \(daily.title) for today")
+      .accessibilityIdentifier("today.daily.\(daily.title)")
+      Button(action: onOpen) {
+        Image(systemName: "ellipsis")
+          .font(theme.type.glyph(14))
+          .foregroundStyle(theme.muted)
+          .frame(width: 36, height: theme.touchTarget)
+          .contentShape(Rectangle())
+      }
+      .buttonStyle(.plain)
+      .accessibilityLabel("Options for \(daily.title)")
     }
-    .buttonStyle(.plain)
-    .accessibilityLabel(daily.isDone ? "Clear \(daily.title) for today" : "Log \(daily.title) for today")
-    .accessibilityIdentifier("today.daily.\(daily.title)")
   }
 
   private var progress: String {
     let logged = Format.duration(daily.secondsToday)
     guard let target = daily.targetSeconds else { return logged }
     return "\(daily.secondsToday > 0 ? logged : "0m")/\(Format.duration(target))"
+  }
+}
+
+/// A row just finished, and where it stood, so the list can keep drawing it
+/// crossed out for a moment after the day has dropped it.
+struct Leaving<Item: Identifiable> {
+  /// How long a finished row stays, crossed out — Android's `LEAVE_MILLIS`.
+  static var hold: Duration { .milliseconds(900) }
+
+  let item: Item
+  let index: Int
+
+  /// `items` with the rows still leaving put back where they stood.
+  static func merging(_ items: [Item], _ leaving: some Collection<Leaving>) -> [Item] {
+    guard !leaving.isEmpty else { return items }
+    let present = Set(items.map(\.id))
+    var rows = items
+    for row in leaving.sorted(by: { $0.index < $1.index }) where !present.contains(row.item.id) {
+      rows.insert(row.item, at: min(row.index, rows.count))
+    }
+    return rows
   }
 }

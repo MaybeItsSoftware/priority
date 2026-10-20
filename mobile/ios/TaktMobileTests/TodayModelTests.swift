@@ -114,15 +114,25 @@ final class TodayModelTests: XCTestCase {
   func testTickingADailyLogsTodayAndKeepsTheTaskOpen() async throws {
     let task = try add("Practice")
     try model.store.makeDaily(taskId: task.id)
-    await today.load(model)
-    let daily = try XCTUnwrap(today.day.dailies.first)
+    let dailyID = try XCTUnwrap(try model.store.dailies(on: .now).first?.daily.id)
+    let daily = DayDaily(
+      id: dailyID, taskID: task.id, title: task.title, isDone: false, secondsToday: 0, targetSeconds: nil)
     today.toggleDaily(daily, model: model)
     await today.load(model)
-    XCTAssertTrue(today.day.dailies.first?.isDone ?? false)
+    XCTAssertTrue(try model.store.dailies(on: .now).first?.isDoneToday ?? false)
     XCTAssertEqual(try model.store.task(id: task.id)?.status, .open)
-    today.toggleDaily(try XCTUnwrap(today.day.dailies.first), model: model)
+    // Met for today, it leaves the day — neither a card nor a daily row.
+    XCTAssertFalse(today.day.cards.contains { $0.id == task.id })
+    XCTAssertTrue(today.day.dailies.isEmpty)
+  }
+
+  func testADailyOnTheDayAsACardIsNotListedAgainUnderneath() async throws {
+    let task = try add("Stretch")
+    try model.store.makeDaily(taskId: task.id)
+    try model.store.setPlannedForToday(true, taskIds: [task.id])
     await today.load(model)
-    XCTAssertFalse(today.day.dailies.first?.isDone ?? true)
+    XCTAssertTrue(today.day.cards.contains { $0.id == task.id })
+    XCTAssertFalse(today.day.dailies.contains { $0.taskID == task.id })
   }
 
   func testDeferringTakesATaskOffTheDay() async throws {
