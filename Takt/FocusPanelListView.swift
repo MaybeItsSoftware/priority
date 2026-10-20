@@ -54,7 +54,7 @@ struct FocusPanelListView: View {
         help: "↓ with the field empty puts the keys in the list · ⌘P goes to another list", onKey: fieldKey)
       FocusRule()
       content(rows)
-      if model.pendingTaskDeletionID != nil, let pending = model.pendingTaskDeletion {
+      if let pending = model.pendingTaskDeletion(on: .panel) {
         TaskDeletionPrompt(task: pending)
       } else {
         WorkspaceOverlayFooter(hints: hints, trailing: keysInList ? nil : "\(rows.count)")
@@ -317,7 +317,7 @@ struct FocusPanelListView: View {
       guard query.isEmpty, let task = selectedID.flatMap(model.task(withID:)),
         task.id != model.activeFocusSession?.activeTaskId
       else { return .ignored }
-      model.requestTaskDeletion(task)
+      model.requestTaskDeletion(task, from: .panel)
       return .handled
     case .enter:
       if model.pendingTaskDeletionID != nil {

@@ -164,6 +164,7 @@ struct MainApp: App {
               AppDelegate.shared.workspace.run(id)
             }
             .commandShortcut(id)
+            .workspaceWindowOnly()
           }
           // Ending the block sits after the section that starts one.
           if index == 0 {
@@ -208,10 +209,12 @@ struct MainApp: App {
           AppDelegate.shared.workspace.showSelectedListSettings()
         }
         .commandShortcut(.listSettings)
+        .workspaceWindowOnly()
         Button("Archive Current List") {
           AppDelegate.shared.workspace.archiveSelectedList()
         }
         .commandShortcut(.listArchive)
+        .workspaceWindowOnly()
         Button("Restore Most Recently Archived List") {
           AppDelegate.shared.workspace.restoreMostRecentlyArchivedList()
         }
@@ -241,6 +244,24 @@ struct MainApp: App {
 final class MenuBarWorkspace {
   static let shared = MenuBarWorkspace()
   var workspace: WorkspaceViewModel?
+  /// Whether the workspace window is the key window — not Settings, not the
+  /// focus panel, not a sheet on the window. `MainWindowController` keeps it.
+  var isWorkspaceWindowKey = false
+}
+
+/// Greys a menu item that acts on the window's selection while some other
+/// window has the keyboard. Its key equivalent then goes to that window
+/// instead: ⌘⌫ in a Settings field deletes to the start of the line, and in
+/// the focus panel it is the panel's, rather than deleting the task selected
+/// in a window you are not looking at.
+private struct WorkspaceWindowOnly: ViewModifier {
+  func body(content: Content) -> some View {
+    content.disabled(!MenuBarWorkspace.shared.isWorkspaceWindowKey)
+  }
+}
+
+extension View {
+  fileprivate func workspaceWindowOnly() -> some View { modifier(WorkspaceWindowOnly()) }
 }
 
 /// Finish and Stop, greyed while there is nothing running to end. A view of

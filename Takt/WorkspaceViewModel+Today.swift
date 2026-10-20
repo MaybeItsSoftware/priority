@@ -19,7 +19,12 @@ extension WorkspaceViewModel {
   /// column, and reading the reason would plan it a second time instead of
   /// taking it off.
   func togglePlannedTodayForSelection() {
-    guard let store, let task = selectedTask else { return }
+    if let task = selectedTask { togglePlannedToday(task) }
+  }
+
+  /// Plans the task for today, or takes it off — the panel's ⌃T on its row.
+  func togglePlannedToday(_ task: WorkspaceTask) {
+    guard let store else { return }
     let isPlanned = (try? store.kanbanColumn(for: task.id)) == NextUpSelector.todayColumnID
     var succeeded = false
     perform {

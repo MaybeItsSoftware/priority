@@ -78,7 +78,7 @@ struct DayView: View {
           AppDelegate.shared.showMainWindow()
           model.openConditionsTab()
         }
-        if model.pendingTaskDeletionID != nil, let pending = model.pendingTaskDeletion {
+        if let pending = model.pendingTaskDeletion(on: surface.isPanel ? .panel : .window) {
           TaskDeletionPrompt(task: pending)
         } else {
           WorkspaceOverlayFooter(hints: hints)
@@ -406,7 +406,7 @@ struct DayView: View {
   private func requestDeletion() -> Bool {
     guard let id = selectedID, id != Self.createRowID, id != activeTaskID,
       let task = model.task(withID: id) else { return false }
-    model.requestTaskDeletion(task)
+    model.requestTaskDeletion(task, from: surface.isPanel ? .panel : .window)
     return true
   }
 

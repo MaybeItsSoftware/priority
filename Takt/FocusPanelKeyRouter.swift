@@ -52,6 +52,7 @@ final class FocusPanelKeyRouter {
   func handleListKey(
     _ event: NSEvent, model: WorkspaceViewModel, summons: FocusPanelSummons, context: FocusPanelListContext
   ) -> Bool {
+    model.noteKey(on: .panel)
     guard model.panelOverlay == nil, let key = event.workspaceCommandKey else { return false }
     lastContext = context
     // A delete waiting for Return owns the next key, as in the window.
@@ -89,9 +90,14 @@ final class FocusPanelKeyRouter {
 
   /// A key with the caret in the field: only the chorded ones that cannot be
   /// typed into a search — ⌘D, ⌥T, F2, ⌘P and the like (`reachesFromField`).
+  /// Any other chord the main menu would run on the window's selection — ⌘⌫,
+  /// ⌘⇧M — is the field's own (`FocusPanelWindow` keeps it from the menu),
+  /// so ⌘⌫ there deletes to the start of the line, or, with nothing typed,
+  /// asks to delete the row.
   func handleFieldKey(
     _ event: NSEvent, model: WorkspaceViewModel, summons: FocusPanelSummons, context: FocusPanelListContext
   ) -> Bool {
+    model.noteKey(on: .panel)
     guard model.panelOverlay == nil, model.pendingTaskDeletionID == nil,
       let key = event.workspaceCommandKey,
       let action = FocusPanelKeys.action(forKey: key, on: context.surface),
@@ -126,8 +132,11 @@ final class FocusPanelKeyRouter {
       break
     }
     guard let action = FocusPanelKeys.action(forKey: key, on: context.surface) else {
-      // ⌘Q, ⌘W, ⌘, and copy are the app's; a bare key is the list's.
-      return !WorkspaceCommandCatalog.isChord(key)
+      // ⌘Q, ⌘W, ⌘, and copy are the app's; a bare key is the list's. A
+      // chord for a task or list command the panel has no meaning for —
+      // ⌘⇧M, ⌘⇧L — is swallowed: the main menu would run it on the
+      // window's selection, behind the panel.
+      return !WorkspaceCommandCatalog.isChord(key) || FocusPanelKeys.isSelectionChord(key, on: context.surface)
     }
     perform(action, model: model, summons: summons, context: context)
     return true
@@ -186,7 +195,11 @@ final class FocusPanelKeyRouter {
     case .delete:
       // Never the running block: that one ends through its own finish.
       guard task.id != model.activeFocusSession?.activeTaskId else { return }
-      model.requestTaskDeletion(task)
+      model.requestTaskDeletion(task, from: .panel)
+    case .planToday:
+      model.togglePlannedToday(task)
+    case .openLink:
+      model.openFirstLink(of: task)
     default:
       break
     }

@@ -50,6 +50,10 @@ public enum FocusPanelAction: Equatable, Sendable {
   /// The place before or after this one: Today, then the lists in order.
   case place(Int)
   case dismiss
+  /// `⌃T`: plan the task for today, or take it off.
+  case planToday
+  /// `⌘O`: open the task's first link.
+  case openLink
 }
 
 public enum FocusPanelKeys {
@@ -71,6 +75,7 @@ public enum FocusPanelKeys {
     .goToday: .goToday, .goListNavigator: .chooseList,
     .goPreviousList: .place(-1), .goNextList: .place(1),
     .motionDismiss: .dismiss,
+    .taskTogglePlannedToday: .planToday, .taskOpenLink: .openLink,
   ]
 
   /// The panel's meaning for a command, as the key that asked for it.
@@ -103,9 +108,22 @@ public enum FocusPanelKeys {
     let isFunctionKey = key.hasPrefix("f") && key.count > 1 && key.dropFirst().allSatisfy(\.isNumber)
     guard WorkspaceCommandCatalog.isChord(key) || key.hasPrefix("option+") || isFunctionKey else { return false }
     switch action {
-    case .edit, .due, .clearDue, .clearStart, .goToList, .goToday, .chooseList, .place: return true
+    case .edit, .due, .clearDue, .clearStart, .goToList, .goToday, .chooseList, .place, .planToday, .openLink:
+      return true
     default: return false
     }
+  }
+
+  /// Whether a key is a chord for a command that, run by the main menu, acts
+  /// on the window's selection — a task's or a list's. The panel never lets
+  /// one of those through to the menu: it is done on the panel's row, or not
+  /// at all, but never on a task hidden behind the panel.
+  public static func isSelectionChord(_ key: String, on surface: WorkspaceCommandSurface) -> Bool {
+    guard WorkspaceCommandCatalog.isChord(key),
+      let command = WorkspaceCommandCatalog.command(forKey: key, on: surface)
+        ?? WorkspaceCommandCatalog.command(forKey: key, on: .anywhere)
+    else { return false }
+    return command.group == "Task" || command.group == "Lists"
   }
 
   /// The row `:` lands on for `number` among `count` rows: vim's `:n`, past

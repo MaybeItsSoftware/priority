@@ -160,12 +160,24 @@ extension WorkspaceViewModel {
     requestTaskDeletion(task)
   }
 
-  func requestTaskDeletion(_ task: WorkspaceTask) {
+  func requestTaskDeletion(_ task: WorkspaceTask, from surface: WorkspaceOverlaySurface = .window) {
     pendingTaskDeletionID = task.id
+    pendingTaskDeletionSurface = surface
   }
 
   var pendingTaskDeletion: WorkspaceTask? {
     pendingTaskDeletionID.flatMap { task(withID: $0) }
+  }
+
+  /// The delete waiting for Return, if `surface` is the one that asked.
+  func pendingTaskDeletion(on surface: WorkspaceOverlaySurface) -> WorkspaceTask? {
+    pendingTaskDeletionSurface == surface ? pendingTaskDeletion : nil
+  }
+
+  /// A key arriving on `surface`: a delete the other surface asked for is
+  /// let go, before the key can confirm it.
+  func noteKey(on surface: WorkspaceOverlaySurface) {
+    if pendingTaskDeletionID != nil, pendingTaskDeletionSurface != surface { cancelPendingTaskDeletion() }
   }
 
   func confirmPendingTaskDeletion() {

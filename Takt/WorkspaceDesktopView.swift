@@ -231,7 +231,7 @@ private struct WorkspaceTaskDeletionInset: View {
   @Environment(WorkspaceViewModel.self) private var model
 
   var body: some View {
-    if model.pendingTaskDeletionID != nil, let pending = model.pendingTaskDeletion {
+    if let pending = model.pendingTaskDeletion(on: .window) {
       TaskDeletionPrompt(task: pending)
     }
   }

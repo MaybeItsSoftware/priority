@@ -676,6 +676,10 @@ enum WorkspaceSidebarItem: Identifiable {
   /// A task a delete key has asked to remove, waiting for Return. Held by id
   /// so a task that disappears meanwhile simply has nothing left to confirm.
   var pendingTaskDeletionID: String?
+  /// Which surface asked for it — the window or the panel. The other one
+  /// taking a key lets it go, so Return there cannot confirm a delete
+  /// prompted somewhere you are not looking.
+  var pendingTaskDeletionSurface: WorkspaceOverlaySurface = .window
   var taskComposerFocusRequest = 0
   /// Whether a draft row is open in the pane, at the place the task it
   /// becomes will land (`taskInsertionReference` and its two flags say where).

@@ -94,6 +94,25 @@ final class FocusPanelKeysTests: XCTestCase {
     XCTAssertFalse(FocusPanelKeys.reachesFromField(.undo, key: "cmd+z"))
   }
 
+  /// ⌃T and ⌘O act on the panel's row, from the rows and the field alike.
+  func testPlanTodayAndOpenLinkAreThePanels() {
+    XCTAssertEqual(FocusPanelKeys.action(forKey: "ctrl+t", on: .today), .planToday)
+    XCTAssertEqual(FocusPanelKeys.action(forKey: "cmd+o", on: .outline), .openLink)
+    XCTAssertTrue(FocusPanelKeys.reachesFromField(.planToday, key: "ctrl+t"))
+    XCTAssertTrue(FocusPanelKeys.reachesFromField(.openLink, key: "cmd+o"))
+  }
+
+  /// The chords the main menu would run on the window's selection are never
+  /// let through to it from the panel; the app's own and the views' are.
+  func testSelectionChordsAreTheTaskAndListCommands() {
+    XCTAssertTrue(FocusPanelKeys.isSelectionChord("cmd+delete", on: .today))
+    XCTAssertTrue(FocusPanelKeys.isSelectionChord("cmd+shift+m", on: .outline))
+    XCTAssertTrue(FocusPanelKeys.isSelectionChord("cmd+option+a", on: .outline))
+    XCTAssertFalse(FocusPanelKeys.isSelectionChord("cmd+shift+.", on: .today))
+    XCTAssertFalse(FocusPanelKeys.isSelectionChord("cmd+q", on: .today))
+    XCTAssertFalse(FocusPanelKeys.isSelectionChord("delete", on: .today))
+  }
+
   func testNumberJumpIsVimsColonN() {
     XCTAssertEqual(FocusPanelKeys.numberedIndex(3, count: 5), 2)
     XCTAssertEqual(FocusPanelKeys.numberedIndex(0, count: 5), 0)

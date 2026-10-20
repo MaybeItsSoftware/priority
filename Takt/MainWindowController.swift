@@ -180,6 +180,8 @@ final class MainWindowController: NSObject, NSWindowDelegate {
         }
         return event
       }
+      // A delete the panel asked for is the panel's; a key here lets it go.
+      self.workspace.noteKey(on: .window)
       self.shortcutShiftTap.keyPressed()
       if self.workspace.windowOverlay != nil {
         self.workspace.desktopShortcutSequence.reset()
@@ -314,6 +316,16 @@ final class MainWindowController: NSObject, NSWindowDelegate {
   }
 
   // MARK: - NSWindowDelegate
+
+  func windowDidBecomeKey(_ notification: Notification) {
+    guard (notification.object as? NSWindow) === window else { return }
+    MenuBarWorkspace.shared.isWorkspaceWindowKey = true
+  }
+
+  func windowDidResignKey(_ notification: Notification) {
+    guard (notification.object as? NSWindow) === window else { return }
+    MenuBarWorkspace.shared.isWorkspaceWindowKey = false
+  }
 
   func windowWillClose(_ notification: Notification) {
     guard (notification.object as? NSWindow) === window else { return }
