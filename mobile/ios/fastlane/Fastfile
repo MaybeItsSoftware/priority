@@ -94,6 +94,12 @@ platform :ios do
       screenshots_path:           File.join(listing, "screenshots"),
       overwrite_screenshots:      true,
       skip_binary_upload:         true,
+      # A new app has no review detail yet, and deliver's attachment step
+      # crashes fetching one; notes alone make it create the detail first.
+      # The contact and the review account are added in App Store Connect.
+      app_review_information:     {
+        notes: "Takt works fully without an account: sync is optional and off until you sign in under Settings → Sync.",
+      },
       skip_app_version_update:    false,
       submit_for_review:          false,
       force:                      true,
