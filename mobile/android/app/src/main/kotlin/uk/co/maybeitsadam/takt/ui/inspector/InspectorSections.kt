@@ -4,6 +4,7 @@ import android.content.ActivityNotFoundException
 import android.content.Intent
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
@@ -563,6 +564,15 @@ private fun WaitingSection(
             contentDescription = "Waiting on",
         )
         FieldLabel("Follow up")
+        // The iPhone's quick choices: a morning one, three or seven days on.
+        Row(horizontalArrangement = Arrangement.spacedBy(Metrics.xs)) {
+            for ((title, days) in FOLLOW_UP_CHOICES) {
+                PButton(title, contentPadding = PaddingValues(horizontal = Metrics.sm), onClick = {
+                    day = today.plusDays(days)
+                    time = LocalTime.of(9, 0)
+                })
+            }
+        }
         ChalkDateField(
             label = "Follow up",
             date = day,
@@ -577,6 +587,9 @@ private fun WaitingSection(
             FollowUpRepeat(every, onChange = { every = it })
         }
         Row(horizontalArrangement = Arrangement.spacedBy(Metrics.sm), verticalAlignment = Alignment.CenterVertically) {
+            if (facts.waitingOn != null || savedAt != null) {
+                PButton("Clear", onClick = { vm.setWaiting(null, null, null) }, modifier = Modifier.testTag("inspector_waiting_clear"))
+            }
             Spacer(Modifier.weight(1f))
             PButton(
                 if (isWaiting) "Save" else "Move to Waiting on",
@@ -594,6 +607,9 @@ private fun WaitingSection(
         )
     }
 }
+
+/** The follow-up's quick choices, 9:00 that many days on, as the iPhone's `WaitingForm.quickChoices`. */
+private val FOLLOW_UP_CHOICES = listOf("Tomorrow 9:00" to 1L, "In 3 days" to 3L, "Next week" to 7L)
 
 /** Once, or every so many days: the follow-up's repeat, saved with the rest of the section. */
 @Composable
