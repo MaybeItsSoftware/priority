@@ -24,7 +24,7 @@ import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.WindowInsetsSides
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
@@ -308,9 +308,8 @@ fun EmptyState(title: String, modifier: Modifier = Modifier, detail: String? = n
 }
 
 /**
- * The task's tick: an outlined circle when open, an emerald disc with a check
- * when done, a raspberry disc with a cross when cancelled. The painted circle
- * is 20dp; the target around it is 48dp.
+ * The task's tick: [TaskBox] — a hairline square, never a circle — inside a
+ * 48dp target. The painted box is 20dp.
  */
 @Composable
 fun TaskCheck(
@@ -322,7 +321,6 @@ fun TaskCheck(
     label: String? = null,
     onToggle: () -> Unit,
 ) {
-    val colors = TaktTheme.colors
     val verb = when (status) {
         TaskStatus.OPEN -> "Complete"
         TaskStatus.COMPLETED -> "Reopen"
@@ -333,7 +331,7 @@ fun TaskCheck(
     Box(
         modifier
             .size(Metrics.touchTarget)
-            .clip(CircleShape)
+            .clip(Metrics.control)
             .clickable(role = Role.Checkbox) {
                 haptics.performHapticFeedback(if (status == TaskStatus.OPEN) HapticFeedbackType.ToggleOn else HapticFeedbackType.ToggleOff)
                 onToggle()
@@ -341,15 +339,38 @@ fun TaskCheck(
             .semantics { contentDescription = description },
         contentAlignment = Alignment.Center,
     ) {
-        val shape = if (isList) Metrics.control else CircleShape
+        TaskBox(status, isList = isList, size = size)
+    }
+}
+
+/**
+ * A task's completion box without its action: a hairline square at the
+ * control radius scaled down to the box (never round), empty when open; done
+ * is the box tinted emerald with its border and a check, cancelled the same in
+ * raspberry with a cross. A list's open box holds the outline glyph, so a list
+ * still reads as a list beside its tasks.
+ */
+@Composable
+fun TaskBox(status: TaskStatus, isList: Boolean = false, size: Dp = 20.dp) {
+    val colors = TaktTheme.colors
+    val shape = RoundedCornerShape(minOf(Metrics.controlRadius, size / 4))
+    val hue = when (status) {
+        TaskStatus.OPEN -> null
+        TaskStatus.COMPLETED -> colors.success
+        TaskStatus.CANCELLED -> colors.danger
+    }
+    Box(
+        Modifier
+            .size(size)
+            .clip(shape)
+            .background(hue?.copy(alpha = 0.10f) ?: Color.Transparent)
+            .border(BorderStroke(if (hue == null) 1.5.dp else Metrics.hairline.coerceAtLeast(1.dp), hue?.copy(alpha = 0.4f) ?: colors.inputBorder), shape),
+        contentAlignment = Alignment.Center,
+    ) {
         when (status) {
-            TaskStatus.OPEN -> Box(Modifier.size(size).border(BorderStroke(1.5.dp, colors.inputBorder), shape))
-            TaskStatus.COMPLETED -> Box(Modifier.size(size).clip(shape).background(colors.success), contentAlignment = Alignment.Center) {
-                Icon(Icons.Filled.Check, null, tint = colors.onAccent, modifier = Modifier.size(size * 0.7f))
-            }
-            TaskStatus.CANCELLED -> Box(Modifier.size(size).clip(shape).background(colors.danger), contentAlignment = Alignment.Center) {
-                Icon(Icons.Filled.Close, null, tint = colors.onAccent, modifier = Modifier.size(size * 0.7f))
-            }
+            TaskStatus.OPEN -> if (isList) Icon(PIcons.Outline, null, tint = colors.mutedText, modifier = Modifier.size(size * 0.6f))
+            TaskStatus.COMPLETED -> Icon(Icons.Filled.Check, null, tint = colors.success, modifier = Modifier.size(size * 0.7f))
+            TaskStatus.CANCELLED -> Icon(Icons.Filled.Close, null, tint = colors.danger, modifier = Modifier.size(size * 0.7f))
         }
     }
 }

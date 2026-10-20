@@ -1,8 +1,6 @@
 package uk.co.maybeitsadam.takt.ui.lists
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -20,9 +18,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -47,6 +42,7 @@ import uk.co.maybeitsadam.takt.ui.components.IconAction
 import uk.co.maybeitsadam.takt.ui.components.SectionHeader
 import uk.co.maybeitsadam.takt.ui.components.TaktTopBar
 import uk.co.maybeitsadam.takt.ui.components.Tag
+import uk.co.maybeitsadam.takt.ui.components.TaskBox
 import uk.co.maybeitsadam.takt.ui.navigation.FilterListRoute
 import uk.co.maybeitsadam.takt.ui.navigation.LocalShell
 import uk.co.maybeitsadam.takt.ui.theme.Metrics
@@ -126,7 +122,7 @@ private fun FilterTaskRow(
             Modifier.fillMaxWidth().heightIn(min = Metrics.touchTarget).padding(end = Metrics.lg),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Box(Modifier.size(Metrics.touchTarget), contentAlignment = Alignment.Center) { StatusMark(task.status, task.isList) }
+            Box(Modifier.size(Metrics.touchTarget), contentAlignment = Alignment.Center) { TaskBox(task.status, isList = task.isList) }
             Column(Modifier.weight(1f).padding(vertical = Metrics.xs), verticalArrangement = Arrangement.spacedBy(Metrics.xxs)) {
                 Text(
                     task.title,
@@ -151,19 +147,3 @@ private fun FilterTaskRow(
     }
 }
 
-/** [uk.co.maybeitsadam.takt.ui.components.TaskCheck]'s glyph without its action: a filter list is read-only. */
-@Composable
-private fun StatusMark(status: TaskStatus, isList: Boolean) {
-    val colors = TaktTheme.colors
-    val shape = if (isList) Metrics.control else CircleShape
-    val size = 20.dp
-    when (status) {
-        TaskStatus.OPEN -> Box(Modifier.size(size).border(BorderStroke(1.5.dp, colors.inputBorder), shape))
-        TaskStatus.COMPLETED -> Box(Modifier.size(size).clip(shape).background(colors.success), contentAlignment = Alignment.Center) {
-            Icon(Icons.Filled.Check, null, tint = colors.onAccent, modifier = Modifier.size(size * 0.7f))
-        }
-        TaskStatus.CANCELLED -> Box(Modifier.size(size).clip(shape).background(colors.danger), contentAlignment = Alignment.Center) {
-            Icon(Icons.Filled.Close, null, tint = colors.onAccent, modifier = Modifier.size(size * 0.7f))
-        }
-    }
-}
