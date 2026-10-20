@@ -82,6 +82,7 @@ user, not used for tracking, purpose **App Functionality** only:
 | Contact Info → Email Address | the sync account |
 | User Content → Other User Content | the synced tasks, notes and lists |
 | Identifiers → User ID | the account id that keys the synced rows |
+| Identifiers → Device ID | each signed-in device's generated id and name, for the devices list |
 
 Everything else: not collected. Collection only happens if the user signs in
 to sync; that's still "collected" for Apple's purposes.
