@@ -176,6 +176,12 @@ extension WorkspaceViewModel {
   func addToFocusQueue(_ task: WorkspaceTask) {
     guard !task.isList else { return }
     guard let store, let session = activeFocusSession else { return }
+    // The running task cannot wait behind itself. Today's Return means done
+    // on that row; `gf` on the outline and the board says so instead.
+    guard task.id != session.activeTaskId else {
+      onStatusMessage?("Already running")
+      return
+    }
     perform {
       try store.addToFocusQueue(sessionId: session.id, taskId: task.id)
       allowsQueueResume = true
