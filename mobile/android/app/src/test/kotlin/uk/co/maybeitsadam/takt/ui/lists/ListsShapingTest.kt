@@ -254,6 +254,18 @@ class ListsShapingTest {
         assertNull(BoardShaping.movingColumn(layout, drawn, "c", 1))
     }
 
+    @Test fun aWaitingBadgeNeedsTheWaitingColumnAndChasesOnlyAnOpenTask() {
+        val zone = ZoneOffset.UTC
+        val today = LocalDate.of(2026, 10, 20)
+        val at = Instant.parse("2026-10-21T09:00:00Z")
+        val waiting = uk.co.maybeitsadam.takt.data.workspace.TaskWaitingDetails(waitingOn = "Sam", followUpAt = at, column = "waiting-on")
+        assertEquals(WaitingBadge("Sam", "↻ Tomorrow 09:00"), WaitingBadge.of(waiting, isOpen = true, today, zone))
+        assertEquals(WaitingBadge("Sam", null), WaitingBadge.of(waiting, isOpen = false, today, zone))
+        assertNull(WaitingBadge.of(waiting.copy(column = "backlog"), isOpen = true, today, zone))
+        assertNull(WaitingBadge.of(waiting.copy(waitingOn = null), isOpen = false, today, zone))
+        assertNull(WaitingBadge.of(null, isOpen = true, today, zone))
+    }
+
     @Test fun aFoldedCardDrawsNoSubtasks() {
         val board = BoardShaping.shape(scope(listOf(home), tasks), false, stock, setOf("a"), false, zone, today)
         val card = board.columns.first().cards.first()

@@ -2,6 +2,8 @@ package uk.co.maybeitsadam.takt.ui.today
 
 import androidx.compose.runtime.Immutable
 import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneId
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
@@ -12,6 +14,8 @@ import uk.co.maybeitsadam.takt.core.FocusSessionPhase
 import uk.co.maybeitsadam.takt.core.TaskList
 import uk.co.maybeitsadam.takt.core.WorkProgress
 import uk.co.maybeitsadam.takt.core.WorkspaceNextUpSnapshot
+import uk.co.maybeitsadam.takt.data.workspace.TaskWaitingDetails
+import uk.co.maybeitsadam.takt.ui.lists.WaitingBadge
 
 /** One card in the day. A value, so the list redraws only the cards that changed. */
 @Immutable
@@ -35,6 +39,8 @@ data class DayCard(
     val isBlocked: Boolean = false,
     /** The list it belongs to, for "Go to list". */
     val listId: String? = null,
+    /** Filed in Waiting on: who it waits on and when to chase it. */
+    val waiting: WaitingBadge? = null,
 ) {
     val isPlanned: Boolean get() = reason == DayPlanReason.PLANNED
 }
@@ -178,6 +184,9 @@ object DayShaping {
         dailies: List<DailyItem>,
         lists: List<TaskList>,
         blockedIds: Set<String> = emptySet(),
+        waiting: Map<String, TaskWaitingDetails> = emptyMap(),
+        today: LocalDate = LocalDate.now(),
+        zone: ZoneId = ZoneId.systemDefault(),
     ): DayState {
         val dailyByTask = HashMap<String, DailyItem>()
         for (item in dailies) dailyByTask.putIfAbsent(item.task.id, item)
@@ -213,6 +222,7 @@ object DayShaping {
                 isDailyDoneToday = daily?.isDoneToday ?: false,
                 isRunning = id == runningId,
                 isBlocked = id in blockedIds,
+                waiting = WaitingBadge.of(waiting[id], isOpen = true, today, zone),
             )
         }
         val onTheDay = cards.mapTo(HashSet()) { it.id }

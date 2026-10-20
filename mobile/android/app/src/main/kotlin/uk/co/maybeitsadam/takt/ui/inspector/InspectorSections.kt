@@ -61,6 +61,8 @@ import uk.co.maybeitsadam.takt.ui.components.Format
 import uk.co.maybeitsadam.takt.ui.components.Hairline
 import uk.co.maybeitsadam.takt.ui.components.MonoText
 import uk.co.maybeitsadam.takt.ui.components.PButton
+import uk.co.maybeitsadam.takt.ui.lists.WaitingBadge
+import uk.co.maybeitsadam.takt.ui.lists.WaitingMarkers
 import uk.co.maybeitsadam.takt.ui.components.Tag
 import uk.co.maybeitsadam.takt.ui.conditions.TaskConditionsSheet
 import uk.co.maybeitsadam.takt.ui.components.TaskCheck
@@ -178,6 +180,16 @@ private fun TitleBlock(
             }
             if (around.facts.isPlannedToday) Tag("Today", color = colors.primary, leading = PIcons.Today)
             if (around.facts.daily != null) Tag("Daily", color = colors.success, leading = PIcons.Repeat)
+            // Who it waits on and when to chase it, as the iPhone's header and the list rows say.
+            val facts = around.facts
+            val zone = remember { ZoneId.systemDefault() }
+            WaitingMarkers(
+                WaitingBadge.of(
+                    facts.kanbanColumn, facts.waitingOn, facts.followUpAt, facts.followUpChase,
+                    task.status == TaskStatus.OPEN, LocalDate.now(zone), zone,
+                ),
+                Modifier.align(Alignment.CenterVertically),
+            )
         }
         Row(Modifier.padding(start = Metrics.sm), horizontalArrangement = Arrangement.spacedBy(Metrics.sm)) {
             if (!task.isList && task.status == TaskStatus.OPEN) {

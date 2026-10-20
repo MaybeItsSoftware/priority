@@ -90,6 +90,7 @@ internal fun FilterListContent(id: String, showBack: Boolean, modifier: Modifier
                             task = task,
                             listColorHex = section.list.colorHex,
                             isBlocked = task.id in state.blockedTaskIds,
+                            waiting = state.waiting[task.id],
                             onOpen = { shell.navigator.openList(task.listId, task.id) },
                             onInspect = { vm.inspect(task.id) },
                         )
@@ -105,6 +106,7 @@ private fun FilterTaskRow(
     task: WorkspaceTask,
     listColorHex: String?,
     isBlocked: Boolean,
+    waiting: WaitingBadge?,
     onOpen: () -> Unit,
     onInspect: () -> Unit,
 ) {
@@ -133,6 +135,7 @@ private fun FilterTaskRow(
                     overflow = TextOverflow.Ellipsis,
                 )
                 if (isBlocked) Text("Blocked", style = TaktTheme.type.small, color = colors.dimText)
+                WaitingMarkers(waiting)
             }
             task.dueAt?.let { due ->
                 val overdue = open && due.isBefore(Instant.now())

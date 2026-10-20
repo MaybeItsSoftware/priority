@@ -27,6 +27,11 @@ import uk.co.maybeitsadam.takt.data.workspace.TaskSearchResult
 import uk.co.maybeitsadam.takt.data.workspace.blockedTaskIds
 import uk.co.maybeitsadam.takt.data.workspace.buriedStarts
 import uk.co.maybeitsadam.takt.data.workspace.observeSidebar
+import uk.co.maybeitsadam.takt.data.workspace.waitingDetails
+import uk.co.maybeitsadam.takt.ui.lists.WaitingBadge
+import uk.co.maybeitsadam.takt.core.TaskStatus
+import java.time.LocalDate
+import java.time.ZoneId
 
 @Immutable
 data class SearchState(
@@ -37,6 +42,8 @@ data class SearchState(
     val blockedIds: Set<String> = emptySet(),
     /** Results whose start is still to come, and when: drawn greyed, with the day they start. */
     val buriedStarts: Map<String, java.time.Instant> = emptyMap(),
+    /** Results filed in Waiting on: who they wait on and when to chase them. */
+    val waiting: Map<String, WaitingBadge> = emptyMap(),
 )
 
 /** Search: FTS through the repository, debounced, re-run when tasks change under it. */
@@ -68,11 +75,17 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
                 .map {
                     val results = repository.searchTasks(session.workspace.id, query, includingCompleted = include)
                     val blocked = repository.blockedTaskIds()
+                    val details = repository.waitingDetails()
+                    val today = LocalDate.now()
+                    val zone = ZoneId.systemDefault()
                     SearchState(
                         query,
                         results.toImmutableList(),
                         results.mapNotNullTo(HashSet()) { r -> r.task.id.takeIf { it in blocked } },
                         repository.buriedStarts(results.map { it.task.id }),
+                        results.mapNotNull { r ->
+                            WaitingBadge.of(details[r.task.id], r.task.status == TaskStatus.OPEN, today, zone)?.let { r.task.id to it }
+                        }.toMap(),
                     )
                 }
         }

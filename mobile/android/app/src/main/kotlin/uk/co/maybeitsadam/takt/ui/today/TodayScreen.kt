@@ -75,6 +75,7 @@ import uk.co.maybeitsadam.takt.ui.focus.rememberNotificationGate
 import uk.co.maybeitsadam.takt.ui.focus.rememberTicker
 import uk.co.maybeitsadam.takt.ui.lists.ConfirmDialog
 import uk.co.maybeitsadam.takt.ui.lists.MoveToListSheet
+import uk.co.maybeitsadam.takt.ui.lists.WaitingMarkers
 import uk.co.maybeitsadam.takt.ui.navigation.LocalShell
 import uk.co.maybeitsadam.takt.ui.navigation.Tab
 import uk.co.maybeitsadam.takt.ui.theme.TaktTheme
@@ -429,10 +430,11 @@ private fun CardDetail(card: DayCard) {
         DayPlanReason.STARTS_TODAY -> TaktTheme.colors.success
         else -> TaktTheme.colors.mutedText
     }
-    if (detail == null && card.listName == null && card.dailyId == null && !card.isBlocked) return
+    if (detail == null && card.listName == null && card.dailyId == null && !card.isBlocked && card.waiting == null) return
     Row(horizontalArrangement = Arrangement.spacedBy(Metrics.xs + Metrics.xxs), verticalAlignment = Alignment.CenterVertically) {
         if (card.isBlocked) Text("Blocked", style = TaktTheme.type.small, color = TaktTheme.colors.dimText, maxLines = 1)
         if (detail != null) Text(detail, style = TaktTheme.type.small, color = tint, maxLines = 1)
+        WaitingMarkers(card.waiting)
         if (card.dailyId != null) {
             Icon(PIcons.Repeat, "Daily", tint = TaktTheme.colors.categoricalPurple, modifier = Modifier.size(12.dp))
         }

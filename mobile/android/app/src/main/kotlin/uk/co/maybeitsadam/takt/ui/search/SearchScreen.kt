@@ -79,6 +79,8 @@ import uk.co.maybeitsadam.takt.ui.components.SettingsAction
 import uk.co.maybeitsadam.takt.ui.components.Tag
 import uk.co.maybeitsadam.takt.ui.components.TaskCheck
 import uk.co.maybeitsadam.takt.ui.lists.OutlineShaping
+import uk.co.maybeitsadam.takt.ui.lists.WaitingBadge
+import uk.co.maybeitsadam.takt.ui.lists.WaitingMarkers
 import uk.co.maybeitsadam.takt.ui.navigation.LocalShell
 import uk.co.maybeitsadam.takt.ui.theme.TaktTheme
 import uk.co.maybeitsadam.takt.ui.theme.Metrics
@@ -237,6 +239,7 @@ fun SearchScreen() {
                         starts = state.buriedStarts[result.task.id]?.let {
                             OutlineShaping.startsLabel(it, ZoneId.systemDefault(), LocalDate.now())
                         },
+                        waiting = state.waiting[result.task.id],
                         onOpen = { reveal(result) },
                         onInspect = { model.inspect(result.task.id) },
                         onToggle = { model.toggle(result) },
@@ -325,6 +328,7 @@ private fun ResultRow(
     isSelected: Boolean,
     isBlocked: Boolean,
     starts: String?,
+    waiting: WaitingBadge?,
     onOpen: () -> Unit,
     onInspect: () -> Unit,
     onToggle: () -> Unit,
@@ -374,6 +378,10 @@ private fun ResultRow(
                     if (starts != null) {
                         Spacer(Modifier.width(Metrics.xs))
                         Text(starts, style = TaktTheme.type.monoSmall, color = colors.warning, maxLines = 1)
+                    }
+                    if (waiting != null) {
+                        Spacer(Modifier.width(Metrics.xs))
+                        WaitingMarkers(waiting)
                     }
                     statusLabel(task.status)?.let { label ->
                         Spacer(Modifier.width(Metrics.xs))

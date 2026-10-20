@@ -29,6 +29,7 @@ import uk.co.maybeitsadam.takt.core.FocusSessionPhase
 import uk.co.maybeitsadam.takt.core.TaskAvailabilityPolicy
 import uk.co.maybeitsadam.takt.core.TaskList
 import uk.co.maybeitsadam.takt.data.workspace.observeBlockedTaskIds
+import uk.co.maybeitsadam.takt.data.workspace.observeWaitingDetails
 import uk.co.maybeitsadam.takt.data.workspace.startClash
 import uk.co.maybeitsadam.takt.ui.focus.FocusActions
 import uk.co.maybeitsadam.takt.ui.focus.FocusDeferral
@@ -70,10 +71,11 @@ class TodayViewModel(private val container: AppContainer) : ViewModel() {
             }
         }
         val dailies = dayTicks().flatMapLatest { repo.observeDailies(Instant.now()) }
+        val marks = combine(repo.observeBlockedTaskIds(), repo.observeWaitingDetails(), ::Pair)
         combine(
-            snapshot, active, dailies, repo.observeLists(session.workspace.id), repo.observeBlockedTaskIds(),
-        ) { next, focusSession, daily, lists, blocked ->
-            DayShaping.build(next, focusSession, daily, lists, blocked)
+            snapshot, active, dailies, repo.observeLists(session.workspace.id), marks,
+        ) { next, focusSession, daily, lists, (blocked, waiting) ->
+            DayShaping.build(next, focusSession, daily, lists, blocked, waiting)
         }
     }.flowOn(Dispatchers.Default)
 

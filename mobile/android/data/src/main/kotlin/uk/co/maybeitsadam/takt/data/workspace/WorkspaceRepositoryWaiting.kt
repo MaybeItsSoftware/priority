@@ -23,7 +23,11 @@ data class TaskWaitingDetails(
     val followUpEveryDays: Int? = null,
     /** What a card adds after the follow-up time: `#3 · every 3d`, or null. */
     val chase: String? = null,
-)
+    /** The board column it is filed in: it is waiting only while that is `waiting-on`. */
+    val column: String? = null,
+) {
+    val isWaiting: Boolean get() = column == WaitingFollowUp.WAITING_COLUMN_ID
+}
 
 private fun readWaitingDetails(db: Db): Map<String, TaskWaitingDetails> =
     db.core.allMetadata()
@@ -36,6 +40,7 @@ private fun readWaitingDetails(db: Db): Map<String, TaskWaitingDetails> =
                 followUpOfTaskId = metadata.followUpOfTaskId,
                 followUpEveryDays = metadata.waitingFollowUpEveryDays,
                 chase = metadata.followUpChase,
+                column = metadata.kanbanColumn,
             )
         }
 

@@ -10,13 +10,18 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.flowOn
-import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import uk.co.maybeitsadam.takt.app.AppContainer
+import java.time.LocalDate
+import java.time.ZoneId
 import uk.co.maybeitsadam.takt.core.TaskList
+import uk.co.maybeitsadam.takt.core.TaskStatus
 import uk.co.maybeitsadam.takt.core.WorkspaceTask
 import uk.co.maybeitsadam.takt.data.workspace.FilterListScope
+import uk.co.maybeitsadam.takt.data.workspace.TaskWaitingDetails
 import uk.co.maybeitsadam.takt.data.workspace.observeFilterListScope
+import uk.co.maybeitsadam.takt.data.workspace.observeWaitingDetails
 
 /** One list's share of a filter list's matches, in the core's board order. */
 @Immutable
@@ -33,6 +38,8 @@ data class FilterListState(
     val isLoaded: Boolean,
     /** Deleted, on this device or another, while it was open. */
     val isMissing: Boolean,
+    /** Matches filed in Waiting on: who they wait on and when to chase them. */
+    val waiting: Map<String, WaitingBadge> = emptyMap(),
 ) {
     companion object {
         val Empty = FilterListState("", "", persistentListOf(), emptySet(), 0, isLoaded = false, isMissing = false)
@@ -41,7 +48,12 @@ data class FilterListState(
 
 /** Shaping a filter list's matches into sections. Pure, so it is tested on the JVM. */
 object FilterListShaping {
-    fun shape(scope: FilterListScope): FilterListState {
+    fun shape(
+        scope: FilterListScope,
+        waiting: Map<String, TaskWaitingDetails> = emptyMap(),
+        today: LocalDate = LocalDate.now(),
+        zone: ZoneId = ZoneId.systemDefault(),
+    ): FilterListState {
         val filterList = scope.filterList
             ?: return FilterListState.Empty.copy(isLoaded = true, isMissing = true)
         // The core returns them list by list; grouping keeps that order.
@@ -57,14 +69,20 @@ object FilterListShaping {
             count = scope.matches.size,
             isLoaded = true,
             isMissing = false,
+            waiting = scope.matches.mapNotNull { m ->
+                WaitingBadge.of(waiting[m.task.id], m.task.status == TaskStatus.OPEN, today, zone)?.let { m.task.id to it }
+            }.toMap(),
         )
     }
 }
 
 /** A filter list's matching tasks, read-only, re-read whenever anything its rules read changes. */
 class FilterListViewModel(private val container: AppContainer, id: String) : ViewModel() {
-    val state: StateFlow<FilterListState> = container.withSession { it.repository.observeFilterListScope(it.workspace.id, id) }
-        .map { FilterListShaping.shape(it) }
+    val state: StateFlow<FilterListState> = container.withSession { session ->
+        combine(session.repository.observeFilterListScope(session.workspace.id, id), session.repository.observeWaitingDetails()) { scope, waiting ->
+            FilterListShaping.shape(scope, waiting)
+        }
+    }
         .flowOn(Dispatchers.Default)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), FilterListState.Empty)
 
