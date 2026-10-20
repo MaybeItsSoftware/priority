@@ -182,9 +182,16 @@ extension WorkspaceModel {
     editValues(taskID, saved: { [weak self] in self?.announce("Buried until tomorrow") }) { $0.startAt = tomorrow }
   }
 
+  /// Announced once the save lands: a repeating task that asks first and is
+  /// then left alone has cleared nothing.
   func clearDue(_ taskID: String) {
-    editValues(taskID) { $0.dueAt = nil; $0.dueDate = nil }
-    announce("Cleared the due date")
+    editValues(taskID, saved: { [weak self] in self?.announce("Cleared the due date") }) {
+      $0.dueAt = nil; $0.dueDate = nil
+    }
+  }
+
+  func clearStart(_ taskID: String) {
+    editValues(taskID, saved: { [weak self] in self?.announce("Cleared the start") }) { $0.startAt = nil }
   }
 
   // MARK: - Planning

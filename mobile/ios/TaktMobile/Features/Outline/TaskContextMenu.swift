@@ -119,7 +119,7 @@ struct TaskContextMenu: View {
     case .taskDueTomorrow: model.setDue(taskID, daysFromToday: 1)
     case .taskBury: model.bury(taskID)
     case .taskClearDue: model.clearDue(taskID)
-    case .taskClearStart: model.editValues(taskID) { $0.startAt = nil }
+    case .taskClearStart: model.clearStart(taskID)
     case .taskGoToList: if let task = model.task(taskID) { model.revealInList(task, isPad: isPad) }
     case .taskClearNotes: model.editValues(taskID) { $0.notes = "" }
     case .taskClearTags: model.editValues(taskID) { $0.tags = "" }

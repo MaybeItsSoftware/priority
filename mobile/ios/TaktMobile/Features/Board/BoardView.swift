@@ -401,7 +401,8 @@ struct BoardCardView: View {
           .contextMenu {
             TaskContextMenu(context: TaskMenuContext(
               taskID: item.id, title: item.task.title, status: item.task.status, isList: item.task.isList,
-              isPromoted: item.task.isPromoted == true, isPlanned: false, allowsStructure: false))
+              isPromoted: item.task.isPromoted == true,
+              isPlanned: board.snapshot.plannedTaskIDs.contains(item.id), allowsStructure: false))
           }
         }
         if rows.count > shown.count {

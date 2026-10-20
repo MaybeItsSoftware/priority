@@ -42,6 +42,9 @@ struct BoardSnapshot: Equatable, Sendable {
   var cards: [String: [BoardCard]] = [:]
   /// Matrix placement for every card on the board, read in the same batch.
   var positions: [String: TaskMatrixPosition] = [:]
+  /// Every task in the board's trees filed in Today — cards and the subtasks
+  /// under them — so a subtask's menu offers the right half of the toggle.
+  var plannedTaskIDs: Set<String> = []
 
   var allCards: [BoardCard] { columns.flatMap { cards[$0.id] ?? [] } }
 
@@ -107,6 +110,7 @@ struct BoardSnapshot: Equatable, Sendable {
     snapshot.columns = columnRead.columns
     snapshot.layout = columnRead.layout
     snapshot.positions = board.positions
+    snapshot.plannedTaskIDs = Set(filed.filter { $0.value == NextUpSelector.todayColumnID }.keys)
     let listNames = scope.isSingleTree
       ? [:] : Dictionary(structure.lists.map { ($0.id, $0.name) }, uniquingKeysWith: { first, _ in first })
     for column in snapshot.columns { snapshot.cards[column.id] = [] }
