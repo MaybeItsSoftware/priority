@@ -15422,7 +15422,7 @@ public object FfiConverterTypeEditorFieldOutcome: FfiConverterRustBuffer<EditorF
  */
 data class EditorMetadata (
     /**
-     * 1 to 4; anything else is no priority.
+     * 1 to 4, or -4 to -1; see [`crate::tasks::is_priority`].
      */
     var `priority`: kotlin.Long?
     , 
@@ -18747,7 +18747,7 @@ data class NewTask (
     var `tags`: List<kotlin.String>
     , 
     /**
-     * 1 to 4; anything else is no priority.
+     * 1 to 4, or -4 to -1 for later than the rest; see [`is_priority`].
      */
     var `priority`: kotlin.Long?
     , 

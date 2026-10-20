@@ -150,6 +150,10 @@ pub const MIGRATIONS: &[(&str, &str)] = &[
         "v32_follow_up_repeat",
         include_str!("migrations/v32_follow_up_repeat.sql"),
     ),
+    (
+        "v33_recurrence_series",
+        include_str!("migrations/v33_recurrence_series.sql"),
+    ),
 ];
 
 /// Brings the database at `path` up to date, creating it if it does not

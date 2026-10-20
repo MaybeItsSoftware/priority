@@ -998,3 +998,72 @@ fn a_due_day_counts_as_its_first_moment() {
             .is_none()
     );
 }
+
+fn priority_of(connection: &Connection, id: &str) -> Option<i64> {
+    connection
+        .query_row(
+            "SELECT priority FROM task_metadata WHERE taskId = ?1",
+            [id],
+            |row| row.get(0),
+        )
+        .unwrap()
+}
+
+fn set_priority(connection: &mut Connection, id: &str, priority: Option<i64>, at: i64) {
+    let mut metadata = crate::editor::snapshot(connection, id).unwrap().metadata;
+    metadata.priority = priority;
+    journalled(connection, "Edit Task Details", |tx| {
+        crate::editor::update_editor_metadata(tx, id, &metadata, at)
+    })
+    .unwrap();
+}
+
+#[test]
+fn a_repeating_tasks_priority_is_the_series_and_the_latest_set_wins() {
+    let mut connection = workspace();
+    repeating(&connection, "daily", Some("2024-01-01 09:00:00.000"), None);
+    // A "keep both" copy, which carries no rule, is still of the series.
+    let mut edit = crate::editor::snapshot(&connection, "o").unwrap();
+    edit.due_at_ms = Some(MONDAY_9 + DAY);
+    let copy = journalled(&mut connection, "Keep Both", |tx| {
+        add_occurrence_copy(tx, &edit, MONDAY_9, "UTC")
+    })
+    .unwrap();
+
+    // Set on the original, the copy takes it too.
+    set_priority(&mut connection, "o", Some(2), MONDAY_9);
+    assert_eq!(priority_of(&connection, &copy), Some(2));
+    // Changed later on the copy, the newer value goes back to the original.
+    set_priority(&mut connection, &copy, Some(-1), MONDAY_9 + 1);
+    assert_eq!(priority_of(&connection, "o"), Some(-1));
+    assert_eq!(priority_of(&connection, &copy), Some(-1));
+
+    // The next turn inherits it, and is of the same series.
+    journalled(&mut connection, "Change Status", |tx| {
+        set_status(tx, "o", "completed", MONDAY_9 + 2, "UTC")
+    })
+    .unwrap();
+    let next: String = connection
+        .query_row(
+            "SELECT id FROM tasks WHERE title = 'Other' AND status = 'open' AND id NOT IN ('o', ?1)",
+            [&copy],
+            |row| row.get(0),
+        )
+        .unwrap();
+    assert_eq!(priority_of(&connection, &next), Some(-1));
+
+    // Clearing it on the next turn clears the copy still open, and leaves
+    // the finished occurrence as it was.
+    set_priority(&mut connection, &next, None, MONDAY_9 + 3);
+    assert_eq!(priority_of(&connection, &copy), None);
+    assert_eq!(priority_of(&connection, "o"), Some(-1));
+
+    // One undo takes the whole series back.
+    undo(&mut connection).unwrap();
+    assert_eq!(priority_of(&connection, &next), Some(-1));
+    assert_eq!(priority_of(&connection, &copy), Some(-1));
+
+    // A task that never repeated is a series of one.
+    set_priority(&mut connection, "p", Some(1), MONDAY_9 + 4);
+    assert_eq!(priority_of(&connection, "c"), None);
+}

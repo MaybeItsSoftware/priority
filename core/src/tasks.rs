@@ -1028,9 +1028,10 @@ pub fn schedule_next_occurrence(
     )?;
     transaction.execute(
         "INSERT INTO task_metadata (taskId, priority, startAt, tagsJSON, recurrenceRule, matrixUrgency,
-                                    matrixImportance, kanbanColumn, externalLinksJSON, focusRank, planningJSON, updatedAt)
+                                    matrixImportance, kanbanColumn, externalLinksJSON, focusRank, planningJSON,
+                                    seriesTaskId, updatedAt)
          SELECT ?1, priority, ?2, tagsJSON, recurrenceRule, matrixUrgency, matrixImportance, NULL,
-                externalLinksJSON, NULL, planningJSON, ?3
+                externalLinksJSON, NULL, planningJSON, COALESCE(seriesTaskId, taskId), ?3
          FROM task_metadata WHERE taskId = ?4",
         params![id, next_start.map(stored_instant), stamp, task_id],
     )?;
@@ -1165,9 +1166,10 @@ pub fn add_occurrence_copy(
     )?;
     transaction.execute(
         "INSERT INTO task_metadata (taskId, priority, startAt, tagsJSON, recurrenceRule, matrixUrgency,
-                                    matrixImportance, kanbanColumn, externalLinksJSON, focusRank, planningJSON, updatedAt)
+                                    matrixImportance, kanbanColumn, externalLinksJSON, focusRank, planningJSON,
+                                    seriesTaskId, updatedAt)
          SELECT ?1, priority, startAt, tagsJSON, NULL, matrixUrgency, matrixImportance, NULL,
-                externalLinksJSON, NULL, planningJSON, ?2
+                externalLinksJSON, NULL, planningJSON, COALESCE(seriesTaskId, taskId), ?2
          FROM task_metadata WHERE taskId = ?3",
         params![id, stamp, task_id],
     )?;

@@ -322,6 +322,35 @@ pub(crate) fn write_editor_metadata(
             stored(now_ms)
         ],
     )?;
+    if current.priority != priority {
+        share_priority_with_series(transaction, task_id, priority, now_ms)?;
+    }
+    Ok(())
+}
+
+/// Writes a repeating task's new priority to every other open occurrence of
+/// its series: the priority belongs to the series, and the one set last wins.
+/// A series is the tasks whose `seriesTaskId` — or, for its first occurrence,
+/// whose own id — is the same: the next turn and a "keep both" copy are given
+/// the series of the task they are made from (`tasks::schedule_next_occurrence`,
+/// `tasks::add_occurrence_copy`), and the next turn carries the priority of
+/// the one finished, so it inherits this too. A task that has never repeated
+/// is a series of one, and this writes nothing.
+fn share_priority_with_series(
+    transaction: &Transaction,
+    task_id: &str,
+    priority: Option<i64>,
+    now_ms: i64,
+) -> Result<(), CoreError> {
+    transaction.execute(
+        "UPDATE task_metadata SET priority = ?2, updatedAt = ?3
+         WHERE taskId <> ?1
+           AND priority IS NOT ?2
+           AND COALESCE(seriesTaskId, taskId) =
+               (SELECT COALESCE(seriesTaskId, taskId) FROM task_metadata WHERE taskId = ?1)
+           AND taskId IN (SELECT id FROM tasks WHERE status = 'open' AND archivedAt IS NULL)",
+        params![task_id, priority, stored(now_ms)],
+    )?;
     Ok(())
 }
 

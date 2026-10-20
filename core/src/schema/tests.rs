@@ -53,10 +53,10 @@ fn a_new_database_has_exactly_the_fixtures_schema() {
 fn every_migration_is_recorded_in_order_under_grdbs_identifiers() {
     let connection = migrated();
     assert_eq!(ledger(&connection), workspace_migrations());
-    assert_eq!(workspace_migrations().len(), 32);
+    assert_eq!(workspace_migrations().len(), 33);
     assert_eq!(
         workspace_migrations().last().map(String::as_str),
-        Some("v32_follow_up_repeat")
+        Some("v33_recurrence_series")
     );
 }
 
@@ -69,7 +69,7 @@ fn migrating_again_applies_nothing_and_keeps_the_work() {
         )
         .unwrap();
     let before = dump_schema(&connection).unwrap();
-    assert_eq!(migrate(&mut connection).unwrap(), "v32_follow_up_repeat");
+    assert_eq!(migrate(&mut connection).unwrap(), "v33_recurrence_series");
     assert_eq!(dump_schema(&connection).unwrap(), before);
     let count: i64 = connection
         .query_row("SELECT COUNT(*) FROM workspaces", [], |row| row.get(0))
@@ -96,9 +96,9 @@ fn a_file_database_is_created_and_closed_again() {
     std::fs::create_dir_all(&directory).unwrap();
     let path = directory.join("workspace.sqlite");
     let latest = migrate_workspace(path.to_string_lossy().into_owned()).unwrap();
-    assert_eq!(latest, "v32_follow_up_repeat");
+    assert_eq!(latest, "v33_recurrence_series");
     let reopened = Connection::open(&path).unwrap();
-    assert_eq!(ledger(&reopened).len(), 32);
+    assert_eq!(ledger(&reopened).len(), 33);
     std::fs::remove_dir_all(directory).unwrap();
 }
 
@@ -783,6 +783,51 @@ fn v32_adds_the_follow_up_repeat_and_count_journalled_and_synced() {
         count(
             "SELECT COUNT(*) FROM sync_outbox WHERE tableName = 'task_metadata' AND rowId = 't'
                AND changedJSON LIKE '%waitingFollowUpEveryDays%' AND changedJSON LIKE '%waitingFollowUpCount%'"
+        ),
+        1
+    );
+}
+
+/// v33: the series an occurrence belongs to is a column on `task_metadata`,
+/// journalled and synced like the rest of the row; every existing row is its
+/// own series.
+#[test]
+fn v33_adds_the_recurrence_series_journalled_and_synced() {
+    let mut connection = migrated_through("v32_follow_up_repeat");
+    seed_workspace(&connection);
+    seed_list(&connection, "l", "Inbox", T0);
+    connection
+        .execute_batch(&format!(
+            "INSERT INTO tasks (id, listId, title, sortOrder, createdAt, updatedAt)
+               VALUES ('t', 'l', 'Write', 0, '{T0}', '{T0}');
+             INSERT INTO task_metadata (taskId, updatedAt) VALUES ('t', '{T0}');"
+        ))
+        .unwrap();
+    migrate_through(&mut connection, Some("v33_recurrence_series")).unwrap();
+    let count = |sql: &str| -> i64 { connection.query_row(sql, [], |row| row.get(0)).unwrap() };
+    assert_eq!(
+        count("SELECT COUNT(*) FROM task_metadata WHERE seriesTaskId IS NULL"),
+        1
+    );
+    connection
+        .execute_batch(
+            "UPDATE undo_control SET suppressed = 0, groupId = 'g', label = 'x' WHERE id = 0;
+             UPDATE sync_control SET recording = 1 WHERE id = 0;
+             UPDATE task_metadata SET seriesTaskId = 'first' WHERE taskId = 't';",
+        )
+        .unwrap();
+    let count = |sql: &str| -> i64 { connection.query_row(sql, [], |row| row.get(0)).unwrap() };
+    assert_eq!(
+        count(
+            "SELECT COUNT(*) FROM change_log WHERE tableName = 'task_metadata' AND rowId = 't'
+               AND afterJSON LIKE '%seriesTaskId%'"
+        ),
+        1
+    );
+    assert_eq!(
+        count(
+            "SELECT COUNT(*) FROM sync_outbox WHERE tableName = 'task_metadata' AND rowId = 't'
+               AND changedJSON LIKE '%seriesTaskId%'"
         ),
         1
     );

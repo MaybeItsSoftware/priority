@@ -1,0 +1,12 @@
+-- v33_recurrence_series: which repeating task an occurrence belongs to. A
+-- repeating task's priority is the series', so setting it on one open
+-- occurrence sets it on all of them, and nothing else tied a "keep both"
+-- copy (which carries no rule) to the task it was copied from, or one turn
+-- to the next. `seriesTaskId` is the id of the series' first occurrence;
+-- NULL means the task is its own series, which every task written before
+-- this one is. The next turn and a one-off copy are given
+-- COALESCE(seriesTaskId, taskId) of the task they are made from. No foreign
+-- key: the first occurrence is usually long finished, and may be deleted.
+-- See core/src/editor.rs `share_priority_with_series`.
+-- Written for the Rust core; the journal and outbox triggers are reinstalled after it.
+ALTER TABLE "task_metadata" ADD COLUMN "seriesTaskId" TEXT;

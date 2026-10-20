@@ -11666,7 +11666,7 @@ public func FfiConverterTypeEditorFieldOutcome_lower(_ value: EditorFieldOutcome
  */
 public struct EditorMetadata: Equatable, Hashable {
     /**
-     * 1 to 4; anything else is no priority.
+     * 1 to 4, or -4 to -1; see [`crate::tasks::is_priority`].
      */
     public var priority: Int64?
     public var tags: [String]
@@ -11677,7 +11677,7 @@ public struct EditorMetadata: Equatable, Hashable {
     // declare one manually.
     public init(
         /**
-         * 1 to 4; anything else is no priority.
+         * 1 to 4, or -4 to -1; see [`crate::tasks::is_priority`].
          */priority: Int64?, tags: [String], recurrenceRule: String?, externalLinks: [String]) {
         self.priority = priority
         self.tags = tags
@@ -15920,7 +15920,7 @@ public struct NewTask: Equatable, Hashable {
     public var estimateSeconds: Int64?
     public var tags: [String]
     /**
-     * 1 to 4; anything else is no priority.
+     * 1 to 4, or -4 to -1 for later than the rest; see [`is_priority`].
      */
     public var priority: Int64?
     /**
@@ -15945,7 +15945,7 @@ public struct NewTask: Equatable, Hashable {
          * `"task"`, or `"list"` for a nested list.
          */kind: String, notes: String, kanbanColumn: String?, startAtMs: Int64?, dueAtMs: Int64?, estimateSeconds: Int64?, tags: [String], 
         /**
-         * 1 to 4; anything else is no priority.
+         * 1 to 4, or -4 to -1 for later than the rest; see [`is_priority`].
          */priority: Int64?, 
         /**
          * Who it waits on; puts it in the waiting column.

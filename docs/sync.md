@@ -217,6 +217,16 @@ than v32 drops both on pull, makes unnumbered follow-ups, and never moves the
 time on; a repeat set elsewhere still applies when a newer client completes
 the follow-up. See `core/src/waiting.rs`.
 
+`v33_recurrence_series` adds `task_metadata.seriesTaskId TEXT`: the id of
+the first occurrence of the repeating task this one belongs to, NULL when a
+task is its own series (every task written before it). The next turn and a
+"keep both" copy are given the series of the task they come from, so a
+priority set on one open occurrence can be written to every open occurrence
+of the series in the same step — the newest one wins. It merges on its own
+like the rest of the row and reinstalls every journal and outbox trigger. A
+client older than v33 drops it on pull and sets a priority on the one
+occurrence only. See `core/src/editor.rs`.
+
 The following are not synced: the undo journal (`undo_control`, `change_log`), the FTS index
 (rebuilt by its own triggers as synced rows land), `grdb_migrations`, and the
 sync tables themselves. Day-log files stay per device. Theme *files* do
