@@ -213,7 +213,9 @@ pub fn checkvist_request(
             if let Some(tags) = tags.filter(|tags| !tags.is_empty()) {
                 task.insert("tags".into(), json!(tags));
             }
-            if let Some(priority) = priority {
+            // Checkvist only knows 1 to 4: a negative priority, "after the
+            // rest", is Takt's own and goes as none.
+            if let Some(priority) = priority.filter(|p| (1..=4).contains(p)) {
                 task.insert("priority".into(), json!(priority));
             }
             (

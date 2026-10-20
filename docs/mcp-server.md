@@ -162,7 +162,11 @@ Dates on a workspace task follow the inspector. `due` is a day
 (`2026-10-17 17:00` local, or RFC 3339, the task's `dueAt`); either replaces
 the other, as the inspector's Time toggle does. `start` is a day (its local
 midnight) or a time, and must come before the deadline. `priority` is 1
-(Urgent) to 4 (Low); 0 or null clears it. `estimate_minutes` is whole minutes.
+(Urgent) to 4 (Low), or -4 to -1, which rank behind every task with none
+(-1 the very back) and move the task to the bottom of its siblings where a
+positive one moves it to the top; 0 or null clears it. On a repeating task
+the priority is the series': setting it on one open occurrence sets it on
+every open one, and the next turn inherits it. `estimate_minutes` is whole minutes.
 Null clears each of them. The tool takes only ISO dates: "friday" is the
 agent's to resolve, which is why the app's system prompt states today's date.
 A single change is named as the app names it ("Set Priority", "Schedule

@@ -517,6 +517,41 @@ fn set_priority(connection: &mut Connection, id: &str, priority: Option<i64>) {
 }
 
 #[test]
+fn a_negative_priority_moves_the_task_to_the_bottom_of_its_list() {
+    let mut connection = workspace();
+    connection
+        .execute_batch(&format!(
+            "INSERT INTO tasks (id, listId, parentTaskId, title, sortOrder, createdAt, updatedAt) VALUES
+               ('q', 'l', NULL, 'Second', 1, '{T}', '{T}'),
+               ('r', 'l', NULL, 'Third', 2, '{T}', '{T}');"
+        ))
+        .unwrap();
+    set_priority(&mut connection, "p", Some(-1));
+    assert_eq!(root_order(&connection), ["q", "r", "p"]);
+    // From negative to positive is a change: to the top.
+    set_priority(&mut connection, "p", Some(2));
+    assert_eq!(root_order(&connection), ["p", "q", "r"]);
+    // And back to the bottom; the same one again does not move it.
+    set_priority(&mut connection, "p", Some(-3));
+    assert_eq!(root_order(&connection), ["q", "r", "p"]);
+    set_priority(&mut connection, "r", Some(-2));
+    assert_eq!(root_order(&connection), ["q", "p", "r"]);
+    set_priority(&mut connection, "p", Some(-3));
+    assert_eq!(root_order(&connection), ["q", "p", "r"]);
+    // Out of range is no priority, and clearing does not move it.
+    set_priority(&mut connection, "r", Some(-5));
+    assert_eq!(root_order(&connection), ["q", "p", "r"]);
+    let stored: Option<i64> = connection
+        .query_row(
+            "SELECT priority FROM task_metadata WHERE taskId = 'r'",
+            [],
+            |row| row.get(0),
+        )
+        .unwrap();
+    assert_eq!(stored, None);
+}
+
+#[test]
 fn setting_a_priority_moves_the_task_to_the_top_of_its_list() {
     let mut connection = workspace();
     connection

@@ -219,6 +219,40 @@ fn start_dates_and_the_rest_of_the_fields() {
         shown(&connection, vec![rule("priority", "none", "")]),
         ["idea", "shelf"]
     );
+    // -4 to -1 rank after no priority: "no more urgent than 3" takes them
+    // in, "at least as urgent as 4" leaves them out.
+    connection
+        .execute(
+            "UPDATE task_metadata SET priority = -1 WHERE taskId = 'shelf'",
+            [],
+        )
+        .unwrap();
+    assert_eq!(
+        shown(&connection, vec![rule("priority", "at-most", "3")]),
+        ["report", "shelf"]
+    );
+    assert_eq!(
+        shown(&connection, vec![rule("priority", "at-least", "4")]),
+        ["report", "call", "paper"]
+    );
+    assert_eq!(
+        shown(&connection, vec![rule("priority", "at-least", "-2")]),
+        ["report", "call", "paper"]
+    );
+    assert_eq!(
+        shown(&connection, vec![rule("priority", "at-most", "-2")]),
+        ["shelf"]
+    );
+    assert_eq!(
+        shown(&connection, vec![rule("priority", "is", "-1")]),
+        ["shelf"]
+    );
+    connection
+        .execute(
+            "UPDATE task_metadata SET priority = NULL WHERE taskId = 'shelf'",
+            [],
+        )
+        .unwrap();
     assert_eq!(
         shown(&connection, vec![rule("list", "in", "home, inbox")]),
         ["idea", "shelf", "paper"]

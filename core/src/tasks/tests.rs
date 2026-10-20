@@ -433,6 +433,36 @@ fn new_task(list: &str, title: &str) -> NewTask {
 }
 
 #[test]
+fn a_new_task_with_a_negative_priority_goes_last_even_when_added_at_the_top() {
+    let mut connection = workspace();
+    let new = NewTask {
+        priority: Some(-1),
+        at_top: true,
+        ..new_task("l", "Someday")
+    };
+    let id = journalled(&mut connection, "New Task", |tx| create_task(tx, &new, NOW)).unwrap();
+    assert_eq!(children(&connection, "l", None), ["p", "o", id.as_str()]);
+    let priority: Option<i64> = connection
+        .query_row(
+            "SELECT priority FROM task_metadata WHERE taskId = ?1",
+            [&id],
+            |row| row.get(0),
+        )
+        .unwrap();
+    assert_eq!(priority, Some(-1));
+}
+
+#[test]
+fn priority_ranks_run_one_to_four_none_then_minus_four_to_minus_one() {
+    let order: Vec<Option<i64>> = vec![Some(1), Some(4), None, Some(-4), Some(-2), Some(-1)];
+    let ranks: Vec<i64> = order.iter().map(|p| priority_rank(*p)).collect();
+    assert!(ranks.windows(2).all(|pair| pair[0] < pair[1]), "{ranks:?}");
+    assert_eq!(priority_rank(Some(0)), priority_rank(None));
+    assert_eq!(priority_rank(Some(-5)), priority_rank(None));
+    assert!(!is_priority(0) && !is_priority(5) && !is_priority(-5));
+}
+
+#[test]
 fn a_new_task_with_a_priority_goes_first_with_what_the_add_field_read_in_the_same_step() {
     let mut connection = workspace();
     let new = NewTask {

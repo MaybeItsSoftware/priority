@@ -15,6 +15,24 @@ use crate::CoreError;
 use crate::editor::EditorSnapshot;
 use crate::time::stored;
 
+/// Whether a task can carry this priority: 1 (the most urgent) to 4, or -4
+/// to -1, which send it behind every task that has none, -1 the very back.
+/// Anything else is no priority.
+pub fn is_priority(value: i64) -> bool {
+    matches!(value, 1..=4 | -4..=-1)
+}
+
+/// Where a priority puts a task among others, smallest first: 1 to 4, then
+/// no priority, then -4 up to -1, so -1 comes last of all and -2 just
+/// before it.
+pub fn priority_rank(priority: Option<i64>) -> i64 {
+    match priority.filter(|p| is_priority(*p)) {
+        Some(p) if p > 0 => p,
+        Some(p) => 10 + p,
+        None => 5,
+    }
+}
+
 /// A task to create: everything any client can set when it adds one.
 #[derive(Debug, Clone, Default, PartialEq, Eq, uniffi::Record)]
 pub struct NewTask {
@@ -29,7 +47,7 @@ pub struct NewTask {
     pub due_at_ms: Option<i64>,
     pub estimate_seconds: Option<i64>,
     pub tags: Vec<String>,
-    /// 1 to 4; anything else is no priority.
+    /// 1 to 4, or -4 to -1 for later than the rest; see [`is_priority`].
     pub priority: Option<i64>,
     /// Who it waits on; puts it in the waiting column.
     pub waiting_on: Option<String>,
@@ -70,7 +88,7 @@ pub fn create_task(
         new.kanban_column.clone()
     };
     let tags = normalized_strings(&new.tags);
-    let priority = new.priority.filter(|p| (1..=4).contains(p));
+    let priority = new.priority.filter(|p| is_priority(*p));
     let estimate = new.estimate_seconds.filter(|e| *e > 0);
 
     let list_exists: bool = transaction.query_row(
@@ -157,9 +175,12 @@ pub fn create_task(
         persist_task_order(transaction, &siblings, now_ms)?;
     }
     // A priority puts it first among its siblings, wherever it was added:
-    // setting one is saying it comes before the rest.
-    if priority.is_some() {
-        move_task_to_start(transaction, &id, now_ms)?;
+    // setting one is saying it comes before the rest. A negative one says
+    // the opposite, and sends it to the back.
+    match priority {
+        Some(p) if p > 0 => move_task_to_start(transaction, &id, now_ms)?,
+        Some(_) => move_task_to_end(transaction, &id, now_ms)?,
+        None => {}
     }
     Ok(id)
 }
@@ -403,6 +424,20 @@ pub fn move_task_to_start(
         Some(index) if index > 0 => {
             let moved = siblings.remove(index);
             siblings.insert(0, moved);
+            persist_task_order(transaction, &siblings, now_ms)
+        }
+        _ => Ok(()),
+    }
+}
+
+/// Moves a task to the end of its siblings: what a negative priority does.
+pub fn move_task_to_end(transaction: &Transaction, id: &str, now_ms: i64) -> Result<(), CoreError> {
+    let (list_id, parent) = task_place(transaction, id)?;
+    let mut siblings = task_siblings(transaction, &list_id, parent.as_deref())?;
+    match siblings.iter().position(|s| s == id) {
+        Some(index) if index + 1 < siblings.len() => {
+            let moved = siblings.remove(index);
+            siblings.push(moved);
             persist_task_order(transaction, &siblings, now_ms)
         }
         _ => Ok(()),

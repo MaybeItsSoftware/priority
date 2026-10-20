@@ -51,6 +51,7 @@ use crate::lists::new_id;
 use crate::periodic;
 use crate::planning::Planning;
 use crate::records::{TaskRow, optional_ms, required_ms};
+use crate::tasks::priority_rank;
 use crate::time::{decode_strings, non_empty_name, stored};
 use crate::workspace::CoreWorkspace;
 
@@ -952,15 +953,19 @@ pub(crate) fn holds(rule: &FilterRule, task: &Facts, context: &Context) -> Optio
                 .is_some_and(|days| local_day(at, context.zone) <= days_from(context.today, days))
         }),
         ("start", _) => compare_day(task.start_at_ms.map(|at| local_day(at, context.zone)))?,
-        // 1 is the most urgent, so "at least as urgent as 2" is 1 or 2.
+        // 1 is the most urgent, so "at least as urgent as 2" is 1 or 2, and
+        // -4 to -1 rank after every task with none: "at most 3" is 3, 4 and
+        // the negatives, and "at least -2" every priority but -1.
         ("priority", "at-least") => task
             .priority
+            .filter(|p| crate::tasks::is_priority(*p))
             .zip(number(value))
-            .is_some_and(|(p, n)| p <= n),
+            .is_some_and(|(p, n)| priority_rank(Some(p)) <= priority_rank(Some(n))),
         ("priority", "at-most") => task
             .priority
+            .filter(|p| crate::tasks::is_priority(*p))
             .zip(number(value))
-            .is_some_and(|(p, n)| p >= n),
+            .is_some_and(|(p, n)| priority_rank(Some(p)) >= priority_rank(Some(n))),
         ("priority", "is") => task
             .priority
             .zip(number(value))

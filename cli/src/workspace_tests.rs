@@ -589,6 +589,19 @@ fn a_single_change_to_priority_or_start_is_named_for_it() {
         json!({ "task_id": id, "priority": 2 }),
     );
     assert_eq!(fixture.journal().len(), steps);
+    // -4 to -1 are priorities too: behind the rest.
+    let later = fixture.call(
+        "workspace_task_update",
+        json!({ "task_id": id, "priority": -1 }),
+    );
+    assert_eq!(later["priority"], json!(-1));
+    let error = fixture
+        .try_call(
+            "workspace_task_update",
+            json!({ "task_id": id, "priority": -5 }),
+        )
+        .unwrap_err();
+    assert!(error.contains("priority must be"), "{error}");
 }
 
 #[test]

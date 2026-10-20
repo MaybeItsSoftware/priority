@@ -122,3 +122,41 @@ fn priority_one_is_the_most_urgent_and_no_priority_comes_last() {
     assert_eq!(ranking.ranked[0].reason, "priority");
     assert_eq!(ranking.ranked[4].reason, "order");
 }
+
+/// -1 is the very back, -2 just before it, and every negative one comes
+/// after the tasks with no priority at all.
+#[test]
+fn negative_priorities_come_after_no_priority_with_minus_one_last() {
+    let with = |id: &str, priority: Option<i64>| Candidate {
+        priority,
+        ..task(id)
+    };
+    let ranking = evaluate(
+        &[
+            with("minus-one", Some(-1)),
+            with("none", None),
+            with("minus-four", Some(-4)),
+            with("four", Some(4)),
+            with("minus-two", Some(-2)),
+            with("one", Some(1)),
+            with("minus-three", Some(-3)),
+        ],
+        NOW,
+        "UTC",
+        &FocusContext::default(),
+    );
+    assert_eq!(
+        ids(&ranking),
+        [
+            "one",
+            "four",
+            "none",
+            "minus-four",
+            "minus-three",
+            "minus-two",
+            "minus-one"
+        ]
+    );
+    // A negative priority is no reason to be up next.
+    assert_eq!(ranking.ranked[6].reason, "order");
+}

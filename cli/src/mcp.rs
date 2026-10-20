@@ -665,8 +665,9 @@ fn workspace_tool_definitions() -> Vec<Value> {
          are whole numbers (due within 0 means due by today, overdue included); date is \
          yyyy-mm-dd; lists is comma-separated list ids and folder a folder id, both from \
          workspace_tree; column a kanban column id; text matches title or notes. \
-         Priority runs 1 (the most urgent) to 4, so priority at-least 2 is 1 or 2 \
-         and at-most 3 is 3 or 4. \
+         Priority runs 1 (the most urgent) to 4, then no priority, then -4 to -1 \
+         (behind the rest, -1 last), so priority at-least 2 is 1 or 2 and at-most 3 is \
+         3, 4 or a negative one. \
          Example: tagged work and due within a week is \
          [{{\"field\":\"tag\",\"op\":\"has\",\"value\":\"work\"}},\
          {{\"field\":\"due\",\"op\":\"within\",\"value\":\"7\"}}].",
@@ -784,8 +785,8 @@ fn workspace_tool_definitions() -> Vec<Value> {
                         "description": "When it may start: a date (the start of that day, local) or a date and time (2026-10-20 09:00, local, or RFC 3339). Must come before the due date. Null or empty clears it.",
                     },
                     "priority": {
-                        "type": ["integer", "null"], "minimum": 0, "maximum": 4,
-                        "description": "1 urgent, 2 high, 3 medium, 4 low. Null or 0 clears it.",
+                        "type": ["integer", "null"], "minimum": -4, "maximum": 4,
+                        "description": "1 urgent, 2 high, 3 medium, 4 low; -4 to -1 send it behind every task with none, -1 the very back, and move it to the bottom of its siblings as a positive one moves it to the top. Null or 0 clears it.",
                     },
                     "estimate_minutes": {
                         "type": ["integer", "null"], "minimum": 0,

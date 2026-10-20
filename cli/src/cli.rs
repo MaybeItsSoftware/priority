@@ -398,8 +398,9 @@ pub enum WsCommand {
         /// When it may start: a day or a day and time. Empty clears.
         #[arg(long, value_name = "WHEN")]
         start: Option<String>,
-        /// 1 urgent, 2 high, 3 medium, 4 low; 0 clears.
-        #[arg(long, short = 'p', value_name = "N")]
+        /// 1 urgent, 2 high, 3 medium, 4 low; -4 to -1 behind the rest, -1
+        /// last; 0 clears.
+        #[arg(long, short = 'p', value_name = "N", allow_negative_numbers = true)]
         priority: Option<i64>,
         /// How long it takes, in minutes; 0 clears.
         #[arg(long, short = 'e', value_name = "MINUTES")]

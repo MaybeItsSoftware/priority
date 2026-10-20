@@ -24,7 +24,7 @@ use crate::time::{decode_strings, non_empty_name, parse_stored, stored, swift_js
 /// The parts of a task's metadata the editor shows.
 #[derive(Debug, Clone, Default, PartialEq, Eq, uniffi::Record)]
 pub struct EditorMetadata {
-    /// 1 to 4; anything else is no priority.
+    /// 1 to 4, or -4 to -1; see [`crate::tasks::is_priority`].
     pub priority: Option<i64>,
     pub tags: Vec<String>,
     pub recurrence_rule: Option<String>,
@@ -242,7 +242,8 @@ pub fn update_task(
 /// `WorkspaceStore.updateTaskEditorMetadata`.
 ///
 /// A priority set or changed puts the task first among its siblings — row
-/// `:1` of its list. Clearing one leaves it where it is.
+/// `:1` of its list — and a negative one last. Clearing one leaves it where
+/// it is.
 pub fn update_editor_metadata(
     transaction: &Transaction,
     task_id: &str,
@@ -253,9 +254,13 @@ pub fn update_editor_metadata(
     write_editor_metadata(transaction, task_id, metadata, now_ms)?;
     let after = metadata
         .priority
-        .filter(|priority| (1..=4).contains(priority));
-    if after.is_some() && after != before {
-        crate::tasks::move_task_to_start(transaction, task_id, now_ms)?;
+        .filter(|priority| crate::tasks::is_priority(*priority));
+    if after != before {
+        match after {
+            Some(p) if p > 0 => crate::tasks::move_task_to_start(transaction, task_id, now_ms)?,
+            Some(_) => crate::tasks::move_task_to_end(transaction, task_id, now_ms)?,
+            None => {}
+        }
     }
     Ok(())
 }
@@ -288,7 +293,7 @@ pub(crate) fn write_editor_metadata(
         .map(str::to_string);
     let priority = metadata
         .priority
-        .filter(|priority| (1..=4).contains(priority));
+        .filter(|priority| crate::tasks::is_priority(*priority));
     // A task with no metadata row compares as one with nothing set, so
     // saving nothing onto it writes nothing, as Swift's did.
     let current = stored_metadata(transaction, task_id)?

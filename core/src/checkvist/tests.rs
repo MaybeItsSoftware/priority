@@ -87,6 +87,33 @@ fn a_list_id_must_be_a_number() {
     }
 }
 
+/// Checkvist knows 1 to 4; a negative priority is Takt's own "after the
+/// rest" and is sent as none.
+#[test]
+fn a_negative_priority_is_not_sent_to_checkvist() {
+    let call = |priority| {
+        body(&request(
+            CheckvistCall::CreateTask {
+                list_id: "7".into(),
+                content: "Someday".into(),
+                parent_id: None,
+                position: None,
+                due: None,
+                tags: None,
+                priority,
+                parse: false,
+            },
+            None,
+        ))
+    };
+    assert_eq!(call(Some(-1)), json!({ "task": { "content": "Someday" } }));
+    assert_eq!(call(Some(-4)), json!({ "task": { "content": "Someday" } }));
+    assert_eq!(
+        call(Some(2)),
+        json!({ "task": { "content": "Someday", "priority": 2 } })
+    );
+}
+
 #[test]
 fn creating_a_task_trims_it_and_parses_only_when_asked() {
     let created = request(

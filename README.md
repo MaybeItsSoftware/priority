@@ -196,6 +196,7 @@ afterwards:
 | `@today`, `@tomorrow`, `@fri`, `@3d`, `@2w`, `@2026-10-02` | The day it is due — a weekday means the next one, today included. `^` works as well as `@`, as in Checkvist (`^fri`) |
 | `#work` | A tag — it has to start with a letter, so `#12` stays in the title |
 | `!1`–`!4` | The priority — 1 is the most urgent, 4 the least. A task added with one goes to the top of its list |
+| `!-1`–`!-4` | A priority behind every task that has none — `!-1` the very back, `!-2` just before it. A task added with one goes to the bottom of its list |
 | `wait:Sam` | Waiting on Sam — filed in the Waiting on column straight away |
 | `https://…`, `obsidian://…` | A link — a Drive file or folder, a Doc or Sheet, an Obsidian note, a page. An address on its own names the task for what it points at. See [Links](docs/links.md) |
 

@@ -723,7 +723,12 @@ enum Edit {
 fn edit_for(rule: &FilterRule, context: &Context) -> Option<Edit> {
     let value = rule.value.trim();
     let date = || NaiveDate::parse_from_str(value, "%Y-%m-%d").ok();
-    let priority = || value.parse::<i64>().ok().filter(|p| (1..=4).contains(p));
+    let priority = || {
+        value
+            .parse::<i64>()
+            .ok()
+            .filter(|p| crate::tasks::is_priority(*p))
+    };
     Some(match (rule.field.as_str(), rule.op.as_str()) {
         ("tag", "has") => Edit::AddTag(value.trim_start_matches('#').to_string()),
         ("tag", "lacks") => Edit::RemoveTag(value.to_string()),

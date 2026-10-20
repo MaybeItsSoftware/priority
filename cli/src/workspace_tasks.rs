@@ -211,7 +211,7 @@ impl TaskRow {
         if self.start_at.is_some() {
             object.insert("start_at".into(), json!(local_string(&self.start_at)));
         }
-        if let Some(priority) = self.priority.filter(|p| (1..=4).contains(p)) {
+        if let Some(priority) = self.priority.filter(|p| takt_core::tasks::is_priority(*p)) {
             object.insert("priority".into(), json!(priority));
         }
         if let Some(seconds) = self.estimate_seconds {
@@ -667,11 +667,12 @@ impl Workspace {
         let priority = match edit.priority {
             // 0 is the app's own "clear the priority" key.
             Some(Some(0) | None) => Some(None),
-            Some(Some(level @ 1..=4)) => Some(Some(level)),
+            Some(Some(level @ (1..=4 | -4..=-1))) => Some(Some(level)),
             Some(Some(other)) => {
                 return Err(ToolError::new(format!(
-                    "priority must be 1 (urgent), 2 (high), 3 (medium) or 4 (low), or null to \
-                     clear it, not {other}."
+                    "priority must be 1 (urgent), 2 (high), 3 (medium) or 4 (low), -4 to -1 to \
+                     send it behind every task with none (-1 last of all), or null to clear it, \
+                     not {other}."
                 )));
             }
             None => None,

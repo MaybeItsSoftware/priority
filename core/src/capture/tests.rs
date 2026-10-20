@@ -171,6 +171,23 @@ fn priority_is_one_to_four() {
     assert_eq!(p("Ship it !"), title("Ship it !"));
 }
 
+#[test]
+fn a_negative_priority_is_minus_one_to_minus_four() {
+    assert_eq!(p("Tidy the shed !-1").priority, Some(-1));
+    let capture = p("Tidy the shed 30m !-4");
+    assert_eq!(capture.title, "Tidy the shed");
+    assert_eq!(capture.priority, Some(-4));
+    assert_eq!(capture.estimate_seconds, Some(30 * 60));
+    assert_eq!(p("Ship it !-5"), title("Ship it !-5"));
+    assert_eq!(p("Ship it !-0"), title("Ship it !-0"));
+    assert_eq!(p("Ship it !-"), title("Ship it !-"));
+    assert_eq!(p("Ship it !+1"), title("Ship it !+1"));
+    assert_eq!(
+        detail_labels(&p("Tidy the shed !-2"), now(), Tz::UTC),
+        ["!-2"]
+    );
+}
+
 /// The last one typed wins, and the earlier one stays visible in the title.
 #[test]
 fn a_second_token_of_one_kind_stays_in_the_title() {

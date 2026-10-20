@@ -515,14 +515,15 @@ fn tag(word: &str) -> Option<String> {
         .then(|| body.to_string())
 }
 
-/// `!1` to `!4`.
+/// `!1` to `!4`, and `!-1` to `!-4`, which send it behind the rest.
 fn priority(word: &str) -> Option<i64> {
     let body = word.strip_prefix('!')?;
-    if body.chars().count() != 1 {
+    let digits = body.strip_prefix('-').unwrap_or(body);
+    if digits.chars().count() != 1 || !digits.chars().all(|c| c.is_ascii_digit()) {
         return None;
     }
     let value: i64 = body.parse().ok()?;
-    (1..=4).contains(&value).then_some(value)
+    crate::tasks::is_priority(value).then_some(value)
 }
 
 // MARK: - Checkvist's due dates

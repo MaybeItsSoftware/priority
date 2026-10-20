@@ -219,10 +219,9 @@ fn precedence(left: &Candidate, right: &Candidate, now_ms: i64, zone: Tz) -> Ord
             if task.start_at_ms.is_none() { 1.0 } else { 0.0 },
             if commitment { 0.0 } else { 1.0 },
             -(task.matrix_importance.unwrap_or(0) as f64),
-            // 1 is the most urgent, 4 the least; no priority comes after all four.
-            task.priority
-                .filter(|p| (1..=4).contains(p))
-                .map_or(5.0, |p| p as f64),
+            // 1 is the most urgent, 4 the least; no priority comes after all
+            // four, and -4 to -1 after that, -1 last.
+            crate::tasks::priority_rank(task.priority) as f64,
             if days <= DUE_HORIZON_DAYS {
                 days
             } else {
