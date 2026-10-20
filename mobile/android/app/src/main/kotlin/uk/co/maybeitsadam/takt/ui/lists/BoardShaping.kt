@@ -152,12 +152,18 @@ object BoardShaping {
         today: LocalDate,
     ): BoardShape {
         val key = boardKey(if (isEverything) null else data.lists.firstOrNull()?.id)
-        val tasks = cardTasks(data, isEverything).filter {
+        val candidates = cardTasks(data, isEverything).filter {
             !((it.isList && it.archivedAt != null) || (hideCompleted && it.status != TaskStatus.OPEN))
         }
+        val candidateIds = candidates.mapTo(LinkedHashSet()) { it.id }
+        val listIds = candidates.map { it.listId }.distinct()
+        val board = WorkspaceBoardTrees.build(candidateIds, listIds.mapNotNull { data.trees[it] })
+        // Everything's cards are open tasks at any depth, and a card draws its
+        // subtasks: one beneath another card is drawn there, not again on its
+        // own (the core's `board_cards`). Filed in another column, it is still
+        // a card of its own there, by the cross-column rule below.
+        val tasks = candidates.filterNot { heldByACard(it.id, candidateIds, board.parents) }
         val cardIds = tasks.mapTo(LinkedHashSet()) { it.id }
-        val listIds = tasks.map { it.listId }.distinct()
-        val board = WorkspaceBoardTrees.build(cardIds, listIds.mapNotNull { data.trees[it] })
         val seen = HashSet<String>()
         val treeTasks = (tasks + tasks.flatMap { t -> board.descendants[t.id].orEmpty().map { it.task } }).filter { seen.add(it.id) }
         val filed = HashMap<String, String>()
@@ -220,6 +226,18 @@ object BoardShaping {
             isLoaded = true,
             layout = read.layout.ifEmpty { columns },
         )
+    }
+
+    /** Whether one of [id]'s ancestors is itself a card, and so draws it. */
+    internal fun heldByACard(id: String, cardIds: Set<String>, parents: Map<String, WorkspaceTask>): Boolean {
+        var at = parents[id]
+        // Bounded, so a corrupt cycle ends rather than loops.
+        repeat(parents.size + 1) {
+            val parent = at ?: return false
+            if (parent.id in cardIds) return true
+            at = parents[parent.id]
+        }
+        return false
     }
 
     /**

@@ -214,6 +214,28 @@ class ListsShapingTest {
         assertEquals("A", todayColumn.cards.last().parentTitle)
     }
 
+    @Test fun everythingDrawsASubtaskOnceOnItsParentsCard() {
+        val open = listOf(task("p", "home"), task("p1", "home", parent = "p"), task("p1x", "home", parent = "p1"), task("q", "home"))
+        val board = BoardShaping.shape(scope(listOf(home), open), true, stock, emptySet(), false, zone, today)
+        val drawn = board.columns.flatMap { it.cards }
+        assertEquals(listOf("p", "q"), drawn.map { it.id })
+        assertEquals(listOf("p1", "p1x"), drawn.first().subtasks.map { it.id })
+        assertEquals(2, BoardShaping.matrix(board).unplaced.size)
+    }
+
+    @Test fun everythingKeepsASubtaskFiledInAnotherColumnAsItsOwnCardThere() {
+        val open = listOf(task("p", "home"), task("p1", "home", parent = "p"), task("p2", "home", parent = "p"))
+        val decorations = mapOf("p1" to TaskDecoration(kanbanColumn = "today"))
+        val board = BoardShaping.shape(scope(listOf(home), open, decorations), true, stock, emptySet(), false, zone, today)
+        assertEquals(listOf("p"), board.columns.first().cards.map { it.id })
+        val todayColumn = board.columns.first { it.id == "today" }
+        assertEquals(listOf("p1"), todayColumn.cards.map { it.id })
+        assertEquals("P", todayColumn.cards.single().parentTitle)
+        assertEquals(1, board.columns.sumOf { c -> c.cards.count { it.id == "p1" } })
+        // The matrix counts the board's own cards, not the cross-column one.
+        assertEquals(listOf("p"), BoardShaping.matrix(board).unplaced.map { it.id })
+    }
+
     @Test fun aFoldedCardDrawsNoSubtasks() {
         val board = BoardShaping.shape(scope(listOf(home), tasks), false, stock, setOf("a"), false, zone, today)
         val card = board.columns.first().cards.first()
