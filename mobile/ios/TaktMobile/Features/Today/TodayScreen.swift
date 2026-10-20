@@ -1,6 +1,7 @@
 import TaktCore
 import TaktWorkspace
 import SwiftUI
+import UIKit
 
 /// The day as a list of cards: what is on today, what it should cost, what it
 /// has cost, and the one you are on carrying its own controls. The Mac's
@@ -9,6 +10,7 @@ struct TodayScreen: View {
   @Environment(\.theme) private var theme
   @Environment(WorkspaceModel.self) private var model
   @Environment(\.isPadLayout) private var isPad
+  @Environment(\.scenePhase) private var scenePhase
   @State private var today = TodayModel()
   @State private var conditions = NowConditionsModel()
   /// Rows just finished, held where they stood and crossed out for a moment
@@ -39,8 +41,8 @@ struct TodayScreen: View {
           cardRow(card, index: index)
         }
         .onMove { source, destination in
-          guard leavingCards.isEmpty else { return }
-          today.move(from: source, to: destination, model: model)
+          // The offsets are into the rows drawn, leaving ones included.
+          today.move(from: source, to: destination, drawn: cards, model: model)
         }
       } header: {
         if !today.day.cards.isEmpty && !today.day.isPlanned {
@@ -85,7 +87,16 @@ struct TodayScreen: View {
     .toolbar { WorkspaceToolbar() }
     .task(id: model.revision) { await today.load(model) }
     .task(id: model.revision) { await conditions.load(model) }
-    .task(id: today.day.session?.id) { await refreshWhileRunning() }
+    .task(id: today.day.session?.id) { await refreshPeriodically() }
+    // The day is a function of the clock too: back from the background, past
+    // midnight or across a time-zone change, it is read again even though
+    // nothing was written.
+    .onChange(of: scenePhase) { _, phase in
+      if phase == .active { Task { await today.load(model) } }
+    }
+    .onReceive(NotificationCenter.default.publisher(for: UIApplication.significantTimeChangeNotification)) { _ in
+      Task { await today.load(model) }
+    }
     .accessibilityIdentifier("today.list")
   }
 
@@ -95,6 +106,8 @@ struct TodayScreen: View {
   /// A tap on a row: crossed out where it stands, then gone once the day
   /// has dropped it. The write lands at once, as Android's does.
   private func finish(_ card: DayCard, index: Int) {
+    // Already crossed out: a second tap or swipe would log it twice.
+    guard leavingCards[card.id] == nil else { return }
     if !card.isRunning && !card.isDailyDoneToday {
       leavingCards[card.id] = Leaving(item: card, index: index)
       Task { try? await Task.sleep(for: Leaving<DayCard>.hold); leavingCards[card.id] = nil }
@@ -125,6 +138,7 @@ struct TodayScreen: View {
         DayCardRow(
           card: card, isSelected: isSelected, isBlocked: model.isBlocked(card.id),
           isLeaving: leavingCards[card.id] != nil, waiting: model.waitingBadge(card.id),
+          isSessionRunning: today.day.session?.phase == .running,
           onTick: { finish(card, index: index) },
           onStart: { today.start(card, model: model) },
           menu: { cardMenu(card) })
@@ -139,10 +153,12 @@ struct TodayScreen: View {
     .listRowSeparatorTint(theme.borderMuted)
     .moveDisabled(!card.isPlanned)
     .swipeActions(edge: .leading, allowsFullSwipe: true) {
-      Button { finish(card, index: index) } label: {
-        Label(card.dailyID != nil ? "Log today" : "Done", systemImage: "checkmark")
+      if leavingCards[card.id] == nil {
+        Button { finish(card, index: index) } label: {
+          Label(card.dailyID != nil ? "Log today" : "Done", systemImage: "checkmark")
+        }
+        .tint(theme.success)
       }
-      .tint(theme.success)
     }
     .swipeActions(edge: .trailing, allowsFullSwipe: false) {
       Button { today.deferToTomorrow(card, model: model) } label: { Label("Tomorrow", systemImage: "sunrise") }
@@ -184,13 +200,16 @@ struct TodayScreen: View {
     TaskContextMenu(context: card.menuContext)
   }
 
-  /// While a block runs, a write elsewhere (the Live Activity, an intent)
-  /// can end it; re-read every so often so the day does not show a stale
-  /// clock forever. Cheap: one read, off the main actor.
-  private func refreshWhileRunning() async {
-    guard today.day.session != nil else { return }
+  /// Re-reads the day every minute, as Android's `minuteTicks` does, so a
+  /// start or a due time that arrives with the clock shows without a write.
+  /// While a block runs, every half minute: a write elsewhere (the Live
+  /// Activity, an intent) can end it, and the day should not show a stale
+  /// clock. Cheap: one read, off the main actor.
+  private func refreshPeriodically() async {
+    let interval: Duration = today.day.session != nil ? .seconds(30) : .seconds(60)
     while !Task.isCancelled {
-      try? await Task.sleep(for: .seconds(30))
+      try? await Task.sleep(for: interval)
+      guard !Task.isCancelled else { return }
       await today.load(model)
     }
   }
@@ -300,6 +319,9 @@ struct DayCardRow<Menu: View>: View, Equatable {
   var isLeaving = false
   /// Filed in Waiting on: who it waits on and when it is chased.
   var waiting: WaitingBadge?
+  /// A block is running, so the menu's play queues this card next rather
+  /// than starting it. Part of equality, or the menu keeps its old label.
+  var isSessionRunning = false
   let onTick: () -> Void
   let onStart: () -> Void
   @ViewBuilder let menu: () -> Menu
@@ -307,6 +329,26 @@ struct DayCardRow<Menu: View>: View, Equatable {
   static func == (lhs: DayCardRow, rhs: DayCardRow) -> Bool {
     lhs.card == rhs.card && lhs.isSelected == rhs.isSelected && lhs.isBlocked == rhs.isBlocked
       && lhs.isLeaving == rhs.isLeaving && lhs.waiting == rhs.waiting
+      && lhs.isSessionRunning == rhs.isSessionRunning
+  }
+
+  /// What VoiceOver reads for the row: everything its lines show, not just
+  /// the title.
+  var accessibilityText: String {
+    var parts = [card.title]
+    if let reason = card.reason, reason != .planned {
+      parts.append(card.detail ?? reason.label)
+    } else if let detail = card.detail {
+      parts.append(detail)
+    }
+    if card.dailyID != nil { parts.append("Repeats daily") }
+    if let list = card.listName { parts.append(list) }
+    if let waiting {
+      if let who = waiting.waitingOn { parts.append("Waiting on \(who)") }
+      if let followUp = waiting.followUp { parts.append("Follow up \(followUp)") }
+    }
+    if isBlocked { parts.append("Blocked") }
+    return parts.joined(separator: ", ")
   }
 
   var body: some View {
@@ -350,7 +392,7 @@ struct DayCardRow<Menu: View>: View, Equatable {
       }
       .buttonStyle(.plain)
       .disabled(isLeaving)
-      .accessibilityLabel(card.title)
+      .accessibilityLabel(accessibilityText)
       .accessibilityHint(card.dailyID != nil ? "Logs it for today" : "Completes it")
       .accessibilityIdentifier("today.check.\(card.title)")
       cost.padding(.leading, theme.space.sm)

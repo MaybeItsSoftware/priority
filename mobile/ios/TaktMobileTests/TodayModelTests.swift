@@ -64,6 +64,33 @@ final class TodayModelTests: XCTestCase {
     XCTAssertEqual(today.day.cards.map(\.id), order)
   }
 
+  func testDragReadsItsOffsetsFromTheRowsDrawnWithALeavingCardAmongThem() async throws {
+    let a = try add("A"), b = try add("B"), c = try add("C")
+    try model.store.setPlannedForToday(true, taskIds: [a.id, b.id, c.id])
+    await today.load(model)
+    let before = today.day.plannedIDs
+    XCTAssertEqual(before.count, 3)
+    // A card just ticked off, gone from the day but still drawn at the top.
+    let gone = try add("Gone")
+    let leaving = DayCard(
+      id: gone.id, title: "Gone", listName: nil, listColorHex: nil, reason: .planned, estimateSeconds: nil,
+      loggedSeconds: 0, dueAt: nil, isList: false, dailyID: nil, isDailyDoneToday: false, isRunning: false)
+    let drawn = Leaving.merging(today.day.cards, [Leaving(item: leaving, index: 0)])
+    XCTAssertEqual(drawn.first?.id, gone.id)
+
+    // Drawn row 3 is the day's third card; dropped at drawn offset 1, it
+    // goes to the top of what is still in the day.
+    today.move(from: IndexSet(integer: 3), to: 1, drawn: drawn, model: model)
+    let expected = [before[2], before[0], before[1]]
+    XCTAssertEqual(today.day.plannedIDs, expected)
+    await today.load(model)
+    XCTAssertEqual(today.day.plannedIDs, expected, "persisted, without the leaving card")
+
+    // An offset past the end is clamped rather than trapping.
+    today.move(from: IndexSet(integer: 1), to: 99, drawn: drawn, model: model)
+    XCTAssertEqual(today.day.plannedIDs.count, 3)
+  }
+
   func testStartPauseAndDoneCompletesTheTaskAndScoresTheBlock() async throws {
     let task = try add("Write", estimate: 600)
     try model.store.setPlannedForToday(true, taskIds: [task.id])

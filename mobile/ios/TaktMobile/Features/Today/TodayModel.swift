@@ -183,13 +183,19 @@ final class TodayModel {
   }
 
   /// A drag in the list. Only planned cards move; the order of the rest is
-  /// the dates'.
-  func move(from source: IndexSet, to destination: Int, model: WorkspaceModel) {
-    var cards = day.cards
-    guard let index = source.first, cards.indices.contains(index), cards[index].isPlanned else { return }
-    cards.move(fromOffsets: source, toOffset: destination)
-    let arranged = cards.filter(\.isPlanned).map(\.id)
-    guard arranged != day.plannedIDs else { return }
+  /// the dates'. The offsets are into `drawn` — the rows on screen, which
+  /// can still hold a card crossed out and leaving — so the move is made
+  /// there, by id, and only what is still in the day is written.
+  func move(from source: IndexSet, to destination: Int, drawn: [DayCard]? = nil, model: WorkspaceModel) {
+    var rows = drawn ?? day.cards
+    guard let index = source.first, rows.indices.contains(index) else { return }
+    let movedID = rows[index].id
+    guard day.cards.first(where: { $0.id == movedID })?.isPlanned == true else { return }
+    let valid = IndexSet(source.filter { rows.indices.contains($0) })
+    rows.move(fromOffsets: valid, toOffset: min(max(0, destination), rows.count))
+    let planned = Set(day.plannedIDs)
+    let arranged = rows.map(\.id).filter { planned.contains($0) }
+    guard arranged.count == planned.count, arranged != day.plannedIDs else { return }
     arrange(arranged, model: model)
   }
 
