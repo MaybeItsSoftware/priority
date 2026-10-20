@@ -50,7 +50,7 @@ struct WorkspaceWaitingOverlay: View {
             textField("once, or every 3d", text: $every, field: .every)
             Text(repeatPreview)
               .font(theme.captionFont)
-              .foregroundStyle(parsedEvery == nil ? theme.danger : theme.muted)
+              .foregroundStyle(repeatNeedsFollowUp || parsedEvery == nil ? theme.danger : theme.muted)
           }
         }
         if let error {
@@ -136,9 +136,15 @@ struct WorkspaceWaitingOverlay: View {
     WaitingFollowUp.everyDays(from: every)
   }
 
+  /// A repeat counts from each follow-up, so one with no follow-up time has
+  /// nothing to count from.
+  private var repeatNeedsFollowUp: Bool {
+    (parsedEvery ?? 0) > 0 && followUpIsEmpty
+  }
+
   private var repeatPreview: String {
     guard let days = parsedEvery else { return "1 to 365 days, or once" }
-    if days > 0, followUpIsEmpty { return "Needs a follow-up time" }
+    if repeatNeedsFollowUp { return "Needs a follow-up time" }
     return days == 0 ? "Once" : WaitingFollowUp.repeatText(days) + ", from when each follow-up is done"
   }
 
@@ -171,6 +177,12 @@ struct WorkspaceWaitingOverlay: View {
     guard let days = parsedEvery else {
       error = "Write the repeat as once, 3, 3d or every 3 days, from 1 to 365."
       field = .every
+      return
+    }
+    // Saved, the repeat would be dropped without a word.
+    guard !repeatNeedsFollowUp else {
+      error = "A repeat needs a follow-up time to count from: give one, or make it once."
+      field = .followUp
       return
     }
     if let failure = model.setWaiting(request.task, waitingOn: tag, followUpAt: date, everyDays: days == 0 ? nil : days) {
