@@ -73,6 +73,8 @@ import uk.co.maybeitsadam.takt.ui.focus.QualityPrompt
 import uk.co.maybeitsadam.takt.ui.focus.isTicking
 import uk.co.maybeitsadam.takt.ui.focus.rememberNotificationGate
 import uk.co.maybeitsadam.takt.ui.focus.rememberTicker
+import uk.co.maybeitsadam.takt.ui.lists.ConfirmDialog
+import uk.co.maybeitsadam.takt.ui.lists.MoveToListSheet
 import uk.co.maybeitsadam.takt.ui.navigation.LocalShell
 import uk.co.maybeitsadam.takt.ui.navigation.Tab
 import uk.co.maybeitsadam.takt.ui.theme.TaktTheme
@@ -101,6 +103,9 @@ fun TodayScreen() {
     // before they go, so a swipe reads as done rather than as vanished.
     val leavingCards = remember { mutableStateMapOf<String, Leaving<DayCard>>() }
     val leavingDailies = remember { mutableStateMapOf<String, Leaving<DayDaily>>() }
+    // The card whose "Move to list…" or "Delete…" is asking.
+    var moving by remember { mutableStateOf<DayCard?>(null) }
+    var deleting by remember { mutableStateOf<DayCard?>(null) }
     // A row on its way out has been finished already: a second tap or swipe
     // on it would log it again.
     fun finish(card: DayCard, kind: DaySectionKind, index: Int) {
@@ -195,9 +200,14 @@ fun TodayScreen() {
                                 onStart = { gate { vm.start(card) } },
                                 menu = { dismiss ->
                                     CardMenu(
-                                    card, vm, dismiss, onStart = { gate { vm.start(card) } }, onHabit = { container.habits.open(card.id) },
-                                    onGoToList = { listId -> shell.navigator.openList(listId, card.id) },
-                                )
+                                        card, vm, dismiss,
+                                        onComplete = { finish(card, kind, index) },
+                                        onStart = { gate { vm.start(card) } },
+                                        onHabit = { container.habits.open(card.id) },
+                                        onMove = { moving = card },
+                                        onDelete = { deleting = card },
+                                        onGoToList = { listId -> shell.navigator.openList(listId, card.id) },
+                                    )
                                 },
                                 handle = if (card.isPlanned && plannedIds.size > 1) {
                                     Modifier.plannedDragHandle(drag, card.id, plannedIds, vm::arrange)
@@ -243,6 +253,20 @@ fun TodayScreen() {
 
     pending?.let { completion ->
         QualityPrompt(completion, onScore = vm::confirmCompletion, onCancel = vm::cancelCompletion)
+    }
+    moving?.let { card ->
+        val lists by vm.lists.collectAsStateWithLifecycle()
+        MoveToListSheet(
+            card.title, card.listId, lists, onDismiss = { moving = null },
+            onMove = { vm.moveToList(card, it) },
+            onMoveToNew = { vm.moveToNewList(card, it) },
+        )
+    }
+    deleting?.let { card ->
+        ConfirmDialog(
+            "Delete ${card.title}?", "This deletes the task and everything beneath it. You can undo it.",
+            onDismiss = { deleting = null },
+        ) { vm.delete(card) }
     }
 }
 
@@ -438,10 +462,15 @@ private fun CardMenu(
     card: DayCard,
     vm: TodayViewModel,
     dismiss: () -> Unit,
+    onComplete: () -> Unit,
     onStart: () -> Unit,
     onHabit: () -> Unit,
+    onMove: () -> Unit,
+    onDelete: () -> Unit,
     onGoToList: (String) -> Unit,
 ) {
+    // The list rows' menu where it applies here, after the day's own moves.
+    ChalkMenuItem(if (card.dailyId != null) "Log today" else "Complete") { dismiss(); onComplete() }
     ChalkMenuItem(if (card.isPlanned) "Take off today" else "Plan for today") { dismiss(); vm.togglePlanned(card) }
     if (card.isPlanned) {
         ChalkMenuItem("Move up in the day") { dismiss(); vm.movePlanned(card.id, -1) }
@@ -449,11 +478,16 @@ private fun CardMenu(
     }
     ChalkMenuItem("Due today") { dismiss(); vm.dueToday(card) }
     ChalkMenuItem("Due tomorrow") { dismiss(); vm.dueTomorrow(card) }
+    if (card.dueAt != null) ChalkMenuItem("Clear due date") { dismiss(); vm.clearDue(card) }
+    // Only a card here because it starts today is known to have a start.
+    if (card.reason == DayPlanReason.STARTS_TODAY) ChalkMenuItem("Clear start date") { dismiss(); vm.clearStart(card) }
     ChalkMenuItem("Not today") { dismiss(); vm.deferToTomorrow(card) }
     ChalkMenuItem("Start focus") { dismiss(); onStart() }
     ChalkMenuItem("Habit…") { dismiss(); onHabit() }
     ChalkMenuItem("Open inspector") { dismiss(); vm.inspect(card) }
+    ChalkMenuItem("Move to list…") { dismiss(); onMove() }
     card.listId?.let { listId -> ChalkMenuItem("Go to list") { dismiss(); onGoToList(listId) } }
+    ChalkMenuItem("Delete…", destructive = true) { dismiss(); onDelete() }
 }
 
 /** The card you are on, grown: a live mono clock and the controls that only apply to it. */

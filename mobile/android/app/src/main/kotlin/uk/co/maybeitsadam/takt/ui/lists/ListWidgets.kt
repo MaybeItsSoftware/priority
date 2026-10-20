@@ -52,7 +52,12 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.toImmutableList
+import uk.co.maybeitsadam.takt.core.TaskList
+import uk.co.maybeitsadam.takt.core.TaskListRole
 import uk.co.maybeitsadam.takt.ui.components.Hairline
 import uk.co.maybeitsadam.takt.ui.components.PButton
 import uk.co.maybeitsadam.takt.ui.theme.TaktTheme
@@ -230,6 +235,42 @@ internal fun ConfirmDialog(
         Text(message, style = TaktTheme.type.body, color = TaktTheme.colors.mutedText)
     }
 }
+
+/**
+ * Where to move a task: every open list, the one it is in marked, or a new
+ * one named on the spot. The list screens' and Today's "Move to list…".
+ */
+@Composable
+internal fun MoveToListSheet(
+    title: String,
+    currentListId: String?,
+    lists: List<TaskList>,
+    onDismiss: () -> Unit,
+    onMove: (String) -> Unit,
+    onMoveToNew: (String) -> Unit,
+) {
+    var creating by remember { mutableStateOf(false) }
+    if (creating) {
+        NamePromptDialog("New list", confirm = "Move", onDismiss = onDismiss, onConfirm = onMoveToNew)
+        return
+    }
+    val choices = remember(lists, currentListId) {
+        (
+            listOf(Choice(NEW_LIST_CHOICE, "New list…", icon = Icons.Filled.Add)) +
+                lists.filter { it.completedAt == null }.map {
+                    Choice(
+                        it.id, it.name, icon = if (it.systemRole == TaskListRole.INBOX) PIcons.Inbox else PIcons.ListIcon,
+                        isCurrent = it.id == currentListId,
+                    )
+                }
+            ).toImmutableList()
+    }
+    ChoiceSheet("Move $title to", choices, onDismiss = { if (!creating) onDismiss() }) { choice ->
+        if (choice.id == NEW_LIST_CHOICE) creating = true else choice.id?.let(onMove)
+    }
+}
+
+private const val NEW_LIST_CHOICE = "\u0000new"
 
 /** One choice in a picker sheet. */
 @Immutable

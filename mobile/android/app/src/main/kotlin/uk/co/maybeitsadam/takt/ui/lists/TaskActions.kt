@@ -20,6 +20,7 @@ import uk.co.maybeitsadam.takt.app.AppContainer
 import uk.co.maybeitsadam.takt.core.TaskStatus
 import uk.co.maybeitsadam.takt.ui.commands.KeyCommand
 import uk.co.maybeitsadam.takt.ui.commands.PaletteCommand
+import uk.co.maybeitsadam.takt.ui.navigation.LocalShell
 import uk.co.maybeitsadam.takt.ui.theme.PIcons
 
 /** The dialogs and sheets a list screen can show. */
@@ -49,6 +50,9 @@ class TaskActions(
     private val show: (ListDialog) -> Unit,
 ) {
     private val commands get() = container.commands
+
+    /** The list the screen shows; null in Everything, where every row's list is elsewhere. */
+    val screenListId: String? get() = vm.listId
 
     fun select(id: String) = vm.select(id)
 
@@ -193,6 +197,10 @@ internal fun ColumnScope.TaskMenuItems(
         PMenuItem("Move down", Icons.Filled.KeyboardArrowDown, trailing = "Alt+Down", onClick = run { actions.moveDown(id) })
     }
     PMenuItem("Move to list…", PIcons.ListIcon, onClick = run { actions.askMove(row) })
+    if (row.listId != actions.screenListId) {
+        val navigator = LocalShell.current.navigator
+        PMenuItem("Go to list", PIcons.ListIcon, onClick = run { navigator.openList(row.listId, id) })
+    }
     PMenuItem(if (row.isList) "Convert to task" else "Convert to list", ListIcons.Nested, onClick = run { actions.toggleList(id) })
     PMenuItem("Extract branch as list", PIcons.Folder, onClick = run { actions.extractBranch(id) })
     PMenuDivider()

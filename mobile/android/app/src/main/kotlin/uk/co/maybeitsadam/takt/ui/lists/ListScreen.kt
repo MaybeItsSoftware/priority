@@ -222,25 +222,11 @@ private fun ListDialogHost(
         ) { actions.delete(dialog.id) }
         is ListDialog.MoveTask -> {
             val lists by vm.allLists.collectAsStateWithLifecycle()
-            var creating by remember { mutableStateOf(false) }
-            if (creating) {
-                NamePromptDialog("New list", confirm = "Move", onDismiss = dismiss) { actions.moveToNewList(dialog.id, it) }
-            } else {
-                val choices = remember(lists, dialog) {
-                    (
-                        listOf(Choice("\u0000new", "New list…", icon = Icons.Filled.Add)) +
-                            lists.filter { it.completedAt == null }.map {
-                                Choice(
-                                    it.id, it.name, icon = if (it.systemRole == TaskListRole.INBOX) PIcons.Inbox else PIcons.ListIcon,
-                                    isCurrent = it.id == dialog.listId,
-                                )
-                            }
-                        ).toImmutableList()
-                }
-                ChoiceSheet("Move ${dialog.title} to", choices, onDismiss = { if (!creating) dismiss() }) { choice ->
-                    if (choice.id == "\u0000new") creating = true else choice.id?.let { actions.moveToList(dialog.id, it) }
-                }
-            }
+            MoveToListSheet(
+                dialog.title, dialog.listId, lists, onDismiss = dismiss,
+                onMove = { actions.moveToList(dialog.id, it) },
+                onMoveToNew = { actions.moveToNewList(dialog.id, it) },
+            )
         }
         is ListDialog.NewListForMove -> NamePromptDialog("New list", confirm = "Move", onDismiss = dismiss) { actions.moveToNewList(dialog.id, it) }
         is ListDialog.MoveCard -> {

@@ -27,6 +27,7 @@ import uk.co.maybeitsadam.takt.core.FocusContext
 import uk.co.maybeitsadam.takt.core.WorkspaceNextUpSnapshot
 import uk.co.maybeitsadam.takt.core.FocusSessionPhase
 import uk.co.maybeitsadam.takt.core.TaskAvailabilityPolicy
+import uk.co.maybeitsadam.takt.core.TaskList
 import uk.co.maybeitsadam.takt.data.workspace.observeBlockedTaskIds
 import uk.co.maybeitsadam.takt.data.workspace.startClash
 import uk.co.maybeitsadam.takt.ui.focus.FocusActions
@@ -158,6 +159,20 @@ class TodayViewModel(private val container: AppContainer) : ViewModel() {
     }
 
     fun inspect(card: DayCard) = container.inspector.open(card.id)
+
+    /** Every list, for "Move to list…". */
+    val lists: StateFlow<List<TaskList>> = container.withSession { it.repository.observeLists(it.workspace.id) }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    fun clearDue(card: DayCard) = container.commands.clearDue(card.id)
+
+    fun clearStart(card: DayCard) = container.commands.clearStart(card.id)
+
+    fun moveToList(card: DayCard, listId: String) = container.commands.moveToList(card.id, listId)
+
+    fun moveToNewList(card: DayCard, name: String) = container.commands.moveToNewList(card.id, name)
+
+    fun delete(card: DayCard) = container.commands.delete(card.id)
 
     // endregion
 
