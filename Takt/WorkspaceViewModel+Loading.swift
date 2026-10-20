@@ -201,7 +201,7 @@ extension WorkspaceViewModel {
   /// column the keys are in, its cards with the subtask rows drawn on them:
   /// the cards of every column alone left out a subtask row, so one ticked
   /// off there lost the selection and the next arrow started from the top.
-  private func selectionOrder(inBoardColumn columnID: String?) -> [String] {
+  func selectionOrder(inBoardColumn columnID: String?) -> [String] {
     guard let columnID, let column = boardColumns.first(where: { $0.id == columnID }) else {
       return visibleNavigationTasks.map(\.id)
     }

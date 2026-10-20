@@ -190,13 +190,41 @@ extension WorkspaceViewModel {
     pendingTaskDeletionID = nil
   }
 
+  /// Whether `id` is `ancestorID` or somewhere under it.
+  private func isTask(_ id: String, inside ancestorID: String) -> Bool {
+    var current: String? = id
+    var seen = Set<String>()
+    while let next = current, seen.insert(next).inserted {
+      if next == ancestorID { return true }
+      current = task(withID: next)?.parentTaskId
+    }
+    return false
+  }
+
+  /// Deletes the task and everything under it. A selection on it, or under
+  /// it, moves to the row that takes its place (`SelectionSuccessor`), as a
+  /// completion's does, rather than leaving the keys nowhere; a scope inside
+  /// it steps out to its parent.
   func deleteTask(_ task: WorkspaceTask) {
     guard let store else { return }
+    let selectionGoes = selectedTaskID.map { isTask($0, inside: task.id) } ?? false
+    let scopeGoes = scopeTaskID.map { isTask($0, inside: task.id) } ?? false
+    let column = viewMode == .board ? activeBoardColumnID : nil
+    let before = selectionOrder(inBoardColumn: column)
+    // Read before the delete, which takes the rows under it with it.
+    let parents = Dictionary(
+      before.map { ($0, self.task(withID: $0)?.parentTaskId) }, uniquingKeysWith: { first, _ in first })
     perform {
       try store.deleteTask(id: task.id)
-      if selectedTaskID == task.id { selectedTaskID = nil }
-      if scopeTaskID == task.id { scopeTaskID = task.parentTaskId }
+      if scopeGoes { scopeTaskID = task.parentTaskId }
       reloadOutline()
+      if selectionGoes {
+        let successor = SelectionSuccessor.successor(
+          of: task.id, previousOrder: before, remaining: Set(selectionOrder(inBoardColumn: column)),
+          parentOf: { parents[$0] ?? nil })
+        if successor != nil, let column { focusedBoardColumnID = column }
+        selectedTaskID = successor
+      }
       reloadFocus()
     }
   }
