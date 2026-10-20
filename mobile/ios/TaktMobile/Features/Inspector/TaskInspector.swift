@@ -585,8 +585,7 @@ private struct BlockedBySection: View {
   private func row(_ other: WorkspaceTask) -> some View {
     let isOpen = other.status == .open
     return HStack(spacing: theme.space.sm) {
-      Image(systemName: isOpen ? "circle" : "checkmark.circle")
-        .foregroundStyle(isOpen ? theme.muted : theme.success)
+      TaskCheckbox(status: other.status, isList: other.isList, size: 16)
       Text(other.title)
         .font(theme.type.body)
         .foregroundStyle(isOpen ? theme.ink : theme.muted)

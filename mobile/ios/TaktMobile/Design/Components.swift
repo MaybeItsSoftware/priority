@@ -93,9 +93,11 @@ struct Tag: View {
   private var hue: Color { tint ?? theme.muted }
 }
 
-/// The themed checkbox: a square at the control radius that fills with
-/// emerald when done, with a struck line for invalidated work. Drawn rather
-/// than a stock toggle so it follows the palette.
+/// The themed checkbox: a hairline square at the control radius scaled down
+/// to the box — never a circle — empty when open. Done is the box tinted
+/// emerald with its border and a check; cancelled is a well with a minus. A
+/// list's open box holds a list glyph, so it still reads as a list beside its
+/// tasks. Drawn rather than a stock toggle so it follows the palette.
 struct TaskCheckbox: View {
   @Environment(\.theme) private var theme
   let status: TaskStatus
@@ -103,18 +105,19 @@ struct TaskCheckbox: View {
   var size: CGFloat = 20
 
   var body: some View {
-    let shape = RoundedRectangle(
-      cornerRadius: isList ? min(size / 2, theme.radius.pill) : max(0, theme.radius.control - 1), style: .continuous)
+    let shape = RoundedRectangle(cornerRadius: min(theme.radius.control, size / 4), style: .continuous)
     ZStack {
       shape.fill(fill)
       shape.strokeBorder(stroke, lineWidth: 1.25)
       switch status {
       case .completed:
-        Image(systemName: "checkmark").font(.system(size: size * 0.55, weight: .bold)).foregroundStyle(theme.onAccent)
+        Image(systemName: "checkmark").font(.system(size: size * 0.55, weight: .bold)).foregroundStyle(theme.success)
       case .cancelled:
         Image(systemName: "minus").font(.system(size: size * 0.55, weight: .bold)).foregroundStyle(theme.muted)
       case .open:
-        EmptyView()
+        if isList {
+          Image(systemName: "list.bullet").font(.system(size: size * 0.5, weight: .semibold)).foregroundStyle(theme.muted)
+        }
       }
     }
     .frame(width: size, height: size)
@@ -123,7 +126,7 @@ struct TaskCheckbox: View {
 
   private var fill: Color {
     switch status {
-    case .completed: theme.success
+    case .completed: theme.success.opacity(0.10)
     case .cancelled: theme.well
     case .open: Color.clear
     }
@@ -131,7 +134,7 @@ struct TaskCheckbox: View {
 
   private var stroke: Color {
     switch status {
-    case .completed: theme.success
+    case .completed: theme.success.opacity(0.40)
     case .cancelled: theme.inputBorder
     case .open: theme.inputBorder
     }

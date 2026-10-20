@@ -63,12 +63,9 @@ private struct TaskRow: View {
   var body: some View {
     HStack(spacing: 8) {
       Button(action: onTick) {
+        // No check circle, as on the phone's Today and the Wear watch: a tap
+        // crosses the title out and the row leaves once the tick is sent.
         HStack(alignment: .top, spacing: 8) {
-          Image(systemName: isFinishing ? "checkmark.circle.fill" : (task.isDaily ? "arrow.trianglehead.2.clockwise" : "circle"))
-            .font(.system(size: 18, weight: .semibold))
-            .foregroundStyle(isFinishing ? WatchPalette.emerald : (task.isDaily ? WatchPalette.amber : WatchPalette.dim))
-            .frame(width: 22)
-            .padding(.top, 1)
           VStack(alignment: .leading, spacing: 2) {
             Text(task.title)
               .font(.system(.body).weight(.semibold))

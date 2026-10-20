@@ -299,7 +299,7 @@ struct ListsTreeRows: View {
       Button { model.moveList(list.id, by: 1) } label: { Label("Move down", systemImage: "arrow.down") }
       Divider()
       Button { model.toggleCompleted(list: list.id) } label: {
-        Label(list.completedAt == nil ? "Complete list" : "Reopen list", systemImage: "checkmark.circle")
+        Label(list.completedAt == nil ? "Complete list" : "Reopen list", systemImage: "checkmark.square")
       }
       Button { model.setArchived(true, list: list.id) } label: { Label("Archive", systemImage: "archivebox") }
       Button { model.convertListToTask(list.id) } label: { Label("Convert to task", systemImage: "checkmark.square") }

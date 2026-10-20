@@ -225,7 +225,7 @@ private struct ReviewDoneView: View {
     .overlay {
       if review.doneGroups.isEmpty {
         EmptyState(title: "Nothing finished yet", message: "Completed tasks from the last five weeks show here.",
-                   systemImage: "checkmark.circle")
+                   systemImage: "checkmark.square")
       }
     }
     .task(id: model.revision) { await review.loadDone() }
