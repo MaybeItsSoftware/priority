@@ -34,6 +34,7 @@ sealed interface ListDialog {
     data object DeleteList : ListDialog
     data object AddColumn : ListDialog
     data class RemoveColumn(val id: String, val title: String) : ListDialog
+    data class RenameColumn(val id: String, val title: String) : ListDialog
 }
 
 /**

@@ -266,6 +266,7 @@ private fun ListDialogHost(
             onClose()
         }
         ListDialog.AddColumn -> NamePromptDialog("New board column", confirm = "Add", onDismiss = dismiss) { vm.addColumn(it) }
+        is ListDialog.RenameColumn -> NamePromptDialog("Rename column", dialog.title, onDismiss = dismiss) { vm.renameColumn(dialog.id, it) }
         is ListDialog.RemoveColumn -> ConfirmDialog(
             "Remove ${dialog.title}?", "Its cards move to the first remaining column, in one undo step.", confirm = "Remove", onDismiss = dismiss,
         ) { vm.removeColumn(dialog.id) }

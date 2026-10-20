@@ -262,6 +262,41 @@ object BoardShaping {
         )
     }
 
+    /**
+     * [layout] with [columnId] titled [title]; a column drawn only because
+     * cards are filed in it joins the layout under its new title. Null when
+     * nothing changes.
+     */
+    fun renamingColumn(layout: List<WorkspaceKanbanColumn>, columnId: String, title: String): List<WorkspaceKanbanColumn>? {
+        val name = title.trim()
+        if (name.isEmpty()) return null
+        val updated = if (layout.any { it.id == columnId }) {
+            layout.map { if (it.id == columnId) it.copy(title = name) else it }
+        } else {
+            layout + WorkspaceKanbanColumn(columnId, name)
+        }
+        return updated.takeUnless { it == layout }
+    }
+
+    /**
+     * [layout] with [columnId] moved [offset] places past its drawn neighbour
+     * in [drawn], as the iPhone's `moveColumn`; null at either end, or when
+     * either column is not in the layout.
+     */
+    fun movingColumn(layout: List<WorkspaceKanbanColumn>, drawn: List<String>, columnId: String, offset: Int): List<WorkspaceKanbanColumn>? {
+        val index = drawn.indexOf(columnId)
+        if (index < 0) return null
+        val neighbourId = drawn.getOrNull(index + offset) ?: return null
+        val updated = layout.toMutableList()
+        val from = updated.indexOfFirst { it.id == columnId }
+        if (from < 0) return null
+        val moving = updated.removeAt(from)
+        val neighbour = updated.indexOfFirst { it.id == neighbourId }
+        if (neighbour < 0) return null
+        updated.add(if (offset > 0) neighbour + 1 else neighbour, moving)
+        return updated
+    }
+
     /** A column id from a title, unique among [columns]: the core's `board_column_id`. */
     fun uniqueColumnId(title: String, columns: List<WorkspaceKanbanColumn>): String =
         boardColumnId(title, columns.map { it.id })

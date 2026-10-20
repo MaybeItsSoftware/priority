@@ -23,7 +23,10 @@ import androidx.compose.foundation.pager.PageSize
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -127,9 +130,19 @@ internal fun BoardPane(vm: ListViewModel, actions: TaskActions, show: (ListDialo
                 }
             }
             IconAction(Icons.Filled.Add, "Add a board column", onClick = { show(ListDialog.AddColumn) })
+            val current = columns.getOrNull(pager.currentPage)
             ColumnMenu(
-                enabled = columns.size > 1,
-                onRemove = { columns.getOrNull(pager.currentPage)?.let { show(ListDialog.RemoveColumn(it.id, it.title)) } },
+                canRemove = columns.size > 1,
+                canMoveLeft = current != null && pager.currentPage > 0,
+                canMoveRight = current != null && pager.currentPage < columns.size - 1,
+                onRename = { current?.let { show(ListDialog.RenameColumn(it.id, it.title)) } },
+                onMove = { offset ->
+                    current?.let {
+                        vm.moveColumn(it.id, offset)
+                        scope.launch { pager.animateScrollToPage((pager.currentPage + offset).coerceIn(0, columns.size - 1)) }
+                    }
+                },
+                onRemove = { current?.let { show(ListDialog.RemoveColumn(it.id, it.title)) } },
             )
         }
         Hairline()
@@ -151,12 +164,32 @@ internal fun BoardPane(vm: ListViewModel, actions: TaskActions, show: (ListDialo
 }
 
 @Composable
-private fun ColumnMenu(enabled: Boolean, onRemove: () -> Unit) {
+private fun ColumnMenu(
+    canRemove: Boolean,
+    canMoveLeft: Boolean,
+    canMoveRight: Boolean,
+    onRename: () -> Unit,
+    onMove: (Int) -> Unit,
+    onRemove: () -> Unit,
+) {
     var open by remember { mutableStateOf(false) }
     Box {
         IconAction(Icons.Filled.MoreVert, "Column actions", onClick = { open = true })
         PMenu(open, { open = false }) {
-            PMenuItem("Remove this column", Icons.Filled.Delete, destructive = true, enabled = enabled, onClick = {
+            PMenuItem("Rename…", Icons.Filled.Edit, onClick = {
+                open = false
+                onRename()
+            })
+            PMenuItem("Move left", Icons.AutoMirrored.Filled.KeyboardArrowLeft, enabled = canMoveLeft, onClick = {
+                open = false
+                onMove(-1)
+            })
+            PMenuItem("Move right", Icons.AutoMirrored.Filled.KeyboardArrowRight, enabled = canMoveRight, onClick = {
+                open = false
+                onMove(1)
+            })
+            PMenuDivider()
+            PMenuItem("Remove this column", Icons.Filled.Delete, destructive = true, enabled = canRemove, onClick = {
                 open = false
                 onRemove()
             })

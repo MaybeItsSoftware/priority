@@ -236,6 +236,24 @@ class ListsShapingTest {
         assertEquals(listOf("p"), BoardShaping.matrix(board).unplaced.map { it.id })
     }
 
+    @Test fun renamingAColumnKeepsItsRulesAndAFiledOnlyColumnJoinsTheLayout() {
+        val rule = FilterDefinition("all", "open", emptyList())
+        val layout = listOf(WorkspaceKanbanColumn("a", "A", rule), WorkspaceKanbanColumn("b", "B"))
+        assertEquals(listOf(WorkspaceKanbanColumn("a", "Now", rule), layout[1]), BoardShaping.renamingColumn(layout, "a", " Now "))
+        assertEquals(layout + WorkspaceKanbanColumn("c", "Later"), BoardShaping.renamingColumn(layout, "c", "Later"))
+        assertNull(BoardShaping.renamingColumn(layout, "b", "B"))
+        assertNull(BoardShaping.renamingColumn(layout, "b", "  "))
+    }
+
+    @Test fun movingAColumnStepsPastItsDrawnNeighbour() {
+        val layout = listOf("a", "hidden", "b", "c").map { WorkspaceKanbanColumn(it, it) }
+        val drawn = listOf("a", "b", "c")
+        assertEquals(listOf("hidden", "b", "a", "c"), BoardShaping.movingColumn(layout, drawn, "a", 1)?.map { it.id })
+        assertEquals(listOf("a", "hidden", "c", "b"), BoardShaping.movingColumn(layout, drawn, "c", -1)?.map { it.id })
+        assertNull(BoardShaping.movingColumn(layout, drawn, "a", -1))
+        assertNull(BoardShaping.movingColumn(layout, drawn, "c", 1))
+    }
+
     @Test fun aFoldedCardDrawsNoSubtasks() {
         val board = BoardShaping.shape(scope(listOf(home), tasks), false, stock, setOf("a"), false, zone, today)
         val card = board.columns.first().cards.first()

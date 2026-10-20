@@ -300,6 +300,21 @@ class ListViewModel(
         undo.perform { it.setKanbanBoardColumns(updated, boardKey, label = "Add Board Column") }
     }
 
+    fun renameColumn(columnId: String, title: String) {
+        val shape = board.value
+        if (!shape.isLoaded) return
+        val updated = BoardShaping.renamingColumn(shape.layout, columnId, title) ?: return
+        undo.perform { it.setKanbanBoardColumns(updated, boardKey, label = "Rename Board Column") }
+    }
+
+    /** Moves a column [offset] places along the drawn board. */
+    fun moveColumn(columnId: String, offset: Int) {
+        val shape = board.value
+        if (!shape.isLoaded) return
+        val updated = BoardShaping.movingColumn(shape.layout, shape.columns.map { it.id }, columnId, offset) ?: return
+        undo.perform { it.setKanbanBoardColumns(updated, boardKey, label = "Move Board Column") }
+    }
+
     /**
      * Removes a column, moving the cards filed in it into the first remaining
      * column that is filed into, in the same undo step. A column drawn only
