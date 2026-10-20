@@ -2,6 +2,7 @@
 name = "takt-core"
 version = "0.1.0"
 edition = "2024"
+license = "AGPL-3.0-only"
 publish = false
 description = "Takt's shared core: the workspace store, its journal and sync, called by every client through UniFFI. See docs/rust-core-migration.md."
 

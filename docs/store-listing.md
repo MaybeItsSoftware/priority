@@ -57,6 +57,11 @@ EVERYWHERE
 • Themes: three built in, or make your own from three colours
 • Widgets, and a quick-add shortcut
 
+OPEN SOURCE AND FREE
+• Open source under the GNU AGPL-3.0:
+  github.com/MaybeItsSoftware/priority
+• Sync between your devices is free, and you can self-host it for free
+
 No ads, no tracking, no analytics.
 ```
 

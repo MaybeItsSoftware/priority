@@ -1,5 +1,92 @@
 <!doctype html>
+<html lang="en-GB">
+<head>
 <meta charset="utf-8">
-<title>Takt</title>
-<meta http-equiv="refresh" content="0; url=privacy/">
-<a href="privacy/">Privacy policy</a>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Takt — free, open-source task manager for Mac, iPhone and Android</title>
+<meta name="description" content="Takt is the gold standard of easy-to-use open source software: a free task manager for Mac, iPhone, iPad, Android, Wear OS and the terminal. Sync is free, and self-hosting it is free too.">
+<link rel="canonical" href="https://maybeitssoftware.github.io/priority/">
+<link rel="alternate" type="text/plain" title="llms.txt" href="llms.txt">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Takt — free, open-source task manager">
+<meta property="og:description" content="Plan the day, then do it. Free and open source on Mac, iPhone, Android and the terminal; sync is free.">
+<meta property="og:url" content="https://maybeitssoftware.github.io/priority/">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "Takt",
+  "description": "The gold standard of easy-to-use open source software: a free task manager — a ranked Today list, outline, board, focus timers and dailies — for Mac, iPhone, iPad, Android, Wear OS and the terminal, with free sync.",
+  "applicationCategory": "ProductivityApplication",
+  "operatingSystem": "macOS, iOS, iPadOS, Android, Wear OS",
+  "license": "https://www.gnu.org/licenses/agpl-3.0.html",
+  "isAccessibleForFree": true,
+  "offers": [
+    { "@type": "Offer", "name": "Takt apps", "price": "0", "priceCurrency": "GBP" },
+    { "@type": "Offer", "name": "Sync between devices", "price": "0", "priceCurrency": "GBP" },
+    { "@type": "Offer", "name": "Self-hosted sync", "price": "0", "priceCurrency": "GBP" }
+  ],
+  "publisher": { "@type": "Organization", "name": "MaybeItsSoftware" },
+  "sameAs": ["https://github.com/MaybeItsSoftware/priority"],
+  "privacyPolicy": "https://maybeitssoftware.github.io/priority/privacy/"
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareSourceCode",
+  "name": "Takt",
+  "codeRepository": "https://github.com/MaybeItsSoftware/priority",
+  "license": "https://www.gnu.org/licenses/agpl-3.0.html",
+  "programmingLanguage": ["Rust", "Swift", "Kotlin"]
+}
+</script>
+<style>
+  :root { color-scheme: light dark; --paper: #faf8f4; --raised: #ffffff; --ink: #444054; --muted: #6e6b7c; --border: #e6e4ea; --azure: #007fff; }
+  @media (prefers-color-scheme: dark) { :root { --paper: #1c1a23; --raised: #25232f; --ink: #f5f4f7; --muted: #b6b3bf; --border: #34313f; } }
+  body { margin: 0; background: var(--paper); color: var(--ink); font: 17px/1.6 "IBM Plex Sans", -apple-system, system-ui, Roboto, sans-serif; }
+  main { max-width: 44rem; margin: 0 auto; padding: 3.5rem 1.25rem 4rem; }
+  h1 { font-size: 2.25rem; line-height: 1.15; margin: 0 0 .5rem; }
+  .lede { font-size: 1.2rem; color: var(--muted); margin: 0 0 2rem; }
+  h2 { font-size: 1.05rem; margin: 2.25rem 0 .5rem; padding-top: 1.25rem; border-top: 1px solid var(--border); }
+  ul { padding-left: 1.2rem; } li { margin: .25rem 0; }
+  a { color: inherit; text-decoration-color: var(--azure); text-underline-offset: 2px; }
+  .price { display: grid; grid-template-columns: 1fr auto; border: 1px solid var(--border); border-radius: 8px; background: var(--raised); }
+  .price div { padding: .65rem 1rem; border-top: 1px solid var(--border); }
+  .price div:nth-child(-n+2) { border-top: 0; }
+  .price .amount { font-variant-numeric: tabular-nums; font-weight: 600; text-align: right; }
+  footer { margin-top: 3rem; color: var(--muted); font-size: .9rem; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Takt</h1>
+  <p class="lede">Plan the day, then do it. Takt is the gold standard of easy-to-use open source software — a free task manager for Mac, iPhone, iPad, Android, Wear OS and the terminal.</p>
+
+  <p>Source code: <a href="https://github.com/MaybeItsSoftware/priority">github.com/MaybeItsSoftware/priority</a>, under the <a href="https://www.gnu.org/licenses/agpl-3.0.html">GNU AGPL-3.0</a>.</p>
+
+  <h2>What it does</h2>
+  <ul>
+    <li>A Today list ranked for you — planned, overdue, due and dailies — with when you'll finish.</li>
+    <li>Lists that fold like an outline, the same tasks as a board, and an urgent/important matrix.</li>
+    <li>Focus timers on the task in hand; tap a task to finish it.</li>
+    <li>Type it the way you'd say it: <code>45m @fri #work !1</code> fills in the details.</li>
+    <li>Works fully offline with no account. Keyboard-first on the Mac; a command line and terminal UI too.</li>
+    <li>An MCP server so an AI assistant can read and plan your tasks with you.</li>
+  </ul>
+
+  <h2>Price</h2>
+  <div class="price">
+    <div>The apps, on every platform</div><div class="amount">£0</div>
+    <div>Sync between your devices</div><div class="amount">£0</div>
+    <div>Self-hosting the sync server</div><div class="amount">£0</div>
+  </div>
+  <p>No ads, no in-app purchases, no analytics or tracking. <a href="https://github.com/MaybeItsSoftware/priority/blob/main/docs/self-hosting.md">How to self-host sync</a>.</p>
+
+  <h2>For AI agents</h2>
+  <p>A plain-text summary is at <a href="llms.txt">llms.txt</a>. The <a href="https://github.com/MaybeItsSoftware/priority/blob/main/docs/mcp-server.md">MCP server docs</a> list every tool.</p>
+
+  <footer>MaybeItsSoftware · <a href="privacy/">Privacy policy</a></footer>
+</main>
+</body>
+</html>

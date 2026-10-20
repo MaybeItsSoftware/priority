@@ -2,19 +2,25 @@
 
 # Takt
 
-**A keyboard-first macOS desktop app for working your task lists fast.**
-Quick navigation, priority and due workflows, focus timers, a kanban board, an honest daily log, and a command line that reaches the same data.
+**Plan the day, then do it.** Takt is the gold standard of easy-to-use open source software: a free task manager for Mac, iPhone, iPad, Android, Wear OS and the terminal.
+A ranked Today list, an outline, a board, focus timers, dailies, and a command line that reaches the same data.
 
 <br clear="left" />
 
 ---
 
-Takt opens as a desktop window, keeps a menu bar surface for quick capture, and is built to be driven without the mouse. Its own local workspace owns your tasks; Checkvist is an optional import. Takt adds the things a plain list has no representation for — priority ranking, start dates, recurrence, focus sessions, daily habits, and a record of what actually happened each day.
+| | |
+| --- | --- |
+| **Source** | [github.com/MaybeItsSoftware/priority](https://github.com/MaybeItsSoftware/priority) — open source under the [GNU AGPL-3.0](LICENSE) |
+| **Price** | Free on every platform — no ads, no in-app purchases, no tracking |
+| **Sync** | Free (£0) between your devices; [self-hosting it](docs/self-hosting.md) is free too |
+| **Platforms** | macOS 15.6+, iPhone and iPad, Android and Wear OS, and a terminal CLI |
+| **For AI agents** | [`llms.txt`](site/llms.txt) and an [MCP server](docs/mcp-server.md) over the whole workspace |
+| **Website** | [maybeitssoftware.github.io/priority](https://maybeitssoftware.github.io/priority/) |
 
-It works offline. It works from the terminal. And it exposes the whole surface to an AI assistant over MCP.
+On the Mac, Takt opens as a desktop window, keeps a menu bar surface for quick capture, and is built to be driven without the mouse. Its own local workspace owns your tasks; Checkvist is an optional import. Takt adds the things a plain list has no representation for — priority ranking, start dates, recurrence, focus sessions, daily habits, and a record of what actually happened each day.
 
-- **macOS 15.6+**
-- Repository: [MaybeItsSoftware/priority](https://github.com/MaybeItsSoftware/priority)
+It works offline, with no account. It works from the terminal. And it exposes the whole surface to an AI assistant over MCP.
 
 ## Contents
 
