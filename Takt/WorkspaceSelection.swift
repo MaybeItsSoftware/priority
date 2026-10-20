@@ -114,13 +114,13 @@ struct WorkspaceTaskMarker: View {
       } else if task.isList {
         WorkspaceIconImage(name: model.itemSymbol(for: task)).foregroundStyle(theme.muted)
       } else if isHovered {
-        Image(systemName: "circle").foregroundStyle(theme.muted)
+        TaskCheckBox()
       } else if isSubtask {
         WorkspaceSubtaskElbow(colour: elbowColour)
       } else {
-        // Held at the circle's size, so the row's height and the hover
+        // Held at the box's size, so the row's height and the hover
         // target are the same whichever mark shows.
-        Image(systemName: "circle").hidden()
+        TaskCheckBox().hidden()
       }
     }
     .frame(maxWidth: .infinity)

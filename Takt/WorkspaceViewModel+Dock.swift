@@ -72,7 +72,7 @@ enum WorkspaceBottomDockTab: String, CaseIterable, Identifiable {
   var symbolName: String {
     switch self {
     case .progress: "chart.bar.xaxis"
-    case .done: "checkmark.circle"
+    case .done: "checkmark.square"
     case .timeline: "clock"
     }
   }

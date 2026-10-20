@@ -206,9 +206,7 @@ struct WorkspaceDependencyInspectorSection: View {
     let isOpen = other.status == .open
     return Button { model.selectTask(other) } label: {
       HStack(spacing: theme.space.xs) {
-        Image(systemName: isOpen ? "circle" : "checkmark.circle")
-          .font(theme.captionFont)
-          .foregroundStyle(isOpen ? theme.muted : theme.success)
+        TaskCheckBox(isDone: !isOpen, size: CGFloat(theme.scale.caption))
         Text(other.title)
           .foregroundStyle(isOpen ? theme.ink : theme.muted)
           .strikethrough(!isOpen)

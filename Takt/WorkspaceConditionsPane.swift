@@ -638,7 +638,7 @@ private struct WorkspaceConditionManageRow: View {
 
   var body: some View {
     HStack(spacing: theme.space.sm) {
-      Image(systemName: condition.isLocation ? "location" : "checkmark.circle")
+      Image(systemName: condition.isLocation ? "location" : "checkmark.square")
         .foregroundStyle(condition.isArchived ? theme.dim : theme.muted)
         .frame(width: 14)
       if isRenaming {

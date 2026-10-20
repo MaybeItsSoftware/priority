@@ -940,9 +940,15 @@ struct DailyBadge: View {
     Button {
       model.toggleDailyProgress(task)
     } label: {
-      Image(systemName: isDoneToday ? "checkmark.circle.fill" : "arrow.triangle.2.circlepath")
-        .font(theme.microLabelFont)
-        .foregroundStyle(isDoneToday ? theme.success : theme.muted)
+      Group {
+        if isDoneToday {
+          TaskCheckBox(isDone: true, size: CGFloat(theme.scale.caption))
+        } else {
+          Image(systemName: "arrow.triangle.2.circlepath")
+            .font(theme.microLabelFont)
+            .foregroundStyle(theme.muted)
+        }
+      }
         .frame(width: theme.paneIconButtonSize, height: theme.paneIconButtonSize)
         .contentShape(Rectangle())
     }

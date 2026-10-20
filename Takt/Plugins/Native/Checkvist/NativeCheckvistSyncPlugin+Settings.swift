@@ -3,7 +3,7 @@ import SwiftUI
 
 @MainActor
 extension NativeCheckvistSyncPlugin: PluginSettingsPageProviding {
-  var settingsIconSystemName: String { "checkmark.circle" }
+  var settingsIconSystemName: String { "checkmark.square" }
 
   func sidebarStatusLabel(manager: AppCoordinator) -> String {
     manager.checkvist.isEnabled ? "Enabled" : "Disabled"
@@ -278,7 +278,7 @@ private struct CheckvistSyncPluginSettingsView: View {
     switch state {
     case .disconnected:
       return StatusStyle(
-        iconName: "circle.dashed",
+        iconName: "square.dashed",
         tint: theme.muted,
         title: "Not connected",
         message: "Enter your Checkvist email and OpenAPI key below to import your lists."
@@ -301,7 +301,7 @@ private struct CheckvistSyncPluginSettingsView: View {
       let email = checkvist.username
       let listWord = listCount == 1 ? "list" : "lists"
       return StatusStyle(
-        iconName: "checkmark.circle.fill",
+        iconName: "checkmark.square.fill",
         tint: theme.success,
         title: "Connected as \(email)",
         message: "\(listCount) \(listWord) on Checkvist. Choose which to copy below."

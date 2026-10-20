@@ -74,7 +74,7 @@ class MenuBarController: NSObject {
     statusItem?.button?.title = ""
     statusItem?.button?.attributedTitle = NSAttributedString(string: "")
     let image = NSImage(
-      systemSymbolName: "checkmark.circle",
+      systemSymbolName: "checkmark.square",
       accessibilityDescription: "Open Takt")
     image?.isTemplate = true
     statusItem?.button?.image = image

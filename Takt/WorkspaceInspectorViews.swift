@@ -511,7 +511,7 @@ struct LocalTaskInspector: View {
       .commandHelp(.taskPromoteList)
       actionButton(
         task.status == .open ? "Complete list" : "Reopen list",
-        systemImage: task.status == .open ? "checkmark.circle" : "arrow.uturn.backward.circle", stop: "complete"
+        systemImage: task.status == .open ? "checkmark.square" : "arrow.uturn.backward.circle", stop: "complete"
       ) { model.toggleTask(task) }
       .commandHelp(.taskComplete, note: task.status == .open ? "Complete the list" : "Reopen the list")
       actionButton("Archive list", systemImage: "archivebox", stop: "archive") { model.archiveNestedList(task) }

@@ -96,9 +96,7 @@ struct CelebrationPreview: View {
     phase: CelebrationPhase, treatment: CelebrationRowTreatment, celebrating: Bool
   ) -> some View {
     HStack(spacing: theme.space.sm) {
-      Image(systemName: celebrating ? "checkmark.circle.fill" : "circle")
-        .font(theme.bodyFont())
-        .foregroundStyle(celebrating ? theme.success : theme.dim)
+      TaskCheckBox(isDone: celebrating)
         .scaleEffect(treatment.iconScale(for: phase))
       Text(occasion == .dailyTicked ? "Practise music" : "Write the quarterly plan")
         .font(theme.bodyFont())

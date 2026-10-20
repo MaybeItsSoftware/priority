@@ -146,7 +146,7 @@ struct WorkspaceConditionFinder: View {
     return HStack(spacing: theme.space.sm) {
       Image(systemName: request.purpose == .place
         ? (isOn ? "largecircle.fill.circle" : "circle")
-        : (option.condition?.isLocation == true ? "location" : "checkmark.circle"))
+        : (option.condition?.isLocation == true ? "location" : "checkmark.square"))
         .foregroundStyle(request.purpose == .place && isOn ? theme.primary : theme.muted)
       Text(option.title)
         .font(theme.bodyFont())

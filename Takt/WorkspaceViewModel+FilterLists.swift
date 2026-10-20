@@ -145,7 +145,7 @@ extension WorkspaceFilterList {
     (defaultIcon, "Filter"), ("sun.max", "Today"), ("calendar", "Calendar"),
     ("clock", "Soon"), ("exclamationmark.circle", "Urgent"), ("flag", "Flagged"),
     ("tag", "Tag"), ("star", "Starred"), ("bolt", "Quick"), ("hourglass", "Waiting"),
-    ("checkmark.circle", "Done"), ("briefcase", "Work"), ("house", "Home"),
+    ("checkmark.square", "Done"), ("briefcase", "Work"), ("house", "Home"),
     ("person.2", "People"), ("lightbulb", "Ideas"), ("tray.full", "Everything"),
   ]
 }

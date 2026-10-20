@@ -246,9 +246,7 @@ struct DayTaskRow: View, Equatable {
     Button(action: onTick) {
       Group {
         if chrome.isHovered {
-          Image(systemName: "checkmark.circle")
-            .font(theme.bodyFont())
-            .foregroundStyle(theme.success)
+          TaskCheckBox(isDone: true)
         } else if chrome.depth > 0 {
           // A subtask hangs from its parent, as in the outline.
           WorkspaceSubtaskElbow()
@@ -260,9 +258,7 @@ struct DayTaskRow: View, Equatable {
             .foregroundStyle(theme.dim)
         } else {
           // No empty box down the column; the tick shows under the pointer.
-          Image(systemName: "circle")
-            .font(theme.captionFont)
-            .hidden()
+          TaskCheckBox(size: CGFloat(theme.scale.caption)).hidden()
         }
       }
       .frame(width: WorkspaceRowMetrics.iconWidth, alignment: .trailing)

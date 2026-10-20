@@ -214,7 +214,7 @@ private struct MCPIntegrationPluginSettingsView: View {
     detailIsSelectable: Bool = false
   ) -> some View {
     HStack(alignment: .firstTextBaseline, spacing: theme.space.xs) {
-      Image(systemName: ok ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
+      Image(systemName: ok ? "checkmark.square.fill" : "exclamationmark.triangle.fill")
         .foregroundStyle(ok ? theme.success : theme.warning)
         .font(theme.captionFont)
       VStack(alignment: .leading, spacing: theme.space.xxs) {
