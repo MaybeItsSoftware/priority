@@ -231,6 +231,13 @@ final class OutlineModel {
     folded = fold ? TaskOutlineFolding.parentIDs(base.items) : []
   }
 
+  /// A reveal from elsewhere: completed tasks shown and the named ancestors
+  /// unfolded, written through to the defaults as any fold is.
+  func apply(_ request: RevealRequest) {
+    hidesCompleted = false
+    if !folded.isDisjoint(with: request.ancestorIDs) { folded.subtract(request.ancestorIDs) }
+  }
+
   /// Opens every folded ancestor of a row so it can be seen.
   func reveal(_ id: String) {
     var ancestors: Set<String> = []

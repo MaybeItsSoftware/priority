@@ -9,6 +9,8 @@ struct OutlineView: View {
   @Environment(WorkspaceModel.self) private var model
   @Environment(\.isPadLayout) private var isPad
   @State private var outline: OutlineModel
+  /// A revealed row to scroll to once the outline has drawn it.
+  @State private var pendingScrollID: String?
   @FocusState private var focusedField: Field?
 
   enum Field: Hashable { case composer, rename }
@@ -19,57 +21,68 @@ struct OutlineView: View {
 
   var body: some View {
     @Bindable var navigation = model.navigation
-    List(selection: $navigation.selectedTaskID) {
-      if outline.composer?.anchorRowID == nil, outline.composer != nil {
-        composerRow
-      }
-      let entries = OutlineEntry.entries(
-        rows: outline.rows, blocked: model.blockedTaskIDs, buried: Set(model.buriedStarts.keys))
-      ForEach(entries) { entry in
-        switch entry {
-        case .row(let row):
-          rowView(row)
-          if outline.composer?.anchorRowID == row.id {
-            composerRow
-          }
-        case .blockedLabel(_, let depth, let isBuried):
-          blockedLabelRow(depth: depth, isBuried: isBuried)
+    ScrollViewReader { proxy in
+      List(selection: $navigation.selectedTaskID) {
+        if outline.composer?.anchorRowID == nil, outline.composer != nil {
+          composerRow
         }
-      }
-      .onMove { source, destination in
-        guard let move = OutlineEntry.rowMove(in: entries, source: source, destination: destination) else { return }
-        outline.move(from: move.source, to: move.destination, model: model)
-      }
-      .moveDisabled(!outline.scope.isSingleTree)
-    }
-    .listStyle(.plain)
-    .scrollContentBackground(.hidden)
-    .environment(\.defaultMinListRowHeight, 40)
-    .overlay {
-      if outline.isLoaded && outline.rows.isEmpty && outline.composer == nil {
-        VStack(spacing: theme.space.md) {
-          EmptyState(
-            title: outline.scope.isSingleTree ? "Nothing here yet" : "Nothing to do",
-            message: outline.scope.isSingleTree
-              ? "Add a task to start the list."
-              : outline.scope.filterListID != nil
-                ? "No task matches this filter list." : "Every open task in these lists shows here.",
-            systemImage: "list.bullet")
-          if outline.scope.isSingleTree {
-            Button("Add a task") { startComposing() }
-              .buttonStyle(ThemedButtonStyle(kind: .primary))
-              .accessibilityIdentifier("outline.addFirst")
+        let entries = OutlineEntry.entries(
+          rows: outline.rows, blocked: model.blockedTaskIDs, buried: Set(model.buriedStarts.keys))
+        ForEach(entries) { entry in
+          switch entry {
+          case .row(let row):
+            rowView(row)
+            if outline.composer?.anchorRowID == row.id {
+              composerRow
+            }
+          case .blockedLabel(_, let depth, let isBuried):
+            blockedLabelRow(depth: depth, isBuried: isBuried)
           }
         }
+        .onMove { source, destination in
+          guard let move = OutlineEntry.rowMove(in: entries, source: source, destination: destination) else { return }
+          outline.move(from: move.source, to: move.destination, model: model)
+        }
+        .moveDisabled(!outline.scope.isSingleTree)
       }
-    }
-    .task(id: QueryKey(revision: model.revision, scope: OutlineScopeKey(scope: outline.scope, token: outline.reloadToken))) {
-      await outline.load(model)
-    }
-    .onChange(of: model.navigation.outlineCommand) { _, command in
-      guard let command else { return }
-      model.navigation.outlineCommand = nil
-      handle(command)
+      .listStyle(.plain)
+      .scrollContentBackground(.hidden)
+      .environment(\.defaultMinListRowHeight, 40)
+      .overlay {
+        if outline.isLoaded && outline.rows.isEmpty && outline.composer == nil {
+          VStack(spacing: theme.space.md) {
+            EmptyState(
+              title: outline.scope.isSingleTree ? "Nothing here yet" : "Nothing to do",
+              message: outline.scope.isSingleTree
+                ? "Add a task to start the list."
+                : outline.scope.filterListID != nil
+                  ? "No task matches this filter list." : "Every open task in these lists shows here.",
+              systemImage: "list.bullet")
+            if outline.scope.isSingleTree {
+              Button("Add a task") { startComposing() }
+                .buttonStyle(ThemedButtonStyle(kind: .primary))
+                .accessibilityIdentifier("outline.addFirst")
+            }
+          }
+        }
+      }
+      .task(id: QueryKey(revision: model.revision, scope: OutlineScopeKey(scope: outline.scope, token: outline.reloadToken))) {
+        await outline.load(model)
+      }
+      .onChange(of: model.navigation.outlineCommand) { _, command in
+        guard let command else { return }
+        model.navigation.outlineCommand = nil
+        handle(command)
+      }
+      .onChange(of: model.navigation.revealRequest, initial: true) { _, request in
+        guard let request, request.scope == outline.scope else { return }
+        model.navigation.revealRequest = nil
+        outline.apply(request)
+        pendingScrollID = request.taskID
+        scrollToPending(proxy)
+      }
+      .onChange(of: outline.rows) { _, _ in scrollToPending(proxy) }
+      .accessibilityIdentifier("outline.list")
     }
     .toolbar {
       ToolbarItemGroup(placement: .secondaryAction) {
@@ -80,7 +93,6 @@ struct OutlineView: View {
         }
       }
     }
-    .accessibilityIdentifier("outline.list")
   }
 
   // MARK: - Rows
@@ -245,6 +257,15 @@ struct OutlineView: View {
     case .toggleHideCompleted: outline.hidesCompleted.toggle()
     case .selectNext: select(offset: 1)
     case .selectPrevious: select(offset: -1)
+    }
+  }
+
+  /// Scrolls to the revealed row once it is among the rows drawn.
+  private func scrollToPending(_ proxy: ScrollViewProxy) {
+    guard let id = pendingScrollID, outline.rows.contains(where: { $0.id == id }) else { return }
+    pendingScrollID = nil
+    Task { @MainActor in
+      withAnimation { proxy.scrollTo(id, anchor: .center) }
     }
   }
 

@@ -11,14 +11,19 @@ extension WorkspaceModel {
     UserDefaults.standard.set(false, forKey: "outlineHidesCompleted")
     let foldKey = "outlineFolds.\(scope.storageKey)"
     var folds = Set(UserDefaults.standard.stringArray(forKey: foldKey) ?? [])
+    var ancestors: Set<String> = []
     var parent = task.parentTaskId
     while let id = parent, let ancestor = self.task(id) {
-      folds.remove(id)
+      ancestors.insert(id)
       parent = ancestor.parentTaskId
     }
+    folds.subtract(ancestors)
     UserDefaults.standard.set(Array(folds).sorted(), forKey: foldKey)
     navigation.viewMode = .outline
     navigation.open(scope, isPad: isPad)
     navigation.selectedTaskID = task.id
+    // A new outline reads the defaults above; one already open hears this.
+    navigation.revealRequest = RevealRequest(
+      taskID: task.id, scope: scope, ancestorIDs: ancestors, serial: (navigation.revealRequest?.serial ?? 0) + 1)
   }
 }

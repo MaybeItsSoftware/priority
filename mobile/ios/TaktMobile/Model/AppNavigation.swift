@@ -112,6 +112,17 @@ enum SidebarItem: Hashable {
   case scope(ListScope)
 }
 
+/// "Reveal in list" for the outline showing `scope`: completed tasks shown,
+/// the task's ancestors unfolded, and the row scrolled to. An outline already
+/// open keeps its folds in memory, so it is told rather than left to read
+/// them again; `serial` makes a second reveal of the same task a change.
+struct RevealRequest: Equatable {
+  let taskID: String
+  let scope: ListScope
+  let ancestorIDs: Set<String>
+  let serial: Int
+}
+
 /// Where the user is. One object, so the iPhone tabs, the iPad split view,
 /// the keyboard shortcuts and the intents that open the app agree.
 @MainActor
@@ -142,6 +153,8 @@ final class AppNavigation {
   var listSettingsID: String?
   /// A command for the outline on screen, from the toolbar or a hardware key.
   var outlineCommand: OutlineCommand?
+  /// A reveal waiting for the outline of its scope. See `RevealRequest`.
+  var revealRequest: RevealRequest?
   var isHistoryPresented = false
   /// The habit form, on a task or (no task) for a standalone habit.
   var habitRequest: HabitRequest?

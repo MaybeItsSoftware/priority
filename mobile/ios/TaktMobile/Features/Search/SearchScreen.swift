@@ -211,10 +211,10 @@ struct SearchScreen: View {
     .accessibilityIdentifier("search.result.\(task.title)")
   }
 
-  /// Opens the task's list with the task selected.
+  /// Opens the task's list with the task selected, unfolded to and shown
+  /// even when it is done: the same reveal as "Go to the task's list".
   private func reveal(_ result: TaskSearchResult) {
     isFieldFocused = false
-    model.navigation.open(.list(result.list.id), isPad: isPad)
-    model.navigation.selectedTaskID = result.task.id
+    model.revealInList(result.task, isPad: isPad)
   }
 }
