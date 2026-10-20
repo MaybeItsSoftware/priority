@@ -62,8 +62,9 @@ suspend fun WorkspaceRepository.startClash(taskId: String, startAt: Instant?): T
 
 /**
  * "Keep both": a one-off copy of [taskId] beside it, carrying the dates it
- * has now — call it after the move is saved — as its own "Keep Both" step.
- * Returns the copy's id.
+ * has now. Call it straight after the move is saved: it joins the move's undo
+ * step, relabelled "Keep Both", so one undo takes back both. Returns the
+ * copy's id.
  */
 suspend fun WorkspaceRepository.addOccurrenceCopy(taskId: String, now: Instant = Instant.now()): String {
     val edit = taskEditorSnapshot(taskId)

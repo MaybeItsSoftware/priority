@@ -746,7 +746,7 @@ fn workspace_tool_definitions() -> Vec<Value> {
         }),
         json!({
             "name": "workspace_task_update",
-            "description": "Change a local task's title, notes, external links (replaces the whole set), status, kanban column, kind, sidebar pin, what it is waiting on and when to follow up, its due date, start, priority or estimate. Fields left out are unchanged; null clears one. One call is one undo step. Completing a repeating task writes its next occurrence, as Takt does. Dates are ISO only: turn a phrase like \"friday\" or \"next week\" into a date yourself, from today's date, before calling.",
+            "description": "Change a local task's title, notes, external links (replaces the whole set), status, kanban column, kind, sidebar pin, what it is waiting on and when to follow up, its due date, start, priority or estimate. Fields left out are unchanged; null clears one. One call is one undo step. Completing a repeating task writes its next occurrence, as Takt does, and reopening it takes that occurrence back while it is untouched. Moving a repeating task's dates onto its next turn is saved as asked: unlike the apps, this does not ask whether to stack the two turns or keep both. Dates are ISO only: turn a phrase like \"friday\" or \"next week\" into a date yourself, from today's date, before calling.",
             "inputSchema": {
                 "type": "object",
                 "properties": {
@@ -766,15 +766,15 @@ fn workspace_tool_definitions() -> Vec<Value> {
                     },
                     "waiting_on": {
                         "type": ["string", "null"],
-                        "description": "Who or what the task waits on (\"Sam\", \"Legal\"). Files it in the waiting-on column. Null or empty clears the tag.",
+                        "description": "Who or what the task waits on (\"Sam\", \"Legal\"). Files it in the waiting-on column. Null or empty clears the tag; clearing it and follow_up_at both takes the task out of the waiting-on column. A kanban_column in the same call wins.",
                     },
                     "follow_up_at": {
                         "type": ["string", "null"],
-                        "description": "When to chase it: 2026-10-08 14:00 (local) or RFC 3339. Files it in the waiting-on column; if it is still waiting then, Takt adds a 'Follow up' task to Today. Null or empty clears it.",
+                        "description": "When to chase it: 2026-10-08 14:00 (local) or RFC 3339. Files it in the waiting-on column; if it is still waiting then, Takt adds a 'Follow up' task to Today. Null or empty clears it; clearing it and waiting_on both takes the task out of the waiting-on column.",
                     },
                     "follow_up_every_days": {
                         "type": ["integer", "null"],
-                        "description": "Chase again every this many days (1 to 365): when the follow-up task is completed while this task is still waiting, its next follow-up is set that many days on, at the same time of day, and the next follow-up is numbered ('Follow up #2 with Sam: ...'). One never completed makes no more. Null or 0 makes it once. Needs follow_up_at.",
+                        "description": "Chase again every this many days (1 to 365): when the follow-up task is completed while this task is still waiting, its next follow-up is set that many days on, at the same time of day, and the next follow-up is numbered ('Follow up #2 with Sam: ...'). One never completed makes no more. Null or 0 makes it once. Needs a follow-up time: refused on a task with no follow_up_at unless one is passed in the same call.",
                     },
                     "due": {
                         "type": ["string", "null"],

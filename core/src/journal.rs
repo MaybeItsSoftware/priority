@@ -57,6 +57,63 @@ pub fn begin(transaction: &Transaction, label: &str) -> Result<String, CoreError
     Ok(group)
 }
 
+/// Arms the journal to add to the step just taken, when that step changed
+/// `task_id` and nothing has been undone since, and relabels it `label`;
+/// otherwise begins a step of its own, as [`begin`]. Returns the group id
+/// [`finish`] needs.
+///
+/// "Keep both" is a second write after the move it answers, made by the
+/// client once the move is saved; joining the move's step makes the two one
+/// undo, so taking back the copy cannot leave the move behind or the other
+/// way round.
+pub fn begin_joining_last(
+    transaction: &Transaction,
+    label: &str,
+    task_id: &str,
+) -> Result<String, CoreError> {
+    let undone: bool = transaction.query_row(
+        "SELECT EXISTS(SELECT 1 FROM change_log WHERE undone = 1)",
+        [],
+        |row| row.get(0),
+    )?;
+    let last: Option<String> = if undone {
+        None
+    } else {
+        transaction
+            .query_row(
+                "SELECT groupId FROM change_log WHERE undone = 0 ORDER BY id DESC LIMIT 1",
+                [],
+                |row| row.get(0),
+            )
+            .optional()?
+            .flatten()
+    };
+    let Some(group) = last else {
+        return begin(transaction, label);
+    };
+    let touched: bool = transaction.query_row(
+        "SELECT EXISTS(SELECT 1 FROM change_log WHERE groupId = ?1 AND rowId = ?2
+                        AND tableName IN ('tasks', 'task_metadata'))",
+        params![group, task_id],
+        |row| row.get(0),
+    )?;
+    if !touched {
+        return begin(transaction, label);
+    }
+    let armed = transaction.execute(
+        "UPDATE undo_control SET groupId = ?1, label = ?2, suppressed = 0 WHERE id = 0",
+        params![group, label],
+    )?;
+    if armed != 1 {
+        return Err(CoreError::NoJournal);
+    }
+    transaction.execute(
+        "UPDATE change_log SET label = ?2 WHERE groupId = ?1",
+        params![group, label],
+    )?;
+    Ok(group)
+}
+
 /// Disarms the journal, and if the step changed anything, makes it the new
 /// branch of history: the redo stack goes, and the journal is trimmed to
 /// [`JOURNAL_DEPTH`] steps. Returns whether the step changed anything.

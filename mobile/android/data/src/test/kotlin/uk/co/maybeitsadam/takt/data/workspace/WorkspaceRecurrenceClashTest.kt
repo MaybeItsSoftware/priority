@@ -13,7 +13,9 @@ import uk.co.maybeitsadam.takt.data.TestWorkspace
 
 /** The repository's side of a repeating task moved onto its next turn; the rule itself is the core's. */
 class WorkspaceRecurrenceClashTest {
-    private val monday9: Instant = Instant.parse("2026-10-05T09:00:00Z")
+    // Ahead of the clock: the next turn is the first one after now as well as
+    // after the task's date, so an overdue task brought to today is no clash.
+    private val monday9: Instant = Instant.parse("2099-10-05T09:00:00Z")
     private val day = 86_400L
 
     private class Fixture(val w: TestWorkspace, val inboxId: String) {
@@ -64,7 +66,7 @@ class WorkspaceRecurrenceClashTest {
     }
 
     @Test
-    fun keepBothCopiesTheMovedTaskAsAOneOffInItsOwnStep() = fixture {
+    fun keepBothCopiesTheMovedTaskAsAOneOffInTheMovesStep() = fixture {
         val id = daily()
         val moved = monday9.plusSeconds(day)
         store.saveTaskEditor(TaskEditorDraft(store.taskEditorSnapshot(id)).edit { copy(dueAt = moved) })
@@ -77,9 +79,11 @@ class WorkspaceRecurrenceClashTest {
         assertEquals(moved, copied.dueAt)
         assertNull(copied.metadata.recurrenceRule)
         assertEquals("daily", store.taskEditorSnapshot(id).metadata.recurrenceRule)
+        // One undo takes back the copy and the move it answered.
         store.undo()
         assertFalse(store.tasks(inboxId).any { it.id == copy })
         assertTrue(store.tasks(inboxId).any { it.id == id })
+        assertEquals(monday9, store.taskEditorSnapshot(id).dueAt)
     }
 
     @Test

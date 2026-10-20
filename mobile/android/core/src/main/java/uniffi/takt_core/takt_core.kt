@@ -3410,7 +3410,7 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_actionable_tasks_packed() and 0xFFFF) != 11098) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_add_occurrence_copy() and 0xFFFF) != 51110) {
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_add_occurrence_copy() and 0xFFFF) != 10536) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_add_task_blocker() and 0xFFFF) != 26156) {
@@ -5240,8 +5240,11 @@ public interface CoreWorkspaceInterface {
     fun `actionableTasksPacked`(`listIds`: List<kotlin.String>): kotlin.ByteArray
     
     /**
-     * Keeps a one-off copy of a repeating task at the dates `edit` gives, as
-     * one "Keep Both" step; returns its id. See `tasks::add_occurrence_copy`.
+     * Keeps a one-off copy of a repeating task at the dates `edit` gives,
+     * and returns its id; see `tasks::add_occurrence_copy`. Called once the
+     * move it answers is saved, it joins that move's step, relabelled "Keep
+     * Both", so one undo takes back the move and the copy together
+     * (`journal::begin_joining_last`); with no such step it is one of its own.
      */
     fun `addOccurrenceCopy`(`edit`: EditorSnapshot, `nowMs`: kotlin.Long, `zone`: kotlin.String): kotlin.String
     
@@ -7523,8 +7526,11 @@ open class CoreWorkspace: Disposable, AutoCloseable, CoreWorkspaceInterface
 
     
     /**
-     * Keeps a one-off copy of a repeating task at the dates `edit` gives, as
-     * one "Keep Both" step; returns its id. See `tasks::add_occurrence_copy`.
+     * Keeps a one-off copy of a repeating task at the dates `edit` gives,
+     * and returns its id; see `tasks::add_occurrence_copy`. Called once the
+     * move it answers is saved, it joins that move's step, relabelled "Keep
+     * Both", so one undo takes back the move and the copy together
+     * (`journal::begin_joining_last`); with no such step it is one of its own.
      */
     @Throws(CoreException::class)override fun `addOccurrenceCopy`(`edit`: EditorSnapshot, `nowMs`: kotlin.Long, `zone`: kotlin.String): kotlin.String {
             return FfiConverterString.lift(

@@ -406,6 +406,24 @@ pub fn schedule_task(
     update_task_record(transaction, &edit, now_ms)
 }
 
+/// Gives a task just created its start, checked and filed as a save of it
+/// would be: refused on or after its deadline, and moved between Today and
+/// This week by the day it falls on. The deadline it was made with is not
+/// pinned, so it follows the start, as one set when a task is added does.
+pub(crate) fn plan_new_task(
+    transaction: &Transaction,
+    id: &str,
+    start_at_ms: i64,
+    now_ms: i64,
+    zone: &str,
+) -> Result<(), CoreError> {
+    let mut edit = snapshot(transaction, id)?;
+    let mut planning = edit.planning.clone().unwrap_or_default();
+    planning.start_at_ms = Some(start_at_ms);
+    edit.planning = planning.normalized();
+    update_planning(transaction, &mut edit, None, None, now_ms, zone)
+}
+
 /// Copies a task's requirements, start and block rules (not its due date,
 /// which stays each subtask's own) onto every task below it.
 /// `WorkspaceStore.applyPlanningToDescendants`.
@@ -531,16 +549,7 @@ fn update_planning(
     if current_planning == edit.planning && was_pinned == pinned {
         return Ok(());
     }
-    let mut kept = planning.clone();
-    kept.start_at_ms = None;
-    let json = match (kept.normalized().map(|p| p.to_json()), pinned) {
-        (json, false) => json,
-        (Some(json), true) => Some(format!(
-            "{},\"{DUE_PINNED_KEY}\":true}}",
-            json.strip_suffix('}').unwrap_or(&json)
-        )),
-        (None, true) => Some(format!("{{\"{DUE_PINNED_KEY}\":true}}")),
-    };
+    let json = stored_planning_json(&planning, pinned);
     let start = planning.start_at_ms.map(stored);
     transaction.execute(
         "INSERT INTO task_metadata (taskId, tagsJSON, externalLinksJSON, startAt, planningJSON, updatedAt)
@@ -556,6 +565,34 @@ fn update_planning(
         refile_by_start(transaction, &edit.task_id, start, now_ms, zone)?;
     }
     Ok(())
+}
+
+/// The `planningJSON` a task's planning is stored as: everything but the
+/// start, which has its own column, and the pin when the deadline has one.
+fn stored_planning_json(planning: &Planning, pinned: bool) -> Option<String> {
+    let mut kept = planning.clone();
+    kept.start_at_ms = None;
+    match (kept.normalized().map(|p| p.to_json()), pinned) {
+        (json, false) => json,
+        (Some(json), true) => Some(format!(
+            "{},\"{DUE_PINNED_KEY}\":true}}",
+            json.strip_suffix('}').unwrap_or(&json)
+        )),
+        (None, true) => Some(format!("{{\"{DUE_PINNED_KEY}\":true}}")),
+    }
+}
+
+/// A stored `planningJSON` with its due day replaced by `day`, keeping
+/// everything else it holds, the pin included: the next occurrence of a
+/// repeating task carries its planning on to its own due day.
+pub(crate) fn planning_json_with_due_day(json: &str, day: &str) -> Result<String, CoreError> {
+    let pinned = serde_json::from_str::<serde_json::Value>(json)
+        .ok()
+        .and_then(|value| value.get(DUE_PINNED_KEY)?.as_bool())
+        .unwrap_or(false);
+    let mut planning = Planning::from_json(json)?;
+    planning.due_date = Some(day.to_string());
+    Ok(stored_planning_json(&planning, pinned).unwrap_or_else(|| json.to_string()))
 }
 
 /// A deadline moves with its start, by as much — a due time by the same

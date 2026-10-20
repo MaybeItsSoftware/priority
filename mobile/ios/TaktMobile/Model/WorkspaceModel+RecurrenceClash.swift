@@ -46,7 +46,7 @@ extension WorkspaceModel {
       guard choice.saves, save() else { return }
       saved?()
       guard choice.addsCopy else { return }
-      // The copy is its own "Keep Both" step, which the toast offers to undo.
+      // The copy joins the move's step as "Keep Both", which the toast offers to undo.
       let copied = perform { store in
         try store.addOccurrenceCopy(TaskEditorDraft(snapshot: try store.taskEditorSnapshot(for: taskID)))
       }

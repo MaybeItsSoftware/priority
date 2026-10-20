@@ -867,14 +867,29 @@ fn repeating(connection: &Connection, rule: &str, due: Option<&str>, start: Opti
 fn a_daily_task_moved_to_tomorrow_lands_on_its_next_turn() {
     let connection = workspace();
     repeating(&connection, "daily", Some("2024-01-01 09:00:00.000"), None);
-    let clash = recurrence_clash(&connection, "o", Some(MONDAY_9 + DAY), None, "UTC")
-        .unwrap()
-        .expect("tomorrow is the next turn");
+    let clash = recurrence_clash(
+        &connection,
+        "o",
+        Some(MONDAY_9 + DAY),
+        None,
+        MONDAY_9,
+        "UTC",
+    )
+    .unwrap()
+    .expect("tomorrow is the next turn");
     assert_eq!(clash.next_turn_ms, MONDAY_9 + DAY);
     assert_eq!(clash.moved_to_ms, MONDAY_9 + DAY);
     // Later the same day is not the next turn.
     assert_eq!(
-        recurrence_clash(&connection, "o", Some(MONDAY_9 + 3_600_000), None, "UTC").unwrap(),
+        recurrence_clash(
+            &connection,
+            "o",
+            Some(MONDAY_9 + 3_600_000),
+            None,
+            MONDAY_9,
+            "UTC"
+        )
+        .unwrap(),
         None
     );
 }
@@ -889,7 +904,15 @@ fn a_weekly_task_clashes_only_from_its_next_day_on() {
         None,
     );
     let moved = |days: i64| {
-        recurrence_clash(&connection, "o", Some(MONDAY_9 + days * DAY), None, "UTC").unwrap()
+        recurrence_clash(
+            &connection,
+            "o",
+            Some(MONDAY_9 + days * DAY),
+            None,
+            MONDAY_9,
+            "UTC",
+        )
+        .unwrap()
     };
     assert_eq!(moved(2), None, "Wednesday is before next Monday");
     assert!(moved(7).is_some(), "next Monday is its turn");
@@ -901,15 +924,30 @@ fn only_a_move_of_an_existing_date_on_an_open_repeating_task_counts() {
     let connection = workspace();
     // No rule.
     assert_eq!(
-        recurrence_clash(&connection, "o", Some(MONDAY_9 + DAY), None, "UTC").unwrap(),
+        recurrence_clash(
+            &connection,
+            "o",
+            Some(MONDAY_9 + DAY),
+            None,
+            MONDAY_9,
+            "UTC"
+        )
+        .unwrap(),
         None
     );
     repeating(&connection, "daily", None, Some("2024-01-01 09:00:00.000"));
     // The start decides when there is no due date; a due date added fresh does not.
     assert!(
-        recurrence_clash(&connection, "o", None, Some(MONDAY_9 + DAY), "UTC")
-            .unwrap()
-            .is_some()
+        recurrence_clash(
+            &connection,
+            "o",
+            None,
+            Some(MONDAY_9 + DAY),
+            MONDAY_9,
+            "UTC"
+        )
+        .unwrap()
+        .is_some()
     );
     assert!(
         recurrence_clash(
@@ -917,6 +955,7 @@ fn only_a_move_of_an_existing_date_on_an_open_repeating_task_counts() {
             "o",
             Some(MONDAY_9 + DAY),
             Some(MONDAY_9),
+            MONDAY_9,
             "UTC"
         )
         .unwrap()
@@ -924,17 +963,31 @@ fn only_a_move_of_an_existing_date_on_an_open_repeating_task_counts() {
     );
     // Moved earlier.
     assert!(
-        recurrence_clash(&connection, "o", None, Some(MONDAY_9 - DAY), "UTC")
-            .unwrap()
-            .is_none()
+        recurrence_clash(
+            &connection,
+            "o",
+            None,
+            Some(MONDAY_9 - DAY),
+            MONDAY_9,
+            "UTC"
+        )
+        .unwrap()
+        .is_none()
     );
     connection
         .execute("UPDATE tasks SET status = 'completed' WHERE id = 'o'", [])
         .unwrap();
     assert!(
-        recurrence_clash(&connection, "o", None, Some(MONDAY_9 + DAY), "UTC")
-            .unwrap()
-            .is_none()
+        recurrence_clash(
+            &connection,
+            "o",
+            None,
+            Some(MONDAY_9 + DAY),
+            MONDAY_9,
+            "UTC"
+        )
+        .unwrap()
+        .is_none()
     );
 }
 
@@ -987,13 +1040,13 @@ fn a_due_day_counts_as_its_first_moment() {
     );
     edit.planning.as_mut().unwrap().due_date = Some("2024-01-02".into());
     assert!(
-        editor_recurrence_clash(&connection, &edit, "UTC")
+        editor_recurrence_clash(&connection, &edit, MONDAY_9, "UTC")
             .unwrap()
             .is_some()
     );
     edit.planning.as_mut().unwrap().due_date = Some("2024-01-01".into());
     assert!(
-        editor_recurrence_clash(&connection, &edit, "UTC")
+        editor_recurrence_clash(&connection, &edit, MONDAY_9, "UTC")
             .unwrap()
             .is_none()
     );
@@ -1066,4 +1119,307 @@ fn a_repeating_tasks_priority_is_the_series_and_the_latest_set_wins() {
     // A task that never repeated is a series of one.
     set_priority(&mut connection, "p", Some(1), MONDAY_9 + 4);
     assert_eq!(priority_of(&connection, "c"), None);
+}
+
+fn next_of(connection: &Connection, id: &str) -> String {
+    connection
+        .query_row(
+            "SELECT taskId FROM task_metadata WHERE seriesTaskId = ?1 ORDER BY updatedAt DESC LIMIT 1",
+            [id],
+            |row| row.get(0),
+        )
+        .unwrap()
+}
+
+fn planning_of(connection: &Connection, id: &str) -> (Option<String>, Option<String>) {
+    connection
+        .query_row(
+            "SELECT planningJSON, startAt FROM task_metadata WHERE taskId = ?1",
+            [id],
+            |row| Ok((row.get(0)?, row.get(1)?)),
+        )
+        .unwrap()
+}
+
+/// 2026-03-08 15:37 UTC, which is 15:37 in London too.
+const MARCH_8_1537: i64 = 1_772_984_220_000;
+
+#[test]
+fn a_task_due_on_a_day_moves_its_day_on_not_before_today_and_keeps_its_pin() {
+    let mut connection = workspace();
+    connection
+        .execute_batch(&format!(
+            "INSERT INTO task_metadata (taskId, recurrenceRule, planningJSON, linkDetailsJSON, updatedAt)
+               VALUES ('o', 'every 3 days', '{{\"dueDate\":\"2026-03-02\",\"duePinned\":true}}', '{{\"a\":1}}', '{T}');"
+        ))
+        .unwrap();
+    // Finished late: the 5th is behind it, the 8th is today.
+    journalled(&mut connection, "Change Status", |tx| {
+        set_status(tx, "o", "completed", MARCH_8_1537, "Europe/London")
+    })
+    .unwrap();
+    let next = next_of(&connection, "o");
+    let (json, start) = planning_of(&connection, &next);
+    let json = json.unwrap();
+    assert!(json.contains("\"dueDate\":\"2026-03-08\""), "{json}");
+    assert!(json.contains("\"duePinned\":true"), "{json}");
+    assert_eq!(start, None, "a due day is a date; no start is made up");
+    let details: Option<String> = connection
+        .query_row(
+            "SELECT linkDetailsJSON FROM task_metadata WHERE taskId = ?1",
+            [&next],
+            |row| row.get(0),
+        )
+        .unwrap();
+    assert_eq!(details.as_deref(), Some("{\"a\":1}"));
+
+    // Finished on its day, it moves a whole turn on.
+    journalled(&mut connection, "Change Status", |tx| {
+        set_status(
+            tx,
+            &next,
+            "completed",
+            MARCH_8_1537 + 60_000,
+            "Europe/London",
+        )
+    })
+    .unwrap();
+    let after = next_of(&connection, "o");
+    assert_ne!(after, next);
+    let json = planning_of(&connection, &after).0.unwrap();
+    assert!(json.contains("\"dueDate\":\"2026-03-11\""), "{json}");
+}
+
+#[test]
+fn a_start_keeps_its_distance_from_the_due_day_it_moves_with() {
+    let mut connection = workspace();
+    connection
+        .execute_batch(&format!(
+            "INSERT INTO task_metadata (taskId, recurrenceRule, startAt, planningJSON, updatedAt)
+               VALUES ('o', 'weekly', '2026-03-01 09:00:00.000', '{{\"dueDate\":\"2026-03-02\"}}', '{T}');"
+        ))
+        .unwrap();
+    journalled(&mut connection, "Change Status", |tx| {
+        set_status(tx, "o", "completed", MARCH_8_1537, "UTC")
+    })
+    .unwrap();
+    let next = next_of(&connection, "o");
+    let (json, start) = planning_of(&connection, &next);
+    assert!(json.unwrap().contains("\"dueDate\":\"2026-03-09\""));
+    assert_eq!(start.as_deref(), Some("2026-03-08 09:00:00.000"));
+}
+
+#[test]
+fn a_rule_with_no_dates_starts_the_next_one_at_the_beginning_of_its_day() {
+    let mut connection = workspace();
+    repeating(&connection, "daily", None, None);
+    journalled(&mut connection, "Change Status", |tx| {
+        set_status(tx, "o", "completed", MARCH_8_1537, "Europe/London")
+    })
+    .unwrap();
+    let next = next_of(&connection, "o");
+    assert_eq!(
+        planning_of(&connection, &next).1.as_deref(),
+        Some("2026-03-09 00:00:00.000")
+    );
+}
+
+#[test]
+fn an_overdue_task_brought_to_today_is_catching_up_not_landing_on_a_turn() {
+    let connection = workspace();
+    repeating(&connection, "daily", Some("2024-01-01 09:00:00.000"), None);
+    let now = MONDAY_9 + 3 * DAY + 6 * 3_600_000;
+    let moved = |days: i64| {
+        recurrence_clash(
+            &connection,
+            "o",
+            Some(MONDAY_9 + days * DAY),
+            None,
+            now,
+            "UTC",
+        )
+        .unwrap()
+    };
+    assert_eq!(moved(3), None, "today: its turn is still to come");
+    let clash = moved(4).expect("tomorrow is its next turn");
+    assert_eq!(clash.next_turn_ms, MONDAY_9 + 4 * DAY);
+}
+
+#[test]
+fn reopening_takes_back_the_next_occurrence_only_while_it_is_untouched() {
+    let mut connection = workspace();
+    repeating(&connection, "daily", Some("2024-01-01 09:00:00.000"), None);
+    let count = |c: &Connection| -> i64 {
+        c.query_row("SELECT COUNT(*) FROM tasks", [], |row| row.get(0))
+            .unwrap()
+    };
+    let before = count(&connection);
+    journalled(&mut connection, "Change Status", |tx| {
+        set_status(tx, "o", "completed", MONDAY_9, "UTC")
+    })
+    .unwrap();
+    assert_eq!(count(&connection), before + 1);
+    journalled(&mut connection, "Change Status", |tx| {
+        set_status(tx, "o", "open", MONDAY_9 + 60_000, "UTC")
+    })
+    .unwrap();
+    assert_eq!(count(&connection), before, "the untouched next one goes");
+    assert_eq!(status_of(&connection, "o"), ("open".into(), None));
+
+    // Edited after it was made, it stays.
+    journalled(&mut connection, "Change Status", |tx| {
+        set_status(tx, "o", "completed", MONDAY_9 + 120_000, "UTC")
+    })
+    .unwrap();
+    let next = next_of(&connection, "o");
+    journalled(&mut connection, "Edit Task", |tx| {
+        crate::editor::update_task(
+            tx,
+            &next,
+            "Other, renamed",
+            "",
+            Some(MONDAY_9 + DAY),
+            None,
+            MONDAY_9 + 180_000,
+            "UTC",
+        )
+    })
+    .unwrap();
+    journalled(&mut connection, "Change Status", |tx| {
+        set_status(tx, "o", "open", MONDAY_9 + 240_000, "UTC")
+    })
+    .unwrap();
+    assert!(ids(&connection).contains(&next));
+}
+
+#[test]
+fn keeping_both_joins_the_moves_step_so_one_undo_takes_back_both() {
+    let mut connection = workspace();
+    repeating(&connection, "daily", Some("2024-01-01 09:00:00.000"), None);
+    journalled(&mut connection, "Edit Task", |tx| {
+        crate::editor::update_task(
+            tx,
+            "o",
+            "Other",
+            "",
+            Some(MONDAY_9 + DAY),
+            None,
+            MONDAY_9,
+            "UTC",
+        )
+    })
+    .unwrap();
+    let edit = crate::editor::snapshot(&connection, "o").unwrap();
+    let transaction = connection.transaction().unwrap();
+    let group = crate::journal::begin_joining_last(&transaction, "Keep Both", "o").unwrap();
+    let copy = add_occurrence_copy(&transaction, &edit, MONDAY_9, "UTC").unwrap();
+    crate::journal::finish(&transaction, &group).unwrap();
+    transaction.commit().unwrap();
+
+    assert_eq!(undo(&mut connection).unwrap().as_deref(), Some("Keep Both"));
+    assert!(!ids(&connection).contains(&copy));
+    let due: Option<String> = connection
+        .query_row("SELECT dueAt FROM tasks WHERE id = 'o'", [], |row| {
+            row.get(0)
+        })
+        .unwrap();
+    assert_eq!(due.as_deref(), Some("2024-01-01 09:00:00.000"));
+    assert_eq!(undo(&mut connection).unwrap(), None);
+}
+
+fn column_and_rank(connection: &Connection, id: &str) -> (Option<String>, Option<i64>) {
+    connection
+        .query_row(
+            "SELECT kanbanColumn, focusRank FROM task_metadata WHERE taskId = ?1",
+            [id],
+            |row| Ok((row.get(0)?, row.get(1)?)),
+        )
+        .unwrap()
+}
+
+#[test]
+fn leaving_today_by_board_drops_the_place_in_the_day() {
+    let mut connection = workspace();
+    connection
+        .execute_batch(
+            "INSERT INTO task_metadata (taskId, kanbanColumn, focusRank, updatedAt)
+               VALUES ('o', 'today', 1, '2024-01-01 00:00:00.000'), ('p', 'today', 0, '2024-01-01 00:00:00.000');",
+        )
+        .unwrap();
+    journalled(&mut connection, "Move", |tx| {
+        set_kanban_column(tx, &["o".to_string()], Some("today"), NOW)
+    })
+    .unwrap();
+    assert_eq!(
+        column_and_rank(&connection, "o"),
+        (Some("today".into()), Some(1))
+    );
+    journalled(&mut connection, "Move", |tx| {
+        set_kanban_column(tx, &["o".to_string()], Some("doing"), NOW)
+    })
+    .unwrap();
+    assert_eq!(
+        column_and_rank(&connection, "o"),
+        (Some("doing".into()), None)
+    );
+    journalled(&mut connection, "Move", |tx| {
+        move_task_before(tx, "o", "p", Some("today"), NOW)
+    })
+    .unwrap();
+    journalled(&mut connection, "Move", |tx| {
+        move_task_before(tx, "p", "o", Some("backlog"), NOW)
+    })
+    .unwrap();
+    assert_eq!(
+        column_and_rank(&connection, "p"),
+        (Some("backlog".into()), None)
+    );
+}
+
+#[test]
+fn a_new_tasks_waiting_tag_is_clipped_by_characters_as_people_see_them() {
+    let mut connection = workspace();
+    let family = "👨‍👩‍👧";
+    let mut new = new_task("l", "Wait");
+    new.waiting_on = Some(format!("  {}{family}  ", "a".repeat(39)));
+    let id = journalled(&mut connection, "New Task", |tx| create_task(tx, &new, NOW)).unwrap();
+    let tag: String = connection
+        .query_row(
+            "SELECT waitingOn FROM task_metadata WHERE taskId = ?1",
+            [&id],
+            |row| row.get(0),
+        )
+        .unwrap();
+    assert_eq!(tag, format!("{}{family}", "a".repeat(39)));
+}
+
+#[test]
+fn a_new_tasks_start_is_checked_and_filed_as_a_save_of_it_would_be() {
+    let mut connection = workspace();
+    let mut new = new_task("l", "Late");
+    new.due_at_ms = Some(MONDAY_9);
+    new.start_at_ms = Some(MONDAY_9 + DAY);
+    let refused = journalled(&mut connection, "New Task", |tx| {
+        create_task_in(tx, &new, MONDAY_9 - DAY, "UTC")
+    });
+    assert!(matches!(refused, Err(CoreError::InvalidSchedule)));
+
+    // Added to Today with a start a month out: it is not today's.
+    let mut new = new_task("l", "Later");
+    new.kanban_column = Some("today".into());
+    new.start_at_ms = Some(MONDAY_9 + 30 * DAY);
+    let id = journalled(&mut connection, "New Task", |tx| {
+        create_task_in(tx, &new, MONDAY_9, "UTC")
+    })
+    .unwrap();
+    let (column, _) = column_and_rank(&connection, &id);
+    assert_eq!(column, None);
+    let start: Option<String> = connection
+        .query_row(
+            "SELECT startAt FROM task_metadata WHERE taskId = ?1",
+            [&id],
+            |row| row.get(0),
+        )
+        .unwrap();
+    assert!(start.is_some());
 }

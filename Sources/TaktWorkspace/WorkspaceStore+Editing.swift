@@ -20,8 +20,9 @@ extension WorkspaceStore {
   }
 
   /// Whether saving `draft` moves a repeating task onto or past its next
-  /// turn: the Rust core's `tasks::editor_recurrence_clash`. Read-only, and
-  /// nil for anything that is not such a move.
+  /// turn still to come: the Rust core's `tasks::editor_recurrence_clash`.
+  /// Read-only, and nil for anything that is not such a move — bringing an
+  /// overdue task up to today is catching up, not a clash.
   public func recurrenceClash(for draft: TaskEditorDraft) throws -> TaskRecurrenceClash? {
     let edit = try draft.validatedSnapshot()
     return try Self.mappingCoreErrors {
@@ -30,8 +31,10 @@ extension WorkspaceStore {
   }
 
   /// "Keep both": a one-off copy of the task beside it, carrying the dates
-  /// `draft` gives, as its own "Keep Both" step. Returns the copy's id: the
-  /// Rust core's `tasks::add_occurrence_copy`.
+  /// `draft` gives. Returns the copy's id: the Rust core's
+  /// `tasks::add_occurrence_copy`. Called straight after the move is saved,
+  /// it joins the move's undo step, relabelled "Keep Both", so one undo takes
+  /// back the move and the copy together.
   @discardableResult
   public func addOccurrenceCopy(_ draft: TaskEditorDraft, now: Date = .now) throws -> String {
     let edit = try draft.validatedSnapshot()

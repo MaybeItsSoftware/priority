@@ -65,3 +65,13 @@ pub fn swift_json_strings(values: &[String]) -> String {
 pub fn decode_strings(text: &str) -> Vec<String> {
     serde_json::from_str::<Vec<String>>(text).unwrap_or_default()
 }
+
+/// The device's clock, in milliseconds since 1970, for the reads the
+/// clients do not hand a moment to.
+pub fn now_ms() -> i64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map_or(0, |since| {
+            i64::try_from(since.as_millis()).unwrap_or(i64::MAX)
+        })
+}

@@ -60,27 +60,36 @@ pub struct NewTask {
 }
 
 /// The board column a task waiting on someone goes in.
-pub const WAITING_COLUMN: &str = "waiting-on";
-/// The longest waiting-on tag kept: it is a chip, not a note.
-const MAXIMUM_WAITING_TAG: usize = 40;
+pub use crate::waiting::WAITING_COLUMN;
 
 /// Creates a task and returns its id. Everything the add field read off the
 /// title (tags, priority, estimate, waiting) goes in the same undo step, so
 /// undoing a typed task never leaves its estimate behind as a step of its
 /// own. Replaces `WorkspaceStore.createTask`, its Kotlin copy and the CLI's
 /// `add_task`.
+///
+/// Its dates are checked and filed as the editor's save of them would be: a
+/// start on or after the due time is refused, and a task added to Today or
+/// This week with a start that belongs elsewhere is filed where it belongs.
+/// The device's time zone says which day is today; see [`create_task_in`].
 pub fn create_task(
     transaction: &Transaction,
     new: &NewTask,
     now_ms: i64,
 ) -> Result<String, CoreError> {
+    let zone = iana_time_zone::get_timezone().unwrap_or_else(|_| "UTC".to_string());
+    create_task_in(transaction, new, now_ms, &zone)
+}
+
+/// [`create_task`] in the user's `zone`, an IANA name.
+pub fn create_task_in(
+    transaction: &Transaction,
+    new: &NewTask,
+    now_ms: i64,
+    zone: &str,
+) -> Result<String, CoreError> {
     let title = crate::time::non_empty_name(&new.title)?;
-    let waiting_on = new
-        .waiting_on
-        .as_deref()
-        .map(str::trim)
-        .filter(|w| !w.is_empty())
-        .map(|w| w.chars().take(MAXIMUM_WAITING_TAG).collect::<String>());
+    let waiting_on = crate::waiting::normalized_tag(new.waiting_on.as_deref());
     // Waiting on someone puts it in that column, as `set_waiting` does.
     let kanban_column = if waiting_on.is_some() {
         Some(WAITING_COLUMN.to_string())
@@ -136,20 +145,18 @@ pub fn create_task(
         ],
     )?;
     let has_metadata = kanban_column.is_some()
-        || new.start_at_ms.is_some()
         || !tags.is_empty()
         || priority.is_some()
         || waiting_on.is_some()
         || !new.external_links.is_empty();
     if has_metadata {
         transaction.execute(
-            "INSERT INTO task_metadata(taskId, priority, startAt, tagsJSON, externalLinksJSON,
+            "INSERT INTO task_metadata(taskId, priority, tagsJSON, externalLinksJSON,
                                        kanbanColumn, waitingOn, updatedAt)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
             params![
                 id,
                 priority,
-                new.start_at_ms.map(stored),
                 crate::time::swift_json_strings(&tags),
                 crate::time::swift_json_strings(&new.external_links),
                 kanban_column,
@@ -174,6 +181,11 @@ pub fn create_task(
         siblings.insert(insertion, id.clone());
         persist_task_order(transaction, &siblings, now_ms)?;
     }
+    // The start goes in as the editor's would, checked against the deadline
+    // and refiling the task by the day it falls on.
+    if let Some(start) = new.start_at_ms {
+        crate::editor::plan_new_task(transaction, &id, start, now_ms, zone)?;
+    }
     // A priority puts it first among its siblings, wherever it was added:
     // setting one is saying it comes before the rest. A negative one says
     // the opposite, and sends it to the back.
@@ -197,7 +209,7 @@ pub fn create_task_requiring(
     now_ms: i64,
     zone: &str,
 ) -> Result<String, CoreError> {
-    let id = create_task(transaction, new, now_ms)?;
+    let id = create_task_in(transaction, new, now_ms, zone)?;
     if requirement_groups.is_empty() {
         return Ok(id);
     }
@@ -476,7 +488,11 @@ pub fn move_task_before(
         transaction.execute(
             "INSERT INTO task_metadata(taskId, tagsJSON, externalLinksJSON, kanbanColumn, updatedAt)
              VALUES (?1, '[]', '[]', ?2, ?3)
-             ON CONFLICT(taskId) DO UPDATE SET kanbanColumn = excluded.kanbanColumn, updatedAt = excluded.updatedAt",
+             ON CONFLICT(taskId) DO UPDATE SET
+               kanbanColumn = excluded.kanbanColumn,
+               focusRank = CASE WHEN kanbanColumn IS 'today' AND excluded.kanbanColumn IS NOT 'today'
+                                THEN NULL ELSE focusRank END,
+               updatedAt = excluded.updatedAt",
             params![id, column, stored(now_ms)],
         )?;
     }
@@ -580,7 +596,12 @@ pub fn set_kanban_column(
     let mut statement = transaction.prepare(
         "INSERT INTO task_metadata(taskId, tagsJSON, externalLinksJSON, kanbanColumn, updatedAt)
          VALUES (?1, '[]', '[]', ?2, ?3)
-         ON CONFLICT(taskId) DO UPDATE SET kanbanColumn = excluded.kanbanColumn, updatedAt = excluded.updatedAt",
+         ON CONFLICT(taskId) DO UPDATE SET
+           kanbanColumn = excluded.kanbanColumn,
+           -- Leaving Today drops the place in the day, as planning for today does.
+           focusRank = CASE WHEN kanbanColumn IS 'today' AND excluded.kanbanColumn IS NOT 'today'
+                            THEN NULL ELSE focusRank END,
+           updatedAt = excluded.updatedAt",
     )?;
     for id in ids {
         statement.execute(params![id, value, now])?;
@@ -847,6 +868,7 @@ pub fn set_status(
         return Ok(());
     }
     let was_open = completed_at.is_none();
+    let closed_at = completed_at.clone();
     let now = stored(now_ms);
     let completed_at = if status == "open" {
         None
@@ -857,6 +879,14 @@ pub fn set_status(
         "UPDATE tasks SET status = ?1, completedAt = ?2, updatedAt = ?3 WHERE id = ?4",
         params![status, completed_at, now, task_id],
     )?;
+    // Reopening a finished occurrence takes back the next one its closing
+    // wrote, while nobody has touched it: the task it stood in for is open
+    // again. One that has been edited, moved or finished stays.
+    if status == "open"
+        && let Some(closed_at) = closed_at.as_deref()
+    {
+        remove_untouched_next_occurrence(transaction, task_id, closed_at)?;
+    }
     if status != "open" && was_open {
         schedule_next_occurrence(transaction, task_id, now_ms, crate::periodic::zone(zone))?;
         expire_habits(transaction, task_id, now_ms)?;
@@ -875,6 +905,36 @@ pub fn set_status(
         close_open_descendants(transaction, task_id, status, &now, now_ms)?;
     }
     Ok(())
+}
+
+/// Deletes the occurrence `task_id`'s closing at `closed_at` wrote, if it is
+/// still as it was written: open, made at that moment, its row and its
+/// metadata unchanged since (every write stamps `updatedAt`), and nothing
+/// hung under it or made a daily of it. Returns whether it did.
+fn remove_untouched_next_occurrence(
+    transaction: &Transaction,
+    task_id: &str,
+    closed_at: &str,
+) -> Result<bool, CoreError> {
+    let next: Option<String> = transaction
+        .query_row(
+            "SELECT t.id FROM tasks t JOIN task_metadata m ON m.taskId = t.id
+             WHERE m.seriesTaskId = (SELECT COALESCE(seriesTaskId, taskId) FROM task_metadata WHERE taskId = ?1)
+               AND t.id <> ?1 AND t.status = 'open' AND t.completedAt IS NULL AND t.archivedAt IS NULL
+               AND t.createdAt = ?2 AND t.updatedAt = ?2 AND m.updatedAt = ?2
+               AND m.recurrenceRule IS NOT NULL
+               AND NOT EXISTS (SELECT 1 FROM tasks c WHERE c.parentTaskId = t.id)
+               AND NOT EXISTS (SELECT 1 FROM dailies d WHERE d.taskId = t.id)
+             ORDER BY t.id LIMIT 1",
+            params![task_id, closed_at],
+            |row| row.get(0),
+        )
+        .optional()?;
+    let Some(next) = next else {
+        return Ok(false);
+    };
+    transaction.execute("DELETE FROM tasks WHERE id = ?1", [&next])?;
+    Ok(true)
 }
 
 /// Closing a task closes what is still open beneath it, the same way, in the
@@ -976,35 +1036,33 @@ pub fn schedule_next_occurrence(
     if kind == "list" {
         return Ok(None);
     }
-    let metadata: Option<(Option<String>, Option<String>)> = transaction
+    let metadata: Option<(Option<String>, Option<String>, Option<String>)> = transaction
         .query_row(
-            "SELECT recurrenceRule, startAt FROM task_metadata WHERE taskId = ?1",
+            "SELECT recurrenceRule, startAt, planningJSON FROM task_metadata WHERE taskId = ?1",
             [task_id],
-            |row| Ok((row.get(0)?, row.get(1)?)),
+            |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
         )
         .optional()?;
-    let Some((Some(rule), start_at)) = metadata else {
+    let Some((Some(rule), start_at, planning_json)) = metadata else {
         return Ok(None);
     };
     let Some(cadence) = Cadence::parse(&rule) else {
         return Ok(None);
     };
-    let now = chrono::DateTime::from_timestamp_millis(now_ms).unwrap_or_default();
-    let rolled = |date: Option<String>| {
-        date.as_deref()
-            .and_then(parse_stored)
-            .and_then(|date| cadence.next_occurrence(date, Some(now), zone))
-    };
-    let next_due = rolled(due_at);
-    let next_start = rolled(start_at).or_else(|| {
-        next_due
-            .is_none()
-            .then(|| cadence.next_occurrence(now, Some(now), zone))
-            .flatten()
-    });
-    if next_start.is_none() && next_due.is_none() {
+    let Some(dates) = next_dates(
+        cadence,
+        due_at.as_deref().and_then(parse_stored),
+        planning_due_day(planning_json.as_deref()).as_deref(),
+        start_at.as_deref().and_then(parse_stored),
+        now_ms,
+        zone,
+    ) else {
         return Ok(None);
-    }
+    };
+    let planning_json = match (&planning_json, &dates.due_day) {
+        (Some(json), Some(day)) => Some(crate::editor::planning_json_with_due_day(json, day)?),
+        (json, _) => json.clone(),
+    };
 
     let id = crate::lists::new_id();
     let stamp = stored(now_ms);
@@ -1019,7 +1077,7 @@ pub fn schedule_next_occurrence(
             title,
             notes,
             sort_order,
-            next_due.map(stored_instant),
+            dates.due_at.map(stored_instant),
             estimate,
             kind,
             promoted,
@@ -1029,11 +1087,17 @@ pub fn schedule_next_occurrence(
     transaction.execute(
         "INSERT INTO task_metadata (taskId, priority, startAt, tagsJSON, recurrenceRule, matrixUrgency,
                                     matrixImportance, kanbanColumn, externalLinksJSON, focusRank, planningJSON,
-                                    seriesTaskId, updatedAt)
+                                    linkDetailsJSON, seriesTaskId, updatedAt)
          SELECT ?1, priority, ?2, tagsJSON, recurrenceRule, matrixUrgency, matrixImportance, NULL,
-                externalLinksJSON, NULL, planningJSON, COALESCE(seriesTaskId, taskId), ?3
+                externalLinksJSON, NULL, ?5, linkDetailsJSON, COALESCE(seriesTaskId, taskId), ?3
          FROM task_metadata WHERE taskId = ?4",
-        params![id, next_start.map(stored_instant), stamp, task_id],
+        params![
+            id,
+            dates.start_at.map(stored_instant),
+            stamp,
+            task_id,
+            planning_json
+        ],
     )?;
 
     // The finished occurrence keeps its place; the next one follows it.
@@ -1044,6 +1108,86 @@ pub fn schedule_next_occurrence(
         persist_task_order(transaction, &siblings, now_ms)?;
     }
     Ok(Some(id))
+}
+
+/// The dates a repeating task's next occurrence carries.
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct NextDates {
+    due_at: Option<chrono::DateTime<chrono::Utc>>,
+    /// The next due day, `yyyy-MM-dd`, for a task due on a day.
+    due_day: Option<String>,
+    start_at: Option<chrono::DateTime<chrono::Utc>>,
+}
+
+/// The due day a stored `planningJSON` gives, if any.
+fn planning_due_day(json: Option<&str>) -> Option<String> {
+    crate::planning::Planning::from_json(json?).ok()?.due_date
+}
+
+/// When the occurrence after one with these dates falls, finished at
+/// `now_ms`; nothing when there is nothing to step from.
+///
+/// A due time steps on until it is after now, a due day — from its local
+/// midnight — until it is today or later, so a task finished late keeps its
+/// rhythm and its next turn is not already behind it. A start moves by as
+/// many days as the deadline did, keeping its time of day, so it stays as far
+/// ahead of the deadline as it was; with no deadline it steps on like a due
+/// time. A task with a rule and no dates at all starts at the beginning of
+/// the day of its next turn, not to the second a period after it was done.
+fn next_dates(
+    cadence: crate::periodic::Cadence,
+    due_at: Option<chrono::DateTime<chrono::Utc>>,
+    due_day: Option<&str>,
+    start_at: Option<chrono::DateTime<chrono::Utc>>,
+    now_ms: i64,
+    zone: chrono_tz::Tz,
+) -> Option<NextDates> {
+    use crate::periodic::resolve;
+    let now = chrono::DateTime::from_timestamp_millis(now_ms).unwrap_or_default();
+    let local_day = |at: chrono::DateTime<chrono::Utc>| at.with_timezone(&zone).date_naive();
+    let midnight = |day: chrono::NaiveDate| resolve(zone, day.and_time(chrono::NaiveTime::MIN));
+
+    let next_due = due_at.and_then(|due| cadence.next_occurrence(due, Some(now), zone));
+    let due_day = due_day.and_then(crate::editor::calendar_date);
+    let next_due_day = due_day.and_then(|day| {
+        // Strictly after the moment before today began: today or later.
+        let floor = midnight(local_day(now)) - chrono::Duration::milliseconds(1);
+        cadence
+            .next_occurrence(resolve(zone, day), Some(floor), zone)
+            .map(local_day)
+    });
+    // The deadline the start keeps its distance from: the due time, else the day.
+    let deadline_days = match (due_at, next_due) {
+        (Some(from), Some(to)) => Some((local_day(from), local_day(to))),
+        _ => due_day
+            .zip(next_due_day)
+            .map(|(from, to)| (from.date(), to)),
+    };
+    let next_start = match (start_at, deadline_days) {
+        (Some(start), Some((from, to))) => {
+            let local = start.with_timezone(&zone).naive_local();
+            Some(resolve(
+                zone,
+                local + chrono::Duration::days((to - from).num_days()),
+            ))
+        }
+        (Some(start), None) => cadence.next_occurrence(start, Some(now), zone),
+        (None, _) => None,
+    }
+    .or_else(|| {
+        (next_due.is_none() && next_due_day.is_none())
+            .then(|| cadence.next_occurrence(now, Some(now), zone))
+            .flatten()
+            .map(|turn| midnight(local_day(turn)))
+    });
+    if next_start.is_none() && next_due.is_none() && next_due_day.is_none() {
+        return None;
+    }
+    Some(NextDates {
+        due_at: next_due,
+        due_day: next_due_day.map(|day| day.format("%Y-%m-%d").to_string()),
+        start_at: next_start,
+    })
 }
 
 /// A repeating task's dates moved onto or past its own next turn: the day
@@ -1064,11 +1208,17 @@ pub struct RecurrenceClash {
 /// turn. Only a move counts: a date added where there was none has nothing
 /// to collide with, and neither has one moved earlier. The due date decides
 /// when the task has one; the start, when it only has that.
+///
+/// The next turn is the first one after `now_ms` as well as after the task's
+/// own date: an overdue daily's turn yesterday is gone, so bringing it to
+/// today is catching up, not landing on a turn, and only a move onto one
+/// still to come asks.
 pub fn recurrence_clash(
     connection: &Connection,
     task_id: &str,
     due_at_ms: Option<i64>,
     start_at_ms: Option<i64>,
+    now_ms: i64,
     zone: &str,
 ) -> Result<Option<RecurrenceClash>, CoreError> {
     use crate::periodic::Cadence;
@@ -1103,7 +1253,7 @@ pub fn recurrence_clash(
         return Ok(None);
     };
     let instant = |ms: i64| chrono::DateTime::from_timestamp_millis(ms).unwrap_or_default();
-    let Some(next) = cadence.next_occurrence(instant(current), None, tz) else {
+    let Some(next) = cadence.next_occurrence(instant(current), Some(instant(now_ms)), tz) else {
         return Ok(None);
     };
     if instant(proposed).with_timezone(&tz).date_naive() < next.with_timezone(&tz).date_naive() {
@@ -1121,11 +1271,12 @@ pub fn recurrence_clash(
 pub fn editor_recurrence_clash(
     connection: &Connection,
     edit: &EditorSnapshot,
+    now_ms: i64,
     zone: &str,
 ) -> Result<Option<RecurrenceClash>, CoreError> {
     let due = effective_due(edit, crate::periodic::zone(zone));
     let start = edit.planning.as_ref().and_then(|p| p.start_at_ms);
-    recurrence_clash(connection, &edit.task_id, due, start, zone)
+    recurrence_clash(connection, &edit.task_id, due, start, now_ms, zone)
 }
 
 /// A due time, or the first moment of a due day, in milliseconds.
@@ -1167,9 +1318,9 @@ pub fn add_occurrence_copy(
     transaction.execute(
         "INSERT INTO task_metadata (taskId, priority, startAt, tagsJSON, recurrenceRule, matrixUrgency,
                                     matrixImportance, kanbanColumn, externalLinksJSON, focusRank, planningJSON,
-                                    seriesTaskId, updatedAt)
+                                    linkDetailsJSON, seriesTaskId, updatedAt)
          SELECT ?1, priority, startAt, tagsJSON, NULL, matrixUrgency, matrixImportance, NULL,
-                externalLinksJSON, NULL, planningJSON, COALESCE(seriesTaskId, taskId), ?2
+                externalLinksJSON, NULL, planningJSON, linkDetailsJSON, COALESCE(seriesTaskId, taskId), ?2
          FROM task_metadata WHERE taskId = ?3",
         params![id, stamp, task_id],
     )?;

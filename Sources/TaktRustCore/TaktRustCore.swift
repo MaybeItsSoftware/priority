@@ -1347,8 +1347,11 @@ public protocol CoreWorkspaceProtocol: AnyObject, Sendable {
     func actionableTasksPacked(listIds: [String]) throws  -> Data
     
     /**
-     * Keeps a one-off copy of a repeating task at the dates `edit` gives, as
-     * one "Keep Both" step; returns its id. See `tasks::add_occurrence_copy`.
+     * Keeps a one-off copy of a repeating task at the dates `edit` gives,
+     * and returns its id; see `tasks::add_occurrence_copy`. Called once the
+     * move it answers is saved, it joins that move's step, relabelled "Keep
+     * Both", so one undo takes back the move and the copy together
+     * (`journal::begin_joining_last`); with no such step it is one of its own.
      */
     func addOccurrenceCopy(edit: EditorSnapshot, nowMs: Int64, zone: String) throws  -> String
     
@@ -3227,8 +3230,11 @@ open func actionableTasksPacked(listIds: [String])throws  -> Data  {
 }
     
     /**
-     * Keeps a one-off copy of a repeating task at the dates `edit` gives, as
-     * one "Keep Both" step; returns its id. See `tasks::add_occurrence_copy`.
+     * Keeps a one-off copy of a repeating task at the dates `edit` gives,
+     * and returns its id; see `tasks::add_occurrence_copy`. Called once the
+     * move it answers is saved, it joins that move's step, relabelled "Keep
+     * Both", so one undo takes back the move and the copy together
+     * (`journal::begin_joining_last`); with no such step it is one of its own.
      */
 open func addOccurrenceCopy(edit: EditorSnapshot, nowMs: Int64, zone: String)throws  -> String  {
     return try  FfiConverterString.lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
@@ -32107,7 +32113,7 @@ private let initializationResult: InitializationResult = {
     if (uniffi_takt_core_checksum_method_coreworkspace_actionable_tasks_packed() != 11098) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_takt_core_checksum_method_coreworkspace_add_occurrence_copy() != 51110) {
+    if (uniffi_takt_core_checksum_method_coreworkspace_add_occurrence_copy() != 10536) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_method_coreworkspace_add_task_blocker() != 26156) {

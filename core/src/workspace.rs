@@ -825,7 +825,14 @@ impl CoreWorkspace {
         start_at_ms: Option<i64>,
         zone: String,
     ) -> Result<Option<tasks::RecurrenceClash>, CoreError> {
-        tasks::recurrence_clash(&self.lock(), &task_id, due_at_ms, start_at_ms, &zone)
+        tasks::recurrence_clash(
+            &self.lock(),
+            &task_id,
+            due_at_ms,
+            start_at_ms,
+            crate::time::now_ms(),
+            &zone,
+        )
     }
 
     /// `recurrence_clash` for the dates an editor save would write. Read-only.
@@ -834,20 +841,28 @@ impl CoreWorkspace {
         edit: EditorSnapshot,
         zone: String,
     ) -> Result<Option<tasks::RecurrenceClash>, CoreError> {
-        tasks::editor_recurrence_clash(&self.lock(), &edit, &zone)
+        tasks::editor_recurrence_clash(&self.lock(), &edit, crate::time::now_ms(), &zone)
     }
 
-    /// Keeps a one-off copy of a repeating task at the dates `edit` gives, as
-    /// one "Keep Both" step; returns its id. See `tasks::add_occurrence_copy`.
+    /// Keeps a one-off copy of a repeating task at the dates `edit` gives,
+    /// and returns its id; see `tasks::add_occurrence_copy`. Called once the
+    /// move it answers is saved, it joins that move's step, relabelled "Keep
+    /// Both", so one undo takes back the move and the copy together
+    /// (`journal::begin_joining_last`); with no such step it is one of its own.
     pub fn add_occurrence_copy(
         &self,
         edit: EditorSnapshot,
         now_ms: i64,
         zone: String,
     ) -> Result<String, CoreError> {
-        journal::journalled(&mut self.lock(), "Keep Both", |tx| {
-            tasks::add_occurrence_copy(tx, &edit, now_ms, &zone)
-        })
+        let mut connection = self.lock();
+        let transaction =
+            connection.transaction_with_behavior(rusqlite::TransactionBehavior::Immediate)?;
+        let group = journal::begin_joining_last(&transaction, "Keep Both", &edit.task_id)?;
+        let id = tasks::add_occurrence_copy(&transaction, &edit, now_ms, &zone)?;
+        journal::finish(&transaction, &group)?;
+        transaction.commit()?;
+        Ok(id)
     }
 
     /// Copies a task's planning onto its subtasks as one step.
