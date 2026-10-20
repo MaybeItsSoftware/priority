@@ -288,12 +288,23 @@ private fun PlanSection(
         FieldLabel("Priority")
         Segmented(
             options = PriorityLabels.order.map { p ->
-                Segment(PriorityLabels.label(p), p, tint = if (p == 0) null else priorityColor(p), description = "Priority ${PriorityLabels.label(p)}")
+                Segment(PriorityLabels.label(p), p, tint = if (p == 0) null else priorityColor(p), description = PriorityLabels.description(p))
             },
             selected = values.priority,
             onSelect = { p -> edit { it.copy(priority = p) } },
             mono = true,
             modifier = Modifier.testTag("inspector_priority"),
+        )
+        // Behind every task with no priority, -1 the very back: a second
+        // row, as nine segments do not fit a phone's width.
+        Segmented(
+            options = PriorityLabels.later.map { p ->
+                Segment(if (p == -1) "!-1 last" else PriorityLabels.label(p), p, tint = priorityColor(p), description = PriorityLabels.description(p))
+            },
+            selected = values.priority,
+            onSelect = { p -> edit { it.copy(priority = p) } },
+            mono = true,
+            modifier = Modifier.testTag("inspector_priority_later"),
         )
 
         FieldLabel("Tags")

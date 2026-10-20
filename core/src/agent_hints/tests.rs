@@ -275,6 +275,21 @@ fn due_start_priority_and_estimate_are_their_keys() {
         .as_deref(),
         Some("[4]")
     );
+    assert_eq!(
+        render(
+            "workspace_task_update",
+            json!({"task_id": TASK, "priority": -1})
+        )
+        .as_deref(),
+        Some("[-]")
+    );
+    assert_eq!(
+        render(
+            "workspace_task_update",
+            json!({"task_id": TASK, "priority": -3})
+        ),
+        None
+    );
     for cleared in [json!(null), json!(0)] {
         assert_eq!(
             render(

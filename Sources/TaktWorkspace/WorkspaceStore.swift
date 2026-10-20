@@ -312,12 +312,14 @@ public final class WorkspaceStore: @unchecked Sendable {
     try taskEditorSnapshot(for: taskId).metadata
   }
 
-  /// Every task that has a priority, and what it is (1–4), so a row's
+  /// Every task that has a priority, and what it is (1–4, or -4 to -1), so a row's
   /// number is a dictionary lookup rather than a read per row.
   public func taskPriorities() throws -> [String: Int] {
     var priorities: [String: Int] = [:]
     for row in try Self.mappingCoreErrors({ try core.allMetadata() }) {
-      if let priority = row.priority, (1...4).contains(priority) { priorities[row.taskId] = Int(priority) }
+      if let priority = row.priority.map(Int.init), TaskEditorValues.isPriority(priority) {
+        priorities[row.taskId] = priority
+      }
     }
     return priorities
   }

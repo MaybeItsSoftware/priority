@@ -158,6 +158,7 @@ extension WorkspaceViewModel {
     case .taskClearNotes: editTaskValues { $0.notes = "" }
     case .taskClearTags: editTaskValues { $0.tags = "" }
     case .taskClearPriority: editTaskValues { $0.priority = 0 }
+    case .taskSendToBack: editTaskValues { $0.priority = -1 }
     case .taskToggleDaily:
       if let task = selectedTask { toggleCommitment(task) }
     case .taskHabit: presentHabitForm()

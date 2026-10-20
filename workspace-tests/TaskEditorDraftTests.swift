@@ -31,6 +31,19 @@ final class TaskEditorDraftTests: XCTestCase {
     XCTAssertFalse(draft.isDirty)
   }
 
+  /// 1 to 4, then -4 to -1 behind every task with none; anything else is refused.
+  func testANegativePriorityIsSavedAndOneOutOfRangeIsRefused() throws {
+    var draft = TaskEditorDraft(snapshot: initial)
+    draft.values.priority = -1
+    XCTAssertEqual(try draft.validatedSnapshot().metadata.priority, -1)
+    draft.values.priority = -5
+    XCTAssertThrowsError(try draft.validatedSnapshot())
+    XCTAssertEqual(TaskEditorValues.priorityLevels, [0, 1, 2, 3, 4, -4, -3, -2, -1])
+    XCTAssertEqual(TaskEditorValues.priorityName(-1), "−1 · Last")
+    XCTAssertEqual(TaskEditorValues.priorityBadge(-2), "−2")
+    XCTAssertEqual(TaskEditorValues.priorityBadge(3), "3")
+  }
+
   func testDirtyNotesSurviveUnrelatedSavedTitleChange() throws {
     var draft = TaskEditorDraft(snapshot: initial)
     draft.values.notes = "My notes"

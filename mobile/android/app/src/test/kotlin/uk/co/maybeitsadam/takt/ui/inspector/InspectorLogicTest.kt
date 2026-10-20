@@ -293,6 +293,11 @@ class TextListsTest {
         assertEquals("work, launch", joinTags(listOf("work", "launch")))
         assertEquals("!1", PriorityLabels.label(1))
         assertEquals("None", PriorityLabels.label(0))
+        // Behind every task with none: written as the capture syntax writes it.
+        assertEquals("!-1", PriorityLabels.label(-1))
+        assertEquals("None", PriorityLabels.label(-5))
+        assertEquals("Priority -1, last", PriorityLabels.description(-1))
+        assertEquals(listOf(-4, -3, -2, -1), PriorityLabels.later)
     }
 }
 

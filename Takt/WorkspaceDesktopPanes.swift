@@ -282,7 +282,7 @@ struct WorkspaceOutlineRow: View {
 /// A task's priority as the number that set it — the digit pressed on the
 /// row, or the `!2` typed after a title — in a small squared tag beside the
 /// title. Nothing at all when the task has none, so an unprioritised list
-/// stays quiet.
+/// stays quiet. A negative one (`−1`, the back) is muted: it means later.
 struct WorkspacePriorityBadge: View {
   @Environment(WorkspaceViewModel.self) private var model
   @Environment(\.theme) private var theme
@@ -291,18 +291,21 @@ struct WorkspacePriorityBadge: View {
   var body: some View {
     if let priority = model.taskPriorities[taskID] {
       let shape = RoundedRectangle(cornerRadius: theme.controlRadius, style: .continuous)
-      Text("\(priority)")
+      Text(TaskEditorValues.priorityBadge(priority))
         .font(theme.numeralFont(theme.scale.caption, weight: .semibold))
         .monospacedDigit()
-        .foregroundStyle(theme.ink)
+        .foregroundStyle(priority < 0 ? theme.muted : theme.ink)
         .lineLimit(1)
         .padding(.horizontal, theme.space.xs)
         .padding(.vertical, theme.space.xxs)
         .background(shape.fill(theme.well))
         .overlay(shape.strokeBorder(theme.border, lineWidth: theme.hairline))
         .fixedSize()
-        .help("Priority \(priority) — 1 is the most urgent; 1–4 sets it, 0 clears it")
-        .accessibilityLabel("Priority \(priority)")
+        .help(
+          priority < 0
+            ? "Priority \(TaskEditorValues.priorityBadge(priority)) — behind every task with none; - sends it to the back, 0 clears it"
+            : "Priority \(priority) — 1 is the most urgent; 1–4 sets it, 0 clears it")
+        .accessibilityLabel("Priority \(TaskEditorValues.priorityBadge(priority))")
     }
   }
 }

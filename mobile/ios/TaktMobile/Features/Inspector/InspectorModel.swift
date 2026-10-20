@@ -320,8 +320,6 @@ final class InspectorModel {
     conditions.first { $0.id == id }?.name ?? "Missing condition"
   }
 
-  static var priorityNames: [String] { TaskEditorValues.priorityNames }
-
   /// A conflicting field's two values, written out for the banner.
   func display(_ field: TaskEditorField, in values: TaskEditorValues) -> String {
     switch field {
@@ -329,7 +327,7 @@ final class InspectorModel {
     case .notes: values.notes.isEmpty ? "Empty" : values.notes
     case .dueAt: values.dueAt?.formatted(date: .abbreviated, time: .shortened) ?? "None"
     case .estimateMinutes: values.estimateMinutes.isEmpty ? "None" : "\(values.estimateMinutes) minutes"
-    case .priority: Self.priorityNames[min(max(values.priority, 0), Self.priorityNames.count - 1)]
+    case .priority: TaskEditorValues.priorityName(values.priority)
     case .tags: values.tags.isEmpty ? "None" : values.tags
     case .recurrenceRule: values.recurrenceRule.isEmpty ? "None" : values.recurrenceRule
     case .links: values.links.isEmpty ? "None" : values.links

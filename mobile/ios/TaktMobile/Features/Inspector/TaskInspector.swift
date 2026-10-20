@@ -269,13 +269,21 @@ struct TaskInspector: View {
   private func plan(_ task: WorkspaceTask, _ values: TaskEditorValues) -> some View {
     InspectorSection("Plan") {
       Text("Priority").font(theme.type.callout).foregroundStyle(theme.muted)
+      let priority = Binding(
+        get: { inspector.values?.priority ?? 0 },
+        set: { value in inspector.edit(model, immediate: true) { $0.priority = value } })
       ChoiceChips(
-        options: InspectorModel.priorityNames.enumerated().map { ($0.element, $0.offset) },
-        selection: Binding(
-          get: { inspector.values?.priority ?? 0 },
-          set: { value in inspector.edit(model, immediate: true) { $0.priority = value } }),
+        options: [0, 1, 2, 3, 4].map { (TaskEditorValues.priorityName($0), $0) },
+        selection: priority,
         tint: (1...2).contains(values.priority) ? theme.danger : theme.primary,
         identifier: "inspector.priority")
+      // Behind every task with no priority, -1 the very back. Muted: they
+      // mean later, not urgent. A second row, as nine chips do not fit one.
+      ChoiceChips(
+        options: [-4, -3, -2, -1].map { ($0 == -1 ? "−1 · last" : TaskEditorValues.priorityBadge($0), $0) },
+        selection: priority,
+        tint: theme.muted,
+        identifier: "inspector.priorityLater")
       InspectorRow("Estimate") {
         HStack(spacing: theme.space.sm) {
           TextField("Minutes", text: binding(\.estimateMinutes))

@@ -179,9 +179,20 @@ struct MainApp: App {
         // the menu passes the digit as the key.
         Menu("Set Priority") {
           ForEach(1..<5) { digit in
-            Button("Priority \(digit) — \(TaskEditorValues.priorityNames[digit])") {
+            Button("Priority \(digit) — \(TaskEditorValues.priorityName(digit))") {
               AppDelegate.shared.workspace.run(.motionSetPriority, key: String(digit))
             }
+          }
+          Divider()
+          // Behind every task with no priority; -1 is the very back, and the
+          // only one with a key.
+          ForEach([-4, -3, -2], id: \.self) { level in
+            Button("Priority \(TaskEditorValues.priorityName(level))") {
+              AppDelegate.shared.workspace.editTaskValues { $0.priority = level }
+            }
+          }
+          Button(WorkspaceCommandCatalog[.taskSendToBack].title) {
+            AppDelegate.shared.workspace.run(.taskSendToBack)
           }
           Divider()
           Button(WorkspaceCommandCatalog[.taskClearPriority].title) {

@@ -176,7 +176,8 @@ final class FocusPanelKeyRouter {
     case .edit(let field):
       model.presentOverlay(.quickEdit(WorkspaceTaskQuickEditRequest(task: task, kind: .init(field))))
     case .priority(let priority):
-      // The core moves a task given a priority to the top of its list.
+      // The core moves a task given a priority to the top of its list, and
+      // one given a negative priority to the bottom.
       model.editTaskValues(of: task) { $0.priority = priority }
     case .conditions:
       guard !task.isList else { return }

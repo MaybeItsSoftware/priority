@@ -792,7 +792,7 @@ enum WorkspaceSidebarItem: Identifiable {
   /// scope's read at each reload, and checked again when the soonest start
   /// arrives.
   var buriedStarts: [String: Date] = [:]
-  /// Each prioritised task's priority, 1–4, for the number on its row.
+  /// Each prioritised task's priority, 1–4 or -4 to -1, for the number on its row.
   /// Read with `waitingDetails`, under the same change stamp.
   var taskPriorities: [String: Int] = [:]
   /// The tasks with at least one link, for the link mark on their rows.

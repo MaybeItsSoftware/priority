@@ -29,7 +29,8 @@ public enum WorkspaceCommandCatalog {
 
   /// The menu bar's Task menu, in sections. Every action in the Task group is
   /// in it except "Add a task", which the Workspace menu carries, and "Clear
-  /// the priority", which sits under the menu's priority digits; a test holds
+  /// the priority" and "Send to the back", which sit under the menu's
+  /// priority digits; a test holds
   /// the menu to that, so a new task command cannot be left out of it.
   public static let taskMenu: [[WorkspaceCommandID]] = [
     [.taskComplete, .taskInvalidate, .taskStartFocus, .taskDelete],

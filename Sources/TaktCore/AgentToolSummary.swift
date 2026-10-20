@@ -162,8 +162,11 @@ public struct AgentToolSummary: Equatable, Sendable {
   /// writes dates: "Fri 17 Oct", "Fri 17 Oct, 17:00".
   private static let dateKeys: Set<String> = ["due", "start", "follow_up_at"]
 
-  /// The workspace's four priorities, as the editor names them.
-  private static let priorityNames = [1: "Urgent", 2: "High", 3: "Medium", 4: "Low"]
+  /// The workspace's priorities, as the editor names them: 1 to 4, then
+  /// -4 to -1 behind every task with none.
+  private static let priorityNames = [
+    1: "Urgent", 2: "High", 3: "Medium", 4: "Low", -4: "Later", -3: "Later still", -2: "Second to last", -1: "Last",
+  ]
 
   /// A value the way the card shows it, for the app to put the task's
   /// current value in the same words: `priority` 1 is "1 (Urgent)", `due`

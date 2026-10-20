@@ -53,6 +53,7 @@ enum class KeyCommand(
     TASK_CLEAR_DUE("taskClearDue"),
     TASK_CLEAR_START("taskClearStart"),
     TASK_CLEAR_PRIORITY("taskClearPriority"),
+    TASK_SEND_TO_BACK("taskSendToBack"),
     TASK_SET_PRIORITY("motionSetPriority"),
     TASK_TOGGLE_DAILY("taskToggleDaily"),
     TASK_HABIT("taskHabit"),

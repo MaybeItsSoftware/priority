@@ -375,7 +375,7 @@ fun TaskBox(status: TaskStatus, isList: Boolean = false, size: Dp = 20.dp) {
     }
 }
 
-/** `!1` … `!4`, coloured raspberry, amber, azure, muted. */
+/** `!1` … `!4`, coloured raspberry, amber, azure, muted; `!-4` … `!-1`, which mean later, muted too. */
 @Composable
 fun priorityColor(priority: Int?): Color = when (priority) {
     1 -> TaktTheme.colors.danger

@@ -97,6 +97,7 @@ something you already have to know.
 | `Space` / `x` | **Always** complete the task (or reopen it) — unless you are typing |
 | `Shift+Space` | Cancel the task, or reinstate it — it stopped mattering, rather than got done |
 | `1`–`4` / `0` | Set the task's priority at once (1 is the most urgent), as `!1`–`!4` does when you type a task, or clear it — on the outline, the board, the matrix and Today. Setting or changing a priority moves the task to the top of its list (row `:1`); clearing one leaves it where it is. The number shows in a small box beside the title; one undo step each |
+| `-` | Send the task to the back: priority −1, as `!-1` writes it — behind every task with no priority, and to the bottom of its list. −2 to −4, each just ahead of the one after, are in the inspector's Priority. A negative priority shows muted, as `!-1`. On a repeating task the priority is the series': setting it on one open occurrence sets it on all of them, and the next turn keeps it |
 | `tc` | Hide or show completed tasks — a completed task stays put for three seconds and then leaves the list; `tc` shows them all again |
 | `bu` | Bury the task: it starts tomorrow, so until then it sinks, greyed and subtasks and all, to the **Buried** section below its blocked siblings in the outline, on the board and in the matrix — and Today picks it up the morning it arrives. `start <value>` buries it until any other time; `clear start` digs it up |
 | `tl` | Hide or show buried tasks — anything whose start is still to come. Shown by default; `tl` hides them, with their subtasks. A filter list with a start-date rule always shows what it matches, and jumping to a buried task from search shows them again |
@@ -642,6 +643,7 @@ the field the arrows only choose, so you can keep refining a search.
 | `td` / `tm` / `cd` | Due today / tomorrow / clear the due date |
 | `cs` | Clear the start date, so a buried task is back among its siblings at once. `⌫` in the `⌥S` editor does the same |
 | `1`–`4` / `0` | Set the priority (which moves the task to the top of its list) / clear it |
+| `-` | Send it to the back (priority −1, which moves it to the bottom of its list) |
 | `cc` | Conditions: what the task needs |
 | `Delete` / `Cmd+Delete` | Delete, then `Return` to confirm |
 | `Cmd+Z` / `Cmd+Shift+Z` | Undo / redo |

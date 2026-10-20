@@ -67,7 +67,7 @@ public enum FocusPanelKeys {
     .taskRename: .edit(.title), .taskRenameAppend: .edit(.title), .taskRenameInsert: .edit(.title),
     .taskEditDue: .edit(.due), .taskEditStart: .edit(.start), .taskEditEstimate: .edit(.estimate),
     .taskEditNotes: .edit(.notes), .taskEditTags: .edit(.tags), .taskEditRecurrence: .edit(.recurrence),
-    .taskClearPriority: .priority(0), .taskConditions: .conditions,
+    .taskClearPriority: .priority(0), .taskSendToBack: .priority(-1), .taskConditions: .conditions,
     .taskDueToday: .due(days: 0), .taskDueTomorrow: .due(days: 1), .taskClearDue: .clearDue,
     .taskClearStart: .clearStart, .taskGoToList: .goToList,
     .taskDelete: .delete, .goSearch: .search, .taskNew: .add,

@@ -340,9 +340,15 @@ struct LocalTaskInspector: View {
   private func filing(_ draft: TaskEditorDraft) -> some View {
     InspectorRow("Priority") {
       let priority = binding(\.priority, fallback: draft.values.priority)
-      let priorities = Self.priorityNames.enumerated().map { ThemedPickerOption($0.element, value: $0.offset) }
-      let current = min(max(draft.values.priority, 0), Self.priorityNames.count - 1)
-      InspectorMenu(current == 0 ? "Add priority" : Self.priorityNames[current], tone: current == 0 ? .dim : .ink) {
+      let priorities = TaskEditorValues.priorityLevels.map {
+        ThemedPickerOption(TaskEditorValues.priorityName($0), value: $0)
+      }
+      let current = TaskEditorValues.isPriority(draft.values.priority) ? draft.values.priority : 0
+      // A negative priority means "later", so it reads muted rather than as ink.
+      InspectorMenu(
+        current == 0 ? "Add priority" : TaskEditorValues.priorityName(current),
+        tone: current == 0 ? .dim : current < 0 ? .muted : .ink
+      ) {
         Picker("Priority", selection: priority) {
           ForEach(priorities) { Text($0.title).tag($0.value) }
         }
@@ -576,7 +582,6 @@ struct LocalTaskInspector: View {
     return [ThemedPickerOption(current, value: current)] + iconOptions
   }
 
-  static var priorityNames: [String] { TaskEditorValues.priorityNames }
 
   private func binding<Value>(_ keyPath: WritableKeyPath<TaskEditorValues, Value>, fallback: Value) -> Binding<Value> {
     Binding(
@@ -590,7 +595,7 @@ struct LocalTaskInspector: View {
     case .notes: values.notes
     case .dueAt: values.dueAt?.formatted() ?? "None"
     case .estimateMinutes: values.estimateMinutes.isEmpty ? "None" : "\(values.estimateMinutes) minutes"
-    case .priority: Self.priorityNames[min(max(values.priority, 0), Self.priorityNames.count - 1)]
+    case .priority: TaskEditorValues.priorityName(values.priority)
     case .tags: values.tags
     case .recurrenceRule: values.recurrenceRule
     case .links: values.links

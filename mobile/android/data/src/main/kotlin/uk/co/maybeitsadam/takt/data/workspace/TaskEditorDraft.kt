@@ -30,7 +30,7 @@ class TaskEditorException(val error: TaskEditorError) : Exception(error.message)
 
 enum class TaskEditorError(val message: String) {
     INVALID_ESTIMATE("Enter a non-negative number of minutes within the supported range."),
-    INVALID_PRIORITY("Choose a priority between None and Urgent."),
+    INVALID_PRIORITY("Choose a priority: None, 1 to 4, or −4 to −1."),
     CONFLICTING_CHANGES("Saved values have changed. Review the conflicting fields before saving."),
     INVALID_VISIBLE_ROOT("Choose the list's only imported top-level task, with children, as its visible root."),
 }
@@ -184,7 +184,8 @@ data class TaskEditorDraft(
         if (values.estimateMinutes != baseline.values.estimateMinutes) {
             result = result.copy(estimateSeconds = TaskEditorValues.parseEstimate(values.estimateMinutes))
         }
-        if (values.priority !in 0..4) throw TaskEditorException(TaskEditorError.INVALID_PRIORITY)
+        // 1 (urgent) to 4, then -4 to -1 behind every task with none.
+        if (values.priority !in -4..4) throw TaskEditorException(TaskEditorError.INVALID_PRIORITY)
         var metadata = result.metadata.copy(priority = if (values.priority == 0) null else values.priority)
         if (values.tags != baseline.values.tags) {
             metadata = metadata.copy(tags = normalizedStrings(values.tags.split(",")))

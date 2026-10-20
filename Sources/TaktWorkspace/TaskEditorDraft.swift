@@ -56,10 +56,32 @@ public struct TaskEditorSnapshot: Codable, Equatable, Sendable {
 
 /// Raw text stays intact until Save, including temporarily invalid input.
 public struct TaskEditorValues: Codable, Equatable, Sendable {
-  /// What each stored priority is called, indexed by the value: 0 is none,
+  /// Every priority a picker offers, in the order it lists them: 0 is none,
   /// then 1 (the most urgent) to 4 (the least) — the digit keys, `!1`–`!4`
-  /// and the next-up ranking all read it that way round.
-  public static let priorityNames = ["None", "Urgent", "High", "Medium", "Low"]
+  /// and the next-up ranking all read it that way round — then -4 to -1,
+  /// which rank behind every task with none, -1 the very back (`!-1`, `-`).
+  public static let priorityLevels = [0, 1, 2, 3, 4, -4, -3, -2, -1]
+
+  /// Whether `level` is a priority at all: 1 to 4, or -4 to -1.
+  public static func isPriority(_ level: Int) -> Bool { (1...4).contains(level) || (-4 ... -1).contains(level) }
+
+  /// What a priority is called in a picker; anything that is not one is "None".
+  public static func priorityName(_ level: Int) -> String {
+    switch level {
+    case 1: "Urgent"
+    case 2: "High"
+    case 3: "Medium"
+    case 4: "Low"
+    case -4: "−4 · Later"
+    case -3: "−3 · Later still"
+    case -2: "−2 · Second to last"
+    case -1: "−1 · Last"
+    default: "None"
+    }
+  }
+
+  /// A priority as its row shows it: `1`, or `−1` with a true minus sign.
+  public static func priorityBadge(_ level: Int) -> String { level < 0 ? "−\(-level)" : "\(level)" }
 
   public var title: String
   public var notes: String
@@ -183,7 +205,7 @@ public struct TaskEditorDraft: Codable, Equatable, Sendable {
     if values.estimateMinutes != baseline.values.estimateMinutes {
       result.estimateSeconds = try TaskEditorValues.parseEstimate(values.estimateMinutes)
     }
-    guard (0...4).contains(values.priority) else { throw TaskEditorError.invalidPriority }
+    guard values.priority == 0 || TaskEditorValues.isPriority(values.priority) else { throw TaskEditorError.invalidPriority }
     result.metadata.priority = values.priority == 0 ? nil : values.priority
     if values.tags != baseline.values.tags {
       result.metadata.tags = WorkspaceStore.normalizedStrings(values.tags.components(separatedBy: ","))
@@ -212,7 +234,7 @@ public enum TaskEditorError: LocalizedError, Equatable {
   public var errorDescription: String? {
     switch self {
     case .invalidEstimate: "Enter a non-negative number of minutes within the supported range."
-    case .invalidPriority: "Choose a priority between None and Urgent."
+    case .invalidPriority: "Choose a priority: None, 1 to 4, or −4 to −1."
     case .conflictingChanges: "Saved values have changed. Review the conflicting fields before saving."
     case .invalidVisibleRoot: "Choose the list's only imported top-level task, with children, as its visible root."
     }

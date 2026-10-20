@@ -114,6 +114,7 @@ class TaskActions(
             KeyCommand.TASK_CONVERT_TO_LIST.matches(event) -> { { toggleList(id) } }
             KeyCommand.TASK_MOVE.matches(event) -> { { askMove(row) } }
             KeyCommand.TASK_CLEAR_PRIORITY.matches(event) -> { { setPriority(id, null) } }
+            KeyCommand.TASK_SEND_TO_BACK.matches(event) -> { { setPriority(id, -1) } }
             KeyCommand.TASK_SET_PRIORITY.chordIndex(event) >= 0 -> {
                 val priority = KeyCommand.TASK_SET_PRIORITY.chordIndex(event) + 1
                 { setPriority(id, priority) }
@@ -144,6 +145,7 @@ class TaskActions(
             KeyCommand.TASK_CLEAR_DUE.palette { clearDue(id) },
             KeyCommand.TASK_CLEAR_START.palette { clearStart(id) },
             KeyCommand.TASK_CLEAR_PRIORITY.palette { setPriority(id, null) },
+            KeyCommand.TASK_SEND_TO_BACK.palette { setPriority(id, -1) },
             KeyCommand.TASK_TOGGLE_PLANNED_TODAY.palette { togglePlannedToday(id) },
             KeyCommand.TASK_TOGGLE_DAILY.palette { toggleDaily(id) },
             KeyCommand.TASK_HABIT.palette { openHabit(id) },
@@ -200,6 +202,8 @@ internal fun ColumnScope.TaskMenuItems(
     for (priority in 1..4) {
         PMenuItem("Priority $priority", PIcons.Flag, trailing = if (row.priority == priority) "Set" else null, onClick = run { actions.setPriority(id, priority) })
     }
+    // Behind every task with no priority, and to the bottom of its list.
+    PMenuItem("Send to the back (!-1)", PIcons.Flag, trailing = if (row.priority == -1) "Set" else null, onClick = run { actions.setPriority(id, -1) })
     if (row.priority != null) PMenuItem("No priority", PIcons.Flag, onClick = run { actions.setPriority(id, null) })
     PMenuDivider()
     PMenuItem(if (row.isPlanned) "Take off today" else "Plan for today", PIcons.Today, onClick = run { actions.togglePlannedToday(id) })

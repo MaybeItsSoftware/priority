@@ -51,6 +51,8 @@ final class FocusPanelKeysTests: XCTestCase {
       XCTAssertEqual(action("\(digit)", on: .today), .priority(digit))
     }
     XCTAssertEqual(action("0"), .priority(0))
+    // `-` sends it to the back: priority -1.
+    XCTAssertEqual(action("-"), .priority(-1))
     XCTAssertNil(action("5"))
   }
 

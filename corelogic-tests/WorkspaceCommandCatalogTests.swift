@@ -81,7 +81,7 @@ final class WorkspaceCommandCatalogTests: XCTestCase {
     let expected = WorkspaceCommandCatalog.defaults
       .filter { $0.group == "Task" && $0.kind == .action }
       .map(\.id)
-      .filter { $0 != .taskNew && $0 != .taskClearPriority }
+      .filter { $0 != .taskNew && $0 != .taskClearPriority && $0 != .taskSendToBack }
     XCTAssertEqual(Set(listed), Set(expected))
   }
 
@@ -343,6 +343,9 @@ final class WorkspaceCommandCollisionTests: XCTestCase {
       // : is the palette in the sidebar, as in Zed's vim project panel, and
       // vim's go-to-line over the rows everywhere else.
       "sidebar::",
+      // - is Zed's select parent in the sidebar, and sends a task to the
+      // back (priority -1) everywhere else.
+      "sidebar:-",
       // The sidebar is Zed's project panel: ⌘N and ⌫ act on the row,
       // and so do the vim panel's h, l and gg, never on a task behind it.
       "sidebar:cmd+n", "sidebar:delete", "sidebar:cmd+delete", 

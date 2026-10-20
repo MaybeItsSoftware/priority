@@ -109,10 +109,10 @@ class TaskCommands(private val container: AppContainer) {
         repo.updateTask(task.id, title, task.notes, task.dueAt, task.estimateSeconds)
     }
 
-    /** 1 (urgent) to 4; 0 or null clears it. */
+    /** 1 (urgent) to 4, or -4 to -1 behind every task with none; 0 or null clears it. */
     fun setPriority(taskId: String, priority: Int?) = undo.perform { repo ->
         val metadata = repo.taskEditorMetadata(taskId)
-        repo.updateTaskEditorMetadata(taskId, metadata.copy(priority = priority?.takeIf { it in 1..4 }))
+        repo.updateTaskEditorMetadata(taskId, metadata.copy(priority = priority?.takeIf { it in 1..4 || it in -4..-1 }))
     }
 
     /** Ctrl+T: put it in Today, or take it off. */

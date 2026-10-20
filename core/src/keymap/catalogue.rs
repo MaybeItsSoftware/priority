@@ -161,6 +161,11 @@ fn task() -> Vec<Spec> {
         c("taskClearTags", "Clear the tags", "Task", &["ct"]),
         c("taskClearPriority", "Clear the priority", "Task", &["0"])
             .note("0 is Checkvist's spelling"),
+        // Priority -1, as `!-1` writes it: behind every task with no priority,
+        // and last among its siblings. `-` is free off the sidebar, where it
+        // is Zed's select parent.
+        c("taskSendToBack", "Send to the back (priority −1)", "Task", &["-"])
+            .note("Ranks it behind everything without a priority and moves it to the bottom of its list. −2 to −4 are in the inspector's Priority"),
         c("taskToggleDaily", "Commit to this periodically, or edit the commitment", "Task", &["cmd+shift+d"])
             .note("Asks for a name, how often and an end, then adds a subtask that comes round in Dailies"),
         // `gb`, not Checkvist's `hh`: no sequence starts with `h`, so `h` leaves

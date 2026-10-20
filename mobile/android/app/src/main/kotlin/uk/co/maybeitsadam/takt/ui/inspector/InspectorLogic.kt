@@ -279,7 +279,7 @@ object InspectorValidation {
         if (scheduleChanged && start != null && deadline != null && start >= deadline) {
             problems += InspectorProblem(TaskEditorField.START_AT, TaskPlanningError.INVALID_SCHEDULE.message)
         }
-        if (values.priority !in 0..4) problems += InspectorProblem(TaskEditorField.PRIORITY, TaskEditorError.INVALID_PRIORITY.message)
+        if (values.priority !in -4..4) problems += InspectorProblem(TaskEditorField.PRIORITY, TaskEditorError.INVALID_PRIORITY.message)
         return problems
     }
 }
@@ -318,12 +318,25 @@ fun joinTags(tags: List<String>): String = tags.joinToString(", ")
 /**
  * Priority as the capture syntax writes it: `!1` (most urgent) to `!4`, or
  * none. 1 is the most urgent everywhere, as the colours say: raspberry, amber,
- * azure, muted.
+ * azure, muted. `!-4` to `!-1` rank behind every task with none, `!-1` the
+ * very back, and are muted: they mean later.
  */
 object PriorityLabels {
     val order: List<Int> = listOf(0, 1, 2, 3, 4)
 
-    fun label(priority: Int): String = if (priority in 1..4) "!$priority" else "None"
+    /** The second row of the picker: behind no priority, -1 last. */
+    val later: List<Int> = listOf(-4, -3, -2, -1)
+
+    fun isPriority(priority: Int?): Boolean = priority != null && (priority in 1..4 || priority in -4..-1)
+
+    fun label(priority: Int): String = if (isPriority(priority)) "!$priority" else "None"
+
+    /** What a screen reader says: "Priority !2", "Priority -1, last". */
+    fun description(priority: Int): String = when {
+        priority == -1 -> "Priority -1, last"
+        priority < 0 && isPriority(priority) -> "Priority $priority, behind no priority"
+        else -> "Priority ${label(priority)}"
+    }
 }
 
 /** The daily's schedule controls: weekday chips, an every-N-days stepper, a target stepper. */
