@@ -58,16 +58,6 @@ extension WorkspaceViewModel {
     showInPlace(result.task)
   }
 
-  /// Selects a task without changing the kind of view you are in, so a search
-  /// from the board lands on the board.
-  ///
-  /// It used to switch to the outline every time, on the grounds that a board
-  /// shows one level and a hit can be at any depth. But a board draws a card's
-  /// subtasks on the card, and a jump that throws away the mode you chose is a
-  /// jump you have to undo. So, in order: where you already are, if the task
-  /// is on screen; its list, in the same mode; the level it sits at, on a
-  /// board or matrix that only draws the top; and only then the outline, which
-  /// can show anything — Today, say, for a task not planned for the day.
   /// `go`: the list the task belongs to, opened with the task selected.
   /// Unlike `showInPlace`, which leaves a task where it already shows, this
   /// always leaves Today, a filter list, Everything or a folder for the list.
@@ -78,7 +68,22 @@ extension WorkspaceViewModel {
     showInPlace(task)
   }
 
-  func showInPlace(_ task: WorkspaceTask) {
+  /// Selects a task without changing the kind of view you are in, so a search
+  /// from the board lands on the board.
+  ///
+  /// It used to switch to the outline every time, on the grounds that a board
+  /// shows one level and a hit can be at any depth. But a board draws a card's
+  /// subtasks on the card, and a jump that throws away the mode you chose is a
+  /// jump you have to undo. So, in order: where you already are, if the task
+  /// is on screen; its list, in the same mode; the level it sits at, on a
+  /// board or matrix that only draws the top; and only then the outline, which
+  /// can show anything — Today, say, for a task not planned for the day.
+  ///
+  /// - Parameters:
+  ///   - fallsBackToOutline: false to leave the mode alone even when the task
+  ///     cannot be drawn in it, selecting it all the same, as undo does.
+  ///   - takesKeyboard: false to leave the keyboard where it is.
+  func showInPlace(_ task: WorkspaceTask, fallsBackToOutline: Bool = true, takesKeyboard: Bool = true) {
     // Something ticked off is invisible in a view that hides completions.
     if task.status != .open { hidesCompletedTasks = false }
     // And something buried, or under a buried task, in one hiding them.
@@ -113,7 +118,7 @@ extension WorkspaceViewModel {
         reloadOutline(refreshSidebar: false)
       }
     }
-    if !isShowing(task.id) {
+    if fallsBackToOutline, !isShowing(task.id) {
       batchingRefreshes {
         scopeTaskID = nil
         viewMode = .outline
@@ -122,7 +127,7 @@ extension WorkspaceViewModel {
       unfoldAncestors(of: task)
     }
     selectedTaskID = task.id
-    requestKeyboardFocus(.tasks)
+    if takesKeyboard { requestKeyboardFocus(.tasks) }
   }
 
   /// Whether the task is drawn in the pane as it is now: a row the keys walk,

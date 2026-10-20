@@ -22,6 +22,7 @@ extension WorkspaceViewModel {
     guard let store else { return }
     taskEditor.flush()
     taskInsertionReference = nil
+    var restored: WorkspaceTask?
     perform {
       let target = try store.historyTarget(forUndo: forUndo)
       guard try step(store) != nil else {
@@ -44,16 +45,20 @@ extension WorkspaceViewModel {
       if let listID = target.listId, lists.contains(where: { $0.id == listID }) {
         selectList(listID)
       }
-      if selectedTaskID == nil, let taskID = target.taskId, let task = try store.task(id: taskID) {
-        if !isEverythingSelected && selectedListID != task.listId { selectList(task.listId) }
-        scopeTaskID = task.parentTaskId
-        hidesCompletedTasks = false
-        reloadOutline()
-        selectedTaskID = task.id
+      if selectedTaskID == nil, let taskID = target.taskId {
+        restored = try store.task(id: taskID)
       }
       if let selectedFolderID, !folders.contains(where: { $0.id == selectedFolderID }) {
         self.selectedFolderID = nil
       }
+    }
+    // With nothing selected, the task the step brought back is selected —
+    // where it already shows if it does, Today, a folder or a filter list
+    // included, in the mode you are in. Only a task that cannot be seen from
+    // here moves you, and then as search's reveal does, never into the
+    // outline: the inspector shows it either way.
+    if let restored {
+      showInPlace(task(withID: restored.id) ?? restored, fallsBackToOutline: false, takesKeyboard: false)
     }
   }
 
