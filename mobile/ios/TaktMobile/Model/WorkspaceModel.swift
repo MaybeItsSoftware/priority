@@ -153,6 +153,7 @@ final class WorkspaceModel {
 
   @ObservationIgnored private var externalToken: Int?
   @ObservationIgnored private var externalWatch: Task<Void, Never>?
+  @ObservationIgnored private var engineWatch: Task<Void, Never>?
   @ObservationIgnored private var structureGeneration = 0
   @ObservationIgnored let logger = Logger(subsystem: "uk.co.maybeitssoftware.takt", category: "WorkspaceModel")
 
@@ -331,7 +332,18 @@ final class WorkspaceModel {
 
   /// Polls for commits made by another process while the app is in the
   /// foreground. Cheap: one pragma on the writer connection.
+  /// Also runs the board's two engines (`runForegroundEngines`): once now,
+  /// so whatever came due while the app was away lands as it comes forward,
+  /// then every half minute, as Android's `ForegroundEngines` does.
   func startWatchingExternalWrites() {
+    if engineWatch == nil {
+      engineWatch = Task { @MainActor [weak self] in
+        while !Task.isCancelled {
+          self?.runForegroundEngines()
+          try? await Task.sleep(for: .seconds(30))
+        }
+      }
+    }
     guard externalWatch == nil else { return }
     externalWatch = Task { @MainActor [weak self] in
       while !Task.isCancelled {
@@ -344,6 +356,30 @@ final class WorkspaceModel {
   func stopWatchingExternalWrites() {
     externalWatch?.cancel()
     externalWatch = nil
+    engineWatch?.cancel()
+    engineWatch = nil
+  }
+
+  /// The habit engine puts each habit due today in its column, takes out one
+  /// that is done or was dropped at the end of its day, and ends habits that
+  /// expired; the waiting engine makes due follow-ups. Neither is an undo
+  /// step, and each is one read when there is nothing to do. Returns whether
+  /// either wrote, after which every query re-reads.
+  @discardableResult
+  func runForegroundEngines(now: Date = .now) -> Bool {
+    var changed = false
+    do {
+      changed = try store.reconcileHabits(now: now) || changed
+    } catch {
+      logger.error("Couldn't place habits: \(error.localizedDescription, privacy: .public)")
+    }
+    do {
+      changed = try store.reconcileWaitingFollowUps(now: now) || changed
+    } catch {
+      logger.error("Couldn't make due follow-ups: \(error.localizedDescription, privacy: .public)")
+    }
+    if changed { didChange() }
+    return changed
   }
 
   func checkExternalWrites() async {

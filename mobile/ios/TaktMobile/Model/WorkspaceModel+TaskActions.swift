@@ -11,13 +11,41 @@ import TaktWorkspaceEditing
 extension WorkspaceModel {
   // MARK: - Status
 
-  /// Completes an open task or reopens a closed one.
+  /// Completes an open task or reopens a closed one. A habit is ticked for
+  /// the day instead, never finished — its task is what the next appearance
+  /// is made of — as the Mac's `toggleTask` and Android's `tickHabit` do.
   func toggleComplete(_ taskID: String) {
     guard let task = task(taskID) else { return }
+    if task.status == .open, let habit = habitTick(for: taskID) {
+      tickHabit(habit, title: task.title)
+      return
+    }
     let completing = task.status == .open
     guard perform({ try $0.setStatus(completing ? .completed : .open, for: taskID) }) else { return }
     if completing { noteCompletion() }
     announce(completing ? "Completed \(task.title)" : "Reopened \(task.title)")
+  }
+
+  /// A habit on an open task, and whether today's appearance is already
+  /// ticked: what ticking its task does instead of completing it. Nil for
+  /// anything that is not a live habit.
+  func habitTick(for taskID: String, on day: Date = .now) -> (daily: WorkspaceDaily, isDoneToday: Bool)? {
+    guard let daily = try? store.daily(forTaskId: taskID), daily.isHabit, !daily.isArchived else { return nil }
+    let today = (try? store.dailies(on: day))?.first { $0.daily.id == daily.id }
+    return (daily, today?.isDoneToday ?? false)
+  }
+
+  /// Logs today's contribution to a habit, or clears it when today is
+  /// already ticked. Not showing today, there is nothing to un-tick: doing it
+  /// now simply counts for today.
+  private func tickHabit(_ habit: (daily: WorkspaceDaily, isDoneToday: Bool), title: String) {
+    let dailyID = habit.daily.id
+    if habit.isDoneToday {
+      if perform({ try $0.clearContribution(dailyId: dailyID) }) { announce("Unticked \(title) for today") }
+    } else if perform({ _ = try $0.logContribution(dailyId: dailyID) }) {
+      noteCompletion()
+      announce("Ticked \(title) for today")
+    }
   }
 
   /// Marks a task as no longer worth doing — closed, but not done — or

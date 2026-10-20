@@ -81,7 +81,8 @@ extension WorkspaceModel {
   func completeCelebrating(_ taskID: String, defaults: UserDefaults = .standard) {
     guard celebration.taskID != taskID else { return }
     let style = CelebrationStyle.stored(in: defaults)
-    guard style != .none, task(taskID)?.status == .open else {
+    // Unticking a habit's day is not a completion to celebrate.
+    guard style != .none, task(taskID)?.status == .open, habitTick(for: taskID)?.isDoneToday != true else {
       toggleComplete(taskID)
       return
     }
