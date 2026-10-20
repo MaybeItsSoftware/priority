@@ -71,6 +71,9 @@ final class ParityTests: XCTestCase {
     let first = try XCTUnwrap(model.performReturning { try $0.createList(workspaceId: model.workspace.id, name: "First") })
     let second = try XCTUnwrap(model.performReturning { try $0.createList(workspaceId: model.workspace.id, name: "Second") })
     model.setArchived(true, list: first.id)
+    // The last archived is the newest stamp, which is to the millisecond: two
+    // archives in the same one tie, which only a test can manage.
+    Thread.sleep(forTimeInterval: 0.01)
     model.setArchived(true, list: second.id)
     model.reloadStructureNow()
     model.restoreLastArchivedList()
