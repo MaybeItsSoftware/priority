@@ -34,9 +34,9 @@ struct MainApp: App {
     }
     .commands {
       CommandGroup(replacing: .undoRedo) {
-        Button("Undo") { AppDelegate.shared.workspace.applyHistoryFromMenu(redo: false) }
+        Button("Undo") { applyHistoryFromMenu(redo: false) }
           .commandShortcut(.windowUndo)
-        Button("Redo") { AppDelegate.shared.workspace.applyHistoryFromMenu(redo: true) }
+        Button("Redo") { applyHistoryFromMenu(redo: true) }
           .commandShortcut(.windowRedo)
       }
       CommandGroup(replacing: .appSettings) {
@@ -204,19 +204,23 @@ struct MainApp: App {
           AppDelegate.shared.workspace.run(.taskNew)
         }
         .commandShortcut(.taskNew)
+        .workspaceWindowOnly()
         Button("New List") {
           AppDelegate.shared.workspace.requestListCreationForSelection()
         }
         .commandShortcut(.listNew)
+        .workspaceWindowOnly()
         Button("New Folder") {
           AppDelegate.shared.workspace.requestFolderCreationForSelection()
         }
         .commandShortcut(.folderNew)
+        .workspaceWindowOnly()
         Divider()
         Button("Search…") {
           AppDelegate.shared.workspace.run(.goSearch)
         }
         .commandShortcut(.goSearch)
+        .workspaceWindowOnly()
         Button("List Settings…") {
           AppDelegate.shared.workspace.showSelectedListSettings()
         }
@@ -231,6 +235,7 @@ struct MainApp: App {
           AppDelegate.shared.workspace.restoreMostRecentlyArchivedList()
         }
         .commandShortcut(.listRestore)
+        .workspaceWindowOnly()
         Divider()
         Button("Command Palette…") {
           AppDelegate.shared.workspace.run(.goCommandPalette)
@@ -274,6 +279,19 @@ private struct WorkspaceWindowOnly: ViewModifier {
 
 extension View {
   fileprivate func workspaceWindowOnly() -> some View { modifier(WorkspaceWindowOnly()) }
+}
+
+/// Undo and Redo stay enabled everywhere, unlike the items above, because a
+/// text field in Settings or the focus panel undoes its own typing through
+/// them. Only the workspace window steps the task history; anywhere else the
+/// action goes down that window's responder chain and touches nothing else.
+@MainActor
+private func applyHistoryFromMenu(redo: Bool) {
+  if MenuBarWorkspace.shared.isWorkspaceWindowKey {
+    AppDelegate.shared.workspace.applyHistoryFromMenu(redo: redo)
+  } else {
+    NSApp.sendAction(redo ? Selector(("redo:")) : Selector(("undo:")), to: nil, from: nil)
+  }
 }
 
 /// Finish and Stop, greyed while there is nothing running to end. A view of
