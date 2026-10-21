@@ -316,8 +316,21 @@ final class InspectorModel {
     }
   }
 
+  /// `!` on a condition: ticks it as not holding ("not Home"), turns one
+  /// required as itself round, or ticks a "not" off. Saved straight away.
+  func negateRequirement(_ conditionID: String, model: WorkspaceModel) {
+    edit(model, immediate: true) { values in
+      values.requirementGroups = TaskRequirementToggle.negating(conditionID, in: values.requirementGroups)
+    }
+  }
+
   func conditionName(_ id: String) -> String {
     conditions.first { $0.id == id }?.name ?? "Missing condition"
+  }
+
+  /// A requirement as written: "Home", or "not Home".
+  func requirementLabel(_ member: String) -> String {
+    TaskRequirement.label(member) { id in conditions.first { $0.id == id }?.name }
   }
 
   /// A conflicting field's two values, written out for the banner.
@@ -335,7 +348,7 @@ final class InspectorModel {
     case .startAt: values.startAt?.formatted(date: .abbreviated, time: .shortened) ?? "None"
     case .dueDate: values.dueDate ?? "None"
     case .requirements:
-      (values.requirementGroups ?? []).map { $0.map(conditionName).joined(separator: " or ") }
+      (values.requirementGroups ?? []).map { $0.map(requirementLabel).joined(separator: " or ") }
         .joined(separator: " and ").nonEmpty ?? "None"
     case .minimumBlock: values.minimumBlockMinutes ?? "None"
     case .singleSitting: values.requiresSingleSitting == true ? "Required" : "Not required"

@@ -84,14 +84,15 @@ enum ConditionPicker {
   static func requirementSummary(_ groups: [[String]]?, name: (String) -> String) -> String {
     let groups = (groups ?? []).filter { !$0.isEmpty }
     guard !groups.isEmpty else { return "Anytime" }
-    return groups.map { $0.map(name).joined(separator: " or ") }.joined(separator: " + ")
+    return groups.map { TaskRequirement.label(group: $0, name: name) }.joined(separator: " + ")
   }
 
   /// The other conditions sharing a group with `id` — "Campus" for Home in
   /// Home-or-Campus — or nil.
   static func alternatives(to id: String, in groups: [[String]]?, name: (String) -> String) -> String? {
-    guard let group = (groups ?? []).first(where: { $0.contains(id) && $0.count > 1 }) else { return nil }
-    return group.filter { $0 != id }.map(name).joined(separator: " or ")
+    let names = { (member: String) in TaskRequirement(member).conditionID == id }
+    guard let group = (groups ?? []).first(where: { $0.contains(where: names) && $0.count > 1 }) else { return nil }
+    return TaskRequirement.label(group: group.filter { !names($0) }, name: name)
   }
 
   /// What holds now, in the order the headings put it: "Home · Laptop", or nil for nothing.

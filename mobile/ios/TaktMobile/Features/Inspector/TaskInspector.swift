@@ -363,11 +363,11 @@ struct TaskInspector: View {
               Button {
                 inspector.removeRequirement(id, fromGroup: index, model: model)
               } label: {
-                Tag(text: inspector.conditionName(id), tint: theme.purple, systemImage: "xmark")
+                Tag(text: inspector.requirementLabel(id), tint: theme.purple, systemImage: "xmark")
               }
               .buttonStyle(.plain)
               .frame(minHeight: 30)
-              .accessibilityLabel("Remove \(inspector.conditionName(id))")
+              .accessibilityLabel("Remove \(inspector.requirementLabel(id))")
             }
             let others = inspector.conditions.filter { !$0.isArchived && !group.contains($0.id) }
             if !others.isEmpty {

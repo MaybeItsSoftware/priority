@@ -137,8 +137,9 @@ struct NowConditionsSheet: View {
 /// The conditions a task needs, ticked: the Mac's `cc` picker. Every live
 /// condition under its category — and any archived one the task still
 /// needs, so it can be ticked off. A tick is "and needs"; a second place
-/// joins the first as "or". A name nothing is called yet makes the condition
-/// and requires it.
+/// joins the first as "or". Swiping a row right ticks it as *not* holding
+/// ("not Home"), or a "not" off. A name nothing is called yet makes the
+/// condition and requires it.
 struct TaskConditionsSheet: View {
   @Environment(WorkspaceModel.self) private var model
   let inspector: InspectorModel
@@ -150,6 +151,7 @@ struct TaskConditionsSheet: View {
     let groups = inspector.values?.requirementGroups
     let offered = value.conditions.filter { !$0.isArchived || TaskRequirementToggle.requires($0.id, in: groups) }
     let name: (String) -> String = { id in value.conditions.first { $0.id == id }?.name ?? "Missing condition" }
+    let negated = { (id: String) in TaskRequirementToggle.requirement(of: id, in: groups)?.isNegated == true }
     let list = ConditionPicker.list(
       offered: TaskConditionSection.sections(offered), searchable: offered, all: value.conditions,
       query: query, isOn: { TaskRequirementToggle.requires($0, in: groups) }, exclusiveRadio: false)
@@ -172,7 +174,9 @@ struct TaskConditionsSheet: View {
       onCreate: { name in
         query = ""
         if let made = model.createCondition(named: name, category: nil) { toggle(made.id) }
-      })
+      },
+      label: { row in negated(row.condition.id) ? "not \(row.condition.name)" : row.condition.name },
+      onNegate: { row in inspector.negateRequirement(row.condition.id, model: model) })
     .task(id: model.revision) {
       let workspaceID = model.workspace.id
       await catalogue.load(model.store) { store in try ConditionsCatalogue.load(store: store, workspaceID: workspaceID) }
@@ -202,6 +206,10 @@ private struct ConditionPickerSheet<Leading: View, Notice: View>: View {
   var count: (ConditionPickerRow) -> Int? = { _ in nil }
   let onToggle: (ConditionPickerRow) -> Void
   let onCreate: (String) -> Void
+  /// What a row is called: its name, or "not Home" for a negated requirement.
+  var label: (ConditionPickerRow) -> String = { $0.condition.name }
+  /// Ticks a row as not holding, from a swipe; nil where that means nothing.
+  var onNegate: ((ConditionPickerRow) -> Void)?
   @ViewBuilder var leading: () -> Leading
   @ViewBuilder var notice: () -> Notice
 
@@ -317,7 +325,7 @@ private struct ConditionPickerSheet<Leading: View, Notice: View>: View {
       HStack(spacing: theme.space.md) {
         indicator(isOn: row.isOn, round: row.isExclusive)
         VStack(alignment: .leading, spacing: 1) {
-          Text(row.condition.name)
+          Text(label(row))
             .font(row.isOn ? theme.type.body.weight(.semibold) : theme.type.body)
             .foregroundStyle(row.condition.isArchived ? theme.muted : theme.ink)
             .lineLimit(1)
@@ -342,6 +350,14 @@ private struct ConditionPickerSheet<Leading: View, Notice: View>: View {
     .accessibilityElement(children: .combine)
     .accessibilityAddTraits(row.isOn ? .isSelected : [])
     .accessibilityIdentifier("conditionRow.\(row.condition.name)")
+    .swipeActions(edge: .leading) {
+      if let onNegate {
+        Button("Not") { onNegate(row) }.tint(theme.primary)
+      }
+    }
+    .accessibilityActions {
+      if let onNegate { Button("Not") { onNegate(row) } }
+    }
   }
 
   /// A box, or a round radio for a place: filled azure with a tick when on, a hairline when not.
@@ -368,11 +384,12 @@ extension ConditionPickerSheet where Leading == EmptyView, Notice == EmptyView {
     title: String, subtitle: String?, identifier: String, query: Binding<String>, offeredCount: Int,
     list: ConditionPickerList, emptyText: String, detail: @escaping (ConditionPickerRow) -> String,
     count: @escaping (ConditionPickerRow) -> Int?, onToggle: @escaping (ConditionPickerRow) -> Void,
-    onCreate: @escaping (String) -> Void
+    onCreate: @escaping (String) -> Void, label: @escaping (ConditionPickerRow) -> String = { $0.condition.name },
+    onNegate: ((ConditionPickerRow) -> Void)? = nil
   ) {
     self.init(
       title: title, subtitle: subtitle, identifier: identifier, query: query, offeredCount: offeredCount, list: list,
       emptyText: emptyText, detail: detail, count: count, onToggle: onToggle, onCreate: onCreate,
-      leading: { EmptyView() }, notice: { EmptyView() })
+      label: label, onNegate: onNegate, leading: { EmptyView() }, notice: { EmptyView() })
   }
 }

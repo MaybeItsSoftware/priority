@@ -311,8 +311,7 @@ final class FocusModel {
     switch reason {
     case .startsLater(let date): "Starts \(date.formatted(date: .abbreviated, time: .shortened))"
     case .missingConditions(let groups): "Needs " + groups.map { group in
-      group.map { id in snapshot.conditions.first(where: { $0.id == id })?.name ?? "Missing condition" }
-        .joined(separator: " or ")
+      TaskRequirement.label(group: group) { id in snapshot.conditions.first(where: { $0.id == id })?.name }
     }.joined(separator: " and ")
     case .insufficientTime(let seconds): "Needs at least \(Int(ceil(Double(seconds) / 60))) minutes"
     case .needsEstimate: "Needs a remaining estimate to check it fits"
@@ -326,9 +325,9 @@ final class FocusModel {
   func explanation(for rung: ScoredNextUp) -> String {
     guard rung.reason == .condition else { return rung.explanation }
     let names = rung.candidate.requirementGroups.map { group in
-      group.filter { conditionIDs.contains($0) }
-        .map { id in snapshot.conditions.first(where: { $0.id == id })?.name ?? "Missing condition" }
-        .joined(separator: " or ")
+      TaskRequirement.label(group: group.filter { TaskRequirement($0).isMet(available: conditionIDs) }) { id in
+        snapshot.conditions.first(where: { $0.id == id })?.name
+      }
     }.joined(separator: " + ")
     return names + " available now"
   }

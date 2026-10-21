@@ -83,6 +83,10 @@ final class ConditionPickerTests: XCTestCase {
       ConditionPicker.requirementSummary([[home.id, campus.id], [laptop.id]], name: name), "Home or Campus + Laptop")
     XCTAssertEqual(ConditionPicker.alternatives(to: home.id, in: [[home.id, campus.id]], name: name), "Campus")
     XCTAssertNil(ConditionPicker.alternatives(to: laptop.id, in: [[laptop.id]], name: name))
+    XCTAssertEqual(
+      ConditionPicker.requirementSummary([["!" + home.id], [campus.id, "!" + laptop.id]], name: name),
+      "not Home + Campus or not Laptop")
+    XCTAssertEqual(ConditionPicker.alternatives(to: campus.id, in: [[campus.id, "!" + laptop.id]], name: name), "not Laptop")
     XCTAssertEqual(ConditionPicker.nowSummary(all, selected: [laptop.id, home.id]), "Home · Laptop")
     XCTAssertNil(ConditionPicker.nowSummary(all, selected: []))
   }
@@ -101,6 +105,18 @@ final class ConditionPickerTests: XCTestCase {
     XCTAssertEqual(inspector.values?.requirementGroups, [[home.id, campus.id]])
     XCTAssertTrue(inspector.save(model))
     XCTAssertEqual(try model.store.taskEditorSnapshot(for: task.id).values.requirementGroups, [[home.id, campus.id]])
+  }
+
+  func testNotTicksAConditionAsNotHoldingAndTicksItOff() throws {
+    let task = try XCTUnwrap(model.createTask("Shop", listID: try XCTUnwrap(model.inbox).id))
+    let inspector = InspectorModel(taskID: task.id, draftsURL: FileManager.default.temporaryDirectory
+      .appending(path: "drafts-\(UUID().uuidString).json"))
+    inspector.load(model)
+    inspector.negateRequirement(home.id, model: model)
+    XCTAssertEqual(inspector.values?.requirementGroups, [["!" + home.id]])
+    XCTAssertEqual(inspector.requirementLabel("!" + home.id), "not Home")
+    inspector.negateRequirement(home.id, model: model)
+    XCTAssertNil(inspector.values?.requirementGroups)
   }
 
   func testTheSheetsTogglePutsOnePlaceAtATimeAmongTheConditionsItWasGiven() {
