@@ -156,8 +156,9 @@ key is then handled as usual (it may start a sequence of its own); if no key
 follows within 1.2 seconds, the held letter runs then; holding Shift skips
 the wait. The same goes for a minus and a digit: `-2` to `-4` set the
 priorities behind the back, so `-` on its own waits a moment before sending a
-task to the back. No other task key is held now: `x` begins no sequence (extracting a branch
-is `ex`, not Checkvist's `xx`), so it completes at once. A hold is dropped without running when focus
+task to the back. No other task key is held now: `x` begins no sequence
+(extracting a branch is `ex`, not Checkvist's `xx`), so it completes at once.
+A hold is dropped without running when focus
 moves or text editing begins, because the key no longer means what it did.
 
 The chords that are how you leave a text field — the view and region keys,
