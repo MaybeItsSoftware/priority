@@ -114,6 +114,19 @@ final class WatchBridge: NSObject {
     await today.load(model)
     let session = today.day.session
     switch action.kind {
+    case .pause, .resume, .stop, .done:
+      // A timer action names the task the watch showed running. One that
+      // lands after the phone has moved on to another block — queued, or
+      // sent again — would act on that one instead. A watch too old to name
+      // the task is taken at its word, as before.
+      if let taskID = action.taskId, taskID != session?.activeTaskId {
+        logger.notice("Watch \(action.kind.rawValue, privacy: .public) was for a block no longer running; ignored")
+        return
+      }
+    case .refresh, .complete, .logDaily, .start:
+      break
+    }
+    switch action.kind {
     case .refresh:
       break
     case .complete:
@@ -169,7 +182,9 @@ final class WatchBridge: NSObject {
   private func completeRunning(today: TodayModel, model: WorkspaceModel, now: Date = .now) {
     guard let session = today.day.session, let taskID = session.activeTaskId else { return }
     let title = today.day.cards.first { $0.id == taskID }?.title ?? model.task(taskID)?.title ?? ""
-    let asked = model.pendingBlock
+    // Only a question about this session's block: one left from an earlier
+    // session must not lend it its seconds or block.
+    let asked = model.pendingBlock.flatMap { $0.sessionID == session.id && $0.taskID == taskID ? $0 : nil }
     model.pendingBlock = PendingBlockCompletion(
       sessionID: asked?.sessionID ?? session.id, taskID: taskID, title: title,
       seconds: asked?.seconds ?? session.elapsedSeconds(now: now), completeTask: true,

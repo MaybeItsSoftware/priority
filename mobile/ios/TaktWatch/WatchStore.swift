@@ -101,7 +101,7 @@ final class WatchStore: NSObject {
   func togglePause(now: Date = .now) {
     guard let session = snapshot.session else { return }
     WKInterfaceDevice.current().play(.click)
-    send(WatchAction(kind: session.isPaused ? .resume : .pause))
+    send(WatchAction(kind: session.isPaused ? .resume : .pause, taskId: session.taskId))
     change { $0.session = session.isPaused ? session.resumed(at: now) : session.paused(at: now) }
   }
 
@@ -119,9 +119,9 @@ final class WatchStore: NSObject {
 
   /// Stop: the block's time is logged and the task stays on the day.
   func stop() {
-    guard snapshot.session != nil else { return }
+    guard let session = snapshot.session else { return }
     WKInterfaceDevice.current().play(.stop)
-    send(WatchAction(kind: .stop))
+    send(WatchAction(kind: .stop, taskId: session.taskId))
     change { snapshot in
       snapshot.session = nil
       snapshot.tasks = snapshot.tasks.map { row in
