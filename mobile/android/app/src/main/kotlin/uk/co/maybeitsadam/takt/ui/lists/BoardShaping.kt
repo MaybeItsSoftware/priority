@@ -280,14 +280,27 @@ object BoardShaping {
 
     /**
      * [layout] with [columnId] moved [offset] places past its drawn neighbour
-     * in [drawn], as the iPhone's `moveColumn`; null at either end, or when
-     * either column is not in the layout.
+     * in [drawn], as the iPhone's `moveColumn`; null at either end. A column
+     * drawn only because cards are filed in it joins the layout first, under
+     * its drawn title from [titles], as renaming one does: the menu offered
+     * to move it, and moving it used to do nothing. Null too when either
+     * column is in neither.
      */
-    fun movingColumn(layout: List<WorkspaceKanbanColumn>, drawn: List<String>, columnId: String, offset: Int): List<WorkspaceKanbanColumn>? {
+    fun movingColumn(
+        layout: List<WorkspaceKanbanColumn>,
+        drawn: List<String>,
+        columnId: String,
+        offset: Int,
+        titles: Map<String, String> = emptyMap(),
+    ): List<WorkspaceKanbanColumn>? {
         val index = drawn.indexOf(columnId)
         if (index < 0) return null
         val neighbourId = drawn.getOrNull(index + offset) ?: return null
         val updated = layout.toMutableList()
+        // In drawn order, so the two land where the board drew them: after the layout's own.
+        for (id in drawn.filter { it == columnId || it == neighbourId }) {
+            if (updated.none { it.id == id }) updated += WorkspaceKanbanColumn(id, titles[id] ?: return null)
+        }
         val from = updated.indexOfFirst { it.id == columnId }
         if (from < 0) return null
         val moving = updated.removeAt(from)
