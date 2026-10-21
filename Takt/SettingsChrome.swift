@@ -37,7 +37,10 @@ private struct SettingsFormBody<Content: View>: View {
         titledSections: sections.filter { !$0.header.isEmpty }.count,
         rows: sections.reduce(0) { $0 + $1.content.count })
       // The first titled section is open until it is closed, so a long page
-      // never opens onto nothing but headings; the rest start closed.
+      // never opens onto nothing but headings; the rest start closed. Which
+      // was first is settled the first time each section is drawn and kept
+      // under its title, so a section that comes and goes above it later
+      // does not open or close the ones below.
       let firstTitled = sections.firstIndex { !$0.header.isEmpty }
       VStack(alignment: .leading, spacing: collapsible ? theme.space.sm : theme.space.lg) {
         ForEach(Array(sections.enumerated()), id: \.element.id) { index, section in
@@ -125,6 +128,13 @@ final class SettingsDisclosureMemory {
     state[key] ?? opensByDefault
   }
 
+  /// Keeps a section's default the first time it is drawn, so where it then
+  /// sits on the page no longer decides whether it opens.
+  func settle(_ key: String, default opensByDefault: Bool) {
+    guard state[key] == nil else { return }
+    set(key, open: opensByDefault)
+  }
+
   func set(_ key: String, open: Bool) {
     state[key] = open
     UserDefaults.standard.set(state, forKey: Self.defaultsKey)
@@ -136,19 +146,31 @@ final class SettingsDisclosureMemory {
 private struct SettingsDisclosureSection: View {
   @Environment(\.theme) private var theme
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
+  @Environment(\.settingsSearchQuery) private var searchQuery
   let section: SectionConfiguration
   let key: String
   let opensByDefault: Bool
   /// Named by the settings search: open while it is, without remembering so.
   let matchesSearch: Bool
+  /// The search this section was folded under by hand. Folding a section the
+  /// search opened lasts as long as that search and is never saved, so the
+  /// remembered state is still the reader's own once the search is cleared.
+  @State private var foldedForSearch: String?
   private var memory: SettingsDisclosureMemory { .shared }
 
   var body: some View {
-    let isOpen = matchesSearch || memory.isOpen(key, default: opensByDefault)
+    let isOpen =
+      matchesSearch
+      ? foldedForSearch != searchQuery
+      : memory.isOpen(key, default: opensByDefault)
     VStack(alignment: .leading, spacing: theme.space.xs) {
       Button {
         withAnimation(reduceMotion ? nil : .easeOut(duration: 0.15)) {
-          memory.set(key, open: !isOpen)
+          if matchesSearch {
+            foldedForSearch = isOpen ? searchQuery : nil
+          } else {
+            memory.set(key, open: !isOpen)
+          }
         }
       } label: {
         HStack(spacing: theme.space.xs) {
@@ -176,6 +198,7 @@ private struct SettingsDisclosureSection: View {
         SettingsSectionFooter(footer: section.footer)
       }
     }
+    .onAppear { memory.settle(key, default: opensByDefault) }
   }
 }
 

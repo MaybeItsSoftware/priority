@@ -146,19 +146,15 @@ extension WorkspaceViewModel {
   func handleOverlayKey(_ event: NSEvent) -> Bool {
     guard let overlay = activeOverlay, let key = event.workspaceCommandKey else { return false }
     if key == "escape" {
-      // Cancelling a clash hands the edit back to where it was made.
-      if case .recurrenceClash(let request) = overlay {
-        resolveRecurrenceClash(request, choice: .cancel)
-      } else if case .startLater(let request) = overlay {
-        resolveStartLater(request, choice: .cancel)
-      } else {
-        dismissOverlay()
-      }
+      if !cancelHeldSave(overlay) { dismissOverlay() }
       return true
     }
     if WorkspaceCommandCatalog.isChord(key),
       let command = WorkspaceCommandCatalog.command(forKey: key, on: .anywhere),
       WorkspaceCommandCatalog.reachableFromTextField.contains(command.id) {
+      // A prompt holding a save is answered "cancel" before the chord runs,
+      // as escape answers it, rather than closed with the edit inside it.
+      cancelHeldSave(overlay)
       if !Self.overlaySwitchingCommands.contains(command.id) {
         dismissOverlay(restoringFocus: false)
       }
@@ -169,6 +165,18 @@ extension WorkspaceViewModel {
       return handler.handle(key)
     }
     return false
+  }
+
+  /// Cancels the save a clash or start-later prompt is holding, which hands
+  /// the edit back to where it was made. Returns whether `overlay` was one.
+  @discardableResult
+  private func cancelHeldSave(_ overlay: WorkspaceOverlay) -> Bool {
+    switch overlay {
+    case .recurrenceClash(let request): resolveRecurrenceClash(request, choice: .cancel)
+    case .startLater(let request): resolveStartLater(request, choice: .cancel)
+    default: return false
+    }
+    return true
   }
 }
 

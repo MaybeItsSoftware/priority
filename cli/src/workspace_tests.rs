@@ -2084,6 +2084,38 @@ fn conditions_are_listed_required_and_the_context_set() {
 }
 
 #[test]
+fn clearing_who_and_when_drops_a_repeating_follow_up_too() {
+    let fixture = Fixture::new();
+    let task = fixture.add(PROJECTS, "Contract signed", None);
+    let updated = fixture.call(
+        "workspace_task_update",
+        json!({ "task_id": task, "waiting_on": "Sam", "follow_up_at": "2099-10-08 14:00", "follow_up_every_days": 3 }),
+    );
+    assert_eq!(updated["follow_up_every_days"], json!(3));
+    let updated = fixture.call(
+        "workspace_task_update",
+        json!({ "task_id": task, "waiting_on": null, "follow_up_at": null }),
+    );
+    assert_eq!(updated.get("waiting_on"), None);
+    assert_eq!(updated.get("follow_up_at"), None);
+    assert_eq!(updated.get("follow_up_every_days"), None);
+
+    // Naming a repeat while clearing the time is still refused.
+    fixture.call(
+        "workspace_task_update",
+        json!({ "task_id": task, "waiting_on": "Sam", "follow_up_at": "2099-10-08 14:00", "follow_up_every_days": 3 }),
+    );
+    let error = fixture
+        .try_call(
+            "workspace_task_update",
+            json!({ "task_id": task, "follow_up_at": null, "follow_up_every_days": 5 }),
+        )
+        .unwrap_err();
+    assert!(error.contains("has no follow_up_at"), "{error}");
+    assert!(!error.contains("  "), "{error}");
+}
+
+#[test]
 fn a_column_in_the_same_call_wins_and_clearing_who_and_when_stops_waiting() {
     let fixture = Fixture::new();
     let task = fixture.add(PROJECTS, "Contract signed", None);

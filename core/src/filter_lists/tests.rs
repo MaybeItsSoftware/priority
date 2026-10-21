@@ -209,7 +209,7 @@ fn start_dates_and_the_rest_of_the_fields() {
     );
     assert_eq!(
         shown(&connection, vec![rule("priority", "at-most", "3")]),
-        ["report"]
+        ["idea", "report", "shelf"]
     );
     assert_eq!(
         shown(&connection, vec![rule("priority", "is", "2")]),
@@ -220,7 +220,8 @@ fn start_dates_and_the_rest_of_the_fields() {
         ["idea", "shelf"]
     );
     // -4 to -1 rank after no priority: "no more urgent than 3" takes them
-    // in, "at least as urgent as 4" leaves them out.
+    // in, with the tasks that have none, and "at least as urgent as 4"
+    // leaves both out.
     connection
         .execute(
             "UPDATE task_metadata SET priority = -1 WHERE taskId = 'shelf'",
@@ -229,7 +230,7 @@ fn start_dates_and_the_rest_of_the_fields() {
         .unwrap();
     assert_eq!(
         shown(&connection, vec![rule("priority", "at-most", "3")]),
-        ["report", "shelf"]
+        ["idea", "report", "shelf"]
     );
     assert_eq!(
         shown(&connection, vec![rule("priority", "at-least", "4")]),
@@ -237,8 +238,22 @@ fn start_dates_and_the_rest_of_the_fields() {
     );
     assert_eq!(
         shown(&connection, vec![rule("priority", "at-least", "-2")]),
-        ["report", "call", "paper"]
+        ["idea", "report", "call", "paper"]
     );
+    assert_eq!(
+        shown(&connection, vec![rule("priority", "at-most", "-4")]),
+        ["shelf"]
+    );
+    // A value that is no priority matches nothing either way, rather than
+    // standing for the tasks with none.
+    for value in ["0", "5", "-5"] {
+        for op in ["at-least", "at-most"] {
+            assert!(
+                shown(&connection, vec![rule("priority", op, value)]).is_empty(),
+                "{op} {value}"
+            );
+        }
+    }
     assert_eq!(
         shown(&connection, vec![rule("priority", "at-most", "-2")]),
         ["shelf"]

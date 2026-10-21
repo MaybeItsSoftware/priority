@@ -59,9 +59,11 @@ export ASC_KEY_ID="${ASC_KEY_ID:-${APP_STORE_CONNECT_API_KEY_ID:-}}"
 export ASC_ISSUER_ID="${ASC_ISSUER_ID:-${APP_STORE_CONNECT_API_KEY_ISSUER_ID:-}}"
 export ASC_KEY_CONTENT="${ASC_KEY_CONTENT:-${APP_STORE_CONNECT_API_KEY_CONTENT:-}}"
 : "${ASC_KEY_ID:?set it, or put it in ~/.config/takt/asc.env}" "${ASC_ISSUER_ID:?}" "${ASC_KEY_CONTENT:?}"
-# fastlane is told the key is base64; a raw .p8 is encoded here.
+# fastlane is told the key is base64; a raw .p8 is encoded here. '%b', as
+# build_app_store.sh writes it, so a key kept on one line with literal \n
+# between its lines is sent as the PEM it stands for.
 if [[ "$ASC_KEY_CONTENT" == *"BEGIN PRIVATE KEY"* ]]; then
-  ASC_KEY_CONTENT="$(printf '%s' "$ASC_KEY_CONTENT" | base64 | tr -d '\n')"
+  ASC_KEY_CONTENT="$(printf '%b\n' "$ASC_KEY_CONTENT" | base64 | tr -d '\n')"
   export ASC_KEY_CONTENT
 fi
 

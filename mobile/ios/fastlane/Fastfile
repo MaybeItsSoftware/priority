@@ -97,7 +97,12 @@ platform :ios do
       version = app&.get_edit_app_store_version(platform: Spaceship::ConnectAPI::Platform::IOS)
       version&.fetch_app_store_review_detail
       nil
-    rescue StandardError
+    rescue Spaceship::UnexpectedResponse, RuntimeError => e
+      # Only an answer that there is no detail means a new app: Spaceship
+      # raises "No data" for an empty one, and Apple's not-found reads "does
+      # not exist". A network, auth or server failure is raised as itself
+      # rather than taken for a new app and sent notes Apple then refuses.
+      raise unless e.message == "No data" || e.message =~ /does not exist|NOT_FOUND/i
       { notes: "Takt works fully without an account: sync is optional and off until you sign in under Settings → Sync." }
     end
 

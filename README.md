@@ -291,9 +291,10 @@ launches — see [`docs/keyboard-shortcuts.md`](docs/keyboard-shortcuts.md#foldi
 Checkvist's `ll`, `hc`, `hh` and `xx` are `gl`, `tc`, `gb` and `ex` here. A letter
 that begins a sequence and also means something on its own would wait up to 1.2
 seconds for a second letter, then do its own job; any other key ends the wait at
-once, and holding Shift skips it. No task key does that any more: `x` completes at
-once, since extracting a branch moved from `xx` to `ex`. A letter that begins no
-sequence where you are never waits.
+once, and holding Shift skips it. Of the task keys only `-` does that now, in
+case a digit follows to make `-2` to `-4`: `x` completes at once, since
+extracting a branch moved from `xx` to `ex`. A letter that begins no sequence
+where you are never waits.
 
 The one-letter root tabs that used to collide with those sequences are gone
 with the menu bar panel they belonged to, so a sequence no longer has to

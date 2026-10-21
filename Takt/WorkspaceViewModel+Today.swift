@@ -68,6 +68,24 @@ extension WorkspaceViewModel {
       return
     }
     guard let arranged = DayArrangement.moving(task.id, by: offset, in: planned) else { return }
+    // The core puts tasks sent behind the back (-1 to -4) at the end of the
+    // day, -1 last, whatever the arrangement says. A move that crosses that
+    // order would be written and then sorted straight back on the next
+    // reload, so it is refused with the reason instead.
+    if let index = arranged.firstIndex(of: task.id) {
+      let rank = dayEndRank(of: task.id)
+      let above = index > 0 ? dayEndRank(of: arranged[index - 1]) : nil
+      let below = index + 1 < arranged.count ? dayEndRank(of: arranged[index + 1]) : nil
+      if let above, above > rank {
+        onStatusMessage?("Tasks sent to the back stay at the end of the day, in priority order")
+        return
+      }
+      if let below, below < rank {
+        let key = WorkspaceCommandHelpText.firstKey(for: .taskClearPriority)
+        onStatusMessage?("“\(task.title)” is sent to the back, so it stays at the end of the day — clear its priority with \(key) to move it up")
+        return
+      }
+    }
     perform {
       try store.arrangeDay(orderedTaskIds: arranged)
       todayPlan = DayArrangement.applying(arranged, to: todayPlan)
@@ -75,5 +93,12 @@ extension WorkspaceViewModel {
       rebuildDayItems()
       reloadNextUp()
     }
+  }
+
+  /// Where the core's day order puts a task: 0 for most, and after them
+  /// the tasks sent behind the back, -4 first and -1 at the very end.
+  private func dayEndRank(of taskID: String) -> Int {
+    guard let priority = taskPriorities[taskID], (-4 ... -1).contains(priority) else { return 0 }
+    return 10 + priority
   }
 }

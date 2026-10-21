@@ -83,11 +83,16 @@ extension WorkspaceViewModel {
   ///   - fallsBackToOutline: false to leave the mode alone even when the task
   ///     cannot be drawn in it, selecting it all the same, as undo does.
   ///   - takesKeyboard: false to leave the keyboard where it is.
-  func showInPlace(_ task: WorkspaceTask, fallsBackToOutline: Bool = true, takesKeyboard: Bool = true) {
+  ///   - revealsHidden: false to leave "hide completed", "hide buried" and
+  ///     the folds alone — they are kept across launches, and undo has no
+  ///     business changing them — selecting the task even if they hide it.
+  func showInPlace(
+    _ task: WorkspaceTask, fallsBackToOutline: Bool = true, takesKeyboard: Bool = true, revealsHidden: Bool = true
+  ) {
     // Something ticked off is invisible in a view that hides completions.
-    if task.status != .open { hidesCompletedTasks = false }
+    if revealsHidden, task.status != .open { hidesCompletedTasks = false }
     // And something buried, or under a buried task, in one hiding them.
-    if hidesLaterTasks, let store {
+    if revealsHidden, hidesLaterTasks, let store {
       var chain = [task.id]
       var parentID = task.parentTaskId
       while let id = parentID, !chain.contains(id) {
@@ -99,7 +104,7 @@ extension WorkspaceViewModel {
         hidesLaterTasks = false
       }
     }
-    unfoldAncestors(of: task)
+    if revealsHidden { unfoldAncestors(of: task) }
     if !isShowing(task.id) {
       let mode = viewMode
       batchingRefreshes {
@@ -110,7 +115,7 @@ extension WorkspaceViewModel {
         if mode != .today { viewMode = mode }
         reloadOutline(refreshSidebar: false)
       }
-      unfoldAncestors(of: task)
+      if revealsHidden { unfoldAncestors(of: task) }
     }
     if !isShowing(task.id), viewMode != .outline, let parent = task.parentTaskId {
       batchingRefreshes {

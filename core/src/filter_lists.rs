@@ -953,19 +953,17 @@ pub(crate) fn holds(rule: &FilterRule, task: &Facts, context: &Context) -> Optio
                 .is_some_and(|days| local_day(at, context.zone) <= days_from(context.today, days))
         }),
         ("start", _) => compare_day(task.start_at_ms.map(|at| local_day(at, context.zone)))?,
-        // 1 is the most urgent, so "at least as urgent as 2" is 1 or 2, and
-        // -4 to -1 rank after every task with none: "at most 3" is 3, 4 and
-        // the negatives, and "at least -2" every priority but -1.
-        ("priority", "at-least") => task
-            .priority
-            .filter(|p| crate::tasks::is_priority(*p))
-            .zip(number(value))
-            .is_some_and(|(p, n)| priority_rank(Some(p)) <= priority_rank(Some(n))),
-        ("priority", "at-most") => task
-            .priority
-            .filter(|p| crate::tasks::is_priority(*p))
-            .zip(number(value))
-            .is_some_and(|(p, n)| priority_rank(Some(p)) >= priority_rank(Some(n))),
+        // 1 is the most urgent, so "at least as urgent as 2" is 1 or 2. The
+        // comparison is by where a priority puts a task: 1 to 4, then no
+        // priority, then -4 to -1. So "at most 3" is 3, 4, every task with
+        // none and the negatives, and "at least -2" everything but -1. A
+        // value that is no priority (0, 5) matches nothing.
+        ("priority", "at-least") => number(value)
+            .filter(|n| crate::tasks::is_priority(*n))
+            .is_some_and(|n| priority_rank(task.priority) <= priority_rank(Some(n))),
+        ("priority", "at-most") => number(value)
+            .filter(|n| crate::tasks::is_priority(*n))
+            .is_some_and(|n| priority_rank(task.priority) >= priority_rank(Some(n))),
         ("priority", "is") => task
             .priority
             .zip(number(value))

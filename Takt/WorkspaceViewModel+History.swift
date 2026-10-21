@@ -56,9 +56,12 @@ extension WorkspaceViewModel {
     // where it already shows if it does, Today, a folder or a filter list
     // included, in the mode you are in. Only a task that cannot be seen from
     // here moves you, and then as search's reveal does, never into the
-    // outline: the inspector shows it either way.
+    // outline: the inspector shows it either way. Nor does it turn off
+    // "hide completed" or unfold anything, which would outlast the undo.
     if let restored {
-      showInPlace(task(withID: restored.id) ?? restored, fallsBackToOutline: false, takesKeyboard: false)
+      showInPlace(
+        task(withID: restored.id) ?? restored, fallsBackToOutline: false, takesKeyboard: false,
+        revealsHidden: false)
     }
   }
 
