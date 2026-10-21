@@ -205,6 +205,12 @@ extension WorkspaceViewModel {
   /// it, moves to the row that takes its place (`SelectionSuccessor`), as a
   /// completion's does, rather than leaving the keys nowhere; a scope inside
   /// it steps out to its parent.
+  ///
+  /// The deleted task need not be drawn among the rows the selection walks:
+  /// a subtask's own card can sit in another board column than its parent's,
+  /// and the task you are inside is the scope, not a row. The selection then
+  /// leaves from the outermost row on its way up to the deleted task that is
+  /// drawn, or, when the scope goes, from where the task sits in its parent.
   func deleteTask(_ task: WorkspaceTask) {
     guard let store else { return }
     let selectionGoes = selectedTaskID.map { isTask($0, inside: task.id) } ?? false
@@ -212,20 +218,59 @@ extension WorkspaceViewModel {
     let column = viewMode == .board ? activeBoardColumnID : nil
     let before = selectionOrder(inBoardColumn: column)
     // Read before the delete, which takes the rows under it with it.
-    let parents = Dictionary(
+    var parents = Dictionary(
       before.map { ($0, self.task(withID: $0)?.parentTaskId) }, uniquingKeysWith: { first, _ in first })
+    parents[task.id] = task.parentTaskId
+    let leaving = selectionGoes && !scopeGoes ? selectedTaskID.flatMap { drawnRow(from: $0, upTo: task.id, in: before) } : nil
     perform {
       try store.deleteTask(id: task.id)
       if scopeGoes { scopeTaskID = task.parentTaskId }
       reloadOutline()
       if selectionGoes {
-        let successor = SelectionSuccessor.successor(
-          of: task.id, previousOrder: before, remaining: Set(selectionOrder(inBoardColumn: column)),
-          parentOf: { parents[$0] ?? nil })
+        let after = selectionOrder(inBoardColumn: column)
+        let successor: String?
+        if scopeGoes {
+          // The rows walked before were all inside the scope that went, so
+          // the task is put back where it sat among its siblings, now drawn.
+          successor = SelectionSuccessor.successor(
+            of: task.id, previousOrder: placing(task, among: after), remaining: Set(after),
+            parentOf: { [self] in $0 == task.id ? task.parentTaskId : self.task(withID: $0)?.parentTaskId })
+        } else if let leaving {
+          successor = SelectionSuccessor.successor(
+            of: leaving, previousOrder: before, remaining: Set(after), parentOf: { parents[$0] ?? nil })
+        } else {
+          successor = nil
+        }
         if successor != nil, let column { focusedBoardColumnID = column }
         selectedTaskID = successor
       }
       reloadFocus()
     }
+  }
+
+  /// The outermost row in `order` from `id` up to and including `ancestorID`.
+  private func drawnRow(from id: String, upTo ancestorID: String, in order: [String]) -> String? {
+    let drawn = Set(order)
+    var current: String? = id
+    var seen = Set<String>()
+    var outermost: String?
+    while let next = current, seen.insert(next).inserted {
+      if drawn.contains(next) { outermost = next }
+      if next == ancestorID { break }
+      current = task(withID: next)?.parentTaskId
+    }
+    return outermost
+  }
+
+  /// `order` with `task` put back before the first of its siblings that came
+  /// after it, or after the last of them.
+  private func placing(_ task: WorkspaceTask, among order: [String]) -> [String] {
+    let siblings = order.indices.filter { self.task(withID: order[$0])?.parentTaskId == task.parentTaskId }
+    let index =
+      siblings.first { (self.task(withID: order[$0])?.sortOrder ?? .min) > task.sortOrder }
+      ?? siblings.last.map { $0 + 1 } ?? order.count
+    var placed = order
+    placed.insert(task.id, at: index)
+    return placed
   }
 }
