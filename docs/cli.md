@@ -286,6 +286,7 @@ takt ws commit <TASK_ID> [-t TITLE] [-r daily|weekdays|"mon, wed"] [--stacks]   
 takt ws deps <TASK_ID>                        # what it waits on, what waits on it
 takt ws conditions [NAME]                     # conditions, open-task counts, what holds now; NAME's tasks
 takt ws require <TASK_ID> 'Home|Campus' Mat   # needs Home or Campus, and Mat; none clears
+takt ws require <TASK_ID> 'not Home'          # only away from Home ("!Home" too)
 takt ws here Campus --for 60                  # at Campus (the last place goes off), an hour free
 takt ws here --clear                          # anywhere
 takt ws new-folder Computer Science

@@ -2040,6 +2040,34 @@ fn conditions_are_listed_required_and_the_context_set() {
     );
     assert_eq!(created["requires"], json!([["Library"]]));
 
+    // A condition that must not hold: "!", "not " or "!" before an id.
+    let away = fixture.call(
+        "workspace_task_conditions_set",
+        json!({ "task_id": task, "requires": ["not home", ["!Campus", "!mat"], "Library"] }),
+    );
+    assert_eq!(
+        away["requires"],
+        json!([["not Home"], ["not Campus", "not Mat"], ["Library"]])
+    );
+    let stored: String = fixture
+        .db()
+        .query_row(
+            "SELECT planningJSON FROM task_metadata WHERE taskId = ?1",
+            [&task],
+            |row| row.get(0),
+        )
+        .unwrap();
+    assert!(
+        stored.contains("[\"!home\"],[\"!campus\",\"!mat\"]"),
+        "{stored}"
+    );
+    let needing_home = fixture.call("workspace_conditions", json!({ "condition": "Home" }));
+    assert_eq!(needing_home["tasks"][0]["title"], json!("Stretch"));
+    fixture.call(
+        "workspace_task_conditions_set",
+        json!({ "task_id": task, "requires": ["Library"] }),
+    );
+
     let read = fixture.call("workspace_conditions", json!({}));
     assert_eq!(read["sections"][0]["category"], json!("Location"));
     assert_eq!(read["sections"][0]["one_at_a_time"], json!(true));

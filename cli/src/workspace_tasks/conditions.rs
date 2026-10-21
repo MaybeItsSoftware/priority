@@ -70,7 +70,23 @@ fn resolve<'a>(all: &'a [ConditionRow], wanted: &str) -> Result<&'a ConditionRow
     })
 }
 
-/// Fills in each row's `requires` with condition names.
+/// A requirement as typed, read as the condition it names and whether it
+/// asks for that condition not to hold: "!Home", "!id" or "not Home". A
+/// condition whose own name starts "not " is that condition, not a negation.
+fn negation<'a>(all: &[ConditionRow], wanted: &'a str) -> (&'a str, bool) {
+    let trimmed = wanted.trim();
+    if let Some(rest) = trimmed.strip_prefix(core::NEGATION_PREFIX) {
+        return (rest.trim(), true);
+    }
+    let named_so = resolve(all, trimmed).is_ok();
+    match trimmed.get(..4) {
+        Some(word) if !named_so && word.eq_ignore_ascii_case("not ") => (trimmed[4..].trim(), true),
+        _ => (trimmed, false),
+    }
+}
+
+/// Fills in each row's `requires` with condition names, a condition
+/// required not to hold as "not Home".
 pub(super) fn name_requirements(connection: &Connection, rows: &mut [TaskRow]) -> Result<()> {
     if rows.iter().all(|row| row.planning_json.is_none()) {
         return Ok(());
@@ -98,7 +114,14 @@ pub(super) fn name_requirements(connection: &Connection, rows: &mut [TaskRow]) -
             .map(|group| {
                 group
                     .into_iter()
-                    .map(|id| names.get(&id).cloned().unwrap_or(id))
+                    .map(|member| {
+                        let requirement = core::Requirement::parse(&member);
+                        match names.get(requirement.condition_id) {
+                            Some(name) if requirement.negated => format!("not {name}"),
+                            Some(name) => name.clone(),
+                            None => member.clone(),
+                        }
+                    })
                     .collect()
             })
             .collect();
@@ -214,9 +237,11 @@ impl Workspace {
     }
 
     /// Sets what a task requires: each group must hold, any one condition in
-    /// a group will do. Conditions are named or given by id; with
-    /// `create_missing` a name nothing has yet becomes a new condition (with
-    /// no category) first. Empty requires nothing.
+    /// a group will do. Conditions are named or given by id, and required
+    /// not to hold as "!id", "!Name" or "not Name" (a condition actually
+    /// called "Not …" wins over that last); with `create_missing` a name
+    /// nothing has yet becomes a new condition (with no category) first.
+    /// Empty requires nothing.
     pub fn set_task_conditions(
         &self,
         task_id: &str,
@@ -238,6 +263,7 @@ impl Workspace {
                 let mut resolved = Vec::new();
                 for wanted in group {
                     let all = conditions_of(tx, &workspace_id)?;
+                    let (wanted, negated) = negation(&all, wanted);
                     let id = match resolve(&all, wanted) {
                         Ok(found) => found.id.clone(),
                         Err(_) if create_missing && !wanted.trim().is_empty() => {
@@ -246,8 +272,9 @@ impl Workspace {
                         }
                         Err(error) => return Err(error),
                     };
-                    if !resolved.contains(&id) {
-                        resolved.push(id);
+                    let member = core::member(&id, negated);
+                    if !resolved.contains(&member) {
+                        resolved.push(member);
                     }
                 }
                 if !resolved.is_empty() {

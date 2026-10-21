@@ -1063,7 +1063,7 @@ fn workspace_tool_definitions() -> Vec<Value> {
         }),
         json!({
             "name": "workspace_task_conditions_set",
-            "description": "Set what a local task requires before it is offered. requires replaces the whole set: each item is one requirement that must hold, either a condition or an array of conditions any one of which will do (places a task can be done in go in one array: [[\"Home\", \"Campus\"]]). Conditions by name or id; an empty array requires nothing. With create_missing, a name no condition has yet becomes a new condition first. Archived conditions are refused unless the task already needed them. One undo step.",
+            "description": "Set what a local task requires before it is offered. requires replaces the whole set: each item is one requirement that must hold, either a condition or an array of conditions any one of which will do (places a task can be done in go in one array: [[\"Home\", \"Campus\"]]). Conditions by name or id; an empty array requires nothing. To require that a condition does NOT hold, write it \"not Home\" or \"!Home\" (or \"!\" before its id): [[\"not Home\"]] is only away from Home, and [[\"Campus\", \"not Quiet\"]] is on campus or anywhere not quiet. workspace_tasks writes such a requirement back as \"not Home\". With create_missing, a name no condition has yet becomes a new condition first. Archived conditions are refused unless the task already needed them. One undo step.",
             "inputSchema": {
                 "type": "object",
                 "properties": {

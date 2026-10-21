@@ -464,7 +464,8 @@ pub enum WsCommand {
         condition: Vec<String>,
     },
     /// Set what a task requires. Each argument is one requirement; join
-    /// alternatives with | ("Home|Campus"). None requires nothing.
+    /// alternatives with | ("Home|Campus"), and put "!" or "not " before a
+    /// condition that must not hold ("not Home"). None requires nothing.
     Require {
         task_id: String,
         #[arg(num_args = 0.., value_name = "CONDITION[|CONDITION…]")]
