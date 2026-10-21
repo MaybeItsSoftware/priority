@@ -75,6 +75,13 @@ final class FocusPanelKeysTests: XCTestCase {
 
   /// `ex` extracts a branch in the window and `mm` moves a task; the panel
   /// has no use for them, so neither is held for there.
+  func testGoKeysSetWhatHoldsAndWhereYouAre() {
+    for surface in [WorkspaceCommandSurface.today, .outline] {
+      XCTAssertEqual(action("ga", on: surface), .setAvailable)
+      XCTAssertEqual(action("gw", on: surface), .setPlace)
+    }
+  }
+
   func testOnlyThePanelsOwnSequencesAreHeld() {
     let sequences = FocusPanelKeys.sequences(on: .outline)
     XCTAssertTrue(sequences.contains("dd"))

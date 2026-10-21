@@ -160,6 +160,12 @@ final class FocusPanelKeyRouter {
     case .undo: model.undoLastChange()
     case .redo: model.redoLastUndoneChange()
     case .goToday, .chooseList, .place: summons.go(action, model: model)
+    case .setAvailable:
+      // Conditions are set in the window's tab, as ⌘⌥8 hands over to it.
+      AppDelegate.shared.focusPanelController.dismiss(.toWindow)
+      AppDelegate.shared.showMainWindow()
+      model.openConditionsTab()
+    case .setPlace: model.presentPlaceFinder()
     default:
       guard let task = cursorTask(model, context) else { return }
       perform(action, on: task, model: model, context: context)

@@ -54,6 +54,10 @@ public enum FocusPanelAction: Equatable, Sendable {
   case planToday
   /// `⌘O`: open the task's first link.
   case openLink
+  /// `ga`: hand over to the window's Conditions tab, as ⌘⌥8 does here.
+  case setAvailable
+  /// `gw`: the place finder, over the panel.
+  case setPlace
 }
 
 public enum FocusPanelKeys {
@@ -76,6 +80,7 @@ public enum FocusPanelKeys {
     .goPreviousList: .place(-1), .goNextList: .place(1),
     .motionDismiss: .dismiss,
     .taskTogglePlannedToday: .planToday, .taskOpenLink: .openLink,
+    .focusSetAvailable: .setAvailable, .focusSetPlace: .setPlace,
   ]
 
   /// The panel's meaning for a command, as the key that asked for it.
