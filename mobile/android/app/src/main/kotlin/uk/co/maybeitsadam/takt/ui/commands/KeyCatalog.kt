@@ -7,6 +7,7 @@ import androidx.compose.ui.input.key.isCtrlPressed
 import androidx.compose.ui.input.key.isMetaPressed
 import androidx.compose.ui.input.key.isShiftPressed
 import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.nativeKeyCode
 import uniffi.takt_core.CommandEntry
 import uniffi.takt_core.keyboardChord
 import uniffi.takt_core.workspaceCommandCatalog
@@ -158,6 +159,36 @@ object KeyCatalog {
     private val chordCache = HashMap<KeyCommand, List<Chord>>()
 
     fun entry(id: String): CommandEntry? = entries[id]
+
+    /**
+     * The catalogue's two-key sequences a hardware keyboard here can type, by
+     * the command each runs: the minus ones (`-1`–`-4`), which are two plain
+     * keys here too. A letter pair (`dd`) still has no translation.
+     */
+    val sequences: Map<String, KeyCommand> by lazy {
+        KeyCommand.entries.flatMap { command ->
+            entries[command.id]?.keys.orEmpty().filter(::isMinusDigit).map { it to command }
+        }.toMap()
+    }
+
+    private fun isMinusDigit(token: String) = token.length == 2 && token[0] == '-' && token[1] in '0'..'9'
+
+    /**
+     * [event] as a key a [KeySequence] can hold or complete: `-` or a digit,
+     * typed bare; empty for anything else, which can only end a hold.
+     */
+    fun sequenceKey(event: KeyEvent): String {
+        if (event.isCtrlPressed || event.isMetaPressed || event.isAltPressed || event.isShiftPressed) return ""
+        val code = event.key.nativeKeyCode
+        return when {
+            event.key == Key.Minus || event.key == Key.NumPadSubtract -> "-"
+            code in android.view.KeyEvent.KEYCODE_0..android.view.KeyEvent.KEYCODE_9 ->
+                (code - android.view.KeyEvent.KEYCODE_0).toString()
+            code in android.view.KeyEvent.KEYCODE_NUMPAD_0..android.view.KeyEvent.KEYCODE_NUMPAD_9 ->
+                (code - android.view.KeyEvent.KEYCODE_NUMPAD_0).toString()
+            else -> ""
+        }
+    }
 
     fun chords(command: KeyCommand): List<Chord> = synchronized(chordCache) {
         chordCache.getOrPut(command) {

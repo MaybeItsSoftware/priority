@@ -98,6 +98,7 @@ internal fun BoardPane(vm: ListViewModel, actions: TaskActions, show: (ListDialo
                 val current = columns.getOrNull(pager.currentPage)
                 val cards = (columns.firstOrNull { c -> c.cards.any { it.id == selected } } ?: current)?.cards.orEmpty()
                 val card = cards.firstOrNull { it.id == selected }
+                if (actions.holdKey(event, card?.row)) return@onKeyEvent true
                 when {
                     Chord(Key.DirectionLeft, shift = true, alt = true).matches(event) -> card?.let { vm.moveCardBy(it.id, -1) }
                     Chord(Key.DirectionRight, shift = true, alt = true).matches(event) -> card?.let { vm.moveCardBy(it.id, 1) }
