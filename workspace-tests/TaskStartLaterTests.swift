@@ -59,6 +59,16 @@ final class TaskStartLaterTests: XCTestCase {
     XCTAssertNil(TaskStartLater.check(both, now: now, calendar: calendar))
   }
 
+  /// Later the same day, past the deadline: the core would refuse it, so it asks.
+  func testAStartMovedPastTheDeadlineOnTheSameDayAsks() throws {
+    let tomorrow = now + day
+    let past = draft(dueAt: tomorrow + 3 * hour, start: tomorrow, to: tomorrow + 6 * hour)
+    let asked = try XCTUnwrap(TaskStartLater.check(past, now: now, calendar: calendar))
+    XCTAssertEqual(asked.choices, [.move, .clear, .cancel])
+    XCTAssertNil(TaskStartLater.check(
+      draft(dueAt: tomorrow + 3 * hour, start: tomorrow, to: tomorrow + hour), now: now, calendar: calendar))
+  }
+
   func testADeadlineAfterTheNewStartCanBeKept() throws {
     let asked = try XCTUnwrap(TaskStartLater.check(
       draft(dueAt: now + 3 * day, start: now, to: now + day), now: now, calendar: calendar))

@@ -217,6 +217,35 @@ fn a_task_sent_to_the_back_ends_the_day_even_when_ranked_first() {
 }
 
 #[test]
+fn a_card_sent_to_the_back_ends_the_day_too() {
+    let connection = workspace();
+    // t10 is a card (a parent of open work, so never a candidate itself)
+    // with a subtask filed in Today; the card is at -1.
+    connection
+        .execute_batch(&format!(
+            "INSERT INTO tasks (id, listId, parentTaskId, title, status, sortOrder, itemKind, createdAt, updatedAt)
+               VALUES ('a', 'l', 't10', 'A', 'open', 0, 'task', '{T}', '{T}');
+             INSERT INTO task_metadata (taskId, kanbanColumn, updatedAt) VALUES ('a', 'today', '{T}');
+             UPDATE task_metadata SET focusRank = 0, priority = -1 WHERE taskId = 't10';
+             UPDATE task_metadata SET focusRank = 1 WHERE taskId = 't11';"
+        ))
+        .unwrap();
+    let read = next_up(
+        &connection,
+        NOW,
+        "UTC",
+        &FocusContext::default(),
+        None,
+        None,
+    )
+    .unwrap();
+    assert_eq!(
+        entries(&read.day_plan),
+        [("t11", "planned"), ("t10", "planned")]
+    );
+}
+
+#[test]
 fn a_limited_ladder_keeps_its_head_and_the_days_tasks() {
     let connection = workspace();
     let context = FocusContext::default();

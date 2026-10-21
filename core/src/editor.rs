@@ -629,30 +629,36 @@ fn follow_start(
 ) -> bool {
     let previous_due_date = previous.and_then(|p| p.due_date.clone());
     let due_date = edit.planning.as_ref().and_then(|p| p.due_date.clone());
+    let from = previous.and_then(|p| p.start_at_ms);
+    let to = edit.planning.as_ref().and_then(|p| p.start_at_ms);
+    // Where following the start puts the deadline, when the start moved.
+    let followed = match (from, to) {
+        (Some(from), Some(to)) if from != to => {
+            let days = (habits::local_day(to, zone) - habits::local_day(from, zone)).num_days();
+            Some((
+                previous_due_at_ms.map(|at| at + (to - from)),
+                previous_due_date
+                    .as_deref()
+                    .and_then(|date| NaiveDate::parse_from_str(date, "%Y-%m-%d").ok())
+                    .map(|date| (date + Duration::days(days)).format("%Y-%m-%d").to_string()),
+            ))
+        }
+        _ => None,
+    };
     if edit.due_at_ms != previous_due_at_ms || due_date != previous_due_date {
-        return true;
+        // Moved by hand to exactly where following would have put it — the
+        // Mac's "move it with the start" — is still following: it is not pinned.
+        return pinned || followed != Some((edit.due_at_ms, due_date));
     }
     if pinned {
         return true;
     }
-    let from = previous.and_then(|p| p.start_at_ms);
-    let to = edit.planning.as_ref().and_then(|p| p.start_at_ms);
-    let (Some(from), Some(to)) = (from, to) else {
+    let Some((due_at_ms, due_date)) = followed else {
         return false;
     };
-    if from == to {
-        return false;
-    }
-    if let Some(at) = edit.due_at_ms {
-        edit.due_at_ms = Some(at + (to - from));
-    }
-    if let Some(date) = due_date
-        .as_deref()
-        .and_then(|date| NaiveDate::parse_from_str(date, "%Y-%m-%d").ok())
-        && let Some(planning) = edit.planning.as_mut()
-    {
-        let days = (habits::local_day(to, zone) - habits::local_day(from, zone)).num_days();
-        planning.due_date = Some((date + Duration::days(days)).format("%Y-%m-%d").to_string());
+    edit.due_at_ms = due_at_ms;
+    if let Some(planning) = edit.planning.as_mut() {
+        planning.due_date = due_date;
     }
     false
 }

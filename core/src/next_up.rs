@@ -12,7 +12,7 @@ use std::collections::{HashMap, HashSet};
 
 use chrono::{DateTime, Duration, Utc};
 use chrono_tz::Tz;
-use rusqlite::Connection;
+use rusqlite::{Connection, OptionalExtension};
 
 use crate::CoreError;
 use crate::focus::{self, Candidate, FocusContext};
@@ -57,11 +57,11 @@ pub fn next_up(
     let candidates = focus::candidates(connection, now_ms, zone)?;
     // The day is gathered from every candidate rather than from the ranked
     // ones: a task due today that a condition rules out is still today's.
-    let day_plan = behind_the_back_last(
-        roll_up_cards(connection, plan(&candidates, running_id, now_ms, zone))?,
-        &candidates,
-        running_id,
-    );
+    let rolled = roll_up_cards(connection, plan(&candidates, running_id, now_ms, zone))?;
+    // A card is never a candidate (it is a parent of open work), so the
+    // priorities of what the day now holds are read from the store.
+    let priorities = priorities_of(connection, &rolled)?;
+    let day_plan = behind_the_back_last(rolled, |id| priorities.get(id).copied(), running_id);
     let ranking = ranking::evaluate(&candidates, now_ms, zone, context);
     let ranked_count = ranking.ranked.len() as u64;
     let ranked = match ladder_limit {
@@ -169,7 +169,16 @@ pub fn plan<'a>(
     for (candidate, _) in starting {
         claim(candidate, "startsToday");
     }
-    behind_the_back_last(entries, candidates, running_id)
+    behind_the_back_last(
+        entries,
+        |id| {
+            candidates
+                .iter()
+                .find(|c| c.id == id)
+                .and_then(|c| c.priority)
+        },
+        running_id,
+    )
 }
 
 /// Moves the tasks sent behind the back (priority -1 to -4) to the end of the
@@ -179,21 +188,37 @@ pub fn plan<'a>(
 /// puts them back.
 fn behind_the_back_last(
     mut entries: Vec<DayEntry>,
-    candidates: &[Candidate],
+    priority: impl Fn(&str) -> Option<i64>,
     running_id: Option<&str>,
 ) -> Vec<DayEntry> {
     let behind = |id: &str| -> Option<i64> {
         if Some(id) == running_id {
             return None;
         }
-        candidates
-            .iter()
-            .find(|c| c.id == id)
-            .and_then(|c| c.priority)
-            .filter(|p| (-4..=-1).contains(p))
+        priority(id).filter(|p| (-4..=-1).contains(p))
     };
     entries.sort_by_key(|e| behind(&e.id).map_or(0, |p| 10 + p));
     entries
+}
+
+/// The priority of each task in `entries` that has one, read from the store.
+fn priorities_of(
+    connection: &Connection,
+    entries: &[DayEntry],
+) -> Result<HashMap<String, i64>, CoreError> {
+    let mut statement =
+        connection.prepare("SELECT priority FROM task_metadata WHERE taskId = ?1")?;
+    let mut priorities = HashMap::new();
+    for entry in entries {
+        let priority: Option<i64> = statement
+            .query_row([&entry.id], |row| row.get(0))
+            .optional()?
+            .flatten();
+        if let Some(priority) = priority {
+            priorities.insert(entry.id.clone(), priority);
+        }
+    }
+    Ok(priorities)
 }
 
 /// A task beneath a card planned for today is drawn under that card, as the

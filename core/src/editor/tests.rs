@@ -446,6 +446,39 @@ fn a_save_keeping_the_due_date_leaves_it_where_it_was() {
     );
 }
 
+/// "Move it with the start", answered on the Mac, writes the deadline where
+/// following would have put it. That is still following, so a later move of
+/// the start carries the deadline along again.
+#[test]
+fn a_deadline_moved_exactly_with_its_start_keeps_following() {
+    const DAY: i64 = 24 * HOUR;
+    let mut connection = workspace();
+    connection
+        .execute_batch(&format!(
+            "UPDATE tasks SET dueAt = '{}' WHERE id = 'p';
+             INSERT INTO task_metadata (taskId, startAt, updatedAt) VALUES ('p', '{}', '{T}');",
+            stored(NOW + 3 * DAY),
+            stored(NOW + DAY)
+        ))
+        .unwrap();
+    let baseline = snapshot(&connection, "p").unwrap();
+    let mut edit = baseline.clone();
+    edit.planning.as_mut().unwrap().start_at_ms = Some(NOW + 2 * DAY);
+    edit.due_at_ms = Some(NOW + 4 * DAY);
+    journalled(&mut connection, "Edit Task", |tx| {
+        save_editor(tx, &edit, &baseline, NOW, "Europe/London")
+    })
+    .unwrap();
+    journalled(&mut connection, "Schedule", |tx| {
+        schedule_task(tx, "p", Some(NOW + 3 * DAY), NOW, "Europe/London")
+    })
+    .unwrap();
+    assert_eq!(
+        snapshot(&connection, "p").unwrap().due_at_ms,
+        Some(NOW + 5 * DAY)
+    );
+}
+
 #[test]
 fn a_deadline_follows_its_start_until_it_is_changed_on_its_own() {
     const DAY: i64 = 24 * HOUR;

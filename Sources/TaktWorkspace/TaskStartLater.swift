@@ -20,17 +20,25 @@ public struct TaskStartLater: Equatable, Sendable {
   public let canKeep: Bool
 
   /// What the edit in `draft` asks, or nil when there is nothing to ask:
-  /// the start has to move to another day after today, the task has to have
-  /// a deadline, and the edit must not have changed that deadline itself.
+  /// the task has to have a deadline the edit did not change itself, and the
+  /// start has to move either to another day after today or, on any day, to
+  /// where the deadline no longer comes after it — which the core would refuse.
   public static func check(
     _ draft: TaskEditorDraft, now: Date = .now, calendar: Calendar = .current
   ) -> TaskStartLater? {
     let values = draft.values, saved = draft.baseline.values
-    guard let start = values.startAt,
-      calendar.startOfDay(for: start) > calendar.startOfDay(for: now),
-      saved.startAt.map({ !calendar.isDate($0, inSameDayAs: start) }) ?? true,
-      values.dueAt == saved.dueAt, values.dueDate == saved.dueDate
+    guard let start = values.startAt, start != saved.startAt,
+      values.dueAt == saved.dueAt, values.dueDate == saved.dueDate,
+      let asked = asking(values: values, saved: saved, start: start, now: now, calendar: calendar)
     else { return nil }
+    let laterDay = calendar.startOfDay(for: start) > calendar.startOfDay(for: now)
+      && (saved.startAt.map({ !calendar.isDate($0, inSameDayAs: start) }) ?? true)
+    return laterDay || !asked.canKeep ? asked : nil
+  }
+
+  private static func asking(
+    values: TaskEditorValues, saved: TaskEditorValues, start: Date, now: Date, calendar: Calendar
+  ) -> TaskStartLater? {
 
     let from = saved.startAt ?? now
     let days = calendar.dateComponents(
@@ -47,8 +55,9 @@ public struct TaskStartLater: Equatable, Sendable {
         canKeep: endOfDay(dueDay, calendar: calendar) > start)
     }
     guard let dueAt = values.dueAt else { return nil }
-    // The core moves a due time by exactly as long as the start moved; with
-    // no start before, by whole days from today.
+    // The core moves a due time by exactly as long as the start moved. With
+    // no start before it doesn't move it at all; "move" then shifts it by
+    // the whole days from today to the new start.
     let moved = saved.startAt.map { dueAt.addingTimeInterval(start.timeIntervalSince($0)) }
       ?? calendar.date(byAdding: .day, value: days, to: dueAt) ?? dueAt
     let fits = moved > start
