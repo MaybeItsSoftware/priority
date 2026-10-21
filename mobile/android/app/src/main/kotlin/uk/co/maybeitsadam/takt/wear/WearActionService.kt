@@ -4,6 +4,8 @@ import android.util.Log
 import com.google.android.gms.wearable.MessageEvent
 import com.google.android.gms.wearable.WearableListenerService
 import java.time.Instant
+import kotlinx.coroutines.Deferred
+import kotlinx.coroutines.async
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeoutOrNull
 import uk.co.maybeitsadam.takt.app.AppContainer
@@ -45,8 +47,11 @@ class WearActionService : WearableListenerService() {
                 }
                 // Messages arrive one at a time on this thread; waiting here keeps a queue
                 // flushed from the watch in the order it was made.
-                val done = runBlocking { withTimeoutOrNull(TIMEOUT_MILLIS) { WearActions(container).perform(action) } }
-                // Timed out, it may not have landed: left unhandled, the watch sends it again.
+                val running = performOnce(container, action)
+                val done = runBlocking { withTimeoutOrNull(TIMEOUT_MILLIS) { running.await() } }
+                // Timed out, it has not landed yet: left unhandled, the watch sends it
+                // again, and the resend waits on this same run rather than starting
+                // another. The run marks it handled when it finishes.
                 if (done == null) {
                     Log.w(TAG, "Watch action ${action.action} timed out; left for the watch to resend")
                     return
@@ -59,6 +64,28 @@ class WearActionService : WearableListenerService() {
     private companion object {
         const val TAG = "WearActionService"
         const val TIMEOUT_MILLIS = 15_000L
+
+        /** Actions still being applied, by id, so a resend joins the run already going. */
+        private val inFlight = HashMap<String, Deferred<Unit>>()
+
+        /**
+         * Applies [action] once, on the app's scope rather than this thread's,
+         * so a timeout here leaves the write to finish instead of cutting it
+         * off partway. It used to run again in full when the watch resent it
+         * after a timeout, landing twice if the first had only been slow.
+         */
+        fun performOnce(container: AppContainer, action: WearAction): Deferred<Unit> = synchronized(inFlight) {
+            inFlight.getOrPut(action.id) {
+                container.scope.async {
+                    try {
+                        WearActions(container).perform(action)
+                        WearBridge.markHandled(action.id)
+                    } finally {
+                        synchronized(inFlight) { inFlight.remove(action.id) }
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -77,6 +104,10 @@ class WearActions(private val container: AppContainer) {
         val session = repo.activeFocusSession()?.takeIf { it.phase != FocusSessionPhase.FINISHED }
         val taskId = action.taskId
         val issuedAt = Instant.ofEpochMilli(action.issuedAt)
+        if (!targetsRunningTask(action, session)) {
+            Log.i(TAG, "Watch ${action.action} was for a block no longer running; ignored")
+            return
+        }
         when (action.action) {
             WearActionKind.COMPLETE -> taskId?.let { complete(repo, it, session, issuedAt) }
             WearActionKind.LOG_DAILY -> taskId?.let { logDaily(repo, it, issuedAt) }
@@ -101,10 +132,15 @@ class WearActions(private val container: AppContainer) {
         }
     }
 
-    /** Today's tick: the running task is Done; a daily or habit logs today; anything else completes. */
+    /**
+     * Today's tick: the running task is Done; a daily or habit logs today;
+     * anything else completes. A daily is never completed from a tick, even
+     * on a day it is not due, as on the iPhone.
+     */
     private suspend fun complete(repo: WorkspaceRepository, taskId: String, session: FocusSession?, issuedAt: Instant) {
         if (session != null && session.activeTaskId == taskId) return done(session)
         if (logDaily(repo, taskId, issuedAt)) return
+        if (repo.daily(taskId) != null) return
         val task = repo.task(taskId) ?: return
         if (task.status != TaskStatus.OPEN) return
         undo.performNow { it.setStatus(TaskStatus.COMPLETED, taskId) }
@@ -174,6 +210,23 @@ class WearActions(private val container: AppContainer) {
                 completeTask = true,
                 expectedBlockId = asked?.blockId ?: session.activeBlockId,
             )
+        }
+    }
+
+    companion object {
+        private const val TAG = "WearActions"
+
+        /**
+         * Whether a timer action is for the block running now. Pause, Resume,
+         * Stop and Done carry the task the watch showed running; one that
+         * lands after the phone has moved on to another task (a resend, or a
+         * queue flushed late) would otherwise act on that one instead. An
+         * action naming no task, from an older watch, is taken as before.
+         */
+        fun targetsRunningTask(action: WearAction, session: FocusSession?): Boolean = when (action.action) {
+            WearActionKind.PAUSE, WearActionKind.RESUME, WearActionKind.STOP, WearActionKind.DONE ->
+                action.taskId == null || action.taskId == session?.activeTaskId
+            WearActionKind.COMPLETE, WearActionKind.LOG_DAILY, WearActionKind.START -> true
         }
     }
 }

@@ -311,7 +311,9 @@ class ListViewModel(
     fun moveColumn(columnId: String, offset: Int) {
         val shape = board.value
         if (!shape.isLoaded) return
-        val updated = BoardShaping.movingColumn(shape.layout, shape.columns.map { it.id }, columnId, offset) ?: return
+        val updated = BoardShaping.movingColumn(
+            shape.layout, shape.columns.map { it.id }, columnId, offset, shape.columns.associate { it.id to it.title },
+        ) ?: return
         undo.perform { it.setKanbanBoardColumns(updated, boardKey, label = "Move Board Column") }
     }
 

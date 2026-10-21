@@ -254,6 +254,21 @@ class ListsShapingTest {
         assertNull(BoardShaping.movingColumn(layout, drawn, "c", 1))
     }
 
+    @Test fun aFiledOnlyColumnJoinsTheLayoutToMove() {
+        val layout = listOf("a", "b").map { WorkspaceKanbanColumn(it, it) }
+        val drawn = listOf("a", "b", "filed", "also")
+        val titles = mapOf("filed" to "Filed", "also" to "Also")
+        assertEquals(
+            listOf(WorkspaceKanbanColumn("a", "a"), WorkspaceKanbanColumn("filed", "Filed"), WorkspaceKanbanColumn("b", "b")),
+            BoardShaping.movingColumn(layout, drawn, "filed", -1, titles),
+        )
+        assertEquals(
+            listOf("a", "b", "also", "filed"),
+            BoardShaping.movingColumn(layout, drawn, "filed", 1, titles)?.map { it.id },
+        )
+        assertNull(BoardShaping.movingColumn(layout, drawn, "filed", -1))
+    }
+
     @Test fun aWaitingBadgeNeedsTheWaitingColumnAndChasesOnlyAnOpenTask() {
         val zone = ZoneOffset.UTC
         val today = LocalDate.of(2026, 10, 20)

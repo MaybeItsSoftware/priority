@@ -198,6 +198,38 @@ final class WatchBridgeTests: XCTestCase {
     XCTAssertNil(model.pendingBlock)
   }
 
+  func testATimerActionForABlockNoLongerRunningIsIgnored() async throws {
+    let first = try add("First", estimate: 900)
+    let second = try add("Second", estimate: 900)
+    await apply(.start, first.id)
+    await apply(.stop, first.id)
+    await apply(.start, second.id)
+
+    await apply(.done, first.id)
+    await apply(.pause, first.id)
+    await apply(.stop, first.id)
+    XCTAssertEqual(try model.store.activeFocusSession()?.activeTaskId, second.id, "the new block runs on")
+    XCTAssertNil(try model.store.activeFocusSession()?.pausedAt)
+    XCTAssertEqual(try model.store.task(id: second.id)?.status, .open)
+
+    await apply(.done, second.id)
+    XCTAssertEqual(try model.store.task(id: second.id)?.status, .completed, "naming the running task acts")
+  }
+
+  func testDoneTakesNothingFromAQuestionAboutAnotherSession() async throws {
+    let task = try add("Write", estimate: 900)
+    await apply(.start, task.id)
+    // Its block id names no block of this session, so borrowing it would
+    // leave the running block unfinished.
+    model.pendingBlock = PendingBlockCompletion(
+      sessionID: "elsewhere", taskID: task.id, title: "Write", seconds: 7_200, completeTask: false,
+      blockID: "stale", wasPaused: false)
+    await apply(.done, task.id)
+    XCTAssertEqual(try model.store.task(id: task.id)?.status, .completed)
+    XCTAssertNil(try model.store.activeFocusSession()?.activeTaskId)
+    XCTAssertNil(model.pendingBlock)
+  }
+
   func testDoneAnswersAQuestionAlreadyUpOnThePhone() async throws {
     let task = try add("Write", estimate: 900)
     await apply(.start, task.id)

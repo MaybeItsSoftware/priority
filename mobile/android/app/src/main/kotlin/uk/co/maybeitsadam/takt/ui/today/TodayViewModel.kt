@@ -44,9 +44,14 @@ internal fun minuteTicks(): Flow<Unit> = flow {
     }
 }
 
-/** The local date, re-emitted when it changes. */
-internal fun dayTicks(zone: ZoneId = ZoneId.systemDefault()): Flow<LocalDate> =
-    minuteTicks().map { LocalDate.now(zone) }.distinctUntilChanged()
+/**
+ * The local date, re-emitted when it changes, and when the time zone does.
+ * The zone is read afresh every tick: it used to be read once, so after
+ * travelling the day (and the dailies read for it) stayed in the zone it
+ * started in until the screen was made again.
+ */
+internal fun dayTicks(zone: () -> ZoneId = ZoneId::systemDefault): Flow<LocalDate> =
+    minuteTicks().map { zone().let { now -> LocalDate.now(now) to now } }.distinctUntilChanged().map { it.first }
 
 /** Today: the plan, the running block, the dailies, and the forecast drawn from them. */
 @OptIn(ExperimentalCoroutinesApi::class)

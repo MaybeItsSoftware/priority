@@ -1445,6 +1445,8 @@ internal object IntegrityCheckingUniffiLib {
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_save_editor(
     ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_save_editor_keeping_due(
+    ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_save_focus_context(
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_save_folder_settings(
@@ -1952,6 +1954,8 @@ internal object UniffiLib {
     external fun uniffi_takt_core_fn_method_coreworkspace_save_condition(`ptr`: Long,`id`: RustBuffer.ByValue,`name`: RustBuffer.ByValue,`isLocation`: Byte,`isArchived`: Byte,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
     external fun uniffi_takt_core_fn_method_coreworkspace_save_editor(`ptr`: Long,`edit`: RustBuffer.ByValue,`baseline`: RustBuffer.ByValue,`nowMs`: Long,`zone`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_method_coreworkspace_save_editor_keeping_due(`ptr`: Long,`edit`: RustBuffer.ByValue,`baseline`: RustBuffer.ByValue,`nowMs`: Long,`zone`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_method_coreworkspace_save_focus_context(`ptr`: Long,`workspaceId`: RustBuffer.ByValue,`context`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): Byte
@@ -3711,6 +3715,9 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_save_editor() and 0xFFFF) != 10270) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_save_editor_keeping_due() and 0xFFFF) != 9115) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_save_focus_context() and 0xFFFF) != 64775) {
@@ -5783,6 +5790,12 @@ public interface CoreWorkspaceInterface {
      * changed since `baseline`. Returns the task as saved.
      */
     fun `saveEditor`(`edit`: EditorSnapshot, `baseline`: EditorSnapshot, `nowMs`: kotlin.Long, `zone`: kotlin.String): EditorSnapshot
+    
+    /**
+     * [`Self::save_editor`], keeping the deadline where it is when the start
+     * moves rather than letting it follow: the Mac's "Keep the due date".
+     */
+    fun `saveEditorKeepingDue`(`edit`: EditorSnapshot, `baseline`: EditorSnapshot, `nowMs`: kotlin.Long, `zone`: kotlin.String): EditorSnapshot
     
     /**
      * Saves what holds now. Not an undo step: where you are is not an edit.
@@ -9487,6 +9500,28 @@ open class CoreWorkspace: Disposable, AutoCloseable, CoreWorkspaceInterface
     callWithHandle {
     uniffiRustCallWithError(CoreException) { _status ->
     UniffiLib.uniffi_takt_core_fn_method_coreworkspace_save_editor(
+        it,
+        
+        FfiConverterTypeEditorSnapshot.lower(`edit`),
+        FfiConverterTypeEditorSnapshot.lower(`baseline`),
+        FfiConverterLong.lower(`nowMs`),
+        FfiConverterString.lower(`zone`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * [`Self::save_editor`], keeping the deadline where it is when the start
+     * moves rather than letting it follow: the Mac's "Keep the due date".
+     */
+    @Throws(CoreException::class)override fun `saveEditorKeepingDue`(`edit`: EditorSnapshot, `baseline`: EditorSnapshot, `nowMs`: kotlin.Long, `zone`: kotlin.String): EditorSnapshot {
+            return FfiConverterTypeEditorSnapshot.lift(
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_save_editor_keeping_due(
         it,
         
         FfiConverterTypeEditorSnapshot.lower(`edit`),

@@ -1,5 +1,6 @@
 package uk.co.maybeitsadam.takt.ui.lists
 
+import android.os.SystemClock
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.KeyboardArrowDown
@@ -16,9 +17,15 @@ import androidx.compose.runtime.Stable
 import androidx.compose.ui.input.key.KeyEvent
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.type
+import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import uk.co.maybeitsadam.takt.app.AppContainer
 import uk.co.maybeitsadam.takt.core.TaskStatus
+import uk.co.maybeitsadam.takt.ui.commands.KeyCatalog
 import uk.co.maybeitsadam.takt.ui.commands.KeyCommand
+import uk.co.maybeitsadam.takt.ui.commands.KeySequence
 import uk.co.maybeitsadam.takt.ui.commands.PaletteCommand
 import uk.co.maybeitsadam.takt.ui.navigation.LocalShell
 import uk.co.maybeitsadam.takt.ui.theme.PIcons
@@ -91,9 +98,78 @@ class TaskActions(
     fun askMoveCard(row: OutlineRow) = show(ListDialog.MoveCard(row.id, row.title))
     fun askPlace(row: OutlineRow) = show(ListDialog.PlaceCard(row.id, row.title))
 
+    private val sequence = KeySequence(KeyCatalog.sequences.keys)
+
+    /** The task a held key was pressed on, which it runs on when released. */
+    private var heldTaskId: String? = null
+    private var expiry: Job? = null
+
+    /**
+     * Holds `-` to see whether a digit follows, as the Mac does: `-2`–`-4`
+     * set those priorities, and `-` on its own sets −1 once the hold times
+     * out or another key arrives. Every view calls this first, before its
+     * own keys, so that a key it keeps for itself (j/k) still releases the
+     * hold before it moves the selection. Returns true when it consumed the
+     * event.
+     */
+    fun holdKey(event: KeyEvent, row: OutlineRow?): Boolean {
+        if (event.type != KeyEventType.KeyDown) return false
+        val key = if (row == null) "" else KeyCatalog.sequenceKey(event)
+        if (key.isEmpty() && sequence.prefix.isEmpty()) return false
+        val now = SystemClock.uptimeMillis()
+        return when (val result = sequence.advance(key, now)) {
+            KeySequence.Result.Pass -> false
+            KeySequence.Result.Pending -> {
+                hold(row!!.id, now)
+                true
+            }
+            is KeySequence.Result.Command -> {
+                val id = heldTaskId
+                release()
+                val command = KeyCatalog.sequences[result.sequence]
+                if (id != null && command == KeyCommand.TASK_SET_PRIORITY) {
+                    setPriority(id, result.sequence.toInt())
+                }
+                true
+            }
+            is KeySequence.Result.Flush -> {
+                runHeld(result.held)
+                false
+            }
+            is KeySequence.Result.FlushAndHold -> {
+                runHeld(result.held)
+                hold(row!!.id, now)
+                true
+            }
+        }
+    }
+
+    private fun hold(id: String, at: Long) {
+        expiry?.cancel()
+        heldTaskId = id
+        expiry = vm.viewModelScope.launch {
+            delay(KeySequence.TIMEOUT_MS)
+            sequence.expire(at)?.let(::runHeld)
+        }
+    }
+
+    private fun release() {
+        expiry?.cancel()
+        expiry = null
+        heldTaskId = null
+    }
+
+    /** A held key on its own: `-` is the only one, send to the back. */
+    private fun runHeld(key: String) {
+        val id = heldTaskId
+        release()
+        if (id != null && key == "-") setPriority(id, -1)
+    }
+
     /**
      * The keys every task view shares, on the selected [row]. Returns true when
-     * it handled the event. Navigation (j/k) is the view's own.
+     * it handled the event. Navigation (j/k) is the view's own, and a held
+     * `-` is [holdKey]'s.
      */
     fun handleKey(event: KeyEvent, row: OutlineRow?): Boolean {
         if (event.type != KeyEventType.KeyDown || row == null) return false

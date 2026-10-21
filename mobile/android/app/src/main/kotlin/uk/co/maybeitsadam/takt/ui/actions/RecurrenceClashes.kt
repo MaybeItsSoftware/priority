@@ -89,9 +89,8 @@ open class RecurrenceClashQuestions {
 class RecurrenceClashes(private val container: AppContainer) : RecurrenceClashQuestions() {
     /**
      * A move written straight away: asks first if [find] names a clash, then
-     * runs [move] as one step, then [then], and, for Keep both, the copy,
-     * which the core joins to the move's step so one undo takes both back.
-     * Cancel writes nothing.
+     * runs [move] as one step, with Keep both's copy joined to it (see
+     * [keepingBoth]), then [then]. Cancel writes nothing.
      */
     fun move(
         taskId: String,
@@ -111,14 +110,26 @@ class RecurrenceClashes(private val container: AppContainer) : RecurrenceClashQu
                 choose(taskTitle ?: runCatching { repository.task(taskId)?.title }.getOrNull() ?: "This task", clash)
             }
             if (!choice.saves) return@launch
-            if (!container.undo.performNow(message = message, block = move)) return@launch
+            if (!container.undo.performNow(message = message) { keepingBoth(choice, taskId, it, move) }) return@launch
             then()
-            keepBothIfChosen(choice, taskId)
         }
     }
 
-    /** The second step of Keep both, after the move has been saved. */
-    suspend fun keepBothIfChosen(choice: RecurrenceClashChoice, taskId: String) {
-        if (choice.addsCopy) container.undo.performNow { it.addOccurrenceCopy(taskId) }
+    /**
+     * Runs [move] on [repository] and, for Keep both, then adds the copy,
+     * which the core joins to the move's undo step so one undo takes both
+     * back. The two hold the writer between them: the core joins only the
+     * step just taken, so a write landing in between (a sync pull, the
+     * habits placed after every edit) used to leave the copy a step of its
+     * own. For the inside of an undo step's block.
+     */
+    suspend fun <T> keepingBoth(
+        choice: RecurrenceClashChoice,
+        taskId: String,
+        repository: WorkspaceRepository,
+        move: suspend (WorkspaceRepository) -> T,
+    ): T {
+        if (!choice.addsCopy) return move(repository)
+        return repository.writingTogether { move(repository).also { repository.addOccurrenceCopy(taskId) } }
     }
 }

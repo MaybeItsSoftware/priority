@@ -74,6 +74,7 @@ internal fun MatrixPane(vm: ListViewModel, actions: TaskActions, modifier: Modif
             .onKeyEvent { event ->
                 if (event.type != KeyEventType.KeyDown) return@onKeyEvent false
                 val row = ordered.firstOrNull { it.id == selected }
+                if (actions.holdKey(event, row)) return@onKeyEvent true
                 // The catalogue lists ⌥1…⌥4 in quadrant order, so the chord's position is the quadrant.
                 val placement = KeyCommand.PLAN_MATRIX_PLACE.chordIndex(event)
                 when {

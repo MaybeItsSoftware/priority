@@ -109,6 +109,7 @@ internal fun OutlinePane(vm: ListViewModel, actions: TaskActions, modifier: Modi
                 if (event.type != KeyEventType.KeyDown) return@onKeyEvent false
                 val rows = shape.rows
                 val row = rows.firstOrNull { it.id == selected }
+                if (actions.holdKey(event, row)) return@onKeyEvent true
                 when {
                     Chord(Key.J).matches(event) || Chord(Key.DirectionDown).matches(event) -> vm.selectAdjacent(rows, 1)
                     Chord(Key.K).matches(event) || Chord(Key.DirectionUp).matches(event) -> vm.selectAdjacent(rows, -1)

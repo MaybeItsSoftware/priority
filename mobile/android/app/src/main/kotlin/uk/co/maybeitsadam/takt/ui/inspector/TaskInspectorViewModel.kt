@@ -176,10 +176,12 @@ class TaskInspectorViewModel(private val container: AppContainer) : ViewModel() 
             // A move onto a repeating task's next turn asks first; Cancel keeps the draft to reopen.
             val choice = container.clashes.choose(draft.values.title, clashOf(draft))
             if (!choice.saves) return@launch
-            if (!container.undo.performNow { it.saveTaskEditor(draft) }) return@launch
+            val saving = container.undo.performNow { repo ->
+                container.clashes.keepingBoth(choice, draft.baseline.taskId, repo) { it.saveTaskEditor(draft) }
+            }
+            if (!saving) return@launch
             // Reopening the task now starts from the saved values.
             _draft.update { current -> if (current === draft) null else current }
-            container.clashes.keepBothIfChosen(choice, draft.baseline.taskId)
         }
     }
 
@@ -222,13 +224,15 @@ class TaskInspectorViewModel(private val container: AppContainer) : ViewModel() 
         var saved: TaskEditorSnapshot? = null
         var failure: Throwable? = null
         container.undo.performNow { repo ->
-            try {
-                saved = repo.saveTaskEditor(draft)
-            } catch (cancelled: CancellationException) {
-                throw cancelled
-            } catch (error: Exception) {
-                failure = error
-                throw error
+            container.clashes.keepingBoth(choice, draft.baseline.taskId, repo) {
+                try {
+                    saved = it.saveTaskEditor(draft)
+                } catch (cancelled: CancellationException) {
+                    throw cancelled
+                } catch (error: Exception) {
+                    failure = error
+                    throw error
+                }
             }
         }
         val committed = saved
@@ -245,7 +249,6 @@ class TaskInspectorViewModel(private val container: AppContainer) : ViewModel() 
             }
         }
         _save.value = SaveState()
-        container.clashes.keepBothIfChosen(choice, committed.taskId)
         return true
     }
 
