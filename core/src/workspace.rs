@@ -560,6 +560,19 @@ impl CoreWorkspace {
         })
     }
 
+    /// Sets what a condition provides, replacing what it did, as one "Edit
+    /// Condition" step. False when it already provided exactly that.
+    pub fn set_condition_provides(
+        &self,
+        id: String,
+        provided_ids: Vec<String>,
+        now_ms: i64,
+    ) -> Result<bool, CoreError> {
+        journal::journalled(&mut self.lock(), "Edit Condition", |tx| {
+            conditions::set_condition_provides(tx, &id, provided_ids, now_ms)
+        })
+    }
+
     /// Moves a condition one place up (`offset` < 0) or down under its
     /// heading, as one "Move Condition" step. False at the end of the run.
     pub fn move_condition(&self, id: String, offset: i64, now_ms: i64) -> Result<bool, CoreError> {

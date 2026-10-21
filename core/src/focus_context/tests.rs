@@ -58,9 +58,11 @@ fn an_expired_context_is_set_aside_and_offered_back() {
     let mut on = context(&["campus"]);
     on.expires_at_ms = Some(100);
     on.conditions_set_at_ms = Some(10);
+    on.off_ids = vec!["quiet".into()];
     assert_eq!(focus_context_in_force(on.clone(), 99), on);
     let lapsed = focus_context_in_force(on, 100);
     assert!(lapsed.condition_ids.is_empty());
+    assert!(lapsed.off_ids.is_empty(), "nothing provides it any more");
     assert_eq!(lapsed.suggested_ids, vec!["campus"]);
     assert_eq!(lapsed.expires_at_ms, None);
     assert_eq!(lapsed.conditions_set_at_ms, None);

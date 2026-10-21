@@ -107,17 +107,24 @@ fn conditions_and_headings_move_and_the_move_undoes() {
         ))
         .unwrap()
     );
+    // Location is a setting, and settings stay above properties.
+    assert!(
+        !journalled(&mut connection, "Move Category", |tx| {
+            move_condition_category(tx, "w", None, -2, 1)
+        })
+        .unwrap()
+    );
     assert!(
         journalled(&mut connection, "Move Category", |tx| {
-            move_condition_category(tx, "w", None, -2, 1)
+            move_condition_category(tx, "w", None, -1, 1)
         })
         .unwrap()
     );
     assert_eq!(
         shown(&connection),
         vec![
-            ("Other".into(), vec!["Quiet".into()]),
             ("Location".into(), vec!["Campus".into(), "Home".into()]),
+            ("Other".into(), vec!["Quiet".into()]),
             ("Equipment".into(), vec!["Mat".into()]),
         ]
     );
@@ -131,8 +138,8 @@ fn conditions_and_headings_move_and_the_move_undoes() {
     assert_eq!(
         shown(&connection),
         vec![
-            ("Other".into(), vec!["Quiet".into()]),
             ("Location".into(), vec!["Campus".into(), "Gym".into()]),
+            ("Other".into(), vec!["Quiet".into()]),
             ("Equipment".into(), vec!["Mat".into(), "Home".into()]),
         ]
     );
@@ -144,7 +151,7 @@ fn conditions_and_headings_move_and_the_move_undoes() {
     );
     undo(&mut connection).unwrap();
     assert_eq!(
-        shown(&connection)[1],
+        shown(&connection)[0],
         ("Location".into(), vec!["Campus".into(), "Gym".into()])
     );
     // Archived ones move among themselves.

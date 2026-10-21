@@ -601,23 +601,23 @@ fn conditions() -> Vec<Spec> {
             &["space"],
         )
         .on(Conditions)
-        .note("Location replaces the last place; anything else combines"),
+        .note("Location replaces the last place; anything else combines. Off on one a setting provides is off for now, until that setting changes"),
         c(
             "conditionsAdjust",
-            "Change where you are, the time you have, or when it expires",
+            "Change where you are, your free time, or when it expires",
             "Conditions",
             &["left", "right", "h", "l"],
         )
         .on(Conditions)
-        .note("On Location the place, on Time a quarter of an hour less or more, on Finish and Forget the choice"),
+        .note("On Location the place, on Free time a quarter of an hour less or more, on Finish and Forget the choice"),
         c(
             "conditionsTypeTime",
-            "Type the time you have",
+            "Type your free time",
             "Conditions",
             &["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"],
         )
         .on(Conditions)
-        .note("On the Time row: 45, 1h30, 17:00 or 5pm, then Return. Return there types one too"),
+        .note("On the Free time row: 45, 1h30, 17:00 or 5pm, then Return. Return there types one too"),
         c(
             "conditionsEdit",
             "Rename the condition",
@@ -641,6 +641,14 @@ fn conditions() -> Vec<Spec> {
         )
         .on(Conditions)
         .note("Location, Equipment… or a new one. Location is one at a time: turning a place on turns the last one off"),
+        c(
+            "conditionsProvides",
+            "Choose what the condition provides",
+            "Conditions",
+            &["p"],
+        )
+        .on(Conditions)
+        .note("Tick what holds whenever it does: Home provides Floor space and Quiet, the Laptop Typing. Saying it holds turns them on"),
         c(
             "conditionsArchive",
             "Archive or restore the condition",

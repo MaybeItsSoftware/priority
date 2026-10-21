@@ -154,6 +154,10 @@ pub const MIGRATIONS: &[(&str, &str)] = &[
         "v33_recurrence_series",
         include_str!("migrations/v33_recurrence_series.sql"),
     ),
+    (
+        "v34_condition_provides",
+        include_str!("migrations/v34_condition_provides.sql"),
+    ),
 ];
 
 /// Brings the database at `path` up to date, creating it if it does not

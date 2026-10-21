@@ -75,6 +75,10 @@ pub struct ConditionRow {
     /// order, and the headings in the order of their first. None for one
     /// nobody has placed, which comes after the placed ones under its heading.
     pub sort_order: Option<i64>,
+    /// The conditions it switches on while it holds (Home: Floor space,
+    /// Desk), by id, sorted. Empty before v34 and for one that provides
+    /// nothing. See `conditions::provides`.
+    pub provides: Vec<String>,
 }
 
 /// A row of `task_metadata`. `TaskMetadata`.
@@ -253,6 +257,12 @@ impl ConditionRow {
             category: row.get("category")?,
             // Absent before v27; a database the CLI opens unmigrated has none.
             sort_order: row.get("sortOrder").unwrap_or(None),
+            // Absent before v34, like the order before v27.
+            provides: row
+                .get::<_, Option<String>>("providesJSON")
+                .unwrap_or(None)
+                .map(|json| crate::conditions::provided_ids(&json))
+                .unwrap_or_default(),
         })
     }
 }

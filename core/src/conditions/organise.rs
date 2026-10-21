@@ -153,8 +153,9 @@ fn names(section: &ConditionSection, category: Option<&str>) -> bool {
 }
 
 /// Moves a whole heading — a category, or none for "Other" — `offset`
-/// places among the headings. False, writing nothing, at either end or for
-/// a heading nothing is under.
+/// places among the headings. Settings stay above properties, so a heading
+/// moves only among its own kind. False, writing nothing, at either end,
+/// across that line, or for a heading nothing is under.
 pub fn move_condition_category(
     transaction: &Transaction,
     workspace_id: &str,
@@ -167,7 +168,11 @@ pub fn move_condition_category(
         return Ok(false);
     };
     let target = position as i64 + offset;
-    if offset == 0 || target < 0 || target >= sections.len() as i64 {
+    if offset == 0
+        || target < 0
+        || target >= sections.len() as i64
+        || sections[target as usize].is_setting != sections[position].is_setting
+    {
         return Ok(false);
     }
     let section = sections.remove(position);
@@ -259,7 +264,8 @@ fn merged_groups(groups: &[Vec<String>], from: &str, into: &str) -> Vec<Vec<Stri
 
 /// Merges condition `from` into `into`: every task that required `from`
 /// requires `into` instead (and one that required it not to hold, `into` not
-/// to), a context that had `from` on has `into` on, and
+/// to), a context that had `from` on has `into` on, what provided `from`
+/// provides `into` and `into` provides what `from` did, and
 /// `from` is archived, so it can still be restored. Both must be in the same
 /// workspace and differ. Returns how many tasks changed.
 pub fn merge_conditions(
@@ -303,6 +309,7 @@ pub fn merge_conditions(
         )?;
         changed += 1;
     }
+    super::merge_links(transaction, &workspace_id, from, into, now_ms)?;
     crate::focus_context::replace_condition(transaction, &workspace_id, from, into, now_ms)?;
     transaction.execute(
         "UPDATE task_conditions SET isArchived = 1, updatedAt = ?1 WHERE id = ?2 AND isArchived = 0",

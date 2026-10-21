@@ -724,6 +724,7 @@ fn adopt_workspaces(transaction: &Transaction, now_ms: i64) -> Result<bool, Core
         // Before its duplicate conditions go, so the context can be put in
         // terms of the canonical workspace's.
         crate::focus_context::adopt(transaction, other, &canonical)?;
+        crate::conditions::adopt_links(transaction, other, &canonical)?;
         transaction.execute(
             "DELETE FROM task_conditions WHERE workspaceId = ?1
                AND name IN (SELECT name FROM task_conditions WHERE workspaceId = ?2)",

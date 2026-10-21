@@ -20,8 +20,10 @@ use crate::rows::ConditionRow;
 use crate::time::{non_empty_name, stored};
 
 mod organise;
+mod provides;
 mod requirement;
 pub use organise::*;
+pub use provides::*;
 pub use requirement::*;
 
 /// The category whose conditions are places, and exclusive.
@@ -266,17 +268,23 @@ pub struct ConditionSection {
     pub title: String,
     /// Whether saying one holds replaces the rest: the Location heading.
     pub is_exclusive: bool,
+    /// Whether it is a setting — something you say about your situation,
+    /// which switches on what a task needs — rather than properties: the
+    /// Location heading, and any heading a condition under which provides
+    /// something ("Tools on hand"). Settings come first.
+    pub is_setting: bool,
     /// In the order they were given.
     pub conditions: Vec<ConditionRow>,
 }
 
-/// Conditions under their headings, in the order the workspace keeps
-/// (`sortOrder`): the headings by their first placed condition, and the
-/// conditions under each by their own. What nobody has placed — every
-/// condition before v27, and one an older client makes — comes after what
-/// has been, in the order it was given, and a heading with nothing placed
-/// falls back to Location first, then every other category alphabetically,
-/// then the uncategorised under "Other".
+/// Conditions under their headings, settings first (Location, and any
+/// heading whose conditions provide something), then the rest, each half in
+/// the order the workspace keeps (`sortOrder`): the headings by their first
+/// placed condition, and the conditions under each by their own. What nobody
+/// has placed — every condition before v27, and one an older client makes —
+/// comes after what has been, in the order it was given, and a heading with
+/// nothing placed falls back to Location first, then every other category
+/// alphabetically, then the uncategorised under "Other".
 #[uniffi::export]
 pub fn condition_sections(conditions: Vec<ConditionRow>) -> Vec<ConditionSection> {
     let mut named: BTreeMap<String, (String, Vec<ConditionRow>)> = BTreeMap::new();
@@ -297,6 +305,7 @@ pub fn condition_sections(conditions: Vec<ConditionRow>) -> Vec<ConditionSection
         .into_values()
         .map(|(category, conditions)| ConditionSection {
             is_exclusive: category == LOCATION_CATEGORY,
+            is_setting: conditions.iter().any(is_setting),
             title: category.clone(),
             category: Some(category),
             conditions,
@@ -307,6 +316,7 @@ pub fn condition_sections(conditions: Vec<ConditionRow>) -> Vec<ConditionSection
             category: None,
             title: UNCATEGORISED_TITLE.to_string(),
             is_exclusive: false,
+            is_setting: other.iter().any(is_setting),
             conditions: other,
         });
     }
@@ -328,23 +338,46 @@ pub fn condition_sections(conditions: Vec<ConditionRow>) -> Vec<ConditionSection
             Some(_) => 1,
             None => 2,
         };
-        (placed, fallback, section.title.to_lowercase())
+        (
+            !section.is_setting,
+            placed,
+            fallback,
+            section.title.to_lowercase(),
+        )
     });
     sections
 }
 
 /// What "Available now" offers: only the conditions an open task requires
-/// (`required_ids`), since saying anything else holds changes nothing, plus
-/// any that is on now (`active_ids`), so it can be turned off. Under their
-/// headings, with a heading left out when nothing under it is offered. Empty
-/// when no open task needs a condition and none is on.
+/// (`required_ids`), and the settings that provide one, since saying
+/// anything else holds changes nothing, plus any that is on now
+/// (`active_ids`: what holds, provided ones included, and any switched off
+/// for now), so it can be turned off or back on. Under their headings, with
+/// a heading left out when nothing under it is offered. Empty when no open
+/// task needs a condition and none is on.
 #[uniffi::export]
 pub fn available_condition_sections(
     conditions: Vec<ConditionRow>,
     required_ids: Vec<String>,
     active_ids: Vec<String>,
 ) -> Vec<ConditionSection> {
-    let offered: HashSet<String> = required_ids.into_iter().chain(active_ids).collect();
+    let required: HashSet<String> = required_ids.into_iter().collect();
+    let providers = conditions
+        .iter()
+        .filter(|condition| {
+            condition_holdings(conditions.clone(), vec![condition.id.clone()], Vec::new())
+                .iter()
+                .any(|holding| {
+                    holding.condition_id != condition.id && required.contains(&holding.condition_id)
+                })
+        })
+        .map(|condition| condition.id.clone())
+        .collect::<Vec<_>>();
+    let offered: HashSet<String> = required
+        .into_iter()
+        .chain(active_ids)
+        .chain(providers)
+        .collect();
     condition_sections(
         conditions
             .into_iter()
@@ -577,6 +610,7 @@ mod tests {
             updated_at_ms: 0,
             category: category.map(Into::into),
             sort_order: None,
+            provides: Vec::new(),
         }
     }
 
@@ -690,6 +724,7 @@ mod tests {
             updated_at_ms: 0,
             category: None,
             sort_order: None,
+            provides: Vec::new(),
         };
         assert_eq!(condition_section_title(place.clone()), "Location");
         let loose = ConditionRow {

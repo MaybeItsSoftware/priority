@@ -512,3 +512,46 @@ fn a_joining_device_brings_a_newer_context_into_the_accounts_workspace() {
     mac.sync(&mut server, 5_000);
     assert_eq!(mac.context("w").unwrap().condition_ids, vec!["mac-campus"]);
 }
+
+/// What a condition provides travels with the condition, and what is
+/// switched off for now with the rest of what holds: the phone works out
+/// the same effective conditions as the Mac that said them.
+#[test]
+fn what_a_condition_provides_and_what_is_off_follow_the_account() {
+    let mut server = Server::default();
+    let mut mac = Device::with_workspace("mac");
+    mac.run(&format!(
+        "INSERT INTO task_conditions (id, workspaceId, name, isLocation, isArchived, createdAt, updatedAt, category)
+           VALUES ('home', 'w', 'Home', 1, 0, '{T}', '{T}', 'Location'),
+                  ('quiet', 'w', 'Quiet', 0, 0, '{T}', '{T}', NULL),
+                  ('floor', 'w', 'Floor space', 0, 0, '{T}', '{T}', NULL);"
+    ));
+    mac.sync(&mut server, 1_000);
+    let mut phone = Device::new("phone");
+    phone.sync(&mut server, 2_000);
+
+    let tx = mac.connection.transaction().unwrap();
+    crate::conditions::set_condition_provides(
+        &tx,
+        "home",
+        vec!["quiet".into(), "floor".into()],
+        3_000,
+    )
+    .unwrap();
+    tx.commit().unwrap();
+    let mut housemates_in = holding(&["home"]);
+    housemates_in.off_ids = vec!["quiet".into()];
+    mac.say("w", housemates_in, 4_000);
+    mac.sync(&mut server, 5_000);
+    phone.sync(&mut server, 6_000);
+
+    let conditions = crate::rows::conditions(&phone.connection, "w").unwrap();
+    let home = conditions.iter().find(|c| c.id == "home").unwrap();
+    assert_eq!(home.provides, vec!["floor", "quiet"]);
+    let context = phone.context("w").unwrap();
+    assert_eq!(context.off_ids, vec!["quiet"]);
+    assert_eq!(
+        crate::conditions::effective_ids(&conditions, &context.condition_ids, &context.off_ids),
+        vec!["floor", "home"]
+    );
+}

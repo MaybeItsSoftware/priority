@@ -53,10 +53,10 @@ fn a_new_database_has_exactly_the_fixtures_schema() {
 fn every_migration_is_recorded_in_order_under_grdbs_identifiers() {
     let connection = migrated();
     assert_eq!(ledger(&connection), workspace_migrations());
-    assert_eq!(workspace_migrations().len(), 33);
+    assert_eq!(workspace_migrations().len(), 34);
     assert_eq!(
         workspace_migrations().last().map(String::as_str),
-        Some("v33_recurrence_series")
+        Some("v34_condition_provides")
     );
 }
 
@@ -69,7 +69,7 @@ fn migrating_again_applies_nothing_and_keeps_the_work() {
         )
         .unwrap();
     let before = dump_schema(&connection).unwrap();
-    assert_eq!(migrate(&mut connection).unwrap(), "v33_recurrence_series");
+    assert_eq!(migrate(&mut connection).unwrap(), "v34_condition_provides");
     assert_eq!(dump_schema(&connection).unwrap(), before);
     let count: i64 = connection
         .query_row("SELECT COUNT(*) FROM workspaces", [], |row| row.get(0))
@@ -96,9 +96,9 @@ fn a_file_database_is_created_and_closed_again() {
     std::fs::create_dir_all(&directory).unwrap();
     let path = directory.join("workspace.sqlite");
     let latest = migrate_workspace(path.to_string_lossy().into_owned()).unwrap();
-    assert_eq!(latest, "v33_recurrence_series");
+    assert_eq!(latest, "v34_condition_provides");
     let reopened = Connection::open(&path).unwrap();
-    assert_eq!(ledger(&reopened).len(), 33);
+    assert_eq!(ledger(&reopened).len(), 34);
     std::fs::remove_dir_all(directory).unwrap();
 }
 
@@ -828,6 +828,63 @@ fn v33_adds_the_recurrence_series_journalled_and_synced() {
         count(
             "SELECT COUNT(*) FROM sync_outbox WHERE tableName = 'task_metadata' AND rowId = 't'
                AND changedJSON LIKE '%seriesTaskId%'"
+        ),
+        1
+    );
+}
+
+/// v34: what a condition provides is a column on `task_conditions`,
+/// journalled and synced like the rest of the row, and the provided
+/// conditions switched off for now a column on the synced `focus_contexts`.
+/// Nothing existing provides anything or is switched off.
+#[test]
+fn v34_adds_provides_and_overrides_journalled_and_synced() {
+    let mut connection = migrated_through("v33_recurrence_series");
+    seed_workspace(&connection);
+    connection
+        .execute_batch(&format!(
+            "INSERT INTO task_conditions (id, workspaceId, name, isLocation, isArchived, createdAt, updatedAt)
+               VALUES ('home', 'w', 'Home', 1, 0, '{T0}', '{T0}');
+             INSERT INTO focus_contexts (workspaceId, updatedAt) VALUES ('w', '{T0}');"
+        ))
+        .unwrap();
+    migrate_through(&mut connection, Some("v34_condition_provides")).unwrap();
+    let count = |sql: &str| -> i64 { connection.query_row(sql, [], |row| row.get(0)).unwrap() };
+    assert_eq!(
+        count("SELECT COUNT(*) FROM task_conditions WHERE providesJSON IS NULL"),
+        1
+    );
+    assert_eq!(
+        count("SELECT COUNT(*) FROM focus_contexts WHERE offIdsJSON = '[]'"),
+        1
+    );
+    connection
+        .execute_batch(
+            "UPDATE undo_control SET suppressed = 0, groupId = 'g', label = 'x' WHERE id = 0;
+             UPDATE sync_control SET recording = 1 WHERE id = 0;
+             UPDATE task_conditions SET providesJSON = '[\"quiet\"]' WHERE id = 'home';
+             UPDATE focus_contexts SET offIdsJSON = '[\"quiet\"]' WHERE workspaceId = 'w';",
+        )
+        .unwrap();
+    let count = |sql: &str| -> i64 { connection.query_row(sql, [], |row| row.get(0)).unwrap() };
+    assert_eq!(
+        count(
+            "SELECT COUNT(*) FROM change_log WHERE tableName = 'task_conditions' AND rowId = 'home'
+               AND afterJSON LIKE '%providesJSON%'"
+        ),
+        1
+    );
+    assert_eq!(
+        count(
+            "SELECT COUNT(*) FROM sync_outbox WHERE tableName = 'task_conditions' AND rowId = 'home'
+               AND changedJSON LIKE '%providesJSON%'"
+        ),
+        1
+    );
+    assert_eq!(
+        count(
+            "SELECT COUNT(*) FROM sync_outbox WHERE tableName = 'focus_contexts' AND rowId = 'w'
+               AND changedJSON LIKE '%offIdsJSON%'"
         ),
         1
     );

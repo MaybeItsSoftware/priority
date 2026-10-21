@@ -10,6 +10,11 @@
 //! holds wins every column of it, and `conditionsSetAt` travels with it,
 //! which is what lets every device call an answer from yesterday stale. It
 //! is not journalled: saying where you are is not an edit to undo.
+//!
+//! Since v34 it also holds the provided conditions switched off for now
+//! (`offIdsJSON`): what the conditions on provide holds with them
+//! (`conditions::provides`), and an override lasts until whatever provides
+//! the condition is unset or replaced, which [`save`] sees to.
 
 use std::collections::BTreeSet;
 
@@ -33,6 +38,8 @@ pub struct StoredFocusContext {
     pub mode: String,
     /// The conditions that held before the last expiry, offered back.
     pub suggested_ids: Vec<String>,
+    /// Provided conditions switched off for now, sorted. Empty before v34.
+    pub off_ids: Vec<String>,
 }
 
 impl Default for StoredFocusContext {
@@ -44,6 +51,7 @@ impl Default for StoredFocusContext {
             expires_at_ms: None,
             mode: "progress".to_string(),
             suggested_ids: Vec::new(),
+            off_ids: Vec::new(),
         }
     }
 }
@@ -63,6 +71,16 @@ fn table_exists(connection: &Connection, name: &str) -> Result<bool, CoreError> 
     )?)
 }
 
+/// Whether the overrides have a column to live in: not before v34, which
+/// the CLI can meet in a database the app has not migrated yet.
+fn has_overrides(connection: &Connection) -> Result<bool, CoreError> {
+    Ok(connection.query_row(
+        "SELECT EXISTS(SELECT 1 FROM pragma_table_info('focus_contexts') WHERE name = 'offIdsJSON')",
+        [],
+        |row| row.get(0),
+    )?)
+}
+
 fn millis(text: Option<String>) -> Option<i64> {
     text.as_deref()
         .and_then(parse_stored)
@@ -78,10 +96,17 @@ pub fn load(
     if !table_exists(connection, "focus_contexts")? {
         return Ok(None);
     }
+    let off = if has_overrides(connection)? {
+        "offIdsJSON"
+    } else {
+        "'[]'"
+    };
     Ok(connection
         .query_row(
-            "SELECT conditionIdsJSON, conditionsSetAt, availableUntil, expiresAt, mode, suggestedIdsJSON
-             FROM focus_contexts WHERE workspaceId = ?1",
+            &format!(
+                "SELECT conditionIdsJSON, conditionsSetAt, availableUntil, expiresAt, mode, suggestedIdsJSON, {off}
+                 FROM focus_contexts WHERE workspaceId = ?1"
+            ),
             [workspace_id],
             |row| {
                 Ok(StoredFocusContext {
@@ -91,6 +116,7 @@ pub fn load(
                     expires_at_ms: millis(row.get(3)?),
                     mode: row.get(4)?,
                     suggested_ids: sorted(decode_strings(&row.get::<_, String>(5)?)),
+                    off_ids: sorted(decode_strings(&row.get::<_, String>(6)?)),
                 })
             },
         )
@@ -99,8 +125,11 @@ pub fn load(
 
 /// Saves the workspace's context. When the conditions on differ from what
 /// was stored, they are stamped as set at `now_ms` (and the stamp goes when
-/// none are on); otherwise the stamp stays, whatever `context` carries.
-/// False, writing nothing, when nothing changed.
+/// none are on); otherwise the stamp stays, whatever `context` carries. An
+/// override goes when whatever provided its condition is no longer on, or
+/// nothing provides it any more (`conditions::kept_overrides`), so every
+/// client's change of place resets the last place's overrides. False,
+/// writing nothing, when nothing changed.
 pub fn save(
     transaction: &Transaction,
     workspace_id: &str,
@@ -117,8 +146,22 @@ pub fn save(
             _ => Some(now_ms),
         }
     };
+    let overrides = has_overrides(transaction)?;
+    let off_ids = if overrides {
+        crate::conditions::kept_overrides(
+            &crate::rows::conditions(transaction, workspace_id)?,
+            current
+                .as_ref()
+                .map_or(&[][..], |current| &current.condition_ids),
+            &ids,
+            &context.off_ids,
+        )
+    } else {
+        Vec::new()
+    };
     let next = StoredFocusContext {
         condition_ids: ids,
+        off_ids,
         conditions_set_at_ms: set_at,
         suggested_ids: sorted(context.suggested_ids.clone()),
         mode: if context.mode == "finish" {
@@ -131,25 +174,38 @@ pub fn save(
     if current.as_ref() == Some(&next) {
         return Ok(false);
     }
+    // Before v34 there is nowhere to keep an override; `?9` goes unused.
+    let (column, value, update) = if overrides {
+        (", offIdsJSON", ", ?9", ", offIdsJSON = excluded.offIdsJSON")
+    } else {
+        ("", "", "")
+    };
     transaction.execute(
-        "INSERT INTO focus_contexts
-           (workspaceId, conditionIdsJSON, conditionsSetAt, availableUntil, expiresAt, mode, suggestedIdsJSON, updatedAt)
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)
-         ON CONFLICT(workspaceId) DO UPDATE SET
-           conditionIdsJSON = excluded.conditionIdsJSON, conditionsSetAt = excluded.conditionsSetAt,
-           availableUntil = excluded.availableUntil, expiresAt = excluded.expiresAt,
-           mode = excluded.mode, suggestedIdsJSON = excluded.suggestedIdsJSON,
-           updatedAt = excluded.updatedAt",
-        params![
-            workspace_id,
-            swift_json_strings(&next.condition_ids),
-            next.conditions_set_at_ms.map(stored),
-            next.available_until_ms.map(stored),
-            next.expires_at_ms.map(stored),
-            next.mode,
-            swift_json_strings(&next.suggested_ids),
-            stored(now_ms),
-        ],
+        &format!(
+            "INSERT INTO focus_contexts
+               (workspaceId, conditionIdsJSON, conditionsSetAt, availableUntil, expiresAt, mode, suggestedIdsJSON, updatedAt{column})
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8{value})
+             ON CONFLICT(workspaceId) DO UPDATE SET
+               conditionIdsJSON = excluded.conditionIdsJSON, conditionsSetAt = excluded.conditionsSetAt,
+               availableUntil = excluded.availableUntil, expiresAt = excluded.expiresAt,
+               mode = excluded.mode, suggestedIdsJSON = excluded.suggestedIdsJSON,
+               updatedAt = excluded.updatedAt{update}"
+        ),
+        rusqlite::params_from_iter(
+            [
+                Some(workspace_id.to_string()),
+                Some(swift_json_strings(&next.condition_ids)),
+                next.conditions_set_at_ms.map(stored),
+                next.available_until_ms.map(stored),
+                next.expires_at_ms.map(stored),
+                Some(next.mode.clone()),
+                Some(swift_json_strings(&next.suggested_ids)),
+                Some(stored(now_ms)),
+                Some(swift_json_strings(&next.off_ids)),
+            ]
+            .into_iter()
+            .take(if overrides { 9 } else { 8 }),
+        ),
     )?;
     Ok(true)
 }
@@ -176,7 +232,9 @@ pub(crate) fn replace_condition(
     let set_at = context.conditions_set_at_ms;
     swap(&mut context.condition_ids);
     swap(&mut context.suggested_ids);
+    swap(&mut context.off_ids);
     context.condition_ids = sorted(context.condition_ids);
+    context.off_ids = sorted(context.off_ids);
     save(transaction, workspace_id, &context, now_ms)?;
     // The same answer, renamed: not a new one, so it keeps its stamp.
     if set_at.is_some() {
@@ -236,6 +294,7 @@ pub(crate) fn adopt(transaction: &Transaction, from: &str, into: &str) -> Result
         };
         rename(&mut theirs.condition_ids)?;
         rename(&mut theirs.suggested_ids)?;
+        rename(&mut theirs.off_ids)?;
         transaction.execute("DELETE FROM focus_contexts WHERE workspaceId = ?1", [into])?;
         transaction.execute(
             "INSERT INTO focus_contexts
@@ -252,6 +311,12 @@ pub(crate) fn adopt(transaction: &Transaction, from: &str, into: &str) -> Result
                 from_updated,
             ],
         )?;
+        if has_overrides(transaction)? {
+            transaction.execute(
+                "UPDATE focus_contexts SET offIdsJSON = ?1 WHERE workspaceId = ?2",
+                params![swift_json_strings(&theirs.off_ids), into],
+            )?;
+        }
     }
     transaction.execute("DELETE FROM focus_contexts WHERE workspaceId = ?1", [from])?;
     Ok(())
@@ -259,7 +324,7 @@ pub(crate) fn adopt(transaction: &Transaction, from: &str, into: &str) -> Result
 
 /// The context as it stands at `now_ms`: once it has expired its conditions
 /// are set aside — offered back, so "Use again" can restore them — and the
-/// expiry and stamp go with them. Otherwise `context` unchanged.
+/// expiry, stamp and overrides go with them. Otherwise `context` unchanged.
 #[uniffi::export]
 pub fn focus_context_in_force(context: StoredFocusContext, now_ms: i64) -> StoredFocusContext {
     match context.expires_at_ms {
@@ -272,6 +337,7 @@ pub fn focus_context_in_force(context: StoredFocusContext, now_ms: i64) -> Store
             condition_ids: Vec::new(),
             conditions_set_at_ms: None,
             expires_at_ms: None,
+            off_ids: Vec::new(),
             ..context
         },
         _ => context,
