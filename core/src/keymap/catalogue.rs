@@ -180,7 +180,7 @@ fn task() -> Vec<Spec> {
             .note("Finds the task it waits on. Until that is done it is greyed, sinks below its siblings and is never next up"),
         // `c` starts only `cd`, `cn` and `ct`, so `cc` was free.
         c("taskConditions", "Conditions: what the task needs before it is worth starting", "Task", &["cc"])
-            .note("Type to find one, Space or Return ticks it, a new name makes it. With no task selected, the Conditions tab"),
+            .note("Type to find one, Space or Return ticks it, ! ticks it as not holding (\"not Home\"), a new name makes it. With no task selected, the Conditions tab"),
         // ⌃T rather than T: bare `t` starts `td`, `tm` and `tt`, and ⌘T goes to
         // Today.
         // `a` starts nothing on a task (only the Conditions tab's own `a`),

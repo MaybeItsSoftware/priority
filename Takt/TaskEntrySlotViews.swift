@@ -53,9 +53,8 @@ struct TaskEntrySlotStrip: View {
       let available = model.focusContext.conditionIDs
       HStack(spacing: theme.space.xs) {
         ForEach(Array(groups.prefix(2).enumerated()), id: \.offset) { _, group in
-          let name = group.map { id in model.focusConditions.first { $0.id == id }?.name ?? "Missing condition" }
-            .joined(separator: " or ")
-          Text(name).foregroundStyle(group.contains { available.contains($0) } ? theme.success : theme.warning)
+          let name = TaskRequirement.label(group: group, name: model.conditionName)
+          Text(name).foregroundStyle(TaskRequirement.isMet(group: group, available: available) ? theme.success : theme.warning)
         }
         if groups.count > 2 {
           Text("+\(groups.count - 2)").foregroundStyle(theme.muted)

@@ -603,7 +603,7 @@ struct LocalTaskInspector: View {
     case .startAt: values.startAt?.formatted() ?? "None"
     case .dueDate: values.dueDate ?? "None"
     case .requirements: (values.requirementGroups ?? []).map { group in
-      group.map { id in model.focusConditions.first(where: { $0.id == id })?.name ?? "Missing condition" }.joined(separator: " or ")
+      TaskRequirement.label(group: group, name: model.conditionName)
     }.joined(separator: " and ")
     case .minimumBlock: values.minimumBlockMinutes ?? "None"
     case .singleSitting: values.requiresSingleSitting == true ? "Required" : "Not required"

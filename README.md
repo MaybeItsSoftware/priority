@@ -430,7 +430,7 @@ none, which shows under *Other*. **Location** is the one category with a rule:
 you are in one place at a time, so its conditions are exclusive. A task that requires one stays out
 of the day and the panel until you say that condition holds; a task with no
 conditions is available whenever. Its row and card show what it needs as
-tags, one per requirement (*Home*, *Campus or Library*): in the success
+tags, one per requirement (*Home*, *Campus or Library*, *not Home*): in the success
 colour while it holds, in the warning colour while it is what keeps the task
 back.
 
@@ -438,7 +438,9 @@ back.
 the Task menu). A finder opens with every condition as a row with a box,
 under its category's heading (once you type, each row names its category instead):
 type to narrow, `↑`/`↓` to choose, and `Space` or `Return` ticks the row or
-unticks it — saved at once, one undo step each. Type a name nothing is called
+unticks it — saved at once, one undo step each. `!` ticks the row as **not**
+holding instead (*not Home*: the task waits while you are at Home), turns a
+condition already ticked into its "not", and unticks a "not". Type a name nothing is called
 yet and the last row is **New condition “…”**: `Return` makes it and requires
 it together (two undo steps, the requirement first, since the condition
 outlives the task); it is made with no category. It stays open for the next one, and `Esc` closes it. A

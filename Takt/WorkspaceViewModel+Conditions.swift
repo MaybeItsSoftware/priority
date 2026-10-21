@@ -203,11 +203,14 @@ extension WorkspaceViewModel {
     perform { try store?.applyPlanningToDescendants(of: task.id); reloadNextUp(); if let store { taskEditor.refresh(store: store) } }
   }
 
+  /// A condition's name by id, archived ones included.
+  func conditionName(_ id: String) -> String? { focusConditions.first { $0.id == id }?.name }
+
   func focusExplanation(_ scored: ScoredNextUp) -> String {
     guard scored.reason == .condition else { return scored.explanation }
+    let available = focusContext.conditionIDs
     let requirements = scored.candidate.requirementGroups.map { group in
-      group.filter { focusContext.conditionIDs.contains($0) }
-        .map { id in focusConditions.first(where: { $0.id == id })?.name ?? "Missing condition" }.joined(separator: " or ")
+      TaskRequirement.label(group: group.filter { TaskRequirement($0).isMet(available: available) }, name: conditionName)
     }.joined(separator: " + ")
     return requirements + (contextExpiresAt.map { " available until \($0.formatted(date: .omitted, time: .shortened))" } ?? " available now")
   }
@@ -220,9 +223,8 @@ extension WorkspaceViewModel {
   func unavailableDescription(_ reason: TaskUnavailableReason) -> String {
     switch reason {
     case .startsLater(let date): "Starts \(date.formatted(date: .abbreviated, time: .shortened))"
-    case .missingConditions(let groups): "Needs " + groups.map { group in
-      group.map { id in focusConditions.first(where: { $0.id == id })?.name ?? "Missing condition" }.joined(separator: " or ")
-    }.joined(separator: " and ")
+    case .missingConditions(let groups):
+      "Needs " + groups.map { TaskRequirement.label(group: $0, name: conditionName) }.joined(separator: " and ")
     case .insufficientTime(let seconds): "Needs at least \(Int(ceil(Double(seconds) / 60))) minutes"
     case .needsEstimate: "Needs a positive remaining estimate to check finish fit"
     case .expiredWindow: "Available time window has ended"

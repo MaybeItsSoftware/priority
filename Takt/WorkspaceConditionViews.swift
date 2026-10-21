@@ -107,14 +107,20 @@ struct WorkspaceTaskConditionsEditor: View {
     let groups = values.requirementGroups ?? []
     InspectorRow("Conditions") {
       ForEach(Array(groups.enumerated()), id: \.offset) { index, group in
-        ForEach(Array(group.enumerated()), id: \.element) { position, id in
-          requirementLine(id, position: position, in: group, at: index)
+        ForEach(Array(group.enumerated()), id: \.element) { position, member in
+          requirementLine(member, position: position, in: group, at: index)
         }
       }
       InspectorMenu(groups.isEmpty ? "Add condition" : "Add another", tone: .dim) {
         WorkspaceConditionMenuSections(
           offering: { !$0.isArchived && !groups.contains([$0.id]) },
           choose: { require($0.id) })
+        // The same conditions, wanted not to hold: "not Home".
+        Menu("Not…") {
+          WorkspaceConditionMenuSections(
+            offering: { condition in !condition.isArchived && !groups.contains([TaskRequirement(conditionID: condition.id, isNegated: true).member]) },
+            choose: { require(TaskRequirement(conditionID: $0.id, isNegated: true).member) })
+        }
         if model.focusConditions.contains(where: { !$0.isArchived }) { Divider() }
         Button("New condition…") {
           newConditionName = ""
@@ -139,11 +145,12 @@ struct WorkspaceTaskConditionsEditor: View {
     }
   }
 
-  /// "Home", "or Campus", "and Floor space": a condition the task needs, with
-  /// the way to widen its requirement on the requirement's last line.
-  private func requirementLine(_ id: String, position: Int, in group: [String], at index: Int) -> some View {
+  /// "Home", "or Campus", "and not Floor space": a condition the task needs
+  /// (or needs not to hold), with the way to widen its requirement on the
+  /// requirement's last line.
+  private func requirementLine(_ member: String, position: Int, in group: [String], at index: Int) -> some View {
     let prefix = position > 0 ? "or " : (index > 0 ? "and " : "")
-    let name = model.focusConditions.first(where: { $0.id == id })?.name ?? "Missing condition"
+    let name = TaskRequirement.label(member, name: model.conditionName)
     return HStack(alignment: .firstTextBaseline, spacing: theme.space.xxs) {
       (Text(prefix).foregroundStyle(theme.dim) + Text(name).foregroundStyle(theme.ink))
         .font(theme.bodyFont())
@@ -161,8 +168,8 @@ struct WorkspaceTaskConditionsEditor: View {
         .inspectorStop("condition.\(index).or")
         .help("Let another condition do instead")
       }
-      InspectorClearButton(label: "Remove requirement", stop: "condition.\(index).\(id)") {
-        remove(id, from: index)
+      InspectorClearButton(label: "Remove requirement", stop: "condition.\(index).\(member)") {
+        remove(member, from: index)
       }
     }
   }
@@ -205,11 +212,11 @@ struct WorkspaceTaskConditionsEditor: View {
     newConditionName = ""
   }
 
-  private func remove(_ id: String, from index: Int) {
+  private func remove(_ member: String, from index: Int) {
     edit { values in
       var groups = values.requirementGroups ?? []
       guard groups.indices.contains(index) else { return }
-      groups[index].removeAll { $0 == id }
+      groups[index].removeAll { $0 == member }
       groups.removeAll(where: \.isEmpty)
       values.requirementGroups = groups.isEmpty ? nil : groups
     }
@@ -313,9 +320,8 @@ struct WorkspaceRequirementTags: View {
         .foregroundStyle(theme.muted)
         .accessibilityHidden(true)
       ForEach(Array(groups.enumerated()), id: \.offset) { _, group in
-        let name = group.map { id in model.focusConditions.first { $0.id == id }?.name ?? "Missing condition" }
-          .joined(separator: " or ")
-        let holds = group.contains { available.contains($0) }
+        let name = TaskRequirement.label(group: group, name: model.conditionName)
+        let holds = TaskRequirement.isMet(group: group, available: available)
         ThemedTag(name, tint: holds ? theme.success : theme.warning)
           .help(holds ? "Needs \(name) — available now" : "Needs \(name) — not available now. cc changes what it needs")
           .accessibilityLabel(holds ? "Needs \(name), available now" : "Needs \(name), not available now")

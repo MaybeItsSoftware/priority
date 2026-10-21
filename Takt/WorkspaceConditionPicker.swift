@@ -32,7 +32,8 @@ struct WorkspaceConditionPickerRequest: Identifiable {
 /// first. Here every condition is a row with a box: type to narrow, Space or
 /// Return ticks the row you are on, and a name nothing is called yet offers
 /// "New condition" — made and required in one Return. It stays up, so a task
-/// that needs two things takes two ticks and one Esc.
+/// that needs two things takes two ticks and one Esc. `!` ticks the row as
+/// *not* holding ("not Home"), or ticks a "not" off again.
 struct WorkspaceConditionPicker: View {
   @Environment(WorkspaceViewModel.self) private var model
   @Environment(\.theme) private var theme
@@ -133,7 +134,7 @@ struct WorkspaceConditionPicker: View {
         }
       }
       WorkspaceOverlayFooter(
-        hints: "↑↓ choose · space or ↩ tick · ⌘↩ manage · esc done",
+        hints: "↑↓ choose · space or ↩ tick · ! not · ⌘↩ manage · esc done",
         trailing: summary)
     }
     .onAppear { groups = currentGroups }
@@ -158,6 +159,13 @@ struct WorkspaceConditionPicker: View {
         // Typed to find it, so the next name starts from an empty field.
         if !query.isEmpty { query = "" }
         return true
+      // `!`, which a name could hold but almost never does: on a condition's
+      // row it ticks "not"; on the new-condition row it is typed.
+      case "shift+1", "!":
+        let index = selection ?? 0
+        guard conditions.indices.contains(index) else { return false }
+        choose(index, negated: true)
+        return true
       case "cmd+enter":
         model.dismissOverlay(restoringFocus: false)
         model.openConditionsTab(onNewCondition: true)
@@ -169,13 +177,15 @@ struct WorkspaceConditionPicker: View {
   }
 
   private func row(_ condition: TaskCondition, count: Int) -> some View {
-    let isRequired = TaskRequirementToggle.requires(condition.id, in: groups)
+    let requirement = TaskRequirementToggle.requirement(of: condition.id, in: groups)
+    let isRequired = requirement != nil
+    let isNegated = requirement?.isNegated == true
     return HStack(spacing: theme.space.sm) {
-      Image(systemName: isRequired ? "checkmark.square.fill" : "square")
+      Image(systemName: isNegated ? "minus.square.fill" : isRequired ? "checkmark.square.fill" : "square")
         .foregroundStyle(isRequired ? theme.primary : theme.muted)
-      Text(condition.name)
+      (Text(isNegated ? "not " : "").foregroundStyle(theme.muted)
+        + Text(condition.name).foregroundStyle(condition.isArchived ? theme.muted : theme.ink))
         .font(theme.bodyFont())
-        .foregroundStyle(condition.isArchived ? theme.muted : theme.ink)
         .lineLimit(1)
       if let alternatives = alternatives(to: condition) {
         Text("or \(alternatives)")
@@ -198,6 +208,7 @@ struct WorkspaceConditionPicker: View {
     }
     .accessibilityElement(children: .combine)
     .accessibilityAddTraits(isRequired ? .isSelected : [])
+    .accessibilityValue(isNegated ? "Needed not to hold" : "")
   }
 
   /// The category heading that starts at `index`, with nothing typed.
@@ -210,18 +221,15 @@ struct WorkspaceConditionPicker: View {
   /// The other conditions sharing a requirement with this one — "or Campus"
   /// — so an either-or set in the inspector reads as one here too.
   private func alternatives(to condition: TaskCondition) -> String? {
-    guard let group = (groups ?? []).first(where: { $0.contains(condition.id) && $0.count > 1 }) else { return nil }
-    return group.filter { $0 != condition.id }
-      .map { id in model.focusConditions.first { $0.id == id }?.name ?? "Missing condition" }
-      .joined(separator: " or ")
+    let names = { (member: String) in TaskRequirement(member).conditionID == condition.id }
+    guard let group = (groups ?? []).first(where: { $0.contains(where: names) && $0.count > 1 }) else { return nil }
+    return TaskRequirement.label(group: group.filter { !names($0) }, name: model.conditionName)
   }
 
   /// What the task needs, as the footer's count: "Needs Home + Floor space".
   private var summary: String? {
     guard let groups, !groups.isEmpty else { return "Anytime" }
-    return groups.map { group in
-      group.map { id in model.focusConditions.first { $0.id == id }?.name ?? "?" }.joined(separator: " or ")
-    }.joined(separator: " + ")
+    return groups.map { TaskRequirement.label(group: $0, missing: "?", name: model.conditionName) }.joined(separator: " + ")
   }
 
   /// The requirements as they stand: saved on the task, or held by the draft.
@@ -232,7 +240,9 @@ struct WorkspaceConditionPicker: View {
     }
   }
 
-  private func choose(_ index: Int) {
+  /// Ticks the row at `index`, or off; `negated` ticks it as "not", or a
+  /// "not" off.
+  private func choose(_ index: Int, negated: Bool = false) {
     let items = conditions
     let conditionID: String
     if items.indices.contains(index) {
@@ -251,10 +261,9 @@ struct WorkspaceConditionPicker: View {
     }
     switch request.target {
     case .task(let task):
-      groups = model.toggleRequirement(conditionID, on: task)
+      groups = model.toggleRequirement(conditionID, on: task, negated: negated)
     case .draft(_, let binding):
-      let places = Set(model.focusConditions.filter(\.isLocation).map(\.id))
-      binding.wrappedValue = TaskRequirementToggle.toggling(conditionID, in: binding.wrappedValue, places: places) ?? []
+      binding.wrappedValue = model.toggling(conditionID, in: binding.wrappedValue, negated: negated) ?? []
       groups = binding.wrappedValue
     }
   }
@@ -279,15 +288,21 @@ extension WorkspaceViewModel {
     (try? store?.taskEditorSnapshot(for: task.id))?.planning?.requirementGroups
   }
 
-  /// Ticks a condition on the task, or off: one "Edit Task" step to undo.
-  /// Returns the requirements as saved.
+  /// Ticks a condition on the task, or off — as "not" when `negated` — in
+  /// one "Edit Task" step to undo. Returns the requirements as saved.
   @discardableResult
-  func toggleRequirement(_ conditionID: String, on task: WorkspaceTask) -> [[String]]? {
-    let places = Set(focusConditions.filter(\.isLocation).map(\.id))
+  func toggleRequirement(_ conditionID: String, on task: WorkspaceTask, negated: Bool = false) -> [[String]]? {
     editTaskValues(of: task) { values in
-      values.requirementGroups = TaskRequirementToggle.toggling(conditionID, in: values.requirementGroups, places: places)
+      values.requirementGroups = toggling(conditionID, in: values.requirementGroups, negated: negated)
     }
     return requirementGroups(of: task)
+  }
+
+  /// `groups` with a condition ticked on or off, or as "not" when `negated`.
+  func toggling(_ conditionID: String, in groups: [[String]]?, negated: Bool) -> [[String]]? {
+    if negated { return TaskRequirementToggle.negating(conditionID, in: groups) }
+    let places = Set(focusConditions.filter(\.isLocation).map(\.id))
+    return TaskRequirementToggle.toggling(conditionID, in: groups, places: places)
   }
 
   /// Makes a condition and requires it on the task. Two steps to undo — the
