@@ -36,35 +36,40 @@ struct WorkspaceTitleBarAddField: View {
 
   private var field: some View {
     let capture = TaskCapture.parse(title)
-    return HStack(spacing: theme.space.sm) {
-      Image(systemName: "tray.and.arrow.down")
-        .foregroundStyle(theme.muted)
-      TitleBarAddTextField(
-        text: $title,
-        isEditing: $isEditing,
-        focusRequest: model.quickCaptureFocusRequest + textFocusRequest,
-        holdsKeyboard: !slots.focus.isSlot,
-        font: Self.fieldFont(theme),
-        textColor: NSColor(theme.ink),
-        placeholderColor: NSColor(theme.dim),
-        onSubmit: onSubmit,
-        onCancel: onCancel,
-        onEndEditing: { model.taskInsertionReference = nil },
-        onArrow: arrow,
-        // A click into the text takes the keys back from a slot.
-        onFocus: { if slots.focus.isSlot { slots.focus = .text } })
-      // What Return will file beyond the title, shown before it is pressed:
-      // the parse only reads trailing words, and seeing it is what makes a
-      // bare `30m` safe to accept without a prefix.
-      if capture.hasDetails {
-        TaskCapturePreview(capture: capture)
-          .font(theme.monoCaptionFont)
+    // The slots run the bar's full height to its right edge, ruled off as
+    // cells; only the title side keeps the row's padding.
+    return HStack(spacing: 0) {
+      HStack(spacing: theme.space.sm) {
+        Image(systemName: "tray.and.arrow.down")
+          .foregroundStyle(theme.muted)
+        TitleBarAddTextField(
+          text: $title,
+          isEditing: $isEditing,
+          focusRequest: model.quickCaptureFocusRequest + textFocusRequest,
+          holdsKeyboard: !slots.focus.isSlot,
+          font: Self.fieldFont(theme),
+          textColor: NSColor(theme.ink),
+          placeholderColor: NSColor(theme.dim),
+          onSubmit: onSubmit,
+          onCancel: onCancel,
+          onEndEditing: { model.taskInsertionReference = nil },
+          onArrow: arrow,
+          // A click into the text takes the keys back from a slot.
+          onFocus: { if slots.focus.isSlot { slots.focus = .text } })
+        // What Return will file beyond the title, shown before it is pressed:
+        // the parse only reads trailing words, and seeing it is what makes a
+        // bare `30m` safe to accept without a prefix.
+        if capture.hasDetails {
+          TaskCapturePreview(capture: capture)
+        }
       }
+      .padding(.leading, theme.listGutter)
+      .padding(.trailing, theme.space.sm)
+      .padding(.vertical, theme.space.sm)
       TaskEntrySlotStrip(slots: $slots)
     }
+    .fixedSize(horizontal: false, vertical: true)
     .font(theme.bodyFont())
-    .padding(.horizontal, theme.listGutter)
-    .padding(.vertical, theme.space.sm)
     .commandHelp(
       .taskNew,
       note: "Add a task to \(model.addFieldDestinationTitle). \(TaskCapturePreview.syntaxHint)")
@@ -224,9 +229,9 @@ struct TitleBarAddTextField: NSViewRepresentable {
 /// `#work`, `!1` — shown as the field is typed, so the trailing-word parse in
 /// `TaskCapture` is never a surprise after Return.
 ///
-/// Each label is a status chip in the house convention: a tinted fill, a
-/// hairline of the same hue and text in it, squarish rather than a pill. The
-/// hue is the primary one because this is information, not a warning.
+/// Each label is plain text in the mono face, as the slots' values are, in
+/// the primary hue because it is information, not a warning. No box: the
+/// strip after it already rules off the fields.
 struct TaskCapturePreview: View {
   @Environment(\.theme) private var theme
   let capture: TaskCapture
@@ -237,19 +242,12 @@ struct TaskCapturePreview: View {
 
   var body: some View {
     let labels = capture.detailLabels()
-    HStack(spacing: theme.space.xxs) {
+    HStack(spacing: theme.space.sm) {
       ForEach(Array(labels.enumerated()), id: \.offset) { _, label in
         Text(label)
-          .font(theme.monoCaptionFont)
+          .font(InlineField<EmptyView>.font(theme))
           .foregroundStyle(theme.primary)
           .lineLimit(1)
-          .padding(.horizontal, theme.space.xxs)
-          .background(
-            RoundedRectangle(cornerRadius: theme.controlRadius)
-              .fill(theme.color(.primary, opacity: Theme.statusFillOpacity)))
-          .overlay(
-            RoundedRectangle(cornerRadius: theme.controlRadius)
-              .strokeBorder(theme.color(.primary, opacity: Theme.statusBorderOpacity), lineWidth: theme.hairline))
       }
     }
     .fixedSize()

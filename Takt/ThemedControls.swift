@@ -581,13 +581,11 @@ struct ThemedSegmentedPicker<Value: Hashable>: View {
   }
 }
 
-/// A tag: a squarish rectangle at the control radius, never a capsule, in the
-/// caption face. Tinted, it is the status convention — fill, border and text
-/// of one hue at the status opacities; untinted, it is a quiet well with a
-/// hairline, for a plain label such as a name or a file's origin.
-///
-/// The same geometry as `FocusChipButtonStyle`, so a tag beside a chip reads
-/// as the same kind of thing that happens not to be pressable.
+/// A tag: its words in the mono face after a short rule of its hue, no box.
+/// Tinted, the rule and the text take the status colour; untinted, a plain
+/// label such as a name or a file's origin, they are the input border and
+/// muted text. Set as an `InlineField`'s value is, so a tag reads as part of
+/// a line of fields rather than a button that happens not to be pressable.
 struct ThemedTag: View {
   @Environment(\.theme) private var theme
   let text: String
@@ -599,16 +597,59 @@ struct ThemedTag: View {
   }
 
   var body: some View {
-    let shape = RoundedRectangle(cornerRadius: theme.controlRadius, style: .continuous)
-    Text(text)
-      .font(theme.captionFont)
-      .foregroundStyle(tint ?? theme.muted)
-      .lineLimit(1)
-      .padding(.horizontal, theme.space.sm)
-      .padding(.vertical, theme.space.xxs)
-      .background(shape.fill(tint.map { $0.opacity(Theme.statusFillOpacity) } ?? theme.well))
-      .overlay(
-        shape.strokeBorder(
-          tint.map { $0.opacity(Theme.statusBorderOpacity) } ?? theme.border, lineWidth: theme.hairline))
+    HStack(spacing: theme.space.xxs) {
+      Rectangle()
+        .fill(tint ?? theme.inputBorder)
+        .frame(width: theme.focusRingWidth, height: theme.scale.caption)
+      Text(text)
+        .font(InlineField<EmptyView>.font(theme))
+        .foregroundStyle(tint ?? theme.muted)
+        .lineLimit(1)
+    }
   }
+}
+
+/// A field set inline, as a form on a printed sheet sets it: a dim key and
+/// its value in the mono face, a hairline rule on its left, no box. A run of
+/// them reads as columns of one strip rather than a row of buttons. The one
+/// the keys go to takes the selection band and a focus-coloured rule beneath.
+struct InlineField<Value: View>: View {
+  @Environment(\.theme) private var theme
+  let key: String
+  var isFocused = false
+  /// Stretches to the height it is offered, as a cell of a bar does, rather
+  /// than sitting at its text's height with a margin round it.
+  var fills = false
+  @ViewBuilder let value: () -> Value
+
+  var body: some View {
+    HStack(spacing: theme.space.xs) {
+      Text(key).foregroundStyle(isFocused ? theme.primary : theme.dim)
+      value()
+    }
+    .font(Self.font(theme))
+    .lineLimit(1)
+    .padding(.horizontal, theme.space.sm)
+    .padding(.vertical, fills ? 0 : theme.space.xxs)
+    .frame(maxHeight: fills ? .infinity : nil)
+    .background(isFocused ? theme.selectionFill : .clear)
+    .overlay(alignment: .bottom) {
+      if isFocused { Rectangle().fill(theme.focusRing).frame(height: theme.focusRingWidth) }
+    }
+    .overlay(alignment: .leading) {
+      Rectangle().fill(theme.border).frame(width: theme.hairline)
+    }
+    .contentShape(Rectangle())
+  }
+
+  /// The mono face at the caption size, for a value written beside a field.
+  static func font(_ theme: Theme) -> Font { theme.monoFont(size: theme.scale.caption) }
+}
+
+/// An empty value in an `InlineField`: a dash, not a sentence.
+struct InlineFieldEmpty: View {
+  @Environment(\.theme) private var theme
+  var text = "—"
+
+  var body: some View { Text(text).foregroundStyle(theme.dim) }
 }

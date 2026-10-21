@@ -203,9 +203,9 @@ private struct FocusActionButtonBody: View {
   }
 }
 
-/// A chip that is either on or off: a condition that holds, an estimate that
-/// is chosen. Bordered and squarish, never a capsule; on is the primary status
-/// tint, off is a hairline and muted text.
+/// A choice that is either on or off: a condition that holds, an estimate
+/// that is chosen. Set as an `InlineField` is — mono text after a hairline
+/// rule, no box. On is the primary hue with its rule beneath; off is muted.
 struct FocusChipButtonStyle: ButtonStyle {
   let isOn: Bool
 
@@ -218,25 +218,24 @@ private struct FocusChipButtonBody: View {
   @Environment(\.theme) private var theme
   let configuration: ButtonStyleConfiguration
   let isOn: Bool
+  @State private var isHovering = false
 
   var body: some View {
-    let shape = RoundedRectangle(cornerRadius: theme.controlRadius, style: .continuous)
-    return configuration.label
-      .font(theme.captionFont)
+    configuration.label
+      .font(InlineField<EmptyView>.font(theme))
       .monospacedDigit()
-      .foregroundStyle(isOn ? theme.primary : theme.muted)
+      .foregroundStyle(isOn ? theme.primary : (isHovering ? theme.ink : theme.muted))
       .padding(.horizontal, theme.space.sm)
       .padding(.vertical, theme.space.xxs)
-      .background(
-        shape.fill(
-          isOn
-            ? theme.primary.opacity(Theme.statusFillOpacity)
-            : (configuration.isPressed ? theme.well : Color.clear)))
-      .overlay(
-        shape.strokeBorder(
-          isOn ? theme.primary.opacity(Theme.statusBorderOpacity) : theme.border,
-          lineWidth: theme.hairline))
-      .contentShape(shape)
+      .background(configuration.isPressed ? theme.well : (isOn ? theme.selectionFill : Color.clear))
+      .overlay(alignment: .bottom) {
+        if isOn { Rectangle().fill(theme.primary).frame(height: theme.focusRingWidth) }
+      }
+      .overlay(alignment: .leading) {
+        Rectangle().fill(theme.border).frame(width: theme.hairline)
+      }
+      .contentShape(Rectangle())
+      .onHover { isHovering = $0 }
   }
 }
 

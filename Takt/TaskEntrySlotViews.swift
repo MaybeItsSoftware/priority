@@ -8,53 +8,54 @@ import TaktWorkspace
 /// the text walks into them; the keys each one answers are in
 /// `TaskEntryDraft.handle(key:)`. A click puts the keyboard on one.
 ///
-/// Quiet until they hold something or have the keyboard: a hairline at the
-/// control radius round each, dim words for an empty one, and the focus
-/// colour's band and border on the one the keys go to — the field's selection,
-/// not a raised button.
+/// Set as inline fields (`InlineField`) — a key and a value in the mono
+/// face between hairline rules, a dash for an empty one — so they read as
+/// the columns of a form rather than a row of buttons. The one the keys go
+/// to takes the selection band.
 struct TaskEntrySlotStrip: View {
   @Environment(WorkspaceViewModel.self) private var model
   @Environment(\.theme) private var theme
   @Binding var slots: TaskEntryDraft
 
   var body: some View {
-    HStack(spacing: theme.space.xs) {
-      slot(.date, symbol: "calendar", help: "Due day. ↑ a day on, ⇧↑ a week, ↓ the calendar, ⌫ none") {
+    HStack(spacing: 0) {
+      slot(.date, key: "due", help: "Due day. ↑ a day on, ⇧↑ a week, ↓ the calendar, ⌫ none") {
         if let date = slots.dueDate {
           Text(TaskEntryDate.label(date)).foregroundStyle(theme.ink)
         } else {
-          Text("No date").foregroundStyle(theme.dim)
+          InlineFieldEmpty()
         }
       }
-      slot(.conditions, symbol: "location", help: "What it needs. ↓ or Space to choose, ⌫ the last one") {
+      slot(.conditions, key: "needs", help: "What it needs. ↓ or Space to choose, ⌫ the last one") {
         conditions
       }
-      slot(.estimate, symbol: "timer", help: "Time to complete. ↑↓ step, type minutes, ⌫ none") {
+      slot(.estimate, key: "time", help: "Time to complete. ↑↓ step, type minutes, ⌫ none") {
         if let minutes = slots.estimateMinutes {
           Text(TaskEntryEstimate.label(minutes)).foregroundStyle(theme.ink)
         } else {
-          Text("No time").foregroundStyle(theme.dim)
+          InlineFieldEmpty()
         }
       }
     }
-    .fixedSize()
+    .fixedSize(horizontal: true, vertical: false)
+    .frame(maxHeight: .infinity)
   }
 
-  /// The requirements as a row's tags show them: one per requirement, in the
-  /// success colour when it holds now and the warning colour when it does
-  /// not. Two at most, then a count, so the title keeps its room.
+  /// The requirements in the colours a row's tags use: success when one
+  /// holds now, warning when it does not. Two at most, then a count, so the
+  /// title keeps its room.
   @ViewBuilder
   private var conditions: some View {
     let groups = slots.requirementGroups
     if groups.isEmpty {
-      Text("Anytime").foregroundStyle(theme.dim)
+      InlineFieldEmpty(text: "any")
     } else {
       let available = model.focusContext.conditionIDs
-      HStack(spacing: theme.space.xxs) {
+      HStack(spacing: theme.space.xs) {
         ForEach(Array(groups.prefix(2).enumerated()), id: \.offset) { _, group in
           let name = group.map { id in model.focusConditions.first { $0.id == id }?.name ?? "Missing condition" }
             .joined(separator: " or ")
-          ThemedTag(name, tint: group.contains { available.contains($0) } ? theme.success : theme.warning)
+          Text(name).foregroundStyle(group.contains { available.contains($0) } ? theme.success : theme.warning)
         }
         if groups.count > 2 {
           Text("+\(groups.count - 2)").foregroundStyle(theme.muted)
@@ -64,28 +65,14 @@ struct TaskEntrySlotStrip: View {
   }
 
   private func slot<Content: View>(
-    _ focus: TaskEntryFocus, symbol: String, help: String, @ViewBuilder content: () -> Content
+    _ focus: TaskEntryFocus, key: String, help: String, @ViewBuilder content: @escaping () -> Content
   ) -> some View {
     let isFocused = slots.focus == focus
-    let shape = RoundedRectangle(cornerRadius: theme.controlRadius, style: .continuous)
-    return HStack(spacing: theme.space.xxs) {
-      Image(systemName: symbol)
-        .foregroundStyle(isFocused ? theme.primary : theme.muted)
-        .accessibilityHidden(true)
-      content()
-    }
-    .font(theme.captionFont)
-    .lineLimit(1)
-    .padding(.horizontal, theme.space.xs)
-    .padding(.vertical, theme.space.xxs)
-    .background(shape.fill(isFocused ? theme.selectionFill : .clear))
-    .overlay(
-      shape.strokeBorder(isFocused ? theme.focusRing : theme.border, lineWidth: theme.hairline))
-    .contentShape(shape)
-    .onTapGesture { slots.focus = focus }
-    .help(help)
-    .accessibilityElement(children: .combine)
-    .accessibilityAddTraits(isFocused ? [.isButton, .isSelected] : .isButton)
+    return InlineField(key: key, isFocused: isFocused, fills: true, value: content)
+      .onTapGesture { slots.focus = focus }
+      .help(help)
+      .accessibilityElement(children: .combine)
+      .accessibilityAddTraits(isFocused ? [.isButton, .isSelected] : .isButton)
   }
 }
 
