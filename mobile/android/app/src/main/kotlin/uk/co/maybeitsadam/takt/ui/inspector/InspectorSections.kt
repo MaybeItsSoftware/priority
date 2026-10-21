@@ -50,6 +50,7 @@ import java.time.LocalDate
 import java.time.LocalTime
 import java.time.ZoneId
 import uk.co.maybeitsadam.takt.core.MatrixQuadrant
+import uk.co.maybeitsadam.takt.core.TaskRequirement
 import uk.co.maybeitsadam.takt.core.TaskStatus
 import uk.co.maybeitsadam.takt.core.WaitingFollowUp
 import uk.co.maybeitsadam.takt.core.WorkspaceDaily
@@ -430,7 +431,7 @@ private fun ConditionsSection(
                 Text(if (index == 0) "Needs" else "and", style = TaktTheme.type.small, color = colors.mutedText)
                 group.forEachIndexed { position, id ->
                     if (position > 0) Text("or", style = TaktTheme.type.small, color = colors.mutedText)
-                    val name = around.conditionName(id)
+                    val name = TaskRequirement.label(id, around::conditionName)
                     Tag(
                         name,
                         color = colors.categoricalPurple,

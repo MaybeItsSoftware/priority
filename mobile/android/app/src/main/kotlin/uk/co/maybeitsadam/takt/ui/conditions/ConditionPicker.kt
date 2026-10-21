@@ -2,6 +2,7 @@ package uk.co.maybeitsadam.takt.ui.conditions
 
 import androidx.compose.runtime.Immutable
 import uk.co.maybeitsadam.takt.core.TaskCondition
+import uk.co.maybeitsadam.takt.core.TaskRequirement
 import uk.co.maybeitsadam.takt.data.workspace.ConditionGroup
 import uk.co.maybeitsadam.takt.data.workspace.ConditionGroups
 import uniffi.takt_core.PaletteCandidate
@@ -86,16 +87,18 @@ object ConditionPicker {
         )
     }
 
-    /** What a task needs, in one line: "Home or Campus + Floor space", or "Anytime". */
+    /** What a task needs, in one line: "Home or Campus + not Floor space", or "Anytime". */
     fun requirementSummary(groups: List<List<String>>?, name: (String) -> String): String =
         groups.orEmpty().filter { it.isNotEmpty() }.takeIf { it.isNotEmpty() }
-            ?.joinToString(" + ") { group -> group.joinToString(" or ") { name(it) } }
+            ?.joinToString(" + ") { group -> TaskRequirement.label(group, name) }
             ?: "Anytime"
 
     /** The other conditions sharing a group with [id] — "Campus" for Home in Home-or-Campus — or null. */
-    fun alternatives(id: String, groups: List<List<String>>?, name: (String) -> String): String? =
-        groups.orEmpty().firstOrNull { id in it && it.size > 1 }
-            ?.filter { it != id }?.joinToString(" or ") { name(it) }
+    fun alternatives(id: String, groups: List<List<String>>?, name: (String) -> String): String? {
+        val names = { member: String -> TaskRequirement.parse(member).conditionId == id }
+        return groups.orEmpty().firstOrNull { group -> group.any(names) && group.size > 1 }
+            ?.filterNot(names)?.let { TaskRequirement.label(it, name) }
+    }
 
     /** What holds now, in the order the headings put it: "Home · Laptop", or null for nothing. */
     fun nowSummary(conditions: List<TaskCondition>, selected: Set<String>): String? =
@@ -109,20 +112,27 @@ object ConditionPicker {
  * the iPhone calls directly. A tick is a group of its own — "and needs Floor
  * space" — except for a place: you are in one place at a time, so a second
  * place joins the group the first is in ("Home or Campus") rather than asking
- * for both, which nothing could satisfy.
+ * for both, which nothing could satisfy. A condition can also be ticked as
+ * *not* holding ("not Home", stored `!home`): always a group of its own.
  */
 object RequirementToggle {
-    fun requires(id: String, groups: List<List<String>>?): Boolean = groups.orEmpty().any { id in it }
+    /** Whether [id] is required by any group, either way. */
+    fun requires(id: String, groups: List<List<String>>?): Boolean = requirement(id, groups) != null
+
+    /** How [id] is first required — as itself, or negated — or null when it is not. */
+    fun requirement(id: String, groups: List<List<String>>?): TaskRequirement? =
+        groups.orEmpty().asSequence().flatten().map(TaskRequirement::parse).firstOrNull { it.conditionId == id }
 
     /**
-     * [groups] with [id] ticked on, or off if it was already required. Ticking
-     * off takes it out of every group and drops a group it leaves empty.
-     * [places] are the ids of the conditions that are places. Null when nothing is left.
+     * [groups] with [id] ticked on, or off if it was already required either
+     * way. Ticking off takes it out of every group and drops a group it leaves
+     * empty. [places] are the ids of the conditions that are places. Null when
+     * nothing is left.
      */
     fun toggling(id: String, groups: List<List<String>>?, places: Set<String>): List<List<String>>? {
         var next = groups.orEmpty()
         if (requires(id, next)) {
-            next = next.map { group -> group.filter { it != id } }.filter { it.isNotEmpty() }
+            next = removing(id, next)
         } else {
             val placeGroup = if (id in places) next.indexOfFirst { group -> group.all { it in places } } else -1
             next = if (placeGroup >= 0) {
@@ -133,4 +143,17 @@ object RequirementToggle {
         }
         return next.ifEmpty { null }
     }
+
+    /**
+     * [groups] with [id] ticked as not holding: required as itself it turns
+     * into "not", and already "not" it is ticked off. Null when nothing is left.
+     */
+    fun negating(id: String, groups: List<List<String>>?): List<List<String>>? {
+        val wasNegated = requirement(id, groups)?.isNegated == true
+        val next = removing(id, groups.orEmpty())
+        return (if (wasNegated) next else next + listOf(listOf(TaskRequirement(id, isNegated = true).member))).ifEmpty { null }
+    }
+
+    private fun removing(id: String, groups: List<List<String>>): List<List<String>> =
+        groups.map { group -> group.filter { TaskRequirement.parse(it).conditionId != id } }.filter { it.isNotEmpty() }
 }

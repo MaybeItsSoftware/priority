@@ -14,6 +14,7 @@ import uk.co.maybeitsadam.takt.core.NextUpReason
 import uk.co.maybeitsadam.takt.core.ScoredNextUp
 import uk.co.maybeitsadam.takt.core.TaskAvailabilityPolicy
 import uk.co.maybeitsadam.takt.core.TaskCondition
+import uk.co.maybeitsadam.takt.core.TaskRequirement
 import uk.co.maybeitsadam.takt.core.coreMillis
 import uk.co.maybeitsadam.takt.core.coreName
 import uk.co.maybeitsadam.takt.core.FocusContext
@@ -76,7 +77,7 @@ object FocusText {
         when (reason) {
             is TaskUnavailableReason.StartsLater -> "Starts ${Format.day(reason.at, zone)} ${Format.time(reason.at, zone)}"
             is TaskUnavailableReason.MissingConditions -> "Needs " + reason.groups.joinToString(" and ") { group ->
-                group.joinToString(" or ") { id -> conditions.firstOrNull { it.id == id }?.name ?: "Missing condition" }
+                TaskRequirement.label(group) { id -> conditions.firstOrNull { it.id == id }?.name ?: "Missing condition" }
             }
             is TaskUnavailableReason.InsufficientTime -> "Needs at least ${ceil(reason.seconds / 60.0).toInt()} minutes"
             TaskUnavailableReason.NeedsEstimate -> "Needs a remaining estimate to check it fits"
@@ -89,8 +90,9 @@ object FocusText {
     fun explanation(rung: ScoredNextUp, selected: Set<String>, conditions: List<TaskCondition>): String {
         if (rung.reason != NextUpReason.CONDITION) return rung.explanation.capitalisedFirst()
         val names = rung.candidate.requirementGroups.joinToString(" + ") { group ->
-            group.filter { it in selected }
-                .joinToString(" or ") { id -> conditions.firstOrNull { it.id == id }?.name ?: "Missing condition" }
+            TaskRequirement.label(group.filter { TaskRequirement.parse(it).isMet(selected) }) { id ->
+                conditions.firstOrNull { it.id == id }?.name ?: "Missing condition"
+            }
         }
         return "$names available now"
     }

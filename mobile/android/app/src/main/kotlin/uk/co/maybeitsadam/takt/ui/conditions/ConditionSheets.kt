@@ -210,6 +210,7 @@ fun TaskConditionsSheet(
         val places = state.conditions.filter { it.isLocation }.map { it.id }.toSet()
         onGroupsChange { current -> RequirementToggle.toggling(id, current, places) }
     }
+    fun negated(id: String) = RequirementToggle.requirement(id, groups)?.isNegated == true
     ConditionPickerSheet(
         title = "Needs",
         subtitle = ConditionPicker.requirementSummary(groups, state::name),
@@ -226,6 +227,20 @@ fun TaskConditionsSheet(
             ).joinToString(" · ").ifEmpty { null }
         },
         count = { row -> state.usage[row.condition.id] },
+        label = { row -> if (negated(row.condition.id)) "not ${row.condition.name}" else row.condition.name },
+        // "Not": the task waits while the condition holds, rather than until.
+        action = { row ->
+            val on = negated(row.condition.id)
+            Tag(
+                "Not",
+                color = if (on) TaktTheme.colors.primary else TaktTheme.colors.mutedText,
+                selected = on,
+                onClick = { onGroupsChange { current -> RequirementToggle.negating(row.condition.id, current) } },
+                modifier = Modifier
+                    .testTag("condition_not_${row.condition.name}")
+                    .semantics { contentDescription = if (on) "Needed not to hold: tap to remove" else "Need it not to hold" },
+            )
+        },
         onToggle = { row -> toggle(row.condition.id) },
         onCreate = { name ->
             query = ""
@@ -257,6 +272,8 @@ private fun ConditionPickerSheet(
     notice: @Composable () -> Unit = {},
     detail: (ConditionPickerRow) -> String? = { null },
     count: (ConditionPickerRow) -> Int? = { null },
+    label: (ConditionPickerRow) -> String = { it.condition.name },
+    action: (@Composable (ConditionPickerRow) -> Unit)? = null,
 ) {
     val colors = TaktTheme.colors
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = offeredCount >= ConditionPicker.SEARCH_THRESHOLD)
@@ -334,7 +351,7 @@ private fun ConditionPickerSheet(
                         item(key = "header-${section.title}", contentType = "header") { SectionHeader(section.title) }
                     }
                     items(section.rows, key = { "row-${it.condition.id}" }, contentType = { "row" }) { row ->
-                        ConditionRow(row, detail(row), count(row), onToggle = { onToggle(row) })
+                        ConditionRow(row, label(row), detail(row), count(row), action, onToggle = { onToggle(row) })
                     }
                 }
                 list.newName?.let { name ->
@@ -370,7 +387,14 @@ private fun ConditionPickerSheet(
 
 /** One condition: a box (or, under Location when saying where you are, a radio), its name, and what is said beside it. */
 @Composable
-private fun ConditionRow(row: ConditionPickerRow, detail: String?, count: Int?, onToggle: () -> Unit) {
+private fun ConditionRow(
+    row: ConditionPickerRow,
+    label: String,
+    detail: String?,
+    count: Int?,
+    action: (@Composable (ConditionPickerRow) -> Unit)?,
+    onToggle: () -> Unit,
+) {
     val colors = TaktTheme.colors
     val condition = row.condition
     Column {
@@ -387,7 +411,7 @@ private fun ConditionRow(row: ConditionPickerRow, detail: String?, count: Int?, 
             Indicator(row.isOn, round = row.isExclusive)
             Column(Modifier.weight(1f)) {
                 Text(
-                    condition.name,
+                    label,
                     style = if (row.isOn) TaktTheme.type.bodyStrong else TaktTheme.type.body,
                     color = if (condition.isArchived) colors.mutedText else colors.ink,
                     maxLines = 1,
@@ -403,6 +427,7 @@ private fun ConditionRow(row: ConditionPickerRow, detail: String?, count: Int?, 
                     modifier = Modifier.semantics { contentDescription = if (count == 1) "1 open task needs it" else "$count open tasks need it" },
                 )
             }
+            action?.invoke(row)
         }
         Hairline(Modifier.padding(start = Metrics.lg), color = colors.borderMuted)
     }

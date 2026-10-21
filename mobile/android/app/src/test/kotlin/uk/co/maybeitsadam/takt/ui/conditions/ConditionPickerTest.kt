@@ -96,5 +96,21 @@ class ConditionPickerTest {
         assertNull(ConditionPicker.alternatives("laptop", listOf(listOf("laptop")), name))
         assertEquals("Home · Laptop", ConditionPicker.nowSummary(all, setOf("laptop", "home")))
         assertNull(ConditionPicker.nowSummary(all, emptySet()))
+        assertEquals("not Home + Campus or not Laptop", ConditionPicker.requirementSummary(listOf(listOf("!home"), listOf("campus", "!laptop")), name))
+        assertEquals("not Laptop", ConditionPicker.alternatives("campus", listOf(listOf("campus", "!laptop")), name))
+    }
+
+    /** "Not" ticks a condition as not holding, turns one round, and unticks a "not"; ticking one off works either way. */
+    @Test
+    fun notTicksAConditionAsNotHolding() {
+        val places = setOf("home", "campus")
+        assertEquals(listOf(listOf("!home")), RequirementToggle.negating("home", null))
+        assertEquals(listOf(listOf("campus"), listOf("!home")), RequirementToggle.negating("home", listOf(listOf("campus", "home"))))
+        assertNull(RequirementToggle.negating("home", listOf(listOf("!home"))))
+        assertTrue(RequirementToggle.requires("home", listOf(listOf("!home"))))
+        assertTrue(RequirementToggle.requirement("home", listOf(listOf("!home")))!!.isNegated)
+        assertNull(RequirementToggle.toggling("home", listOf(listOf("!home")), places))
+        // A place after a "not" place is not an alternative to it.
+        assertEquals(listOf(listOf("!home"), listOf("campus")), RequirementToggle.toggling("campus", listOf(listOf("!home")), places))
     }
 }

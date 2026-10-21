@@ -40,6 +40,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import java.time.ZoneId
 import uk.co.maybeitsadam.takt.core.TaskCalendarDate
+import uk.co.maybeitsadam.takt.core.TaskRequirement
 import uk.co.maybeitsadam.takt.data.workspace.TaskEditorDraft
 import uk.co.maybeitsadam.takt.data.workspace.TaskEditorField
 import uk.co.maybeitsadam.takt.data.workspace.TaskEditorValues
@@ -221,7 +222,7 @@ private fun display(field: TaskEditorField, values: TaskEditorValues, around: In
         TaskEditorField.START_AT -> values.startAt?.let { Format.due(it, zone) } ?: "None"
         TaskEditorField.DUE_DATE -> values.dueDate?.let { raw -> TaskCalendarDate.date(raw, zone)?.let { Format.day(it, zone) } ?: raw } ?: "None"
         TaskEditorField.REQUIREMENTS -> values.requirementGroups.orEmpty()
-            .joinToString(" and ") { group -> group.joinToString(" or ") { around.conditionName(it) } }
+            .joinToString(" and ") { group -> TaskRequirement.label(group, around::conditionName) }
             .ifEmpty { "None" }
         TaskEditorField.MINIMUM_BLOCK -> values.minimumBlockMinutes?.let { "$it minutes" } ?: "None"
         TaskEditorField.SINGLE_SITTING -> if (values.requiresSingleSitting == true) "Required" else "Not required"

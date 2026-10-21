@@ -56,6 +56,10 @@ class FocusModelTest {
             "Needs Missing condition",
             FocusText.unavailable(TaskUnavailableReason.MissingConditions(listOf(listOf("x"))), emptyList()),
         )
+        assertEquals(
+            "Needs not Missing condition",
+            FocusText.unavailable(TaskUnavailableReason.MissingConditions(listOf(listOf("!x"))), emptyList()),
+        )
     }
 
     @Test fun startObjectionsWhenBlockTooLong() {
