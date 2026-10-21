@@ -408,6 +408,12 @@ class WorkspaceRepository(
     internal suspend fun <T> coreWrite(block: (uniffi.takt_core.CoreWorkspace) -> T): T =
         mappingCoreErrors { database.coreWrite(CORE_WRITTEN_TABLES, block) }
 
+    /**
+     * Runs [block]'s writes back to back, with no other write between them;
+     * each is still its own transaction. See [WorkspaceDatabase.together].
+     */
+    suspend fun <T> writingTogether(block: suspend () -> T): T = database.together(block)
+
     /** Runs a read the Rust core makes, with the same errors as [coreWrite]. */
     internal suspend fun <T> coreRead(block: (uniffi.takt_core.CoreWorkspace) -> T): T =
         mappingCoreErrors { database.coreRead(block) }

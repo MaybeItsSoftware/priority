@@ -1,6 +1,11 @@
 package uk.co.maybeitsadam.takt.data.workspace
 
 import java.time.Instant
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Deferred
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -83,6 +88,36 @@ class WorkspaceRecurrenceClashTest {
         store.undo()
         assertFalse(store.tasks(inboxId).any { it.id == copy })
         assertTrue(store.tasks(inboxId).any { it.id == id })
+        assertEquals(monday9, store.taskEditorSnapshot(id).dueAt)
+    }
+
+    @Test
+    fun aWriteWaitsOutTheMoveAndItsCopyWrittenTogether() = fixture {
+        val id = daily()
+        val other = store.createTask(listId = inboxId, title = "Other").id
+        val moved = monday9.plusSeconds(day)
+        val inBetween = CompletableDeferred<Unit>()
+        coroutineScope {
+            var landing: Deferred<Unit>? = null
+            store.writingTogether {
+                store.saveTaskEditor(TaskEditorDraft(store.taskEditorSnapshot(id)).edit { copy(dueAt = moved) })
+                // A write from elsewhere, between the move and the copy: it waits.
+                landing = this@coroutineScope.async(Dispatchers.Default) {
+                    inBetween.complete(Unit)
+                    store.updateTask(other, "Renamed", "", null, null)
+                }
+                inBetween.await()
+                store.addOccurrenceCopy(id)
+            }
+            landing!!.await()
+        }
+
+        assertEquals("Renamed", store.task(other)?.title)
+        store.undo()
+        assertEquals("Other", store.task(other)?.title)
+        // The next undo is the move and its copy, together.
+        assertEquals("Keep Both", store.undoableLabel())
+        store.undo()
         assertEquals(monday9, store.taskEditorSnapshot(id).dueAt)
     }
 

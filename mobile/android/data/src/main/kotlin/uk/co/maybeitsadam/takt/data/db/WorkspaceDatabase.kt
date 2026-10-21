@@ -11,6 +11,7 @@ import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -22,6 +23,8 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import kotlin.coroutines.AbstractCoroutineContextElement
+import kotlin.coroutines.CoroutineContext
 
 /**
  * The workspace database file: one writer connection and a small pool of
@@ -56,7 +59,7 @@ class WorkspaceDatabase private constructor(
 
     /** Runs [block] in one IMMEDIATE transaction on the writer; rolls back if it throws. */
     suspend fun <T> write(block: (Db) -> T): T = withContext(dispatcher) {
-        val (result, touched) = writerLock.withLock { transaction(writer, "BEGIN IMMEDIATE", track = true, block) }
+        val (result, touched) = holdingWriter { transaction(writer, "BEGIN IMMEDIATE", track = true, block) }
         if (touched.isNotEmpty()) changes.emit(touched)
         result
     }
@@ -68,9 +71,33 @@ class WorkspaceDatabase private constructor(
      * the core never waits on this database's writer or it on the core.
      */
     suspend fun <T> coreWrite(tables: Set<String>, block: (CoreWorkspace) -> T): T = withContext(dispatcher) {
-        val result = writerLock.withLock { block(core) }
+        val result = holdingWriter { block(core) }
         changes.emit(tables)
         result
+    }
+
+    /**
+     * Runs [block], whose writes are each still a transaction (and an undo
+     * step) of their own, with no other write landing between them: the
+     * writer lock is held throughout, and the writes inside take it as
+     * already theirs. For a step the core joins to the one before it
+     * (`journal::begin_joining_last`, Keep both's copy), which a write
+     * landing between would split into two undo steps.
+     *
+     * Only [block]'s own coroutine may write: a coroutine it launches would
+     * inherit the hold and write alongside it.
+     */
+    suspend fun <T> together(block: suspend () -> T): T {
+        if (currentCoroutineContext()[HeldWriter]?.database === this) return block()
+        return writerLock.withLock { withContext(HeldWriter(this)) { block() } }
+    }
+
+    private suspend inline fun <T> holdingWriter(block: () -> T): T =
+        if (currentCoroutineContext()[HeldWriter]?.database === this) block() else writerLock.withLock { block() }
+
+    /** Marks a coroutine inside [together], which holds [writerLock] for the writes it makes. */
+    private class HeldWriter(val database: WorkspaceDatabase) : AbstractCoroutineContextElement(HeldWriter) {
+        companion object Key : CoroutineContext.Key<HeldWriter>
     }
 
     /** Runs a read through the Rust core's connection. */
