@@ -227,6 +227,19 @@ like the rest of the row and reinstalls every journal and outbox trigger. A
 client older than v33 drops it on pull and sets a priority on the one
 occurrence only. See `core/src/editor.rs`.
 
+Negative priorities (-1 to -4, behind every task with none) came with no
+migration: `task_metadata.priority` was already an `INTEGER`, so a value
+arrives on every client. A client built before them (core before
+`c79a5461`) reads one as no priority, and its editor keeps only 1 to 4 of
+what it writes back, so saving any of a task's tags, links, repeat or
+priority there writes NULL over the -1 — even when the user only changed a
+tag. The trigger pushes `priority` as changed, the server's per-column merge
+takes it as the newest word, and every device then shows the task with no
+priority, back among the rest instead of at the bottom. Nothing in a push
+says which version of the core wrote it, so neither the server nor a newer
+client can tell that NULL from a priority cleared on purpose, and the core
+does not try to. Update every device before relying on a negative priority.
+
 The following are not synced: the undo journal (`undo_control`, `change_log`), the FTS index
 (rebuilt by its own triggers as synced rows land), `grdb_migrations`, and the
 sync tables themselves. Day-log files stay per device. Theme *files* do
