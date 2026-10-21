@@ -240,6 +240,17 @@ says which version of the core wrote it, so neither the server nor a newer
 client can tell that NULL from a priority cleared on purpose, and the core
 does not try to. Update every device before relying on a negative priority.
 
+Negated requirements ("not Home") came with no migration either: a member
+of a task's `requirementGroups` written `"!" + conditionId` is met while that
+condition does *not* hold (`core/src/conditions/requirement.rs` is the one
+place that reads one). The planning JSON was already free text, so it syncs
+as it is. A client built before them reads `"!home"` as an id no condition
+has, which no context holds: the task stays waiting there, and its
+requirement shows as a missing condition, until that device is updated.
+Nothing is lost — an older editor keeps the member when it saves the task
+without touching its conditions — but removing the "missing" condition there
+removes the requirement.
+
 The following are not synced: the undo journal (`undo_control`, `change_log`), the FTS index
 (rebuilt by its own triggers as synced rows land), `grdb_migrations`, and the
 sync tables themselves. Day-log files stay per device. Theme *files* do

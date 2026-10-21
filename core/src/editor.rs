@@ -568,16 +568,24 @@ fn update_planning(
     if distinct.len() != groups.len() {
         return Err(CoreError::InvalidCondition);
     }
-    let previously_required: Vec<&String> = previous
+    let previously_required: Vec<&str> = previous
         .and_then(|p| p.requirement_groups.as_ref())
-        .map(|groups| groups.iter().flatten().collect())
+        .map(|groups| {
+            groups
+                .iter()
+                .flatten()
+                .map(|member| crate::conditions::condition_id_of(member))
+                .collect()
+        })
         .unwrap_or_default();
     for group in &groups {
         let unique: BTreeSet<&String> = group.iter().collect();
         if group.is_empty() || unique.len() != group.len() {
             return Err(CoreError::InvalidCondition);
         }
-        for id in group {
+        for member in group {
+            // A negated requirement ("!id") names its condition all the same.
+            let id = crate::conditions::condition_id_of(member);
             let condition: Option<(String, bool)> = transaction
                 .query_row(
                     "SELECT workspaceId, isArchived FROM task_conditions WHERE id = ?1",

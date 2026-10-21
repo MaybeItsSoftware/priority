@@ -13,7 +13,9 @@ is polish.
   `isLocation` equal to "the category is Location" (`core/src/conditions.rs`).
 - A task requires conditions in `task_metadata.planningJSON`
   (`requirementGroups`): every group must hold, and any one member of a group
-  will do. The editor's save validates them (`core/src/editor.rs`).
+  will do. A member written `!id` asks for that condition *not* to hold
+  ("not Home"; `core/src/conditions/requirement.rs`). The editor's save
+  validates them (`core/src/editor.rs`).
 - What holds now is the **context**: active condition ids, an available-time
   window, a goal and an expiry. The ranking (`core/src/focus.rs`,
   `reasons`) holds back a task whose groups are not all met, which keeps it

@@ -266,6 +266,91 @@ fn merging_moves_every_requirement_and_archives_the_old_one() {
 }
 
 #[test]
+fn merging_carries_a_negation_over() {
+    let mut connection = workspace();
+    let home = make(&mut connection, "Home", Some("Location"));
+    let house = make(&mut connection, "House", Some("Location"));
+    let quiet = make(&mut connection, "Quiet", None);
+    task(&connection, "away", "open", &format!("[[\"!{house}\"]]"));
+    task(
+        &connection,
+        "either",
+        "open",
+        &format!("[[\"!{house}\",\"!{home}\"],[\"{house}\",\"{quiet}\"]]"),
+    );
+    task(
+        &connection,
+        "both",
+        "open",
+        &format!("[[\"{house}\",\"!{home}\"]]"),
+    );
+    let changed = journalled(&mut connection, "Merge Conditions", |tx| {
+        merge_conditions(tx, &house, &home, 5)
+    })
+    .unwrap();
+    assert_eq!(changed, 3);
+    assert_eq!(
+        groups(&connection, "away"),
+        Some(vec![vec![format!("!{home}")]])
+    );
+    assert_eq!(
+        groups(&connection, "either"),
+        Some(vec![
+            vec![format!("!{home}")],
+            vec![home.clone(), quiet.clone()]
+        ])
+    );
+    // Named both ways, as it may be: always met, and left so.
+    assert_eq!(
+        groups(&connection, "both"),
+        Some(vec![vec![home.clone(), format!("!{home}")]])
+    );
+}
+
+#[test]
+fn a_negated_requirement_counts_as_its_condition() {
+    let mut connection = workspace();
+    let home = make(&mut connection, "Home", Some("Location"));
+    task(
+        &connection,
+        "both",
+        "open",
+        &format!("[[\"{home}\"],[\"!{home}\",\"x\"]]"),
+    );
+    task(&connection, "away", "open", &format!("[[\"!{home}\"]]"));
+    assert_eq!(
+        condition_usage(&connection, "w").unwrap(),
+        vec![
+            ConditionUsage {
+                condition_id: home.clone(),
+                open_tasks: 2
+            },
+            ConditionUsage {
+                condition_id: "x".into(),
+                open_tasks: 1
+            },
+        ]
+    );
+    let requiring: Vec<String> = tasks_requiring(&connection, "w", &home)
+        .unwrap()
+        .into_iter()
+        .map(|t| t.task_id)
+        .collect();
+    assert_eq!(requiring, ["away", "both"]);
+    let counts = condition_waiting_counts(vec![
+        vec![vec!["!campus".into()]],
+        vec![vec!["campus".into()], vec!["!campus".into()]],
+    ]);
+    assert_eq!(
+        counts,
+        vec![ConditionUsage {
+            condition_id: "campus".into(),
+            open_tasks: 2
+        }]
+    );
+}
+
+#[test]
 fn usage_counts_open_tasks_only_and_names_them() {
     let mut connection = workspace();
     let home = make(&mut connection, "Home", Some("Location"));
@@ -364,6 +449,30 @@ fn a_task_requirements_are_set_checked_and_cleared() {
         }),
         Err(CoreError::MissingTask { .. })
     ));
+    // A condition required not to hold is checked as the condition: an
+    // archived one only if the task already named it, either way.
+    for bad in [
+        vec![vec![format!("!{old}")]],
+        vec![vec!["!nope".to_string()]],
+    ] {
+        assert!(matches!(
+            journalled(&mut connection, "Edit Conditions", |tx| {
+                set_task_requirements(tx, "t", bad, 1)
+            }),
+            Err(CoreError::InvalidCondition)
+        ));
+    }
+    let away = vec![
+        vec![format!("!{home}")],
+        vec![campus.clone(), format!("!{campus}")],
+    ];
+    assert!(
+        journalled(&mut connection, "Edit Conditions", |tx| {
+            set_task_requirements(tx, "t", away.clone(), 1)
+        })
+        .unwrap()
+    );
+    assert_eq!(groups(&connection, "t"), Some(away));
     journalled(&mut connection, "Edit Conditions", |tx| {
         set_task_requirements(tx, "t", vec![], 1)
     })

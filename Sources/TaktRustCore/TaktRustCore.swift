@@ -29340,14 +29340,63 @@ public func conditionSections(conditions: [ConditionRow]) -> [ConditionSection] 
 /**
  * How many held-back tasks wait on each condition: `missing` is, for each
  * task the ranking held back for conditions, the requirement groups it
- * found unmet. A task waits on every condition in those groups, once
- * however many groups name it. Most-waited-on first, then by id.
+ * found unmet. A task waits on every condition in those groups — to hold,
+ * or, negated, to stop holding — once however many groups name it.
+ * Most-waited-on first, then by id.
  */
 public func conditionWaitingCounts(missing: [[[String]]]) -> [ConditionUsage]  {
     return try!  FfiConverterSequenceTypeConditionUsage.lift(try! rustCall() {
         uniffiCallStatus in
     uniffi_takt_core_fn_func_condition_waiting_counts(
         FfiConverterSequenceSequenceSequenceString.lower(missing),uniffiCallStatus
+    )
+})
+}
+/**
+ * The condition a requirement group member names, without its negation.
+ */
+public func requirementConditionId(member: String) -> String  {
+    return try!  FfiConverterString.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_requirement_condition_id(
+        FfiConverterString.lower(member),uniffiCallStatus
+    )
+})
+}
+/**
+ * Whether a requirement group is met when `held_ids` hold: any one member
+ * will do, a negated one by its condition not holding.
+ */
+public func requirementGroupIsMet(group: [String], heldIds: [String]) -> Bool  {
+    return try!  FfiConverterBool.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_requirement_group_is_met(
+        FfiConverterSequenceString.lower(group),
+        FfiConverterSequenceString.lower(heldIds),uniffiCallStatus
+    )
+})
+}
+/**
+ * Whether a requirement group member asks for its condition not to hold.
+ */
+public func requirementIsNegated(member: String) -> Bool  {
+    return try!  FfiConverterBool.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_requirement_is_negated(
+        FfiConverterString.lower(member),uniffiCallStatus
+    )
+})
+}
+/**
+ * The member requiring `condition_id`, or, `negated`, requiring it not to
+ * hold.
+ */
+public func requirementMember(conditionId: String, negated: Bool) -> String  {
+    return try!  FfiConverterString.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_requirement_member(
+        FfiConverterString.lower(conditionId),
+        FfiConverterBool.lower(negated),uniffiCallStatus
     )
 })
 }
@@ -31428,7 +31477,19 @@ private let initializationResult: InitializationResult = {
     if (uniffi_takt_core_checksum_func_condition_sections() != 53530) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_takt_core_checksum_func_condition_waiting_counts() != 32597) {
+    if (uniffi_takt_core_checksum_func_condition_waiting_counts() != 42654) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_requirement_condition_id() != 14162) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_requirement_group_is_met() != 26086) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_requirement_is_negated() != 57245) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_requirement_member() != 19164) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_func_day_boundary_day_key() != 60525) {

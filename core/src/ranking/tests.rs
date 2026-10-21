@@ -101,6 +101,53 @@ fn blocked_work_is_kept_apart_with_its_reasons() {
 }
 
 #[test]
+fn a_negated_requirement_holds_while_its_condition_does_not() {
+    let needing = |id: &str, groups: &[&[&str]]| Candidate {
+        requirement_groups: groups
+            .iter()
+            .map(|group| group.iter().map(|m| m.to_string()).collect())
+            .collect(),
+        ..task(id)
+    };
+    let tasks = [
+        needing("away", &[&["!home"]]),
+        needing("either", &[&["campus", "!quiet"]]),
+        needing("both", &[&["home", "!home"]]),
+    ];
+    let context = |held: &[&str]| FocusContext {
+        condition_ids: held.iter().map(|id| id.to_string()).collect(),
+        ..Default::default()
+    };
+    let ranked = |held: &[&str]| {
+        let mut ids: Vec<String> = evaluate(&tasks, NOW, "UTC", &context(held))
+            .ranked
+            .into_iter()
+            .map(|s| s.candidate.id)
+            .collect();
+        ids.sort();
+        ids
+    };
+    assert_eq!(ranked(&[]), ["away", "both", "either"]);
+    assert_eq!(ranked(&["home", "quiet"]), ["both"]);
+    assert_eq!(ranked(&["campus", "home", "quiet"]), ["both", "either"]);
+    // What holds it back is the requirement as written.
+    let ranking = evaluate(&tasks, NOW, "UTC", &context(&["home", "quiet"]));
+    let away = ranking
+        .blocked
+        .iter()
+        .find(|b| b.candidate.id == "away")
+        .unwrap();
+    assert_eq!(
+        away.reasons,
+        [Unavailable::MissingConditions {
+            groups: vec![vec!["!home".into()]]
+        }]
+    );
+    // Counted as a condition task, like any other requirement.
+    assert_eq!(ranking.ranked[0].reason, "condition");
+}
+
+#[test]
 fn priority_one_is_the_most_urgent_and_no_priority_comes_last() {
     let with = |id: &str, priority: Option<i64>| Candidate {
         priority,

@@ -99,11 +99,11 @@ pub fn reasons(candidate: &Candidate, context: &FocusContext, now_ms: i64) -> Ve
     if let Some(start) = candidate.start_at_ms.filter(|start| *start > now_ms) {
         result.push(Unavailable::StartsLater { at_ms: start });
     }
-    let held: HashSet<&String> = context.condition_ids.iter().collect();
+    let held: HashSet<&str> = context.condition_ids.iter().map(String::as_str).collect();
     let missing: Vec<Vec<String>> = candidate
         .requirement_groups
         .iter()
-        .filter(|group| group.iter().all(|id| !held.contains(id)))
+        .filter(|group| !crate::conditions::group_is_met(group, &held))
         .cloned()
         .collect();
     if !missing.is_empty() {

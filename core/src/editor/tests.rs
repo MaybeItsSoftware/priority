@@ -202,6 +202,22 @@ fn the_planning_rules_refuse_what_both_clients_refused() {
         ),
         (
             Planning {
+                requirement_groups: Some(vec![vec!["!away".into()]]),
+                ..Default::default()
+            },
+            None,
+            |e| matches!(e, CoreError::InvalidCondition),
+        ),
+        (
+            Planning {
+                requirement_groups: Some(vec![vec!["!nowhere".into()]]),
+                ..Default::default()
+            },
+            None,
+            |e| matches!(e, CoreError::InvalidCondition),
+        ),
+        (
+            Planning {
                 requirement_groups: Some(vec![vec!["home".into(), "home".into()]]),
                 ..Default::default()
             },
@@ -676,4 +692,25 @@ fn a_task_sent_to_the_back_supersedes_the_one_already_there() {
     // Setting one again at its own level moves nothing.
     set_priority(&mut connection, "third", Some(-1));
     assert_eq!(priority(&connection, "second"), Some(-2));
+}
+
+#[test]
+fn a_condition_required_not_to_hold_is_checked_as_the_condition() {
+    let mut connection = workspace();
+    let baseline = snapshot(&connection, "p").unwrap();
+    let mut edit = baseline.clone();
+    // One named both ways in a group is allowed: it is simply always met.
+    let groups = vec![
+        vec!["!home".to_string()],
+        vec!["desk".into(), "!desk".into()],
+    ];
+    edit.planning = Some(Planning {
+        requirement_groups: Some(groups.clone()),
+        ..Default::default()
+    });
+    let saved = save(&mut connection, &edit, &baseline).unwrap();
+    assert_eq!(
+        saved.planning.and_then(|p| p.requirement_groups),
+        Some(groups)
+    );
 }

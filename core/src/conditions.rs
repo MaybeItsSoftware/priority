@@ -20,7 +20,9 @@ use crate::rows::ConditionRow;
 use crate::time::{non_empty_name, stored};
 
 mod organise;
+mod requirement;
 pub use organise::*;
+pub use requirement::*;
 
 /// The category whose conditions are places, and exclusive.
 pub const LOCATION_CATEGORY: &str = "Location";
@@ -220,8 +222,9 @@ pub fn set_condition_category(
     Ok(())
 }
 
-/// The ids of the conditions any open task in the workspace requires: not
-/// completed, not archived, and in a list that is not archived.
+/// The ids of the conditions any open task in the workspace requires, either
+/// way (a negated requirement names its condition too): not completed, not
+/// archived, and in a list that is not archived.
 pub fn required_condition_ids(
     connection: &Connection,
     workspace_id: &str,
@@ -244,7 +247,11 @@ pub fn required_condition_ids(
             continue;
         };
         for group in planning.requirement_groups.unwrap_or_default() {
-            ids.extend(group);
+            ids.extend(
+                group
+                    .iter()
+                    .map(|member| condition_id_of(member).to_string()),
+            );
         }
     }
     Ok(ids.into_iter().collect())
@@ -652,13 +659,14 @@ mod tests {
                    ('old', 'gone', 'Old', 'open', 0, '2024-01-01 00:00:00.000', '2024-01-01 00:00:00.000', NULL),
                    ('broken', 'l', 'Broken', 'open', 3, '2024-01-01 00:00:00.000', '2024-01-01 00:00:00.000', NULL);
                  INSERT INTO task_metadata (taskId, planningJSON, updatedAt) VALUES
-                   ('open', '{\"requirementGroups\":[[\"home\",\"campus\"],[\"mat\"]]}', '2024-01-01 00:00:00.000'),
+                   ('open', '{\"requirementGroups\":[[\"home\",\"campus\"],[\"!mat\"]]}', '2024-01-01 00:00:00.000'),
                    ('done', '{\"requirementGroups\":[[\"desk\"]]}', '2024-01-01 00:00:00.000'),
                    ('shelved', '{\"requirementGroups\":[[\"desk\"]]}', '2024-01-01 00:00:00.000'),
                    ('old', '{\"requirementGroups\":[[\"desk\"]]}', '2024-01-01 00:00:00.000'),
                    ('broken', '{\"requirementGroups\":7}', '2024-01-01 00:00:00.000');",
             )
             .unwrap();
+        // Requiring Mat not to hold still makes Mat worth saying holds.
         assert_eq!(
             required_condition_ids(&connection, "w").unwrap(),
             vec!["campus".to_string(), "home".into(), "mat".into()]

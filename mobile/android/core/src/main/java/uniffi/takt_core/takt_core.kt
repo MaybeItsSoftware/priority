@@ -773,6 +773,14 @@ internal object IntegrityCheckingUniffiLib {
     ): Int
     external fun uniffi_takt_core_checksum_func_condition_waiting_counts(
     ): Int
+    external fun uniffi_takt_core_checksum_func_requirement_condition_id(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_requirement_group_is_met(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_requirement_is_negated(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_requirement_member(
+    ): Int
     external fun uniffi_takt_core_checksum_func_day_boundary_day_key(
     ): Int
     external fun uniffi_takt_core_checksum_func_day_boundary_day_offset(
@@ -2145,6 +2153,14 @@ internal object UniffiLib {
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_func_condition_waiting_counts(`missing`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_requirement_condition_id(`member`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_requirement_group_is_met(`group`: RustBuffer.ByValue,`heldIds`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): Byte
+    external fun uniffi_takt_core_fn_func_requirement_is_negated(`member`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): Byte
+    external fun uniffi_takt_core_fn_func_requirement_member(`conditionId`: RustBuffer.ByValue,`negated`: Byte,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_func_day_boundary_day_key(`boundary`: RustBuffer.ByValue,`atMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_func_day_boundary_day_offset(`boundary`: RustBuffer.ByValue,`offset`: Long,`fromMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
@@ -2706,7 +2722,19 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
     if ((lib.uniffi_takt_core_checksum_func_condition_sections() and 0xFFFF) != 53530) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if ((lib.uniffi_takt_core_checksum_func_condition_waiting_counts() and 0xFFFF) != 32597) {
+    if ((lib.uniffi_takt_core_checksum_func_condition_waiting_counts() and 0xFFFF) != 42654) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_requirement_condition_id() and 0xFFFF) != 14162) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_requirement_group_is_met() and 0xFFFF) != 26086) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_requirement_is_negated() and 0xFFFF) != 57245) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_requirement_member() and 0xFFFF) != 19164) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_func_day_boundary_day_key() and 0xFFFF) != 60525) {
@@ -32771,8 +32799,9 @@ public object FfiConverterMapStringTypeSyncValue: FfiConverterRustBuffer<Map<kot
         /**
          * How many held-back tasks wait on each condition: `missing` is, for each
          * task the ranking held back for conditions, the requirement groups it
-         * found unmet. A task waits on every condition in those groups, once
-         * however many groups name it. Most-waited-on first, then by id.
+         * found unmet. A task waits on every condition in those groups — to hold,
+         * or, negated, to stop holding — once however many groups name it.
+         * Most-waited-on first, then by id.
          */ fun `conditionWaitingCounts`(`missing`: List<List<List<kotlin.String>>>): List<ConditionUsage> {
             return FfiConverterSequenceTypeConditionUsage.lift(
     uniffiRustCall() { _status ->
@@ -32780,6 +32809,66 @@ public object FfiConverterMapStringTypeSyncValue: FfiConverterRustBuffer<Map<kot
     
         
         FfiConverterSequenceSequenceSequenceString.lower(`missing`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * The condition a requirement group member names, without its negation.
+         */ fun `requirementConditionId`(`member`: kotlin.String): kotlin.String {
+            return FfiConverterString.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_requirement_condition_id(
+    
+        
+        FfiConverterString.lower(`member`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * Whether a requirement group is met when `held_ids` hold: any one member
+         * will do, a negated one by its condition not holding.
+         */ fun `requirementGroupIsMet`(`group`: List<kotlin.String>, `heldIds`: List<kotlin.String>): kotlin.Boolean {
+            return FfiConverterBoolean.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_requirement_group_is_met(
+    
+        
+        FfiConverterSequenceString.lower(`group`),
+        FfiConverterSequenceString.lower(`heldIds`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * Whether a requirement group member asks for its condition not to hold.
+         */ fun `requirementIsNegated`(`member`: kotlin.String): kotlin.Boolean {
+            return FfiConverterBoolean.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_requirement_is_negated(
+    
+        
+        FfiConverterString.lower(`member`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * The member requiring `condition_id`, or, `negated`, requiring it not to
+         * hold.
+         */ fun `requirementMember`(`conditionId`: kotlin.String, `negated`: kotlin.Boolean): kotlin.String {
+            return FfiConverterString.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_requirement_member(
+    
+        
+        FfiConverterString.lower(`conditionId`),
+        FfiConverterBoolean.lower(`negated`),_status)
 }
     )
     }

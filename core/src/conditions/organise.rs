@@ -12,8 +12,8 @@ use std::collections::{BTreeSet, HashMap};
 use rusqlite::{Connection, OptionalExtension, Transaction, params};
 
 use super::{
-    ConditionSection, condition_sections, effective_category, is_location_category,
-    normalized_category,
+    ConditionSection, Requirement, condition_id_of, condition_sections, effective_category,
+    is_location_category, normalized_category,
 };
 use crate::CoreError;
 use crate::planning::Planning;
@@ -229,17 +229,23 @@ pub fn rename_condition_category(
     Ok(changed)
 }
 
-/// `groups` with `from` read as `into`: a group naming both names it once,
-/// and a group that comes out the same as an earlier one goes.
+/// `groups` with `from` read as `into`, negated where it was ("!from" becomes
+/// "!into"): a group naming both the same way names it once, and a group that
+/// comes out the same as an earlier one goes.
 fn merged_groups(groups: &[Vec<String>], from: &str, into: &str) -> Vec<Vec<String>> {
     let mut result: Vec<Vec<String>> = Vec::new();
     let mut seen: BTreeSet<Vec<String>> = BTreeSet::new();
     for group in groups {
         let mut merged: Vec<String> = Vec::new();
-        for id in group {
-            let id = if id == from { into } else { id.as_str() };
-            if !merged.iter().any(|existing| existing == id) {
-                merged.push(id.to_string());
+        for member in group {
+            let requirement = Requirement::parse(member);
+            let member = if requirement.condition_id == from {
+                super::member(into, requirement.negated)
+            } else {
+                member.clone()
+            };
+            if !merged.contains(&member) {
+                merged.push(member);
             }
         }
         let mut key = merged.clone();
@@ -252,7 +258,8 @@ fn merged_groups(groups: &[Vec<String>], from: &str, into: &str) -> Vec<Vec<Stri
 }
 
 /// Merges condition `from` into `into`: every task that required `from`
-/// requires `into` instead, a context that had `from` on has `into` on, and
+/// requires `into` instead (and one that required it not to hold, `into` not
+/// to), a context that had `from` on has `into` on, and
 /// `from` is archived, so it can still be restored. Both must be in the same
 /// workspace and differ. Returns how many tasks changed.
 pub fn merge_conditions(
@@ -282,7 +289,11 @@ pub fn merge_conditions(
         let Some(groups) = planning.requirement_groups.clone() else {
             continue;
         };
-        if !groups.iter().flatten().any(|id| id == from) {
+        if !groups
+            .iter()
+            .flatten()
+            .any(|id| condition_id_of(id) == from)
+        {
             continue;
         }
         planning.requirement_groups = Some(merged_groups(&groups, from, into));
@@ -343,8 +354,8 @@ fn open_plans(
 }
 
 /// How many open tasks require each condition, for every condition at least
-/// one does, by condition id. A task requiring a condition twice (in two
-/// groups) counts once.
+/// one does, by condition id. Requiring it not to hold counts, and a task
+/// requiring a condition twice (in two groups, or both ways) counts once.
 pub fn condition_usage(
     connection: &Connection,
     workspace_id: &str,
@@ -356,6 +367,7 @@ pub fn condition_usage(
             .unwrap_or_default()
             .into_iter()
             .flatten()
+            .map(|member| condition_id_of(&member).to_string())
             .collect();
         for id in ids {
             *counts.entry(id).or_default() += 1;
@@ -379,8 +391,8 @@ pub struct RequiringTask {
     pub list_name: String,
 }
 
-/// The open tasks that require `condition_id`, list by list in sidebar
-/// order.
+/// The open tasks that require `condition_id`, or require it not to hold,
+/// list by list in sidebar order.
 pub fn tasks_requiring(
     connection: &Connection,
     workspace_id: &str,
@@ -394,7 +406,7 @@ pub fn tasks_requiring(
                 .iter()
                 .flatten()
                 .flatten()
-                .any(|id| id == condition_id)
+                .any(|id| condition_id_of(id) == condition_id)
         })
         .map(|(task, _)| task)
         .collect())
@@ -402,13 +414,18 @@ pub fn tasks_requiring(
 
 /// How many held-back tasks wait on each condition: `missing` is, for each
 /// task the ranking held back for conditions, the requirement groups it
-/// found unmet. A task waits on every condition in those groups, once
-/// however many groups name it. Most-waited-on first, then by id.
+/// found unmet. A task waits on every condition in those groups — to hold,
+/// or, negated, to stop holding — once however many groups name it.
+/// Most-waited-on first, then by id.
 #[uniffi::export]
 pub fn condition_waiting_counts(missing: Vec<Vec<Vec<String>>>) -> Vec<ConditionUsage> {
     let mut counts: HashMap<String, u32> = HashMap::new();
     for groups in missing {
-        let ids: BTreeSet<String> = groups.into_iter().flatten().collect();
+        let ids: BTreeSet<String> = groups
+            .into_iter()
+            .flatten()
+            .map(|member| condition_id_of(&member).to_string())
+            .collect();
         for id in ids {
             *counts.entry(id).or_default() += 1;
         }
@@ -429,8 +446,8 @@ pub fn condition_waiting_counts(missing: Vec<Vec<Vec<String>>>) -> Vec<Condition
 }
 
 /// Sets what a task requires — every group must hold, any one condition in a
-/// group will do — leaving the rest of its plan alone. Empty requires
-/// nothing. Each condition must be in the task's workspace and not archived
+/// group will do, "!id" for a condition not holding — leaving the rest of
+/// its plan alone. Empty requires nothing. Each condition must be in the task's workspace and not archived
 /// unless the task already required it; groups may not repeat a condition or
 /// one another. False, writing nothing, when it already required exactly
 /// that.
@@ -459,12 +476,11 @@ pub fn set_task_requirements(
         Some(json) => Planning::from_json(&json)?,
         None => Planning::default(),
     };
-    let previous: Vec<String> = planning
-        .requirement_groups
+    let stored_groups = planning.requirement_groups.clone().unwrap_or_default();
+    let previous: Vec<&str> = stored_groups
         .iter()
         .flatten()
-        .flatten()
-        .cloned()
+        .map(|member| condition_id_of(member))
         .collect();
     let mut distinct: BTreeSet<Vec<String>> = BTreeSet::new();
     for group in &groups {
@@ -477,7 +493,8 @@ pub fn set_task_requirements(
         if !distinct.insert(key) {
             return Err(CoreError::InvalidCondition);
         }
-        for id in group {
+        for member in group {
+            let id = condition_id_of(member);
             let condition: Option<(String, bool)> = transaction
                 .query_row(
                     "SELECT workspaceId, isArchived FROM task_conditions WHERE id = ?1",
@@ -486,7 +503,7 @@ pub fn set_task_requirements(
                 )
                 .optional()?;
             let usable = condition.is_some_and(|(workspace, archived)| {
-                workspace == workspace_id && (!archived || previous.contains(id))
+                workspace == workspace_id && (!archived || previous.contains(&id))
             });
             if !usable {
                 return Err(CoreError::InvalidCondition);
