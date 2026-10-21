@@ -17,7 +17,19 @@ extension WorkspaceViewModel {
     if let draft = taskEditor.draft(for: task.id),
       askAboutStartingLater(draft, title: draft.values.title, proceed: { [weak self] answered, keepingDue in
         guard let self else { return }
-        taskEditor.edit(task.id) { $0 = answered.values }
+        // The inspector stays live under the prompt, so the draft may have
+        // moved on since it was asked; only the deadline the answer set goes
+        // onto it, not the whole draft as it stood then.
+        guard taskEditor.draft(for: task.id) != nil else {
+          errorMessage = "“\(task.title)” was not saved: its edit was closed while the due date question was up."
+          return
+        }
+        if answered.values.dueAt != draft.values.dueAt || answered.values.dueDate != draft.values.dueDate {
+          taskEditor.edit(task.id) {
+            $0.dueAt = answered.values.dueAt
+            $0.dueDate = answered.values.dueDate
+          }
+        }
         saveAnsweredTaskEditor(task, keepingDue: keepingDue)
       }) {
       return
