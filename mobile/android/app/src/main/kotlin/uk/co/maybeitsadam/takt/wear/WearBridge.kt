@@ -86,6 +86,7 @@ object WearBridge {
 
     /** Records that [actionId] has been applied; the next snapshot tells the watch. */
     fun markHandled(actionId: String) {
+        if (actionId in handled.value) return
         handled.value = (handled.value + actionId).takeLast(HANDLED_KEPT)
     }
 
