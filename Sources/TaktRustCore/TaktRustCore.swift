@@ -1892,6 +1892,12 @@ public protocol CoreWorkspaceProtocol: AnyObject, Sendable {
     func saveEditor(edit: EditorSnapshot, baseline: EditorSnapshot, nowMs: Int64, zone: String) throws  -> EditorSnapshot
     
     /**
+     * [`Self::save_editor`], keeping the deadline where it is when the start
+     * moves rather than letting it follow: the Mac's "Keep the due date".
+     */
+    func saveEditorKeepingDue(edit: EditorSnapshot, baseline: EditorSnapshot, nowMs: Int64, zone: String) throws  -> EditorSnapshot
+    
+    /**
      * Saves what holds now. Not an undo step: where you are is not an edit.
      */
     func saveFocusContext(workspaceId: String, context: StoredFocusContext, nowMs: Int64) throws  -> Bool
@@ -4690,6 +4696,23 @@ open func saveEditor(edit: EditorSnapshot, baseline: EditorSnapshot, nowMs: Int6
     return try  FfiConverterTypeEditorSnapshot_lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
         uniffiCallStatus in
     uniffi_takt_core_fn_method_coreworkspace_save_editor(
+            self.uniffiCloneHandle(),
+        FfiConverterTypeEditorSnapshot_lower(edit),
+        FfiConverterTypeEditorSnapshot_lower(baseline),
+        FfiConverterInt64.lower(nowMs),
+        FfiConverterString.lower(zone),uniffiCallStatus
+    )
+})
+}
+    
+    /**
+     * [`Self::save_editor`], keeping the deadline where it is when the start
+     * moves rather than letting it follow: the Mac's "Keep the due date".
+     */
+open func saveEditorKeepingDue(edit: EditorSnapshot, baseline: EditorSnapshot, nowMs: Int64, zone: String)throws  -> EditorSnapshot  {
+    return try  FfiConverterTypeEditorSnapshot_lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_save_editor_keeping_due(
             self.uniffiCloneHandle(),
         FfiConverterTypeEditorSnapshot_lower(edit),
         FfiConverterTypeEditorSnapshot_lower(baseline),
@@ -32414,6 +32437,9 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_method_coreworkspace_save_editor() != 10270) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_save_editor_keeping_due() != 9115) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_method_coreworkspace_save_focus_context() != 64775) {
