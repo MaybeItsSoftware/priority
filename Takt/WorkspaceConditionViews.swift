@@ -314,7 +314,7 @@ struct WorkspaceRequirementTags: View {
   let groups: [[String]]
 
   var body: some View {
-    let available = model.focusContext.conditionIDs
+    let available = model.heldConditionIDs
     HStack(spacing: theme.space.xs) {
       Image(systemName: "location")
         .foregroundStyle(theme.muted)

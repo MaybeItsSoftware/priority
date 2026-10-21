@@ -11,7 +11,14 @@ final class ConditionsPaneLayoutTests: XCTestCase {
   func testRowsWalkBothHalvesAndFoldHeadings() {
     let rows = ConditionsPaneLayout.rows(
       available: ["campus"], sections: sections, folded: ["location"], archived: ["old"], showsArchived: false)
-    XCTAssertEqual(rows, [.available("campus"), .time, .expiry, .add, .folded("location"), .condition("mat"), .archived])
+    XCTAssertEqual(rows, [.time, .available("campus"), .expiry, .add, .folded("location"), .condition("mat"), .archived])
+    // Free time follows where you are, before the other settings and the
+    // properties.
+    XCTAssertEqual(
+      ConditionsPaneLayout.rows(
+        available: ["laptop"], sections: [], folded: [], archived: [], showsArchived: false, hasPlaces: true,
+        hasTimeLimit: true),
+      [.location, .time, .finishOnly, .available("laptop"), .expiry, .add])
     let shown = ConditionsPaneLayout.rows(
       available: [], sections: sections, folded: [], archived: ["old"], showsArchived: true)
     XCTAssertEqual(

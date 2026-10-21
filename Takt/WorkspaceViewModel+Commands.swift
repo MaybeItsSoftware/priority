@@ -266,7 +266,7 @@ extension WorkspaceViewModel {
 
     // MARK: Conditions tab
     case .conditionsToggle, .conditionsAdjust, .conditionsTypeTime, .conditionsEdit, .conditionsNew,
-      .conditionsCategory, .conditionsArchive,
+      .conditionsCategory, .conditionsProvides, .conditionsArchive,
       .conditionsClear, .conditionsUseAgain, .conditionsClose, .motionConditionsSelect,
       .conditionsMoveUp, .conditionsMoveDown, .conditionsMoveCategoryUp, .conditionsMoveCategoryDown,
       .conditionsRenameCategory, .conditionsMerge, .conditionsShowTasks, .conditionsFold, .conditionsFoldAll:

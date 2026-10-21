@@ -3,12 +3,14 @@ import TaktCore
 import TaktWorkspace
 
 struct WorkspaceConditionPickerRequest: Identifiable {
-  /// What the ticks are for: a task that exists, saved as each is ticked, or
+  /// What the ticks are for: a task that exists, saved as each is ticked,
   /// one still being typed in the add field, whose ticks wait in its slot
-  /// until Return files them with it.
+  /// until Return files them with it, or a condition, whose ticks are what
+  /// it provides — `p` in the Conditions tab.
   enum Target {
     case task(WorkspaceTask)
     case draft(title: String, groups: Binding<[[String]]>)
+    case provides(TaskCondition)
   }
 
   let id = UUID()
@@ -16,12 +18,20 @@ struct WorkspaceConditionPickerRequest: Identifiable {
 
   init(task: WorkspaceTask) { target = .task(task) }
   init(draftTitle: String, groups: Binding<[[String]]>) { target = .draft(title: draftTitle, groups: groups) }
+  init(provides condition: TaskCondition) { target = .provides(condition) }
 
   var title: String {
     switch target {
     case .task(let task): task.title
     case .draft(let title, _): title.isEmpty ? "New task" : title
+    case .provides(let condition): condition.name
     }
+  }
+
+  /// The condition whose ticks are what it provides, if that is the job.
+  var provider: TaskCondition? {
+    if case .provides(let condition) = target { return condition }
+    return nil
   }
 }
 
@@ -34,6 +44,10 @@ struct WorkspaceConditionPickerRequest: Identifiable {
 /// "New condition" — made and required in one Return. It stays up, so a task
 /// that needs two things takes two ticks and one Esc. `!` ticks the row as
 /// *not* holding ("not Home"), or ticks a "not" off again.
+///
+/// Opened on a condition (`p` in the Conditions tab), the same list ticks
+/// what that condition provides: Home, Floor space and Quiet. There is no
+/// "not" there, and the condition itself is not offered.
 struct WorkspaceConditionPicker: View {
   @Environment(WorkspaceViewModel.self) private var model
   @Environment(\.theme) private var theme
@@ -47,6 +61,9 @@ struct WorkspaceConditionPicker: View {
   /// The task's requirements, read when the picker opens and again after
   /// every tick, so the boxes show what was saved rather than what was meant.
   @State private var groups: [[String]]?
+  /// What the condition provides, when the picker is for one: read when it
+  /// opens and again after every tick.
+  @State private var provided: [String] = []
   /// Whether the last key moved the cursor rather than typed. Space ticks
   /// then, or with nothing typed; otherwise it is a space in the name,
   /// because "Floor space" has one.
@@ -59,8 +76,10 @@ struct WorkspaceConditionPicker: View {
   /// with nothing typed; filtered the way the list finder filters once you
   /// type, and never reordered by a tick.
   private var conditions: [TaskCondition] {
+    let provider = request.provider
     let offered = TaskConditionSection.sections(model.focusConditions.filter {
-      !$0.isArchived || TaskRequirementToggle.requires($0.id, in: groups)
+      if let provider { return $0.id != provider.id && (!$0.isArchived || provided.contains($0.id)) }
+      return !$0.isArchived || TaskRequirementToggle.requires($0.id, in: groups)
     }).flatMap(\.conditions)
     let needle = query.trimmingCharacters(in: .whitespaces)
     guard !needle.isEmpty else { return offered }
@@ -88,7 +107,9 @@ struct WorkspaceConditionPicker: View {
     let counts = model.conditionRequirementCounts
     VStack(spacing: 0) {
       WorkspaceOverlayField(
-        symbol: "location", prompt: "Needs… or type a new condition", text: $query, context: request.title)
+        symbol: "location",
+        prompt: request.provider == nil ? "Needs… or type a new condition" : "Provides… or type a new condition",
+        text: $query, context: request.title)
       FocusRule()
       if items.isEmpty && new == nil {
         WorkspaceOverlayHint(text: model.focusConditions.isEmpty
@@ -134,10 +155,15 @@ struct WorkspaceConditionPicker: View {
         }
       }
       WorkspaceOverlayFooter(
-        hints: "↑↓ choose · space or ↩ tick · ! not · ⌘↩ manage · esc done",
+        hints: request.provider == nil
+          ? "↑↓ choose · space or ↩ tick · ! not · ⌘↩ manage · esc done"
+          : "↑↓ choose · space or ↩ tick · esc done",
         trailing: summary)
     }
-    .onAppear { groups = currentGroups }
+    .onAppear {
+      groups = currentGroups
+      if let provider = request.provider { provided = model.providedIDs(of: provider) }
+    }
     .onChange(of: query) { _, _ in
       selection = nil
       hasMoved = false
@@ -163,7 +189,7 @@ struct WorkspaceConditionPicker: View {
       // row it ticks "not"; on the new-condition row it is typed.
       case "shift+1", "!":
         let index = selection ?? 0
-        guard conditions.indices.contains(index) else { return false }
+        guard request.provider == nil, conditions.indices.contains(index) else { return false }
         choose(index, negated: true)
         return true
       case "cmd+enter":
@@ -177,8 +203,8 @@ struct WorkspaceConditionPicker: View {
   }
 
   private func row(_ condition: TaskCondition, count: Int) -> some View {
-    let requirement = TaskRequirementToggle.requirement(of: condition.id, in: groups)
-    let isRequired = requirement != nil
+    let requirement = request.provider == nil ? TaskRequirementToggle.requirement(of: condition.id, in: groups) : nil
+    let isRequired = requirement != nil || (request.provider != nil && provided.contains(condition.id))
     let isNegated = requirement?.isNegated == true
     return HStack(spacing: theme.space.sm) {
       Image(systemName: isNegated ? "minus.square.fill" : isRequired ? "checkmark.square.fill" : "square")
@@ -226,8 +252,13 @@ struct WorkspaceConditionPicker: View {
     return TaskRequirement.label(group: group.filter { !names($0) }, name: model.conditionName)
   }
 
-  /// What the task needs, as the footer's count: "Needs Home + Floor space".
+  /// What the task needs, as the footer's count: "Needs Home + Floor space";
+  /// for a condition, what it provides.
   private var summary: String? {
+    if request.provider != nil {
+      let names = model.focusConditions.filter { provided.contains($0.id) }.map(\.name)
+      return names.isEmpty ? "Provides nothing" : "Provides " + names.joined(separator: ", ")
+    }
     guard let groups, !groups.isEmpty else { return "Anytime" }
     return groups.map { TaskRequirement.label(group: $0, missing: "?", name: model.conditionName) }.joined(separator: " + ")
   }
@@ -237,6 +268,7 @@ struct WorkspaceConditionPicker: View {
     switch request.target {
     case .task(let task): model.requirementGroups(of: task)
     case .draft(_, let groups): groups.wrappedValue
+    case .provides: nil
     }
   }
 
@@ -248,6 +280,13 @@ struct WorkspaceConditionPicker: View {
     if items.indices.contains(index) {
       conditionID = items[index].id
     } else if index == items.count, let name = newName {
+      if case .provides(let provider) = request.target {
+        // Made, with no category, and ticked at once: Home provides
+        // "Garden" the moment it is named.
+        guard let condition = model.createCondition(name: name, category: nil) else { return }
+        provided = model.toggleProvided(condition.id, by: provider)
+        return
+      }
       if case .task(let task) = request.target {
         groups = model.requireNewCondition(named: name, on: task)
         return
@@ -265,6 +304,8 @@ struct WorkspaceConditionPicker: View {
     case .draft(_, let binding):
       binding.wrappedValue = model.toggling(conditionID, in: binding.wrappedValue, negated: negated) ?? []
       groups = binding.wrappedValue
+    case .provides(let provider):
+      provided = model.toggleProvided(conditionID, by: provider)
     }
   }
 }
@@ -303,6 +344,40 @@ extension WorkspaceViewModel {
     if negated { return TaskRequirementToggle.negating(conditionID, in: groups) }
     let places = Set(focusConditions.filter(\.isLocation).map(\.id))
     return TaskRequirementToggle.toggling(conditionID, in: groups, places: places)
+  }
+
+  /// `p` in the Conditions tab: the picker, ticking what `condition`
+  /// provides.
+  func presentProvidesPicker(for condition: TaskCondition) {
+    presentOverlay(.conditions(WorkspaceConditionPickerRequest(provides: condition)))
+  }
+
+  /// What a condition provides, read from the store rather than the
+  /// ranking's copy, which lags a tick made a moment ago.
+  func providedIDs(of condition: TaskCondition) -> [String] {
+    guard let store, let workspace else { return condition.provides }
+    return (try? store.conditions(in: workspace.id))?.first { $0.id == condition.id }?.provides ?? condition.provides
+  }
+
+  /// The names of what a condition provides, in the tab's order, or nil
+  /// when it provides nothing.
+  func providedNames(of condition: TaskCondition) -> String? {
+    let names = focusConditions.filter { condition.provides.contains($0.id) && !$0.isArchived }.map(\.name)
+    return names.isEmpty ? nil : names.joined(separator: ", ")
+  }
+
+  /// Ticks `conditionID` as provided by `provider`, or off, in one "Edit
+  /// Condition" step to undo. Returns what it provides as saved.
+  @discardableResult
+  func toggleProvided(_ conditionID: String, by provider: TaskCondition) -> [String] {
+    guard let store else { return provider.provides }
+    var next = providedIDs(of: provider)
+    if let index = next.firstIndex(of: conditionID) { next.remove(at: index) } else { next.append(conditionID) }
+    perform {
+      try store.setConditionProvides(id: provider.id, provides: next)
+      reloadNextUpNow(); taskEditor.refresh(store: store)
+    }
+    return providedIDs(of: provider)
   }
 
   /// Makes a condition and requires it on the task. Two steps to undo — the

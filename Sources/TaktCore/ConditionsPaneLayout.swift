@@ -72,9 +72,10 @@ public enum ConditionsPaneLayout {
     }
   }
 
-  /// Top to bottom: where you are (with `hasPlaces`), the other conditions
-  /// you can say hold, the time you have, whether to finish within it (only
-  /// with `hasTimeLimit`) and when it all expires, the new-condition row,
+  /// Top to bottom: where you are (with `hasPlaces`), your free time and
+  /// whether to finish within it (only with `hasTimeLimit`), the other
+  /// conditions you can say hold — the other settings first, as the core
+  /// orders them — and when it all expires, the new-condition row,
   /// then each heading's conditions — or, folded, the heading alone — and
   /// last the archived heading (when there are any) and, shown, the archived
   /// conditions under it.
@@ -83,9 +84,9 @@ public enum ConditionsPaneLayout {
     archived: [String], showsArchived: Bool, hasPlaces: Bool = false, hasTimeLimit: Bool = false
   ) -> [ConditionsPaneRow] {
     var rows: [ConditionsPaneRow] = hasPlaces ? [.location] : []
+    rows += hasTimeLimit ? [.time, .finishOnly] : [.time]
     rows += available.map(ConditionsPaneRow.available)
-    rows += hasTimeLimit ? [.time, .finishOnly, .expiry] : [.time, .expiry]
-    rows.append(.add)
+    rows += [.expiry, .add]
     for section in sections where !section.conditionIDs.isEmpty {
       if folded.contains(section.id) {
         rows.append(.folded(section.id))

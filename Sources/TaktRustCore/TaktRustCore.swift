@@ -1935,6 +1935,12 @@ public protocol CoreWorkspaceProtocol: AnyObject, Sendable {
     func setConditionCategory(id: String, category: String?, nowMs: Int64) throws 
     
     /**
+     * Sets what a condition provides, replacing what it did, as one "Edit
+     * Condition" step. False when it already provided exactly that.
+     */
+    func setConditionProvides(id: String, providedIds: [String], nowMs: Int64) throws  -> Bool
+    
+    /**
      * Makes an item a task or a nested list.
      */
     func setItemKind(id: String, kind: String, nowMs: Int64) throws 
@@ -4828,6 +4834,22 @@ open func setConditionCategory(id: String, category: String?, nowMs: Int64)throw
         FfiConverterInt64.lower(nowMs),uniffiCallStatus
     )
 }
+}
+    
+    /**
+     * Sets what a condition provides, replacing what it did, as one "Edit
+     * Condition" step. False when it already provided exactly that.
+     */
+open func setConditionProvides(id: String, providedIds: [String], nowMs: Int64)throws  -> Bool  {
+    return try  FfiConverterBool.lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_set_condition_provides(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(id),
+        FfiConverterSequenceString.lower(providedIds),
+        FfiConverterInt64.lower(nowMs),uniffiCallStatus
+    )
+})
 }
     
     /**
@@ -7731,6 +7753,105 @@ public func FfiConverterTypeCompletionContext_lower(_ value: CompletionContext) 
 
 
 /**
+ * One condition's part in what holds now.
+ */
+public struct ConditionHolding: Equatable, Hashable {
+    public var conditionId: String
+    /**
+     * Said to hold directly: a place chosen, a box ticked.
+     */
+    public var isSet: Bool
+    /**
+     * The conditions said to hold that provide it, directly or through
+     * another, in the order the tab shows them: "from Home". Empty when
+     * nothing does.
+     */
+    public var providedBy: [String]
+    /**
+     * Provided, but switched off for now.
+     */
+    public var isOff: Bool
+    /**
+     * Whether it holds: set, or provided and not switched off. This is
+     * what every requirement is checked against.
+     */
+    public var holds: Bool
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(conditionId: String, 
+        /**
+         * Said to hold directly: a place chosen, a box ticked.
+         */isSet: Bool, 
+        /**
+         * The conditions said to hold that provide it, directly or through
+         * another, in the order the tab shows them: "from Home". Empty when
+         * nothing does.
+         */providedBy: [String], 
+        /**
+         * Provided, but switched off for now.
+         */isOff: Bool, 
+        /**
+         * Whether it holds: set, or provided and not switched off. This is
+         * what every requirement is checked against.
+         */holds: Bool) {
+        self.conditionId = conditionId
+        self.isSet = isSet
+        self.providedBy = providedBy
+        self.isOff = isOff
+        self.holds = holds
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension ConditionHolding: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeConditionHolding: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> ConditionHolding {
+        return
+            try ConditionHolding(
+                conditionId: FfiConverterString.read(from: &buf), 
+                isSet: FfiConverterBool.read(from: &buf), 
+                providedBy: FfiConverterSequenceString.read(from: &buf), 
+                isOff: FfiConverterBool.read(from: &buf), 
+                holds: FfiConverterBool.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: ConditionHolding, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.conditionId, into: &buf)
+        FfiConverterBool.write(value.isSet, into: &buf)
+        FfiConverterSequenceString.write(value.providedBy, into: &buf)
+        FfiConverterBool.write(value.isOff, into: &buf)
+        FfiConverterBool.write(value.holds, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeConditionHolding_lift(_ buf: RustBuffer) throws -> ConditionHolding {
+    return try FfiConverterTypeConditionHolding.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeConditionHolding_lower(_ value: ConditionHolding) -> RustBuffer {
+    return FfiConverterTypeConditionHolding.lower(value)
+}
+
+
+/**
  * A row of `task_conditions`. `TaskCondition`.
  */
 public struct ConditionRow: Equatable, Hashable {
@@ -7753,6 +7874,12 @@ public struct ConditionRow: Equatable, Hashable {
      * nobody has placed, which comes after the placed ones under its heading.
      */
     public var sortOrder: Int64?
+    /**
+     * The conditions it switches on while it holds (Home: Floor space,
+     * Desk), by id, sorted. Empty before v34 and for one that provides
+     * nothing. See `conditions::provides`.
+     */
+    public var provides: [String]
 
     // Default memberwise initializers are never public by default, so we
     // declare one manually.
@@ -7766,7 +7893,12 @@ public struct ConditionRow: Equatable, Hashable {
          * Where it sits in the tab, workspace-wide: under its heading in this
          * order, and the headings in the order of their first. None for one
          * nobody has placed, which comes after the placed ones under its heading.
-         */sortOrder: Int64?) {
+         */sortOrder: Int64?, 
+        /**
+         * The conditions it switches on while it holds (Home: Floor space,
+         * Desk), by id, sorted. Empty before v34 and for one that provides
+         * nothing. See `conditions::provides`.
+         */provides: [String]) {
         self.id = id
         self.workspaceId = workspaceId
         self.name = name
@@ -7776,6 +7908,7 @@ public struct ConditionRow: Equatable, Hashable {
         self.updatedAtMs = updatedAtMs
         self.category = category
         self.sortOrder = sortOrder
+        self.provides = provides
     }
 
     
@@ -7802,7 +7935,8 @@ public struct FfiConverterTypeConditionRow: FfiConverterRustBuffer {
                 createdAtMs: FfiConverterInt64.read(from: &buf), 
                 updatedAtMs: FfiConverterInt64.read(from: &buf), 
                 category: FfiConverterOptionString.read(from: &buf), 
-                sortOrder: FfiConverterOptionInt64.read(from: &buf)
+                sortOrder: FfiConverterOptionInt64.read(from: &buf), 
+                provides: FfiConverterSequenceString.read(from: &buf)
         )
     }
 
@@ -7816,6 +7950,7 @@ public struct FfiConverterTypeConditionRow: FfiConverterRustBuffer {
         FfiConverterInt64.write(value.updatedAtMs, into: &buf)
         FfiConverterOptionString.write(value.category, into: &buf)
         FfiConverterOptionInt64.write(value.sortOrder, into: &buf)
+        FfiConverterSequenceString.write(value.provides, into: &buf)
     }
 }
 
@@ -7852,6 +7987,13 @@ public struct ConditionSection: Equatable, Hashable {
      */
     public var isExclusive: Bool
     /**
+     * Whether it is a setting — something you say about your situation,
+     * which switches on what a task needs — rather than properties: the
+     * Location heading, and any heading a condition under which provides
+     * something ("Tools on hand"). Settings come first.
+     */
+    public var isSetting: Bool
+    /**
      * In the order they were given.
      */
     public var conditions: [ConditionRow]
@@ -7869,11 +8011,18 @@ public struct ConditionSection: Equatable, Hashable {
          * Whether saying one holds replaces the rest: the Location heading.
          */isExclusive: Bool, 
         /**
+         * Whether it is a setting — something you say about your situation,
+         * which switches on what a task needs — rather than properties: the
+         * Location heading, and any heading a condition under which provides
+         * something ("Tools on hand"). Settings come first.
+         */isSetting: Bool, 
+        /**
          * In the order they were given.
          */conditions: [ConditionRow]) {
         self.category = category
         self.title = title
         self.isExclusive = isExclusive
+        self.isSetting = isSetting
         self.conditions = conditions
     }
 
@@ -7896,6 +8045,7 @@ public struct FfiConverterTypeConditionSection: FfiConverterRustBuffer {
                 category: FfiConverterOptionString.read(from: &buf), 
                 title: FfiConverterString.read(from: &buf), 
                 isExclusive: FfiConverterBool.read(from: &buf), 
+                isSetting: FfiConverterBool.read(from: &buf), 
                 conditions: FfiConverterSequenceTypeConditionRow.read(from: &buf)
         )
     }
@@ -7904,6 +8054,7 @@ public struct FfiConverterTypeConditionSection: FfiConverterRustBuffer {
         FfiConverterOptionString.write(value.category, into: &buf)
         FfiConverterString.write(value.title, into: &buf)
         FfiConverterBool.write(value.isExclusive, into: &buf)
+        FfiConverterBool.write(value.isSetting, into: &buf)
         FfiConverterSequenceTypeConditionRow.write(value.conditions, into: &buf)
     }
 }
@@ -7978,6 +8129,76 @@ public func FfiConverterTypeConditionUsage_lift(_ buf: RustBuffer) throws -> Con
 #endif
 public func FfiConverterTypeConditionUsage_lower(_ value: ConditionUsage) -> RustBuffer {
     return FfiConverterTypeConditionUsage.lower(value)
+}
+
+
+/**
+ * What is said to hold, and what is switched off for now: the two halves
+ * of a context that [`holdings`] reads.
+ */
+public struct ConditionsSaid: Equatable, Hashable {
+    /**
+     * Said to hold directly, sorted.
+     */
+    public var conditionIds: [String]
+    /**
+     * Provided but switched off for now, sorted.
+     */
+    public var offIds: [String]
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(
+        /**
+         * Said to hold directly, sorted.
+         */conditionIds: [String], 
+        /**
+         * Provided but switched off for now, sorted.
+         */offIds: [String]) {
+        self.conditionIds = conditionIds
+        self.offIds = offIds
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension ConditionsSaid: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeConditionsSaid: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> ConditionsSaid {
+        return
+            try ConditionsSaid(
+                conditionIds: FfiConverterSequenceString.read(from: &buf), 
+                offIds: FfiConverterSequenceString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: ConditionsSaid, into buf: inout [UInt8]) {
+        FfiConverterSequenceString.write(value.conditionIds, into: &buf)
+        FfiConverterSequenceString.write(value.offIds, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeConditionsSaid_lift(_ buf: RustBuffer) throws -> ConditionsSaid {
+    return try FfiConverterTypeConditionsSaid.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeConditionsSaid_lower(_ value: ConditionsSaid) -> RustBuffer {
+    return FfiConverterTypeConditionsSaid.lower(value)
 }
 
 
@@ -18232,6 +18453,10 @@ public struct StoredFocusContext: Equatable, Hashable {
      * The conditions that held before the last expiry, offered back.
      */
     public var suggestedIds: [String]
+    /**
+     * Provided conditions switched off for now, sorted. Empty before v34.
+     */
+    public var offIds: [String]
 
     // Default memberwise initializers are never public by default, so we
     // declare one manually.
@@ -18253,13 +18478,17 @@ public struct StoredFocusContext: Equatable, Hashable {
          */mode: String, 
         /**
          * The conditions that held before the last expiry, offered back.
-         */suggestedIds: [String]) {
+         */suggestedIds: [String], 
+        /**
+         * Provided conditions switched off for now, sorted. Empty before v34.
+         */offIds: [String]) {
         self.conditionIds = conditionIds
         self.conditionsSetAtMs = conditionsSetAtMs
         self.availableUntilMs = availableUntilMs
         self.expiresAtMs = expiresAtMs
         self.mode = mode
         self.suggestedIds = suggestedIds
+        self.offIds = offIds
     }
 
     
@@ -18283,7 +18512,8 @@ public struct FfiConverterTypeStoredFocusContext: FfiConverterRustBuffer {
                 availableUntilMs: FfiConverterOptionInt64.read(from: &buf), 
                 expiresAtMs: FfiConverterOptionInt64.read(from: &buf), 
                 mode: FfiConverterString.read(from: &buf), 
-                suggestedIds: FfiConverterSequenceString.read(from: &buf)
+                suggestedIds: FfiConverterSequenceString.read(from: &buf), 
+                offIds: FfiConverterSequenceString.read(from: &buf)
         )
     }
 
@@ -18294,6 +18524,7 @@ public struct FfiConverterTypeStoredFocusContext: FfiConverterRustBuffer {
         FfiConverterOptionInt64.write(value.expiresAtMs, into: &buf)
         FfiConverterString.write(value.mode, into: &buf)
         FfiConverterSequenceString.write(value.suggestedIds, into: &buf)
+        FfiConverterSequenceString.write(value.offIds, into: &buf)
     }
 }
 
@@ -26354,6 +26585,31 @@ fileprivate struct FfiConverterSequenceTypeCompletedDay: FfiConverterRustBuffer 
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterSequenceTypeConditionHolding: FfiConverterRustBuffer {
+    typealias SwiftType = [ConditionHolding]
+
+    public static func write(_ value: [ConditionHolding], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeConditionHolding.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [ConditionHolding] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [ConditionHolding]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeConditionHolding.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterSequenceTypeConditionRow: FfiConverterRustBuffer {
     typealias SwiftType = [ConditionRow]
 
@@ -29267,10 +29523,12 @@ public func resolveDueDate(input: String, nowMs: Int64, zone: String, hours: Nam
 }
 /**
  * What "Available now" offers: only the conditions an open task requires
- * (`required_ids`), since saying anything else holds changes nothing, plus
- * any that is on now (`active_ids`), so it can be turned off. Under their
- * headings, with a heading left out when nothing under it is offered. Empty
- * when no open task needs a condition and none is on.
+ * (`required_ids`), and the settings that provide one, since saying
+ * anything else holds changes nothing, plus any that is on now
+ * (`active_ids`: what holds, provided ones included, and any switched off
+ * for now), so it can be turned off or back on. Under their headings, with
+ * a heading left out when nothing under it is offered. Empty when no open
+ * task needs a condition and none is on.
  */
 public func availableConditionSections(conditions: [ConditionRow], requiredIds: [String], activeIds: [String]) -> [ConditionSection]  {
     return try!  FfiConverterSequenceTypeConditionSection.lift(try! rustCall() {
@@ -29321,13 +29579,14 @@ public func conditionSectionTitle(condition: ConditionRow) -> String  {
 })
 }
 /**
- * Conditions under their headings, in the order the workspace keeps
- * (`sortOrder`): the headings by their first placed condition, and the
- * conditions under each by their own. What nobody has placed — every
- * condition before v27, and one an older client makes — comes after what
- * has been, in the order it was given, and a heading with nothing placed
- * falls back to Location first, then every other category alphabetically,
- * then the uncategorised under "Other".
+ * Conditions under their headings, settings first (Location, and any
+ * heading whose conditions provide something), then the rest, each half in
+ * the order the workspace keeps (`sortOrder`): the headings by their first
+ * placed condition, and the conditions under each by their own. What nobody
+ * has placed — every condition before v27, and one an older client makes —
+ * comes after what has been, in the order it was given, and a heading with
+ * nothing placed falls back to Location first, then every other category
+ * alphabetically, then the uncategorised under "Other".
  */
 public func conditionSections(conditions: [ConditionRow]) -> [ConditionSection]  {
     return try!  FfiConverterSequenceTypeConditionSection.lift(try! rustCall() {
@@ -29349,6 +29608,65 @@ public func conditionWaitingCounts(missing: [[[String]]]) -> [ConditionUsage]  {
         uniffiCallStatus in
     uniffi_takt_core_fn_func_condition_waiting_counts(
         FfiConverterSequenceSequenceSequenceString.lower(missing),uniffiCallStatus
+    )
+})
+}
+/**
+ * What holds when `set_ids` are said to hold and `off_ids` are switched
+ * off for now, condition by condition: the core's one answer to "what
+ * holds", which every client reads rather than working it out itself.
+ */
+public func conditionHoldings(conditions: [ConditionRow], setIds: [String], offIds: [String]) -> [ConditionHolding]  {
+    return try!  FfiConverterSequenceTypeConditionHolding.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_condition_holdings(
+        FfiConverterSequenceTypeConditionRow.lower(conditions),
+        FfiConverterSequenceString.lower(setIds),
+        FfiConverterSequenceString.lower(offIds),uniffiCallStatus
+    )
+})
+}
+/**
+ * The ids of the conditions that hold, sorted: what a context's
+ * `condition_ids` should be when a task is checked against it.
+ */
+public func effectiveConditionIds(conditions: [ConditionRow], setIds: [String], offIds: [String]) -> [String]  {
+    return try!  FfiConverterSequenceString.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_effective_condition_ids(
+        FfiConverterSequenceTypeConditionRow.lower(conditions),
+        FfiConverterSequenceString.lower(setIds),
+        FfiConverterSequenceString.lower(offIds),uniffiCallStatus
+    )
+})
+}
+/**
+ * The overrides that survive the conditions said to hold changing: see
+ * [`kept_overrides`]. Saving a context applies it too.
+ */
+public func focusContextKeptOverrides(conditions: [ConditionRow], previousIds: [String], nextIds: [String], offIds: [String]) -> [String]  {
+    return try!  FfiConverterSequenceString.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_focus_context_kept_overrides(
+        FfiConverterSequenceTypeConditionRow.lower(conditions),
+        FfiConverterSequenceString.lower(previousIds),
+        FfiConverterSequenceString.lower(nextIds),
+        FfiConverterSequenceString.lower(offIds),uniffiCallStatus
+    )
+})
+}
+/**
+ * A context's conditions with one switched on, off or (`on` none) the
+ * other way: see [`switched`].
+ */
+public func focusContextSwitch(conditions: [ConditionRow], said: ConditionsSaid, conditionId: String, on: Bool?) -> ConditionsSaid  {
+    return try!  FfiConverterTypeConditionsSaid_lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_focus_context_switch(
+        FfiConverterSequenceTypeConditionRow.lower(conditions),
+        FfiConverterTypeConditionsSaid_lower(said),
+        FfiConverterString.lower(conditionId),
+        FfiConverterOptionBool.lower(on),uniffiCallStatus
     )
 })
 }
@@ -29717,7 +30035,7 @@ public func focusContextChanged(current: [String], on: [String], off: [String], 
 /**
  * The context as it stands at `now_ms`: once it has expired its conditions
  * are set aside — offered back, so "Use again" can restore them — and the
- * expiry and stamp go with them. Otherwise `context` unchanged.
+ * expiry, stamp and overrides go with them. Otherwise `context` unchanged.
  */
 public func focusContextInForce(context: StoredFocusContext, nowMs: Int64) -> StoredFocusContext  {
     return try!  FfiConverterTypeStoredFocusContext_lift(try! rustCall() {
@@ -31462,7 +31780,7 @@ private let initializationResult: InitializationResult = {
     if (uniffi_takt_core_checksum_func_resolve_due_date() != 36836) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_takt_core_checksum_func_available_condition_sections() != 57749) {
+    if (uniffi_takt_core_checksum_func_available_condition_sections() != 14999) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_func_condition_categories() != 7519) {
@@ -31474,10 +31792,22 @@ private let initializationResult: InitializationResult = {
     if (uniffi_takt_core_checksum_func_condition_section_title() != 32802) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_takt_core_checksum_func_condition_sections() != 53530) {
+    if (uniffi_takt_core_checksum_func_condition_sections() != 6307) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_func_condition_waiting_counts() != 42654) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_condition_holdings() != 12188) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_effective_condition_ids() != 13024) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_focus_context_kept_overrides() != 44069) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_focus_context_switch() != 26012) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_func_requirement_condition_id() != 14162) {
@@ -31576,7 +31906,7 @@ private let initializationResult: InitializationResult = {
     if (uniffi_takt_core_checksum_func_focus_context_changed() != 16350) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_takt_core_checksum_func_focus_context_in_force() != 62430) {
+    if (uniffi_takt_core_checksum_func_focus_context_in_force() != 44946) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_func_focus_context_is_stale() != 22807) {
@@ -32522,6 +32852,9 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_method_coreworkspace_set_condition_category() != 2912) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_set_condition_provides() != 58619) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_method_coreworkspace_set_item_kind() != 55048) {

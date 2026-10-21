@@ -12,6 +12,10 @@ public struct TaskConditionSection: Identifiable, Equatable, Sendable {
   public let title: String
   /// Whether saying one holds replaces the rest: the Location heading.
   public let isExclusive: Bool
+  /// Whether it is a setting — something you say about your situation, which
+  /// switches on what tasks need — rather than properties: Location, and any
+  /// heading a condition under which provides something. Settings come first.
+  public let isSetting: Bool
   public let conditions: [TaskCondition]
 
   public var id: String { category.map { "category.\($0)" } ?? "uncategorised" }
@@ -23,17 +27,20 @@ public struct TaskConditionSection: Identifiable, Equatable, Sendable {
     category = section.category
     title = section.title
     isExclusive = section.isExclusive
+    isSetting = section.isSetting
     conditions = section.conditions.map(TaskCondition.init)
   }
 
-  /// Every condition under its heading: Location first, the other
-  /// categories alphabetically, then "Other".
+  /// Every condition under its heading: the settings first (Location, then
+  /// any heading whose conditions provide something), then the rest, each in
+  /// the order the workspace keeps.
   public static func sections(_ conditions: [TaskCondition]) -> [TaskConditionSection] {
     conditionSections(conditions: conditions.map(\.core)).map(TaskConditionSection.init)
   }
 
-  /// What "Available now" offers: only the conditions an open task requires,
-  /// and any that is on, under their headings. Empty when nothing needs one.
+  /// What "Available now" offers: only the conditions an open task requires
+  /// and the settings that provide one, and any that is on or switched off
+  /// for now, under their headings. Empty when nothing needs one.
   public static func available(
     _ conditions: [TaskCondition], required: Set<String>, active: Set<String>
   ) -> [TaskConditionSection] {

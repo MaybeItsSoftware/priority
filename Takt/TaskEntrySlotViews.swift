@@ -50,7 +50,7 @@ struct TaskEntrySlotStrip: View {
     if groups.isEmpty {
       InlineFieldEmpty(text: "any")
     } else {
-      let available = model.focusContext.conditionIDs
+      let available = model.heldConditionIDs
       HStack(spacing: theme.space.xs) {
         ForEach(Array(groups.prefix(2).enumerated()), id: \.offset) { _, group in
           let name = TaskRequirement.label(group: group, name: model.conditionName)

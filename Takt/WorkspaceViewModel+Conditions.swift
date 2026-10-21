@@ -3,6 +3,14 @@ import Foundation
 import TaktCore
 import TaktWorkspace
 
+/// `conditionHoldings` as last worked out, and what from.
+struct ConditionHoldingsCache {
+  let conditions: [TaskCondition]
+  let set: Set<String>
+  let off: Set<String>
+  let holdings: [String: FocusConditionHolding]
+}
+
 struct FocusStartOverride: Identifiable {
   let task: WorkspaceTask
   let plannedSeconds: Int
@@ -12,9 +20,29 @@ struct FocusStartOverride: Identifiable {
 
 @MainActor
 extension WorkspaceViewModel {
+  /// The context every task is checked against: what holds — said, plus
+  /// what that provides, less what is switched off for now — and the time.
   var effectiveFocusContext: FocusContext {
     let end = [availableUntil, contextExpiresAt].compactMap { $0 }.min()
-    return FocusContext(conditionIDs: focusContext.conditionIDs, endsAt: end, mode: focusContext.mode)
+    return FocusContext(conditionIDs: heldConditionIDs, endsAt: end, mode: focusContext.mode)
+  }
+
+  /// Every condition said to hold, provided, or switched off for now, by id:
+  /// the core's `condition_holdings`, worked out again only when the
+  /// conditions or what is said change, since every row's tags read it.
+  var conditionHoldings: [String: FocusConditionHolding] {
+    let (conditions, set, off) = (focusConditions, focusContext.conditionIDs, contextOffIDs)
+    if let cache = conditionHoldingsCache, cache.set == set, cache.off == off, cache.conditions == conditions {
+      return cache.holdings
+    }
+    let holdings = FocusConditionHoldings.holdings(conditions, set: set, off: off)
+    conditionHoldingsCache = ConditionHoldingsCache(conditions: conditions, set: set, off: off, holdings: holdings)
+    return holdings
+  }
+
+  /// The conditions that hold now.
+  var heldConditionIDs: Set<String> {
+    Set(conditionHoldings.values.filter(\.holds).map(\.conditionID))
   }
 
   /// Where the context lived before it was a row of `focus_contexts`.
@@ -44,10 +72,12 @@ extension WorkspaceViewModel {
     let known = Set(((try? store.conditions(in: workspace.id)) ?? focusConditions).map(\.id))
     let ids = FocusContextSelection.restoring(Array(context.conditionIDs), known: known)
     let suggested = FocusContextSelection.restoring(Array(context.suggestedIDs), known: known)
-    let changed = ids != focusContext.conditionIDs || context.mode != focusContext.mode
+    let off = FocusContextSelection.restoring(Array(context.offIDs), known: known)
+    let changed = ids != focusContext.conditionIDs || off != contextOffIDs || context.mode != focusContext.mode
       || context.availableUntil != availableUntil || context.expiresAt != contextExpiresAt
       || suggested != suggestedContextIDs || context.conditionsSetAt != contextConditionsSetAt
     focusContext.conditionIDs = ids
+    contextOffIDs = off
     focusContext.mode = context.mode
     availableUntil = context.availableUntil
     contextExpiresAt = context.expiresAt
@@ -58,10 +88,15 @@ extension WorkspaceViewModel {
     return changed
   }
 
-  func toggleFocusCondition(_ condition: TaskCondition) {
-    focusContext.conditionIDs = FocusContextSelection.toggling(
-      condition.id, isLocation: condition.isLocation, in: focusContext.conditionIDs,
-      locationIDs: Set(focusConditions.filter(\.isLocation).map(\.id)))
+  /// Turns a condition on or off — `on` nil for the other way from how it
+  /// stands. One a setting provides is switched off for now rather than
+  /// unsaid, and stays off until that setting changes; a place replaces
+  /// the last one.
+  func toggleFocusCondition(_ condition: TaskCondition, on: Bool? = nil) {
+    let next = FocusConditionHoldings.switching(
+      condition.id, on: on, in: focusConditions, set: focusContext.conditionIDs, off: contextOffIDs)
+    focusContext.conditionIDs = next.set
+    contextOffIDs = next.off
     suggestedContextIDs = []
     focusContextChanged()
   }
@@ -71,23 +106,29 @@ extension WorkspaceViewModel {
   /// the rest on. "Say where you are…".
   func setFocusPlace(_ place: TaskCondition?) {
     let places = Set(focusConditions.filter(\.isLocation).map(\.id))
+    let previous = focusContext.conditionIDs
     focusContext.conditionIDs = FocusContextSelection.changing(
-      focusContext.conditionIDs, on: place.map { [$0.id] } ?? [],
+      previous, on: place.map { [$0.id] } ?? [],
       off: place == nil ? Array(places) : [], locationIDs: places)
+    // A new place brings back what the last one's overrides switched off.
+    contextOffIDs = FocusConditionHoldings.keptOverrides(
+      focusConditions, previous: previous, next: focusContext.conditionIDs, off: contextOffIDs)
     suggestedContextIDs = []
     focusContextChanged()
   }
 
   /// Nothing available beyond the laptop.
   func clearFocusConditions() {
-    guard !focusContext.conditionIDs.isEmpty else { return }
+    guard !focusContext.conditionIDs.isEmpty || !contextOffIDs.isEmpty else { return }
     focusContext.conditionIDs = []
+    contextOffIDs = []
     suggestedContextIDs = []
     focusContextChanged()
   }
 
   func confirmSuggestedContext() {
     focusContext.conditionIDs = suggestedContextIDs
+    contextOffIDs = []
     suggestedContextIDs = []
     focusContextChanged()
   }
@@ -106,16 +147,19 @@ extension WorkspaceViewModel {
   }
 
   /// Saves the context into the workspace, where the core stamps when its
-  /// conditions were said, and reads the stamp back.
+  /// conditions were said and drops the overrides nothing provides any more,
+  /// and reads both back.
   private func saveCurrentContext() {
     guard let store, let workspace else { return }
     let context = SavedFocusContext(
       conditionIDs: focusContext.conditionIDs, conditionsSetAt: contextConditionsSetAt,
       availableUntil: availableUntil, expiresAt: contextExpiresAt, mode: focusContext.mode,
-      suggestedIDs: suggestedContextIDs)
+      suggestedIDs: suggestedContextIDs, offIDs: contextOffIDs)
     do {
       try store.saveFocusContext(context, in: workspace.id)
-      contextConditionsSetAt = (try store.focusContext(in: workspace.id))?.conditionsSetAt
+      let saved = try store.focusContext(in: workspace.id)
+      contextConditionsSetAt = saved?.conditionsSetAt
+      if let off = saved?.offIDs, off != contextOffIDs { contextOffIDs = off }
     } catch {
       errorMessage = error.localizedDescription
     }
@@ -138,11 +182,22 @@ extension WorkspaceViewModel {
   }
 
   /// What "Available now" offers, under category headings: only the
-  /// conditions an open task requires, plus any that is on so it can be
-  /// turned off. Empty when no open task needs a condition. The rule is the
-  /// Rust core's, so the phones offer the same.
+  /// conditions an open task requires and the settings that provide one,
+  /// plus any that is on — said or provided — or switched off for now, so it
+  /// can be turned the other way. Empty when no open task needs a condition.
+  /// The rule is the Rust core's, so the phones offer the same.
   var availableConditionSections: [TaskConditionSection] {
-    TaskConditionSection.available(focusConditions, required: requiredConditionIDs, active: focusContext.conditionIDs)
+    TaskConditionSection.available(
+      focusConditions, required: requiredConditionIDs, active: Set(conditionHoldings.keys))
+  }
+
+  /// "from Home" for a condition a setting provides, "off for now" for one
+  /// switched off, nil for one said to hold or not held at all.
+  func conditionHoldingNote(_ id: String) -> String? {
+    guard let holding = conditionHoldings[id], !holding.isSet, !holding.providedBy.isEmpty else { return nil }
+    if holding.isOff { return "off for now" }
+    let names = holding.providedBy.compactMap(conditionName)
+    return names.isEmpty ? nil : "from " + names.joined(separator: ", ")
   }
 
   /// The conditions you can say are true right now, in the order the tab
@@ -208,7 +263,7 @@ extension WorkspaceViewModel {
 
   func focusExplanation(_ scored: ScoredNextUp) -> String {
     guard scored.reason == .condition else { return scored.explanation }
-    let available = focusContext.conditionIDs
+    let available = heldConditionIDs
     let requirements = scored.candidate.requirementGroups.map { group in
       TaskRequirement.label(group: group.filter { TaskRequirement($0).isMet(available: available) }, name: conditionName)
     }.joined(separator: " + ")
@@ -304,7 +359,7 @@ extension WorkspaceViewModel {
       // Set aside rather than forgotten: offered back with "Use again", as
       // on the phones.
       if !focusContext.conditionIDs.isEmpty { suggestedContextIDs = focusContext.conditionIDs }
-      focusContext.conditionIDs = []; contextExpiresAt = nil; contextConditionsSetAt = nil
+      focusContext.conditionIDs = []; contextOffIDs = []; contextExpiresAt = nil; contextConditionsSetAt = nil
       saveCurrentContext(); reloadNextUp()
     }
     let clockJump = synchroniseFocusClock(now: now)

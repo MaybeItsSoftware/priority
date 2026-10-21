@@ -43,6 +43,7 @@ final class WorkspaceMigrationTests: XCTestCase {
     "v31_link_details",
     "v32_follow_up_repeat",
     "v33_recurrence_series",
+    "v34_condition_provides",
   ]
 
   private var directoryURL: URL!

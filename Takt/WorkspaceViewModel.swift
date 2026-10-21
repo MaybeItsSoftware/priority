@@ -1047,7 +1047,15 @@ enum WorkspaceSidebarItem: Identifiable {
   var conditionRequirementCounts: [String: Int] = [:]
   var taskLoggedSeconds: [String: Int] = [:]
   var taskPlanningByID: [String: TaskPlanning] = [:]
+  /// What is said to hold now — the place chosen, the boxes ticked — with
+  /// the time and the goal. What *holds* adds what those provide, less
+  /// `contextOffIDs`: `heldConditionIDs`, which the ranking reads.
   var focusContext = FocusContext()
+  /// Provided conditions switched off for now, until whatever provides them
+  /// is unset or replaced.
+  var contextOffIDs: Set<String> = []
+  /// The last answer of `conditionHoldings`, and what it was worked out from.
+  @ObservationIgnored var conditionHoldingsCache: ConditionHoldingsCache?
   var suggestedContextIDs: Set<String> = []
   /// The Conditions tab's cursor; nil is its first row.
   var conditionsCursor: WorkspaceConditionsStop?
@@ -1055,7 +1063,7 @@ enum WorkspaceSidebarItem: Identifiable {
   var renamingConditionID: String?
   /// Moves to put the caret in the Conditions tab's new-condition field.
   var conditionsAddFieldRequest = 0
-  /// What is being typed on the Conditions tab's Time row; nil while it is
+  /// What is being typed on the Conditions tab's Free time row; nil while it is
   /// not being typed in.
   var conditionsTimeEntry: String?
   /// The category the Conditions tab's new-condition row files under; nil

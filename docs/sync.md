@@ -227,6 +227,40 @@ like the rest of the row and reinstalls every journal and outbox trigger. A
 client older than v33 drops it on pull and sets a priority on the one
 occurrence only. See `core/src/editor.rs`.
 
+`v34_condition_provides` lets a condition provide others. It adds
+`task_conditions.providesJSON TEXT`: a JSON array of the ids of the
+conditions that hold whenever this one does (Home: Floor space, Desk,
+Quiet), NULL for none. It is a column of the condition's row, so it is
+journalled (setting it is an "Edit Condition" step) and merges like the
+rest of the row, the whole list at once: two devices that each change what
+Home provides keep the later list. The core refuses a condition providing
+itself and a new link to an archived condition; a loop through several
+(Home → Quiet → Home) is harmless, because what holds is worked out by
+visiting each condition once (`core/src/conditions/provides.rs`). Merging
+one condition into another rewrites every list naming it, once each, and
+the merged one stops providing; an archived condition neither provides nor
+is provided; an id whose condition was deleted elsewhere is ignored. When
+adoption folds a device's own workspace into the canonical one, its lists
+are renamed to the canonical conditions of the same name, as its context
+is. It also adds `focus_contexts.offIdsJSON TEXT NOT NULL DEFAULT '[]'`:
+the provided conditions said not to hold for now (housemates in: Quiet
+off). It travels with the rest of the context, whole, and the core drops an
+id from it whenever what provides it is turned off or replaced, or nothing
+provides it any more (`focus_context::save`). It reinstalls every journal
+and outbox trigger.
+
+What holds — the conditions said, everything they provide, less what is
+off for now — is the one set every client checks tasks against, negated
+requirements included (`conditions::effective_ids`). A client older than
+v34 drops both columns on pull and simply does not derive provided
+conditions: on it, a task needing Floor space waits until Floor space
+itself is turned on, as before. Whatever it saves keeps the server's
+`providesJSON`, which it never pushes. Its whole-row push of the context
+does not carry `offIdsJSON` either, so the server keeps the last override
+a newer device sent: one whose provider the older device turned off is
+dropped when a newer device next saves the context, but one whose provider
+it turned off and on again survives until then.
+
 Negative priorities (-1 to -4, behind every task with none) came with no
 migration: `task_metadata.priority` was already an `INTEGER`, so a value
 arrives on every client. A client built before them (core before

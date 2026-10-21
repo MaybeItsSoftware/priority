@@ -5,22 +5,25 @@ import SwiftUI
 
 /// The right dock's Conditions tab, in two halves under one cursor.
 ///
-/// **Available now** is the conditions that hold here, under their category
-/// headings — a Location replaces the last one, anything else combines — and
-/// only those an open task needs, so a condition nothing waits on is not
-/// asked about. Then the time you have, what you want from it and when to
-/// stop trusting the answer. **Conditions** is every condition, by category:
-/// add one, rename it in its row, file it under a category, archive it, and
+/// **Available now** is the settings first — where you are, your free time
+/// and what you want from it, then any other category whose conditions
+/// provide something ("Tools on hand") — and then the properties tasks
+/// need, under their category headings, only those an open task needs, so a
+/// condition nothing waits on is not asked about. What a setting provides
+/// shows as on, "from Home"; turning it off switches it off for now, until
+/// the setting changes. Then when to stop trusting the answer.
+/// **Conditions** is every condition, by category: add one, rename it in its
+/// row, file it under a category, choose what it provides, archive it, and
 /// see how many open tasks need it.
 ///
-/// `↑` `↓` walk both halves; `←` `→` step where you are, the time you have
-/// and when it is forgotten, and typing a number sets the time. Space turns
-/// a condition on or off, Return or F2
-/// renames (on the new-condition row, puts the caret in its field), `t`
-/// files it under a category and `⇧T` renames the category, `⌥↑`/`⌥↓` move
-/// it and `⌥⇧↑`/`⌥⇧↓` its category, `m` merges it into another, `o` lists
-/// the tasks that need it, `z` folds its category, `e` archives it, `c`
-/// clears, Esc goes back to the work.
+/// `↑` `↓` walk both halves; `←` `→` step where you are, your free time and
+/// when it is forgotten, and typing a number sets the time. Space turns a
+/// condition on or off, Return or F2 renames (on the new-condition row,
+/// puts the caret in its field), `t` files it under a category and `⇧T`
+/// renames the category, `p` chooses what it provides, `⌥↑`/`⌥↓` move it
+/// and `⌥⇧↑`/`⌥⇧↓` its category, `m` merges it into another, `o` lists the
+/// tasks that need it, `z` folds its category, `e` archives it, `c` clears,
+/// Esc goes back to the work.
 struct WorkspaceConditionsPane: View {
   @Environment(WorkspaceViewModel.self) private var model
   @Environment(\.theme) private var theme
@@ -54,7 +57,7 @@ struct WorkspaceConditionsPane: View {
   @ViewBuilder
   private func availableNow(cursor: WorkspaceConditionsStop, hasKeyboard: Bool) -> some View {
     WorkspaceConditionsSectionHeader(title: "Available now") {
-      if !model.focusContext.conditionIDs.isEmpty {
+      if !model.focusContext.conditionIDs.isEmpty || !model.contextOffIDs.isEmpty {
         Button("Clear") { model.clearFocusConditions() }
           .buttonStyle(.plain)
           .font(theme.captionFont)
@@ -79,18 +82,22 @@ struct WorkspaceConditionsPane: View {
       staleNotice
     }
     let waiting = model.conditionWaitingCounts
+    let holdings = model.conditionHoldings
     if !model.availablePlaces.isEmpty {
       WorkspaceLocationRow(
         waiting: waiting, isCursor: cursor == .location, hasKeyboard: hasKeyboard && cursor == .location)
         .id(WorkspaceConditionsStop.location.anchor)
     }
+    freeTimeRows(cursor: cursor, hasKeyboard: hasKeyboard)
+    // The other settings, then the properties: the core's order.
     ForEach(sections.filter { $0.conditions.contains { !$0.isLocation } }) { section in
       WorkspaceConditionsCategoryHeading(title: section.title)
       ForEach(section.conditions.filter { !$0.isLocation }) { condition in
         let stop = WorkspaceConditionsStop.available(condition.id)
         WorkspaceAvailableConditionRow(
           condition: condition,
-          isOn: model.focusContext.conditionIDs.contains(condition.id),
+          isOn: holdings[condition.id]?.holds ?? false,
+          note: model.conditionHoldingNote(condition.id),
           waiting: waiting[condition.id] ?? 0,
           isCursor: cursor == stop, hasKeyboard: hasKeyboard && cursor == stop)
           .id(stop.anchor)
@@ -99,7 +106,7 @@ struct WorkspaceConditionsPane: View {
     if !model.suggestedContextIDs.isEmpty {
       lastContext
     }
-    timeRows(cursor: cursor, hasKeyboard: hasKeyboard)
+    expiryRow(cursor: cursor, hasKeyboard: hasKeyboard)
   }
 
   /// Said on an earlier day: probably not where you are now.
@@ -146,10 +153,10 @@ struct WorkspaceConditionsPane: View {
     .padding(.vertical, theme.space.xs)
   }
 
-  /// The time you have, whether to offer only what fits in it, and when what
-  /// you have said is forgotten: rows the cursor stands on, `←` `→` to change.
+  /// Your free time and whether to offer only what fits in it: rows the
+  /// cursor stands on, `←` `→` to change. A setting, beside where you are.
   @ViewBuilder
-  private func timeRows(cursor: WorkspaceConditionsStop, hasKeyboard: Bool) -> some View {
+  private func freeTimeRows(cursor: WorkspaceConditionsStop, hasKeyboard: Bool) -> some View {
     WorkspaceTimeRow(isCursor: cursor == .time, hasKeyboard: hasKeyboard && cursor == .time)
       .id(WorkspaceConditionsStop.time.anchor)
     if model.availableUntil != nil {
@@ -167,9 +174,13 @@ struct WorkspaceConditionsPane: View {
       }
       .id(WorkspaceConditionsStop.finishOnly.anchor)
     }
+  }
+
+  /// When what you have said is forgotten.
+  private func expiryRow(cursor: WorkspaceConditionsStop, hasKeyboard: Bool) -> some View {
     WorkspaceConditionsSettingRow(
       title: "Forget this", stop: .expiry, isCursor: cursor == .expiry, hasKeyboard: hasKeyboard && cursor == .expiry,
-      note: "When where you are and the time you have stop counting; Shift+U offers them back"
+      note: "When where you are and your free time stop counting; Shift+U offers them back"
     ) {
       ThemedMenu(Self.expiryText(model.contextExpiresAt)) {
         ForEach(ConditionsPaneSteps.Expiry.allCases, id: \.self) { stop in
@@ -394,12 +405,16 @@ private struct WorkspaceConditionsCategoryHeading: View {
 }
 
 /// A condition you can say holds: a box, or a radio under Location, since
-/// you are in one place at a time. Clicking it turns it on or off.
+/// you are in one place at a time. Clicking it turns it on or off. One a
+/// setting provides is on with a note of what provides it ("from Home");
+/// turned off, it reads "off for now" until that setting changes.
 private struct WorkspaceAvailableConditionRow: View {
   @Environment(WorkspaceViewModel.self) private var model
   @Environment(\.theme) private var theme
   let condition: TaskCondition
   let isOn: Bool
+  /// "from Home" or "off for now"; nil for one said to hold, or off.
+  let note: String?
   /// How many held-back tasks wait on it.
   let waiting: Int
   let isCursor: Bool
@@ -419,6 +434,13 @@ private struct WorkspaceAvailableConditionRow: View {
         .font(theme.bodyFont())
         .foregroundStyle(theme.ink)
         .lineLimit(1)
+      if let note {
+        Text(note)
+          .font(theme.captionFont)
+          .foregroundStyle(theme.muted)
+          .lineLimit(1)
+          .truncationMode(.tail)
+      }
       Spacer(minLength: theme.space.sm)
       if condition.isArchived {
         Text("Archived").font(theme.captionFont).foregroundStyle(theme.dim)
@@ -442,9 +464,10 @@ private struct WorkspaceAvailableConditionRow: View {
     }
     .commandHelp(
       .conditionsToggle,
-      note: condition.isLocation ? "A location: turning it on replaces the last one" : "Combines with the rest")
+      note: condition.isLocation ? "A location: turning it on replaces the last one"
+        : note != nil ? "Provided by a setting: off stays off until that setting changes" : "Combines with the rest")
     .accessibilityElement(children: .combine)
-    .accessibilityLabel(condition.name)
+    .accessibilityLabel(note.map { "\(condition.name), \($0)" } ?? condition.name)
     .accessibilityAddTraits(isOn ? [.isButton, .isSelected] : [.isButton])
   }
 }
@@ -511,7 +534,7 @@ private struct WorkspaceLocationRow: View {
   }
 }
 
-/// The time you have: how long is left and when it runs out. `←` `→` take or
+/// Your free time: how long is left and when it runs out. `←` `→` take or
 /// give a quarter of an hour; typing a number, Return or a click opens the
 /// field, which reads 45, 1h30, 17:00 or 5pm.
 private struct WorkspaceTimeRow: View {
@@ -523,7 +546,7 @@ private struct WorkspaceTimeRow: View {
 
   var body: some View {
     WorkspaceConditionsSettingRow(
-      title: "Time you have", stop: .time, isCursor: isCursor, hasKeyboard: hasKeyboard,
+      title: "Free time", stop: .time, isCursor: isCursor, hasKeyboard: hasKeyboard,
       note: "A quarter of an hour less or more; type 45, 1h30 or 5pm to set it"
     ) {
       if model.conditionsTimeEntry != nil {
@@ -626,7 +649,8 @@ private struct WorkspaceNewConditionRow: View {
 }
 
 /// One condition to manage: its name (a field while it is being renamed),
-/// how many open tasks need it, its category, and archiving.
+/// what it provides, how many open tasks need it, its category, and
+/// archiving.
 private struct WorkspaceConditionManageRow: View {
   @Environment(WorkspaceViewModel.self) private var model
   @Environment(\.theme) private var theme
@@ -650,6 +674,14 @@ private struct WorkspaceConditionManageRow: View {
           .lineLimit(1)
         if condition.isArchived {
           Text("Archived").font(theme.captionFont).foregroundStyle(theme.dim)
+        }
+        if let provided = model.providedNames(of: condition) {
+          Text("provides \(provided)")
+            .foregroundStyle(theme.muted)
+            .lineLimit(1)
+            .truncationMode(.tail)
+            .onTapGesture { model.presentProvidesPicker(for: condition) }
+            .commandHelp(.conditionsProvides)
         }
         Spacer(minLength: theme.space.xs)
       }

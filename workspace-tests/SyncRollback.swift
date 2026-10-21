@@ -2,7 +2,7 @@ import TestSQLite
 
 extension Database {
   /// Takes `v17_sync` back off a database, and `v18_themes_and_preferences`
-  /// and `v19_habit_options`, `v20_waiting_follow_ups`, `v21_task_dependencies`, `v22_matrix_order`, `v23_filter_lists`, `v24_condition_categories`, `v25_agent_instructions`, `v26_commitment_missed_stack`, `v27_condition_order_and_context`, `v28_synced_focus_context`, `v29_daily_contribution_skips`, `v30_google_calendar`, `v31_link_details`, `v32_follow_up_repeat` and `v33_recurrence_series` with it since they come later, so a test can rewind to an older schema. Its triggers name every column of the synced tables, so like the
+  /// and `v19_habit_options`, `v20_waiting_follow_ups`, `v21_task_dependencies`, `v22_matrix_order`, `v23_filter_lists`, `v24_condition_categories`, `v25_agent_instructions`, `v26_commitment_missed_stack`, `v27_condition_order_and_context`, `v28_synced_focus_context`, `v29_daily_contribution_skips`, `v30_google_calendar`, `v31_link_details`, `v32_follow_up_repeat`, `v33_recurrence_series` and `v34_condition_provides` with it since they come later, so a test can rewind to an older schema. Its triggers name every column of the synced tables, so like the
   /// undo journal's they have to come off before a column can be taken away.
   /// Reopening the store runs the migration again.
   func rollBackSyncMigration() throws {
@@ -39,8 +39,9 @@ extension Database {
     for operation in ["insert", "update", "delete"] {
       try execute(sql: "DROP TRIGGER IF EXISTS change_log_task_conditions_\(operation)")
     }
-    // `v27_condition_order_and_context` adds one more.
-    for column in ["category", "sortOrder"] {
+    // `v27_condition_order_and_context` adds one more, and
+    // `v34_condition_provides` another.
+    for column in ["category", "sortOrder", "providesJSON"] {
       try execute(sql: "ALTER TABLE task_conditions DROP COLUMN \(column)")
     }
     // `v21_task_dependencies` and `v23_filter_lists` come later still: their
@@ -54,6 +55,6 @@ extension Database {
         + "'v23_filter_lists', 'v24_condition_categories', 'v25_agent_instructions', "
         + "'v26_commitment_missed_stack', 'v27_condition_order_and_context', 'v28_synced_focus_context', "
         + "'v29_daily_contribution_skips', 'v30_google_calendar', 'v31_link_details', 'v32_follow_up_repeat', "
-        + "'v33_recurrence_series')")
+        + "'v33_recurrence_series', 'v34_condition_provides')")
   }
 }

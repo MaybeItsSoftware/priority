@@ -17,6 +17,9 @@ public struct TaskCondition: Codable, Identifiable, Equatable, Sendable {
   /// Where it sits in the Conditions tab, workspace-wide; nil for one nobody
   /// has placed. The order itself is the core's (`condition_sections`).
   public var sortOrder: Int?
+  /// The conditions it switches on while it holds (Home: Floor space, Quiet),
+  /// by id. What that makes hold is the core's (`condition_holdings`).
+  public var provides: [String] = []
 }
 
 /// Stored alongside metadata so complete planning edits share one undo step.

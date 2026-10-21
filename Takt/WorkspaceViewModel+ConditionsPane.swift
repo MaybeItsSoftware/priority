@@ -77,20 +77,20 @@ extension WorkspaceViewModel {
     case .available(let id):
       // → turns it on, ← off, as a switch would.
       guard let condition = selectableFocusConditions.first(where: { $0.id == id }),
-        focusContext.conditionIDs.contains(id) != (step > 0)
+        heldConditionIDs.contains(id) != (step > 0)
       else { return }
-      toggleFocusCondition(condition)
+      toggleFocusCondition(condition, on: step > 0)
     case .add, .condition, .folded, .archived: break
     }
   }
 
-  /// Starts typing the time you have, on its row, with what was typed so far.
+  /// Starts typing your free time, on its row, with what was typed so far.
   func beginTypingAvailableTime(_ text: String = "") {
     conditionsCursor = .time
     conditionsTimeEntry = text
   }
 
-  /// Sets the time typed on the Time row: nothing typed is no limit, and an
+  /// Sets the time typed on the Free time row: nothing typed is no limit, and an
   /// entry it cannot read is said so and left to fix.
   func commitTypedAvailableTime(now: Date = .now) {
     guard let entry = conditionsTimeEntry else { return }
@@ -178,6 +178,8 @@ extension WorkspaceViewModel {
       if let condition = conditionUnderCursor { newConditionCategory = condition.category }
       conditionsCursor = .add
       conditionsAddFieldRequest += 1
+    case .conditionsProvides:
+      if let condition = conditionUnderCursor { presentProvidesPicker(for: condition) }
     case .conditionsCategory:
       if conditionsCursorStop == .add {
         presentConditionCategoryFinder(for: nil)

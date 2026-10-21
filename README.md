@@ -471,20 +471,31 @@ remembers when its conditions were said: one said on an earlier day is
 the status bar's indicator and the tab show it in the warning colour, with
 **Clear** (`c`) beside it.
 
-- **Available now**: the conditions under their category headings — a radio
-  under Location, a box anywhere else — and **only those an open task
-  needs**: a condition nothing open requires changes nothing, so it is not
-  asked about, and a category with none of those is left out. One that is on
-  always stays, so it can be turned off. Each one off says how many tasks are
-  **waiting** on it. With nothing needing a condition it
-  says *No open tasks need a condition*. **Where you are** is one row at the
-  top: `←`/`→` step through the places, from *Anywhere*, since you are in one
-  place at a time. The other conditions combine: `Space` (or a click) turns
-  one on or off, and `→`/`←` turn it on and off too. `c` clears them all.
-  Under them, **Time you have**: `←`/`→` give or take a quarter of an hour,
-  and typing a number anywhere in the tab sets it — `45`, `1h30`, `17:00`,
-  `5pm`, then `Return` (an empty field is no limit). With a time set, **Only
-  what I can finish** offers only the tasks whose remaining work fits in it.
+- **Available now**: the settings first — **Where you are**, **Free time**,
+  then any category whose conditions provide others, such as a *Tools on
+  hand* you make (Laptop, Phone, Headphones) — then the plain properties
+  under their category headings, a box each, and **only those an open task
+  needs** (or that provide one it needs): a condition nothing open requires
+  changes nothing, so it is not asked about, and a category with none of
+  those is left out. One that is on always stays, so it can be turned off.
+  Each one off says how many tasks are **waiting** on it. With nothing
+  needing a condition it says *No open tasks need a condition*. **Where you
+  are** is one row: `←`/`→` step through the places, from *Anywhere*, since
+  you are in one place at a time. The other conditions combine: `Space` (or
+  a click) turns one on or off, and `→`/`←` turn it on and off too. `c`
+  clears them all. **Free time** is how long you have: `←`/`→` give or take
+  a quarter of an hour, and typing a number anywhere in the tab sets it —
+  `45`, `1h30`, `17:00`, `5pm`, then `Return` (an empty field is no limit);
+  a task whose estimate does not fit waits. With a time set, **Only what I
+  can finish** offers only the tasks whose remaining work fits in it.
+  **What a condition provides holds with it**: say you are at Home, which
+  provides Floor space, Desk and Quiet, and those show as on, each noting
+  *from Home*, so a task needing Floor space is offered at Home or the Gym
+  without ever turning Floor space on. Turning a provided one off (the
+  housemates are in: Quiet off) is an override, shown *off for now*, and it
+  lasts until what provides it is turned off or replaced — changing where
+  you are starts the new place with everything it provides. A task that
+  needs a condition *not* to hold is checked against the same set.
   **Forget this** (`←`/`→`: never, in one, two or four hours, at midnight)
   is when where you are and the time you have stop counting. What you set is kept
   across relaunches and follows you across your devices: say you are at
@@ -500,7 +511,12 @@ the status bar's indicator and the tab show it in the warning colour, with
   keep their requirements), `t` files it under a category — a finder of the
   categories in use, Location first, then *No category*; type a name nothing
   uses for **New category “…”** — and `e` archives or restores it. Filing one
-  under Location makes it a place; filing it elsewhere makes it not one. **Manage conditions…** in the palette opens the tab
+  under Location makes it a place; filing it elsewhere makes it not one. `p`
+  sets what it **provides**: the conditions picker opens on it, and each
+  tick is a condition that holds whenever this one does (one undo step
+  each; a name nothing has yet makes a new one, ticked). Links chain — Home
+  provides Desk, Desk provides Typing — and a loop does no harm. Its row
+  says what it provides. **Manage conditions…** in the palette opens the tab
   on the new-condition row.
 - **Organising them**: `Alt+↑`/`Alt+↓` move a condition within its category
   and `Alt+Shift+↑`/`Alt+Shift+↓` move its whole category, as they move tasks;
@@ -527,7 +543,9 @@ the conditions an open task needs (and any that is on), under their category
 headings in the order the Mac keeps, and **New condition** asks for a category (one in use, or typed). The
 iPhone's Conditions sheet groups by category too, and a condition's long-press
 menu files it under one (**Category**, with **New category…**); its counts
-are open tasks only, as on the Mac. The phones keep what holds now on the
+are open tasks only, as on the Mac. What a setting provides shows as on there
+too, *from Home*, and turning it off is the same override; what a condition
+provides is set on the Mac (or with `takt ws provides`). The phones keep what holds now on the
 phone itself, and reordering, merging and renaming a category are the Mac's
 for now; what they do there reaches the phones through sync.
 

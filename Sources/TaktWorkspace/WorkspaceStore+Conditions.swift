@@ -101,6 +101,16 @@ extension WorkspaceStore {
     })
   }
 
+  /// Sets what a condition provides, replacing what it did: the Rust core's
+  /// `conditions::set_condition_provides`, one "Edit Condition" step. False
+  /// when it already provided exactly that.
+  @discardableResult
+  public func setConditionProvides(id: String, provides: [String], now: Date = .now) throws -> Bool {
+    try coreWrite {
+      try core.setConditionProvides(id: id, providedIds: provides, nowMs: now.coreMilliseconds)
+    }
+  }
+
   /// Merges a condition into another: its tasks require the other, and it
   /// is archived. Returns how many tasks changed.
   @discardableResult
@@ -153,28 +163,33 @@ public struct SavedFocusContext: Equatable, Sendable {
   public var expiresAt: Date?
   public var mode: FocusTimeMode
   public var suggestedIDs: Set<String>
+  /// Provided conditions switched off for now, until whatever provides them
+  /// is unset or replaced; the core drops the rest when it saves.
+  public var offIDs: Set<String>
 
   public init(
     conditionIDs: Set<String> = [], conditionsSetAt: Date? = nil, availableUntil: Date? = nil,
-    expiresAt: Date? = nil, mode: FocusTimeMode = .progress, suggestedIDs: Set<String> = []
+    expiresAt: Date? = nil, mode: FocusTimeMode = .progress, suggestedIDs: Set<String> = [],
+    offIDs: Set<String> = []
   ) {
     self.conditionIDs = conditionIDs; self.conditionsSetAt = conditionsSetAt
     self.availableUntil = availableUntil; self.expiresAt = expiresAt
-    self.mode = mode; self.suggestedIDs = suggestedIDs
+    self.mode = mode; self.suggestedIDs = suggestedIDs; self.offIDs = offIDs
   }
 
   init(_ core: StoredFocusContext) {
     self.init(
       conditionIDs: Set(core.conditionIds), conditionsSetAt: core.conditionsSetAtMs.map(Date.init(coreMilliseconds:)),
       availableUntil: core.availableUntilMs.map(Date.init(coreMilliseconds:)), expiresAt: core.expiresAtMs.map(Date.init(coreMilliseconds:)),
-      mode: FocusTimeMode(rawValue: core.mode) ?? .progress, suggestedIDs: Set(core.suggestedIds))
+      mode: FocusTimeMode(rawValue: core.mode) ?? .progress, suggestedIDs: Set(core.suggestedIds),
+      offIDs: Set(core.offIds))
   }
 
   var core: StoredFocusContext {
     StoredFocusContext(
       conditionIds: conditionIDs.sorted(), conditionsSetAtMs: conditionsSetAt?.coreMilliseconds,
       availableUntilMs: availableUntil?.coreMilliseconds, expiresAtMs: expiresAt?.coreMilliseconds,
-      mode: mode.rawValue, suggestedIds: suggestedIDs.sorted())
+      mode: mode.rawValue, suggestedIds: suggestedIDs.sorted(), offIds: offIDs.sorted())
   }
 
   /// Whether it had lapsed by `now`.

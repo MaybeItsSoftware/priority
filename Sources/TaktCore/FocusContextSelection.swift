@@ -36,7 +36,7 @@ public enum FocusContextSelection {
   ) -> Bool {
     let context = StoredFocusContext(
       conditionIds: Array(active), conditionsSetAtMs: setAt.map { Int64(($0.timeIntervalSince1970 * 1000).rounded()) },
-      availableUntilMs: nil, expiresAtMs: nil, mode: "progress", suggestedIds: [])
+      availableUntilMs: nil, expiresAtMs: nil, mode: "progress", suggestedIds: [], offIds: [])
     return focusContextIsStale(
       context: context, nowMs: Int64((now.timeIntervalSince1970 * 1000).rounded()), zone: timeZone.identifier)
   }

@@ -66,11 +66,11 @@ final class ConditionsPaneStepsTests: XCTestCase {
     XCTAssertNil(typed("0"))
   }
 
-  func testTheTimeRowsSitBetweenTheConditionsAndTheNewRow() {
+  func testFreeTimeFollowsWhereYouAreAndExpiryTheConditions() {
     let rows = ConditionsPaneLayout.rows(
       available: ["desk"], sections: [], folded: [], archived: [], showsArchived: false,
       hasPlaces: true, hasTimeLimit: false)
-    XCTAssertEqual(rows, [.location, .available("desk"), .time, .expiry, .add])
+    XCTAssertEqual(rows, [.location, .time, .available("desk"), .expiry, .add])
     let timed = ConditionsPaneLayout.rows(
       available: [], sections: [], folded: [], archived: [], showsArchived: false,
       hasPlaces: false, hasTimeLimit: true)

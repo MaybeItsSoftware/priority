@@ -199,8 +199,9 @@ README.
 The Conditions tab's cursor walks both its halves — what is available now, and
 the conditions themselves. `Space` turns the condition on or off, `Return` or
 `F2` renames it in its row (on the new-condition row, puts the caret in its
-field, where `Return` makes it), `a` or `Cmd+N` goes to that row, `p` makes the
-condition a place or not, `e` archives or restores it, `c` clears what is
+field, where `Return` makes it), `a` or `Cmd+N` goes to that row, `t` files
+the condition under a category (Location makes it a place), `p` ticks what it
+provides, `e` archives or restores it, `c` clears what is
 available and `Shift+U` uses the last context again. In a name field `Return`
 saves and `Esc` gives up, both handing the keyboard back to the cursor.
 
