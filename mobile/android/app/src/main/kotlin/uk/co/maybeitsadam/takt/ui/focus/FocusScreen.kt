@@ -51,6 +51,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -60,7 +61,9 @@ import java.time.LocalTime
 import uk.co.maybeitsadam.takt.core.FocusPoints
 import uk.co.maybeitsadam.takt.core.FocusTimeMode
 import uk.co.maybeitsadam.takt.core.ScoredNextUp
+import uk.co.maybeitsadam.takt.core.TaskCondition
 import uk.co.maybeitsadam.takt.data.workspace.ConditionGroups
+import uk.co.maybeitsadam.takt.data.workspace.ConditionHoldings
 import uk.co.maybeitsadam.takt.ui.commands.KeyCommand
 import uk.co.maybeitsadam.takt.ui.commands.PaletteCommand
 import uk.co.maybeitsadam.takt.ui.commands.RegisterCommands
@@ -175,7 +178,7 @@ private fun Planning(state: FocusUiState, context: FocusContextState, vm: FocusV
                 item(key = "staged", contentType = "staged") {
                     StagedCard(
                         title = title,
-                        explanation = rung?.let { FocusText.explanation(it, context.selected, state.conditions) },
+                        explanation = rung?.let { FocusText.explanation(it, context.held, state.conditions) },
                         minutes = stagedMinutes,
                         onMinutes = vm::setStagedMinutes,
                         onBegin = { gate { vm.beginStaged() } },
@@ -201,7 +204,7 @@ private fun Planning(state: FocusUiState, context: FocusContextState, vm: FocusV
                 rung = rung,
                 index = index,
                 count = state.ladder.size,
-                explanation = FocusText.explanation(rung, context.selected, state.conditions),
+                explanation = FocusText.explanation(rung, context.held, state.conditions),
                 isStaged = staged == rung.id,
                 vm = vm,
                 onBegin = { gate { vm.begin(rung.id, suggestedSeconds(rung, context)) } },
@@ -277,8 +280,10 @@ private fun ContextControls(state: FocusUiState, context: FocusContextState, vm:
     var choosing by rememberSaveable { mutableStateOf(false) }
     var customMinutes by rememberSaveable { mutableStateOf(false) }
     var pickingUntil by rememberSaveable { mutableStateOf(false) }
-    val groups = remember(state.conditions, state.requiredConditionIds, context.selected) {
-        ConditionGroups.available(state.conditions, state.requiredConditionIds, context.selected)
+    // Every condition said, provided or off for now stays offered, so it can
+    // be turned off, or back on.
+    val groups = remember(state.conditions, state.requiredConditionIds, context.holdings) {
+        ConditionGroups.available(state.conditions, state.requiredConditionIds, context.holdings.keys)
     }
     Column(Modifier.fillMaxWidth().padding(vertical = Metrics.sm), verticalArrangement = Arrangement.spacedBy(Metrics.xs)) {
         Text("Where you are", style = TaktTheme.type.label, color = TaktTheme.colors.mutedText, modifier = Modifier.padding(horizontal = Metrics.lg))
@@ -309,18 +314,24 @@ private fun ContextControls(state: FocusUiState, context: FocusContextState, vm:
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 for (condition in group.conditions) {
-                    val on = condition.id in context.selected
+                    val on = condition.id in context.held
+                    val note = ConditionHoldings.note(context.holdings[condition.id], state.conditions)
                     Tag(
                         condition.name,
                         color = if (on) TaktTheme.colors.primary else TaktTheme.colors.mutedText,
                         selected = on,
                         leading = if (group.isExclusive) Icons.Filled.LocationOn else null,
-                        modifier = Modifier.testTag("focus_condition_${condition.name}"),
+                        modifier = Modifier
+                            .testTag("focus_condition_${condition.name}")
+                            .semantics { if (note != null) stateDescription = note },
                         onClick = { vm.toggleCondition(condition) },
                     )
                 }
             }
         }
+        // What the settings provide, and what is off for now: "Desk, Quiet
+        // from Home · Floor space off for now". The chips are too small to say it.
+        ProvidedNote(context, state.conditions)
         // Said on an earlier day, here or on another device: probably not
         // where you are now. The Mac's notice, in the same words.
         if (context.isStale) {
@@ -339,7 +350,7 @@ private fun ContextControls(state: FocusUiState, context: FocusContextState, vm:
                 Tag("Clear", color = TaktTheme.colors.primary, onClick = { vm.clearConditions() })
             }
         }
-        Text("Time you have", style = TaktTheme.type.label, color = TaktTheme.colors.mutedText, modifier = Modifier.padding(start = Metrics.lg, end = Metrics.lg, top = Metrics.xs))
+        Text("Free time", style = TaktTheme.type.label, color = TaktTheme.colors.mutedText, modifier = Modifier.padding(start = Metrics.lg, end = Metrics.lg, top = Metrics.xs))
         Row(
             Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = Metrics.lg),
             horizontalArrangement = Arrangement.spacedBy(Metrics.sm),
@@ -612,3 +623,21 @@ private fun RunningBlock(state: FocusUiState, vm: FocusViewModel) {
 private val MinusIcon by lazy { PIcons.icon("Minus", "M19,13H5v-2h14v2z") }
 
 // endregion
+
+/** One line under the chips saying where the provided conditions come from, and which are off for now. */
+@Composable
+private fun ProvidedNote(context: FocusContextState, conditions: List<TaskCondition>) {
+    val name = { id: String -> conditions.firstOrNull { it.id == id }?.name ?: id }
+    val provided = context.holdings.values.filter { it.holds && !it.isSet && it.providedBy.isNotEmpty() }
+        .groupBy { holding -> holding.providedBy.joinToString(", ") { name(it) } }
+        .map { (from, held) -> held.joinToString(", ") { name(it.conditionId) } + " from " + from }
+    val off = context.holdings.values.filter { it.isOff }.map { name(it.conditionId) }
+    val parts = provided + listOfNotNull(off.takeIf { it.isNotEmpty() }?.let { it.joinToString(", ") + " off for now" })
+    if (parts.isEmpty()) return
+    Text(
+        parts.joinToString(" · "),
+        style = TaktTheme.type.small,
+        color = TaktTheme.colors.mutedText,
+        modifier = Modifier.padding(horizontal = Metrics.lg).testTag("focus_conditions_provided"),
+    )
+}

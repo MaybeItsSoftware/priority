@@ -86,7 +86,7 @@ fun NowConditionsBar(modifier: Modifier = Modifier) {
     if (open) NowConditionsSheet(onDismiss = { open = false })
     if (!state.isLoaded || state.available.isEmpty()) return
     val colors = TaktTheme.colors
-    val summary = ConditionPicker.nowSummary(state.conditions, state.selected)
+    val summary = ConditionPicker.nowSummary(state.conditions, state.held)
     Column(modifier) {
         Row(
             Modifier
@@ -118,7 +118,9 @@ fun NowConditionsBar(modifier: Modifier = Modifier) {
 /**
  * Say what holds now: every condition an open task needs, under its
  * category, one tap each. Location is one place at a time, so its rows are
- * radios. Search reaches every condition, and a name nothing is called yet
+ * radios. What a setting provides is ticked with it and says so ("from
+ * Home"); unticking one is an override, "off for now", until the setting
+ * changes. Search reaches every condition, and a name nothing is called yet
  * makes one and turns it on.
  */
 @Composable
@@ -132,7 +134,7 @@ fun NowConditionsSheet(onDismiss: () -> Unit) {
             searchable = state.conditions.filter { !it.isArchived || it.id in state.selected },
             all = state.conditions,
             query = query,
-            isOn = { it in state.selected },
+            isOn = { it in state.held },
             exclusiveRadio = true,
         )
     }
@@ -150,7 +152,9 @@ fun NowConditionsSheet(onDismiss: () -> Unit) {
             "No open task needs a condition. Search to turn one on anyway."
         },
         trailing = {
-            if (state.selected.isNotEmpty()) Tag("Clear", color = colors.primary, onClick = vm::clearNow, modifier = Modifier.testTag("now_conditions_clear"))
+            if (state.selected.isNotEmpty() || state.off.isNotEmpty()) {
+                Tag("Clear", color = colors.primary, onClick = vm::clearNow, modifier = Modifier.testTag("now_conditions_clear"))
+            }
         },
         notice = {
             if (state.isStale) {
@@ -164,6 +168,7 @@ fun NowConditionsSheet(onDismiss: () -> Unit) {
                 }
             }
         },
+        detail = { row -> state.note(row.condition.id) },
         count = { row -> state.usage[row.condition.id] },
         onToggle = { row -> vm.toggleNow(row.condition) },
         onCreate = { name ->

@@ -397,6 +397,8 @@ data class TaskCondition(
     val category: String? = null,
     /** Where it sits in the conditions' order, workspace-wide; null for one nobody has placed. */
     val sortOrder: Long? = null,
+    /** The conditions it switches on while it holds (Home: Floor space, Desk), by id. */
+    val provides: List<String> = emptyList(),
 )
 
 data class FocusWorkBlock(

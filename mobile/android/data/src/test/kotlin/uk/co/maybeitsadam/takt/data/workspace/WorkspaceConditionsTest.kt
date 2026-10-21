@@ -115,6 +115,46 @@ class WorkspaceConditionsTest {
     }
 
     @Test
+    fun whatAPlaceProvidesHoldsUntilSwitchedOffAndComesBackWithTheNextPlace() = fixture {
+        val conditions = store.conditions(workspace.id)
+        val home = conditions.first { it.name == "Home" }
+        val campus = conditions.first { it.name == "Campus" }
+        val floor = conditions.first { it.name == "Floor space" }
+        assertTrue(store.setConditionProvides(home.id, listOf(floor.id), now = now))
+        val stretch = task("Stretch")
+        store.saveTaskEditor(edit(stretch.id).edit { copy(requirementGroups = listOf(listOf(floor.id))) })
+        val all = store.conditions(workspace.id)
+        assertEquals(listOf(floor.id), all.first { it.id == home.id }.provides)
+
+        // At Home, Floor space holds without being said, and the task is offered.
+        val held = ConditionHoldings.held(all, setOf(home.id), emptySet())
+        assertEquals(setOf(home.id, floor.id), held)
+        assertEquals("from Home", ConditionHoldings.note(ConditionHoldings.holdings(all, setOf(home.id), emptySet())[floor.id], all))
+        val ranked = NextUpSelector.evaluate(store.nextUpCandidates(now = now), now = now, zone = UTC, context = FocusContext(held))
+        assertTrue(ranked.ranked.any { it.id == stretch.id })
+        // Home offers itself under "Where you are": it provides what the task needs.
+        val offered = ConditionGroups.available(all, store.requiredConditionIds(workspace.id), held)
+        assertTrue(offered.first().conditions.any { it.id == home.id })
+
+        // Switched off for now: an override, and the task waits.
+        val off = ConditionHoldings.switching(all, setOf(home.id), emptySet(), floor.id)
+        assertEquals(listOf(home.id), off.conditionIds)
+        assertEquals(listOf(floor.id), off.offIds)
+        assertEquals(setOf(home.id), ConditionHoldings.held(all, off.conditionIds.toSet(), off.offIds.toSet()))
+
+        // Saying another place replaces Home, and Home's override goes with it.
+        val moved = ConditionHoldings.switching(all, off.conditionIds.toSet(), off.offIds.toSet(), campus.id)
+        assertEquals(listOf(campus.id), moved.conditionIds)
+        assertTrue(moved.offIds.isEmpty())
+        val back = ConditionHoldings.switching(all, moved.conditionIds.toSet(), emptySet(), home.id)
+        assertEquals(setOf(home.id, floor.id), ConditionHoldings.held(all, back.conditionIds.toSet(), back.offIds.toSet()))
+
+        // The override is kept with the context, and read back.
+        store.saveFocusContext(workspace.id, emptyFocusContext().copy(conditionIds = off.conditionIds, offIds = off.offIds), now)
+        assertEquals(listOf(floor.id), store.focusContext(workspace.id)!!.offIds)
+    }
+
+    @Test
     fun planningSaveAndUndoAreAtomicAndReopenRetainsAllFields() = fixture {
         val task = task()
         val conditions = store.conditions(workspace.id)

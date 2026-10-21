@@ -9,11 +9,15 @@ import java.time.Instant
 import java.time.ZoneId
 import uniffi.takt_core.StoredFocusContext
 import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.ImmutableMap
 import kotlinx.collections.immutable.ImmutableSet
 import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.persistentMapOf
 import kotlinx.collections.immutable.persistentSetOf
 import kotlinx.collections.immutable.toImmutableList
+import kotlinx.collections.immutable.toImmutableMap
 import kotlinx.collections.immutable.toImmutableSet
+import uniffi.takt_core.ConditionHolding
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -46,6 +50,7 @@ import uk.co.maybeitsadam.takt.core.TaskCondition
 import uk.co.maybeitsadam.takt.core.TaskPlanningError
 import uk.co.maybeitsadam.takt.core.TaskPlanningException
 import uk.co.maybeitsadam.takt.core.WorkspaceNextUpSnapshot
+import uk.co.maybeitsadam.takt.data.workspace.ConditionHoldings
 import uk.co.maybeitsadam.takt.data.workspace.FocusCompletionOutcome
 import uk.co.maybeitsadam.takt.data.workspace.emptyFocusContext
 import uk.co.maybeitsadam.takt.data.workspace.startClash
@@ -63,7 +68,14 @@ data class LastBlock(val award: FocusAward?, val outcome: FocusCompletionOutcome
 /** Where you are, how long you have, and whether to make progress or finish. */
 @Immutable
 data class FocusContextState(
+    /** The conditions said to hold: a place chosen, a box ticked. */
     val selected: ImmutableSet<String> = persistentSetOf(),
+    /** Provided conditions switched off for now (housemates in: Quiet off). */
+    val off: ImmutableSet<String> = persistentSetOf(),
+    /** What holds: [selected], everything it provides, less [off]. The core's rule, as the Mac's. */
+    val held: ImmutableSet<String> = persistentSetOf(),
+    /** Each condition said, provided or off, by id: what its row notes ("from Home", "off for now"). */
+    val holdings: ImmutableMap<String, ConditionHolding> = persistentMapOf(),
     val mode: FocusTimeMode = FocusTimeMode.PROGRESS,
     val time: AvailableTime = AvailableTime.Unlimited,
     val endsAt: Instant? = null,
@@ -72,7 +84,8 @@ data class FocusContextState(
     /** Said on an earlier day: probably not where you are now. The core's rule, as the Mac's. */
     val isStale: Boolean = false,
 ) {
-    val context: FocusContext get() = FocusContext(selected, endsAt, mode)
+    /** Tasks are checked against what holds, what the settings provide included. */
+    val context: FocusContext get() = FocusContext(held, endsAt, mode)
 }
 
 /** Everything the Focus screen draws. */
@@ -115,7 +128,14 @@ class FocusViewModel(private val container: AppContainer) : ViewModel() {
         session.repository.observeFocusContext(session.workspace.id)
     }.stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
-    val contextState: StateFlow<FocusContextState> = combine(stored, time, minuteTicks()) { saved, (available, chosenEnd), _ ->
+    /** Every condition, for working out what the ones said provide. */
+    private val allConditions: StateFlow<List<TaskCondition>> = container.withSession { session ->
+        session.repository.observeConditions(session.workspace.id)
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+
+    val contextState: StateFlow<FocusContextState> = combine(
+        stored, allConditions, time, minuteTicks(),
+    ) { saved, conditions, (available, chosenEnd), _ ->
         val now = Instant.now()
         val context = saved?.let { uniffi.takt_core.focusContextInForce(it, now.toEpochMilli()) } ?: emptyFocusContext()
         val until = context.availableUntilMs?.let(Instant::ofEpochMilli)
@@ -127,8 +147,13 @@ class FocusViewModel(private val container: AppContainer) : ViewModel() {
         }
         // The time you have runs to whichever comes first, the window or the context's expiry.
         val ends = listOfNotNull(until, context.expiresAtMs?.let(Instant::ofEpochMilli)).minOrNull()
+        val said = context.conditionIds.toSet()
+        val off = context.offIds.toSet()
         FocusContextState(
-            selected = context.conditionIds.toImmutableSet(),
+            selected = said.toImmutableSet(),
+            off = off.toImmutableSet(),
+            held = ConditionHoldings.held(conditions, said, off).toImmutableSet(),
+            holdings = ConditionHoldings.holdings(conditions, said, off).toImmutableMap(),
             mode = FocusTimeMode.of(context.mode) ?: FocusTimeMode.PROGRESS,
             time = shown,
             endsAt = ends,
@@ -225,22 +250,21 @@ class FocusViewModel(private val container: AppContainer) : ViewModel() {
         }
     }
 
+    /**
+     * Turns a condition on or off. One place at a time: choosing a location
+     * replaces the last one, and what it provided with it. A provided one
+     * turned off is off for now, until what provides it changes. The rules
+     * are the core's, shared with the Mac and iPhone.
+     */
     fun toggleCondition(condition: TaskCondition) {
-        val current = contextState.value.selected
-        // One place at a time: choosing a location replaces the last one. The
-        // rule is the core's, shared with the Mac and iPhone.
-        val next = uniffi.takt_core.focusContextToggle(
-            condition.id,
-            condition.isLocation,
-            current.toList(),
-            state.value.conditions.filter { it.isLocation }.map { it.id },
-        )
-        saveContext { it.copy(conditionIds = next, suggestedIds = emptyList()) }
+        val current = contextState.value
+        val next = ConditionHoldings.switching(allConditions.value, current.selected, current.off, condition.id)
+        saveContext { it.copy(conditionIds = next.conditionIds, offIds = next.offIds, suggestedIds = emptyList()) }
     }
 
     /** Nothing holds any more: every condition off. Clears a stale answer. */
     fun clearConditions() {
-        saveContext { it.copy(conditionIds = emptyList(), suggestedIds = emptyList()) }
+        saveContext { it.copy(conditionIds = emptyList(), offIds = emptyList(), suggestedIds = emptyList()) }
     }
 
     fun setMode(mode: FocusTimeMode) {

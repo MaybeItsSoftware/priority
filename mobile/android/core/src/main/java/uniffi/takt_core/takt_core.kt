@@ -773,6 +773,14 @@ internal object IntegrityCheckingUniffiLib {
     ): Int
     external fun uniffi_takt_core_checksum_func_condition_waiting_counts(
     ): Int
+    external fun uniffi_takt_core_checksum_func_condition_holdings(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_effective_condition_ids(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_focus_context_kept_overrides(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_focus_context_switch(
+    ): Int
     external fun uniffi_takt_core_checksum_func_requirement_condition_id(
     ): Int
     external fun uniffi_takt_core_checksum_func_requirement_group_is_met(
@@ -1469,6 +1477,8 @@ internal object IntegrityCheckingUniffiLib {
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_set_condition_category(
     ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_set_condition_provides(
+    ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_set_item_kind(
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_set_kanban_column(
@@ -1979,6 +1989,8 @@ internal object UniffiLib {
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_method_coreworkspace_set_condition_category(`ptr`: Long,`id`: RustBuffer.ByValue,`category`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
+    external fun uniffi_takt_core_fn_method_coreworkspace_set_condition_provides(`ptr`: Long,`id`: RustBuffer.ByValue,`providedIds`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Byte
     external fun uniffi_takt_core_fn_method_coreworkspace_set_item_kind(`ptr`: Long,`id`: RustBuffer.ByValue,`kind`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
     external fun uniffi_takt_core_fn_method_coreworkspace_set_kanban_column(`ptr`: Long,`taskIds`: RustBuffer.ByValue,`column`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
@@ -2152,6 +2164,14 @@ internal object UniffiLib {
     external fun uniffi_takt_core_fn_func_condition_sections(`conditions`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_func_condition_waiting_counts(`missing`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_condition_holdings(`conditions`: RustBuffer.ByValue,`setIds`: RustBuffer.ByValue,`offIds`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_effective_condition_ids(`conditions`: RustBuffer.ByValue,`setIds`: RustBuffer.ByValue,`offIds`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_focus_context_kept_overrides(`conditions`: RustBuffer.ByValue,`previousIds`: RustBuffer.ByValue,`nextIds`: RustBuffer.ByValue,`offIds`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_focus_context_switch(`conditions`: RustBuffer.ByValue,`said`: RustBuffer.ByValue,`conditionId`: RustBuffer.ByValue,`on`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_func_requirement_condition_id(`member`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
@@ -2707,7 +2727,7 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
     if ((lib.uniffi_takt_core_checksum_func_resolve_due_date() and 0xFFFF) != 36836) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if ((lib.uniffi_takt_core_checksum_func_available_condition_sections() and 0xFFFF) != 57749) {
+    if ((lib.uniffi_takt_core_checksum_func_available_condition_sections() and 0xFFFF) != 14999) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_func_condition_categories() and 0xFFFF) != 7519) {
@@ -2719,10 +2739,22 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
     if ((lib.uniffi_takt_core_checksum_func_condition_section_title() and 0xFFFF) != 32802) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if ((lib.uniffi_takt_core_checksum_func_condition_sections() and 0xFFFF) != 53530) {
+    if ((lib.uniffi_takt_core_checksum_func_condition_sections() and 0xFFFF) != 6307) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_func_condition_waiting_counts() and 0xFFFF) != 42654) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_condition_holdings() and 0xFFFF) != 12188) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_effective_condition_ids() and 0xFFFF) != 13024) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_focus_context_kept_overrides() and 0xFFFF) != 44069) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_focus_context_switch() and 0xFFFF) != 26012) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_func_requirement_condition_id() and 0xFFFF) != 14162) {
@@ -2821,7 +2853,7 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
     if ((lib.uniffi_takt_core_checksum_func_focus_context_changed() and 0xFFFF) != 16350) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if ((lib.uniffi_takt_core_checksum_func_focus_context_in_force() and 0xFFFF) != 62430) {
+    if ((lib.uniffi_takt_core_checksum_func_focus_context_in_force() and 0xFFFF) != 44946) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_func_focus_context_is_stale() and 0xFFFF) != 22807) {
@@ -3767,6 +3799,9 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_set_condition_category() and 0xFFFF) != 2912) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_set_condition_provides() and 0xFFFF) != 58619) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_set_item_kind() and 0xFFFF) != 55048) {
@@ -5861,6 +5896,12 @@ public interface CoreWorkspaceInterface {
      * step. Location makes it a place, anything else makes it not one.
      */
     fun `setConditionCategory`(`id`: kotlin.String, `category`: kotlin.String?, `nowMs`: kotlin.Long)
+    
+    /**
+     * Sets what a condition provides, replacing what it did, as one "Edit
+     * Condition" step. False when it already provided exactly that.
+     */
+    fun `setConditionProvides`(`id`: kotlin.String, `providedIds`: List<kotlin.String>, `nowMs`: kotlin.Long): kotlin.Boolean
     
     /**
      * Makes an item a task or a nested list.
@@ -9707,6 +9748,27 @@ open class CoreWorkspace: Disposable, AutoCloseable, CoreWorkspaceInterface
 
     
     /**
+     * Sets what a condition provides, replacing what it did, as one "Edit
+     * Condition" step. False when it already provided exactly that.
+     */
+    @Throws(CoreException::class)override fun `setConditionProvides`(`id`: kotlin.String, `providedIds`: List<kotlin.String>, `nowMs`: kotlin.Long): kotlin.Boolean {
+            return FfiConverterBoolean.lift(
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_set_condition_provides(
+        it,
+        
+        FfiConverterString.lower(`id`),
+        FfiConverterSequenceString.lower(`providedIds`),
+        FfiConverterLong.lower(`nowMs`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
      * Makes an item a task or a nested list.
      */
     @Throws(CoreException::class)override fun `setItemKind`(`id`: kotlin.String, `kind`: kotlin.String, `nowMs`: kotlin.Long)
@@ -12442,6 +12504,77 @@ public object FfiConverterTypeCompletionContext: FfiConverterRustBuffer<Completi
 
 
 /**
+ * One condition's part in what holds now.
+ */
+data class ConditionHolding (
+    var `conditionId`: kotlin.String
+    , 
+    /**
+     * Said to hold directly: a place chosen, a box ticked.
+     */
+    var `isSet`: kotlin.Boolean
+    , 
+    /**
+     * The conditions said to hold that provide it, directly or through
+     * another, in the order the tab shows them: "from Home". Empty when
+     * nothing does.
+     */
+    var `providedBy`: List<kotlin.String>
+    , 
+    /**
+     * Provided, but switched off for now.
+     */
+    var `isOff`: kotlin.Boolean
+    , 
+    /**
+     * Whether it holds: set, or provided and not switched off. This is
+     * what every requirement is checked against.
+     */
+    var `holds`: kotlin.Boolean
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeConditionHolding: FfiConverterRustBuffer<ConditionHolding> {
+    override fun read(buf: ByteBuffer): ConditionHolding {
+        return ConditionHolding(
+            FfiConverterString.read(buf),
+            FfiConverterBoolean.read(buf),
+            FfiConverterSequenceString.read(buf),
+            FfiConverterBoolean.read(buf),
+            FfiConverterBoolean.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: ConditionHolding) = (
+            FfiConverterString.allocationSize(value.`conditionId`) +
+            FfiConverterBoolean.allocationSize(value.`isSet`) +
+            FfiConverterSequenceString.allocationSize(value.`providedBy`) +
+            FfiConverterBoolean.allocationSize(value.`isOff`) +
+            FfiConverterBoolean.allocationSize(value.`holds`)
+    )
+
+    override fun write(value: ConditionHolding, buf: ByteBuffer) {
+            FfiConverterString.write(value.`conditionId`, buf)
+            FfiConverterBoolean.write(value.`isSet`, buf)
+            FfiConverterSequenceString.write(value.`providedBy`, buf)
+            FfiConverterBoolean.write(value.`isOff`, buf)
+            FfiConverterBoolean.write(value.`holds`, buf)
+    }
+}
+
+
+
+/**
  * A row of `task_conditions`. `TaskCondition`.
  */
 data class ConditionRow (
@@ -12472,6 +12605,13 @@ data class ConditionRow (
      * nobody has placed, which comes after the placed ones under its heading.
      */
     var `sortOrder`: kotlin.Long?
+    , 
+    /**
+     * The conditions it switches on while it holds (Home: Floor space,
+     * Desk), by id, sorted. Empty before v34 and for one that provides
+     * nothing. See `conditions::provides`.
+     */
+    var `provides`: List<kotlin.String>
     
 ){
     
@@ -12497,6 +12637,7 @@ public object FfiConverterTypeConditionRow: FfiConverterRustBuffer<ConditionRow>
             FfiConverterLong.read(buf),
             FfiConverterOptionalString.read(buf),
             FfiConverterOptionalLong.read(buf),
+            FfiConverterSequenceString.read(buf),
         )
     }
 
@@ -12509,7 +12650,8 @@ public object FfiConverterTypeConditionRow: FfiConverterRustBuffer<ConditionRow>
             FfiConverterLong.allocationSize(value.`createdAtMs`) +
             FfiConverterLong.allocationSize(value.`updatedAtMs`) +
             FfiConverterOptionalString.allocationSize(value.`category`) +
-            FfiConverterOptionalLong.allocationSize(value.`sortOrder`)
+            FfiConverterOptionalLong.allocationSize(value.`sortOrder`) +
+            FfiConverterSequenceString.allocationSize(value.`provides`)
     )
 
     override fun write(value: ConditionRow, buf: ByteBuffer) {
@@ -12522,6 +12664,7 @@ public object FfiConverterTypeConditionRow: FfiConverterRustBuffer<ConditionRow>
             FfiConverterLong.write(value.`updatedAtMs`, buf)
             FfiConverterOptionalString.write(value.`category`, buf)
             FfiConverterOptionalLong.write(value.`sortOrder`, buf)
+            FfiConverterSequenceString.write(value.`provides`, buf)
     }
 }
 
@@ -12547,6 +12690,14 @@ data class ConditionSection (
     var `isExclusive`: kotlin.Boolean
     , 
     /**
+     * Whether it is a setting — something you say about your situation,
+     * which switches on what a task needs — rather than properties: the
+     * Location heading, and any heading a condition under which provides
+     * something ("Tools on hand"). Settings come first.
+     */
+    var `isSetting`: kotlin.Boolean
+    , 
+    /**
      * In the order they were given.
      */
     var `conditions`: List<ConditionRow>
@@ -12569,6 +12720,7 @@ public object FfiConverterTypeConditionSection: FfiConverterRustBuffer<Condition
             FfiConverterOptionalString.read(buf),
             FfiConverterString.read(buf),
             FfiConverterBoolean.read(buf),
+            FfiConverterBoolean.read(buf),
             FfiConverterSequenceTypeConditionRow.read(buf),
         )
     }
@@ -12577,6 +12729,7 @@ public object FfiConverterTypeConditionSection: FfiConverterRustBuffer<Condition
             FfiConverterOptionalString.allocationSize(value.`category`) +
             FfiConverterString.allocationSize(value.`title`) +
             FfiConverterBoolean.allocationSize(value.`isExclusive`) +
+            FfiConverterBoolean.allocationSize(value.`isSetting`) +
             FfiConverterSequenceTypeConditionRow.allocationSize(value.`conditions`)
     )
 
@@ -12584,6 +12737,7 @@ public object FfiConverterTypeConditionSection: FfiConverterRustBuffer<Condition
             FfiConverterOptionalString.write(value.`category`, buf)
             FfiConverterString.write(value.`title`, buf)
             FfiConverterBoolean.write(value.`isExclusive`, buf)
+            FfiConverterBoolean.write(value.`isSetting`, buf)
             FfiConverterSequenceTypeConditionRow.write(value.`conditions`, buf)
     }
 }
@@ -12626,6 +12780,54 @@ public object FfiConverterTypeConditionUsage: FfiConverterRustBuffer<ConditionUs
     override fun write(value: ConditionUsage, buf: ByteBuffer) {
             FfiConverterString.write(value.`conditionId`, buf)
             FfiConverterUInt.write(value.`openTasks`, buf)
+    }
+}
+
+
+
+/**
+ * What is said to hold, and what is switched off for now: the two halves
+ * of a context that [`holdings`] reads.
+ */
+data class ConditionsSaid (
+    /**
+     * Said to hold directly, sorted.
+     */
+    var `conditionIds`: List<kotlin.String>
+    , 
+    /**
+     * Provided but switched off for now, sorted.
+     */
+    var `offIds`: List<kotlin.String>
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeConditionsSaid: FfiConverterRustBuffer<ConditionsSaid> {
+    override fun read(buf: ByteBuffer): ConditionsSaid {
+        return ConditionsSaid(
+            FfiConverterSequenceString.read(buf),
+            FfiConverterSequenceString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: ConditionsSaid) = (
+            FfiConverterSequenceString.allocationSize(value.`conditionIds`) +
+            FfiConverterSequenceString.allocationSize(value.`offIds`)
+    )
+
+    override fun write(value: ConditionsSaid, buf: ByteBuffer) {
+            FfiConverterSequenceString.write(value.`conditionIds`, buf)
+            FfiConverterSequenceString.write(value.`offIds`, buf)
     }
 }
 
@@ -20559,6 +20761,11 @@ data class StoredFocusContext (
      * The conditions that held before the last expiry, offered back.
      */
     var `suggestedIds`: List<kotlin.String>
+    , 
+    /**
+     * Provided conditions switched off for now, sorted. Empty before v34.
+     */
+    var `offIds`: List<kotlin.String>
     
 ){
     
@@ -20581,6 +20788,7 @@ public object FfiConverterTypeStoredFocusContext: FfiConverterRustBuffer<StoredF
             FfiConverterOptionalLong.read(buf),
             FfiConverterString.read(buf),
             FfiConverterSequenceString.read(buf),
+            FfiConverterSequenceString.read(buf),
         )
     }
 
@@ -20590,7 +20798,8 @@ public object FfiConverterTypeStoredFocusContext: FfiConverterRustBuffer<StoredF
             FfiConverterOptionalLong.allocationSize(value.`availableUntilMs`) +
             FfiConverterOptionalLong.allocationSize(value.`expiresAtMs`) +
             FfiConverterString.allocationSize(value.`mode`) +
-            FfiConverterSequenceString.allocationSize(value.`suggestedIds`)
+            FfiConverterSequenceString.allocationSize(value.`suggestedIds`) +
+            FfiConverterSequenceString.allocationSize(value.`offIds`)
     )
 
     override fun write(value: StoredFocusContext, buf: ByteBuffer) {
@@ -20600,6 +20809,7 @@ public object FfiConverterTypeStoredFocusContext: FfiConverterRustBuffer<StoredF
             FfiConverterOptionalLong.write(value.`expiresAtMs`, buf)
             FfiConverterString.write(value.`mode`, buf)
             FfiConverterSequenceString.write(value.`suggestedIds`, buf)
+            FfiConverterSequenceString.write(value.`offIds`, buf)
     }
 }
 
@@ -29348,6 +29558,34 @@ public object FfiConverterSequenceTypeCompletedDay: FfiConverterRustBuffer<List<
 /**
  * @suppress
  */
+public object FfiConverterSequenceTypeConditionHolding: FfiConverterRustBuffer<List<ConditionHolding>> {
+    override fun read(buf: ByteBuffer): List<ConditionHolding> {
+        val len = buf.getInt()
+        return List<ConditionHolding>(len) {
+            FfiConverterTypeConditionHolding.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<ConditionHolding>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeConditionHolding.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<ConditionHolding>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeConditionHolding.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
 public object FfiConverterSequenceTypeConditionRow: FfiConverterRustBuffer<List<ConditionRow>> {
     override fun read(buf: ByteBuffer): List<ConditionRow> {
         val len = buf.getInt()
@@ -32711,10 +32949,12 @@ public object FfiConverterMapStringTypeSyncValue: FfiConverterRustBuffer<Map<kot
 
         /**
          * What "Available now" offers: only the conditions an open task requires
-         * (`required_ids`), since saying anything else holds changes nothing, plus
-         * any that is on now (`active_ids`), so it can be turned off. Under their
-         * headings, with a heading left out when nothing under it is offered. Empty
-         * when no open task needs a condition and none is on.
+         * (`required_ids`), and the settings that provide one, since saying
+         * anything else holds changes nothing, plus any that is on now
+         * (`active_ids`: what holds, provided ones included, and any switched off
+         * for now), so it can be turned off or back on. Under their headings, with
+         * a heading left out when nothing under it is offered. Empty when no open
+         * task needs a condition and none is on.
          */ fun `availableConditionSections`(`conditions`: List<ConditionRow>, `requiredIds`: List<kotlin.String>, `activeIds`: List<kotlin.String>): List<ConditionSection> {
             return FfiConverterSequenceTypeConditionSection.lift(
     uniffiRustCall() { _status ->
@@ -32777,13 +33017,14 @@ public object FfiConverterMapStringTypeSyncValue: FfiConverterRustBuffer<Map<kot
     
 
         /**
-         * Conditions under their headings, in the order the workspace keeps
-         * (`sortOrder`): the headings by their first placed condition, and the
-         * conditions under each by their own. What nobody has placed — every
-         * condition before v27, and one an older client makes — comes after what
-         * has been, in the order it was given, and a heading with nothing placed
-         * falls back to Location first, then every other category alphabetically,
-         * then the uncategorised under "Other".
+         * Conditions under their headings, settings first (Location, and any
+         * heading whose conditions provide something), then the rest, each half in
+         * the order the workspace keeps (`sortOrder`): the headings by their first
+         * placed condition, and the conditions under each by their own. What nobody
+         * has placed — every condition before v27, and one an older client makes —
+         * comes after what has been, in the order it was given, and a heading with
+         * nothing placed falls back to Location first, then every other category
+         * alphabetically, then the uncategorised under "Other".
          */ fun `conditionSections`(`conditions`: List<ConditionRow>): List<ConditionSection> {
             return FfiConverterSequenceTypeConditionSection.lift(
     uniffiRustCall() { _status ->
@@ -32809,6 +33050,77 @@ public object FfiConverterMapStringTypeSyncValue: FfiConverterRustBuffer<Map<kot
     
         
         FfiConverterSequenceSequenceSequenceString.lower(`missing`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * What holds when `set_ids` are said to hold and `off_ids` are switched
+         * off for now, condition by condition: the core's one answer to "what
+         * holds", which every client reads rather than working it out itself.
+         */ fun `conditionHoldings`(`conditions`: List<ConditionRow>, `setIds`: List<kotlin.String>, `offIds`: List<kotlin.String>): List<ConditionHolding> {
+            return FfiConverterSequenceTypeConditionHolding.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_condition_holdings(
+    
+        
+        FfiConverterSequenceTypeConditionRow.lower(`conditions`),
+        FfiConverterSequenceString.lower(`setIds`),
+        FfiConverterSequenceString.lower(`offIds`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * The ids of the conditions that hold, sorted: what a context's
+         * `condition_ids` should be when a task is checked against it.
+         */ fun `effectiveConditionIds`(`conditions`: List<ConditionRow>, `setIds`: List<kotlin.String>, `offIds`: List<kotlin.String>): List<kotlin.String> {
+            return FfiConverterSequenceString.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_effective_condition_ids(
+    
+        
+        FfiConverterSequenceTypeConditionRow.lower(`conditions`),
+        FfiConverterSequenceString.lower(`setIds`),
+        FfiConverterSequenceString.lower(`offIds`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * The overrides that survive the conditions said to hold changing: see
+         * [`kept_overrides`]. Saving a context applies it too.
+         */ fun `focusContextKeptOverrides`(`conditions`: List<ConditionRow>, `previousIds`: List<kotlin.String>, `nextIds`: List<kotlin.String>, `offIds`: List<kotlin.String>): List<kotlin.String> {
+            return FfiConverterSequenceString.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_focus_context_kept_overrides(
+    
+        
+        FfiConverterSequenceTypeConditionRow.lower(`conditions`),
+        FfiConverterSequenceString.lower(`previousIds`),
+        FfiConverterSequenceString.lower(`nextIds`),
+        FfiConverterSequenceString.lower(`offIds`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * A context's conditions with one switched on, off or (`on` none) the
+         * other way: see [`switched`].
+         */ fun `focusContextSwitch`(`conditions`: List<ConditionRow>, `said`: ConditionsSaid, `conditionId`: kotlin.String, `on`: kotlin.Boolean?): ConditionsSaid {
+            return FfiConverterTypeConditionsSaid.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_focus_context_switch(
+    
+        
+        FfiConverterSequenceTypeConditionRow.lower(`conditions`),
+        FfiConverterTypeConditionsSaid.lower(`said`),
+        FfiConverterString.lower(`conditionId`),
+        FfiConverterOptionalBoolean.lower(`on`),_status)
 }
     )
     }
@@ -33279,7 +33591,7 @@ public object FfiConverterMapStringTypeSyncValue: FfiConverterRustBuffer<Map<kot
         /**
          * The context as it stands at `now_ms`: once it has expired its conditions
          * are set aside — offered back, so "Use again" can restore them — and the
-         * expiry and stamp go with them. Otherwise `context` unchanged.
+         * expiry, stamp and overrides go with them. Otherwise `context` unchanged.
          */ fun `focusContextInForce`(`context`: StoredFocusContext, `nowMs`: kotlin.Long): StoredFocusContext {
             return FfiConverterTypeStoredFocusContext.lift(
     uniffiRustCall() { _status ->

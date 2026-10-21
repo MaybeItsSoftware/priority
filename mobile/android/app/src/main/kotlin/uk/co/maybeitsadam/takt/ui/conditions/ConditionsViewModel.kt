@@ -23,6 +23,8 @@ import uk.co.maybeitsadam.takt.app.AppContainer
 import uk.co.maybeitsadam.takt.core.TaskCondition
 import uk.co.maybeitsadam.takt.data.workspace.ConditionGroup
 import uk.co.maybeitsadam.takt.data.workspace.ConditionGroups
+import uk.co.maybeitsadam.takt.data.workspace.ConditionHoldings
+import uniffi.takt_core.ConditionHolding
 import uk.co.maybeitsadam.takt.data.workspace.emptyFocusContext
 import uk.co.maybeitsadam.takt.ui.today.minuteTicks
 
@@ -34,6 +36,12 @@ data class ConditionsState(
     val usage: ImmutableMap<String, Int> = persistentMapOf(),
     /** What holds now, as the workspace keeps it, with an expired context set aside. */
     val selected: ImmutableSet<String> = persistentSetOf(),
+    /** Provided conditions switched off for now. */
+    val off: ImmutableSet<String> = persistentSetOf(),
+    /** What holds: [selected], everything it provides, less [off]. The core's rule. */
+    val held: ImmutableSet<String> = persistentSetOf(),
+    /** Each condition said, provided or off, by id. */
+    val holdings: ImmutableMap<String, ConditionHolding> = persistentMapOf(),
     /** Said on an earlier day: probably not where you are now. The core's rule. */
     val isStale: Boolean = false,
     val isLoaded: Boolean = false,
@@ -41,7 +49,10 @@ data class ConditionsState(
     val live: List<TaskCondition> get() = conditions.filter { !it.isArchived }
 
     /** What "where you are" offers: what an open task needs, and whatever is on. The core's rule. */
-    val available: List<ConditionGroup> get() = ConditionGroups.available(conditions, usage.keys, selected)
+    val available: List<ConditionGroup> get() = ConditionGroups.available(conditions, usage.keys, holdings.keys)
+
+    /** What a condition's row says beside it: "from Home", "off for now", or nothing. */
+    fun note(id: String): String? = ConditionHoldings.note(holdings[id], conditions)
 
     fun name(id: String): String = conditions.firstOrNull { it.id == id }?.name ?: "Missing condition"
 }
@@ -63,31 +74,35 @@ class ConditionsViewModel(private val container: AppContainer) : ViewModel() {
         ) { conditions, usage, saved, _ ->
             val now = Instant.now()
             val context = saved?.let { uniffi.takt_core.focusContextInForce(it, now.toEpochMilli()) } ?: emptyFocusContext()
+            val said = context.conditionIds.toSet()
+            val off = context.offIds.toSet()
             ConditionsState(
                 conditions = conditions.toImmutableList(),
                 usage = usage.toImmutableMap(),
-                selected = context.conditionIds.toImmutableSet(),
+                selected = said.toImmutableSet(),
+                off = off.toImmutableSet(),
+                held = ConditionHoldings.held(conditions, said, off).toImmutableSet(),
+                holdings = ConditionHoldings.holdings(conditions, said, off).toImmutableMap(),
                 isStale = uniffi.takt_core.focusContextIsStale(context, now.toEpochMilli(), ZoneId.systemDefault().id),
                 isLoaded = true,
             )
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ConditionsState())
 
-    /** Says [condition] holds now, or no longer does. A place replaces the last: the core's rule, as Focus's chips. */
+    /**
+     * Says [condition] holds now, or no longer does. A place replaces the
+     * last, and a provided one turned off is off for now: the core's rules,
+     * as Focus's chips.
+     */
     fun toggleNow(condition: TaskCondition) {
         val current = state.value
-        val next = uniffi.takt_core.focusContextToggle(
-            condition.id,
-            condition.isLocation,
-            current.selected.toList(),
-            current.conditions.filter { it.isLocation }.map { it.id },
-        )
-        saveContext { it.copy(conditionIds = next, suggestedIds = emptyList()) }
+        val next = ConditionHoldings.switching(current.conditions, current.selected, current.off, condition.id)
+        saveContext { it.copy(conditionIds = next.conditionIds, offIds = next.offIds, suggestedIds = emptyList()) }
     }
 
     /** Nothing holds any more: every condition off. */
     fun clearNow() {
-        saveContext { it.copy(conditionIds = emptyList(), suggestedIds = emptyList()) }
+        saveContext { it.copy(conditionIds = emptyList(), offIds = emptyList(), suggestedIds = emptyList()) }
     }
 
     /**

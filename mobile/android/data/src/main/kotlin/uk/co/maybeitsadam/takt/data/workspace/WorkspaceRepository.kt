@@ -692,6 +692,14 @@ class WorkspaceRepository(
         return database.read { it.condition(id) } ?: planningFail(TaskPlanningError.INVALID_CONDITION)
     }
 
+    /**
+     * Sets what a condition provides, replacing what it did — while it holds,
+     * they hold too: the Rust core's `conditions::set_condition_provides`,
+     * one "Edit Condition" step. False when it already provided exactly that.
+     */
+    suspend fun setConditionProvides(id: String, provides: List<String>, now: Instant = now()): Boolean =
+        coreWrite { it.setConditionProvides(id, provides, now.toEpochMilli()) }
+
     /** Files a condition under a category, or none: the Rust core's `conditions::set_condition_category`. */
     suspend fun setConditionCategory(id: String, category: String?, now: Instant = now()) {
         coreWrite { it.setConditionCategory(id, category, now.toEpochMilli()) }
@@ -1224,4 +1232,5 @@ fun emptyFocusContext(): uniffi.takt_core.StoredFocusContext = uniffi.takt_core.
     expiresAtMs = null,
     mode = "progress",
     suggestedIds = emptyList(),
+    offIds = emptyList(),
 )
