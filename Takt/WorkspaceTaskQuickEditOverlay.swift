@@ -26,6 +26,10 @@ struct WorkspaceTaskQuickEditRequest: Identifiable {
   /// The date to open on in place of the saved one: the date a cancelled
   /// recurrence clash hands back.
   var date: Date?
+  /// The text to open on in place of the saved one, handed back the same way.
+  var text: String?
+  /// Why the save it is reopened from failed, shown under the field.
+  var error: String?
 }
 
 /// One field of one task, edited without opening the inspector: `t` for the
@@ -242,16 +246,17 @@ struct WorkspaceTaskQuickEditOverlay: View {
     do {
       let snapshot = try store.taskEditorSnapshot(for: request.task.id)
       switch request.kind {
-      case .estimate: text = snapshot.values.estimateMinutes
-      case .title: text = snapshot.title
-      case .notes: text = snapshot.notes
-      case .tags: text = snapshot.values.tags
-      case .recurrence: text = snapshot.values.recurrenceRule
+      case .estimate: text = request.text ?? snapshot.values.estimateMinutes
+      case .title: text = request.text ?? snapshot.title
+      case .notes: text = request.text ?? snapshot.notes
+      case .tags: text = request.text ?? snapshot.values.tags
+      case .recurrence: text = request.text ?? snapshot.values.recurrenceRule
       case .due:
         date = request.date ?? snapshot.dueAt ?? snapshot.planning?.dueDate.flatMap { TaskCalendarDate.date($0) }
           ?? defaultDate
       case .start: date = request.date ?? snapshot.planning?.startAt ?? defaultDate
       }
+      error = request.error
     } catch { self.error = error.localizedDescription }
   }
 
@@ -276,15 +281,19 @@ struct WorkspaceTaskQuickEditOverlay: View {
       let model = model
       let request = request
       let chosen = date
-      let reopen: @MainActor () -> Void = {
-        model.presentOverlay(.quickEdit(WorkspaceTaskQuickEditRequest(task: request.task, kind: request.kind, date: chosen)))
+      let typed = text
+      // Puts the box back as it was left — cancelled from a prompt, or a
+      // save that failed after one, with why — so nothing typed is lost.
+      let reopen: @MainActor (String?) -> Void = { error in
+        model.presentOverlay(.quickEdit(WorkspaceTaskQuickEditRequest(
+          task: request.task, kind: request.kind, date: chosen, text: typed, error: error)))
       }
       if model.askAboutStartingLater(
         draft, title: request.task.title,
         proceed: { answered, keepingDue in
           Self.finish(answered, keepingDue: keepingDue, title: request.task.title, store: store, model: model, reopen: reopen)
         },
-        cancel: reopen) {
+        cancel: { reopen(nil) }) {
         return
       }
       if Self.askAboutClash(draft, keepingDue: false, title: request.task.title, store: store, model: model, reopen: reopen) {
@@ -296,22 +305,23 @@ struct WorkspaceTaskQuickEditOverlay: View {
   }
 
   /// The save once the start's question is answered: the clash's question
-  /// next, then the edit itself, any error the window's.
+  /// next, then the edit itself. A failure reopens the box with what was
+  /// typed and why, as a failure before any question leaves it open.
   private static func finish(
     _ draft: TaskEditorDraft, keepingDue: Bool, title: String,
-    store: WorkspaceStore, model: WorkspaceViewModel, reopen: @escaping @MainActor () -> Void
+    store: WorkspaceStore, model: WorkspaceViewModel, reopen: @escaping @MainActor (String?) -> Void
   ) {
     if askAboutClash(draft, keepingDue: keepingDue, title: title, store: store, model: model, reopen: reopen) { return }
     do {
       try commit(draft, keepingDue: keepingDue, store: store, model: model)
     } catch {
-      model.errorMessage = error.localizedDescription
+      reopen(error.localizedDescription)
     }
   }
 
   private static func askAboutClash(
     _ draft: TaskEditorDraft, keepingDue: Bool, title: String,
-    store: WorkspaceStore, model: WorkspaceViewModel, reopen: @escaping @MainActor () -> Void
+    store: WorkspaceStore, model: WorkspaceViewModel, reopen: @escaping @MainActor (String?) -> Void
   ) -> Bool {
     model.askAboutRecurrenceClash(
       draft, title: title,
@@ -320,11 +330,11 @@ struct WorkspaceTaskQuickEditOverlay: View {
           try commit(draft, keepingDue: keepingDue, store: store, model: model)
           return true
         } catch {
-          model.errorMessage = error.localizedDescription
+          reopen(error.localizedDescription)
           return false
         }
       },
-      cancel: reopen)
+      cancel: { reopen(nil) })
   }
 
   private static func commit(
