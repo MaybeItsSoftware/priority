@@ -221,14 +221,23 @@ pub const KEY_NAMES: [&str; 27] = [
     "enter", "escape", "f2", "home", "left", "pagedown", "pageup", "right", "space", "tab", "up",
 ];
 
-/// Whether `key` is a two-letter sequence, typed as two plain letters.
+/// Whether `key` is a two-key sequence: two plain letters (`gg`), or a minus
+/// and a digit (`-2`, a priority behind the back, as `!-2` writes it).
 pub fn is_sequence(key: &str) -> bool {
+    if is_minus_digit(key) {
+        return true;
+    }
     let mut characters = key.chars();
     let both = |c: Option<char>| c.is_some_and(|c| c.is_alphabetic() && c.is_lowercase());
     both(characters.next())
         && both(characters.next())
         && characters.next().is_none()
         && !KEY_NAMES.contains(&key)
+}
+
+fn is_minus_digit(key: &str) -> bool {
+    let bytes = key.as_bytes();
+    bytes.len() == 2 && bytes[0] == b'-' && bytes[1].is_ascii_digit()
 }
 
 // MARK: - Issues
@@ -610,6 +619,10 @@ fn normalized_key(raw: &str, label: Option<&str>) -> Result<String, KeymapIssue>
     if token.is_empty() {
         return reject("is empty");
     }
+    // Before splitting, where `-` would read as a separator.
+    if is_minus_digit(&token) {
+        return Ok(token);
+    }
     let mut parts = split(&token);
     let raw_base = parts.pop().unwrap_or_default();
     if raw_base.is_empty() {
@@ -632,9 +645,7 @@ fn normalized_key(raw: &str, label: Option<&str>) -> Result<String, KeymapIssue>
         return reject("is not a key Takt can recognise");
     }
     if sequence && !modifiers.is_empty() {
-        return reject(
-            "puts a modifier on a two-letter sequence, which is typed as two plain letters",
-        );
+        return reject("puts a modifier on a sequence, which is typed as two plain keys");
     }
     if is_character
         && !is_named

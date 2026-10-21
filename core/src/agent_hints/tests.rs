@@ -287,8 +287,9 @@ fn due_start_priority_and_estimate_are_their_keys() {
         render(
             "workspace_task_update",
             json!({"task_id": TASK, "priority": -3})
-        ),
-        None
+        )
+        .as_deref(),
+        Some("[-3]")
     );
     for cleared in [json!(null), json!(0)] {
         assert_eq!(

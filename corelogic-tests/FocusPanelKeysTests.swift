@@ -53,6 +53,8 @@ final class FocusPanelKeysTests: XCTestCase {
     XCTAssertEqual(action("0"), .priority(0))
     // `-` sends it to the back: priority -1.
     XCTAssertEqual(action("-"), .priority(-1))
+    // And `-1` to `-4` the priorities behind the back.
+    for level in -4 ... -1 { XCTAssertEqual(action("\(level)"), .priority(level)) }
     XCTAssertNil(action("5"))
   }
 

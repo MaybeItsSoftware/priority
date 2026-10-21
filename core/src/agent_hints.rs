@@ -184,11 +184,11 @@ fn build(tool: &str, input: &Map<String, Value>, hint: &mut Hint) -> Option<()> 
                 None => hint,
             };
             // The digit is the priority: `1` urgent to `4` low, `0` none,
-            // and `-` the back. -2 to -4 have no key, only the inspector.
+            // `-` the back, and `-2` to `-4` just ahead of it.
             match number(input, "priority") {
                 Some(level @ 1..=4) => hint.step_nth("motionSetPriority", level as usize - 1),
                 Some(-1) => hint.step("taskSendToBack"),
-                Some(-4..=-2) => hint,
+                Some(level @ -4..=-2) => hint.step_nth("motionSetPriority", (3 - level) as usize),
                 _ if input.contains_key("priority") => hint.step("taskClearPriority"),
                 _ => hint,
             };

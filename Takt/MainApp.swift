@@ -184,11 +184,10 @@ struct MainApp: App {
             }
           }
           Divider()
-          // Behind every task with no priority; -1 is the very back, and the
-          // only one with a key.
+          // Behind every task with no priority; -1 is the very back.
           ForEach([-4, -3, -2], id: \.self) { level in
             Button("Priority \(TaskEditorValues.priorityName(level))") {
-              AppDelegate.shared.workspace.editTaskValues { $0.priority = level }
+              AppDelegate.shared.workspace.run(.motionSetPriority, key: String(level))
             }
           }
           Button(WorkspaceCommandCatalog[.taskSendToBack].title) {

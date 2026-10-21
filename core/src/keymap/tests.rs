@@ -178,6 +178,7 @@ fn keys_are_normalised_to_the_catalogues_spelling() {
         ("cmd++", "cmd++"),
         ("shift+1", "shift+1"),
         ("GH", "gh"),
+        ("-2", "-2"),
     ] {
         assert_eq!(
             keymap_normalized_key(raw.to_string()),

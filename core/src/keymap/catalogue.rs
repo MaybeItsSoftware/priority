@@ -163,9 +163,9 @@ fn task() -> Vec<Spec> {
             .note("0 is Checkvist's spelling"),
         // Priority -1, as `!-1` writes it: behind every task with no priority,
         // and last among its siblings. `-` is free off the sidebar, where it
-        // is Zed's select parent.
+        // is Zed's select parent. It waits briefly, as the start of `-1`–`-4`.
         c("taskSendToBack", "Send to the back (priority −1)", "Task", &["-"])
-            .note("Ranks it behind everything without a priority and moves it to the bottom of its list. −2 to −4 are in the inspector's Priority"),
+            .note("Ranks it behind everything without a priority and moves it to the bottom of its list. -2 to -4 go just ahead of it"),
         c("taskToggleDaily", "Commit to this periodically, or edit the commitment", "Task", &["cmd+shift+d"])
             .note("Asks for a name, how often and an end, then adds a subtask that comes round in Dailies"),
         // `gb`, not Checkvist's `hh`: no sequence starts with `h`, so `h` leaves
@@ -831,10 +831,16 @@ fn motions() -> Vec<Spec> {
         // The four a task can have, as `!1`–`!4` writes them. It listed 1–9,
         // left from the Checkvist panel's rank queue: the workspace's priority
         // stops at 4, so 5–9 ran and said "Choose a priority between None and
-        // Urgent" instead.
-        c("motionSetPriority", "Set the task's priority", "Moving around", &["1", "2", "3", "4"])
-            .motion()
-            .note("Type the digit, at once, and it shows on the row; 0 clears it"),
+        // Urgent" instead. The minus ones are the back four, as `!-1`–`!-4`
+        // writes them, so the list sets every priority the title can.
+        c(
+            "motionSetPriority",
+            "Set the task's priority",
+            "Moving around",
+            &["1", "2", "3", "4", "-1", "-2", "-3", "-4"],
+        )
+        .motion()
+        .note("Type the digit, at once, and it shows on the row; a minus first puts it behind the tasks with none; 0 clears it"),
         // Today's list is walked with the ordinary selection keys, the way every
         // other pane's is — it used to keep a selection of its own behind a search
         // field, and these keys only handed that field the caret back. What is

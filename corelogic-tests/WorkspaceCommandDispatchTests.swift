@@ -266,6 +266,26 @@ final class WorkspaceCommandDispatchTests: XCTestCase {
     XCTAssertTrue(sidebar.contains("gh"))
     XCTAssertTrue(WorkspaceCommandCatalog.sequences(on: .outline).contains("dd"))
     XCTAssertEqual(WorkspaceCommandCatalog.command(forKey: "shift+x", on: .outline)?.id, .taskComplete)
+    // `-` is the sidebar's select parent, so it isn't held for `-2` there,
+    // and the minus priorities stay out of the panes with no task to set.
+    XCTAssertFalse(sidebar.contains("-2"))
+    for surface in [WorkspaceCommandSurface.done, .conditions, .inspector] {
+      XCTAssertFalse(WorkspaceCommandCatalog.sequences(on: surface).contains("-2"), "\(surface)")
+    }
+  }
+
+  /// A lone `-` still sends a task to the back once the hold runs out, and a
+  /// digit straight after it sets one of the priorities behind the back.
+  func testMinusAndADigitSetTheBackPriorities() {
+    let outline = WorkspaceCommandCatalog.sequences(on: .outline)
+    var sequence = DesktopShortcutSequence()
+    XCTAssertEqual(sequence.advance("-", at: 0, sequences: outline), .pending)
+    XCTAssertEqual(sequence.advance("2", at: 0.3, sequences: outline), .command("-2"))
+    XCTAssertEqual(WorkspaceCommandCatalog.command(forKey: "-2", on: .outline)?.id, .motionSetPriority)
+
+    XCTAssertEqual(sequence.advance("-", at: 5, sequences: outline), .pending)
+    XCTAssertEqual(sequence.expire(heldAt: 5), "-")
+    XCTAssertEqual(WorkspaceCommandCatalog.command(forKey: "-", on: .outline)?.id, .taskSendToBack)
   }
 
   // MARK: - Sequences
@@ -278,6 +298,7 @@ final class WorkspaceCommandDispatchTests: XCTestCase {
       [
         "ee", "ea", "ei", "dd", "nn", "tt", "mm", "gl", "uu", "td", "tm", "bu", "cd", "cs", "cn", "ct", "go",
         "dr", "tc", "tl", "gb", "ww", "bb", "cc", "aa", "gh", "sd", "oo", "pc", "pl", "ex", "gg", "za", "gf", "gx", "ga", "gw",
+        "-1", "-2", "-3", "-4",
       ])
     let written = Set(
       WorkspaceCommandCatalog.all.flatMap(\.allKeys).filter(WorkspaceCommandCatalog.isSequence))

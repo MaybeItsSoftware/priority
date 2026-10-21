@@ -83,7 +83,7 @@ public enum FocusPanelKeys {
     switch command {
     case .motionSelectPage: .step(["pageup", "ctrl+u"].contains(key) ? -8 : 8)
     case .motionSelectEnds: ["home", "cmd+up", "gg"].contains(key) ? .first : .last
-    case .motionSetPriority: Int(key).flatMap { (1...4).contains($0) ? .priority($0) : nil }
+    case .motionSetPriority: Int(key).flatMap { (1...4).contains(abs($0)) ? .priority($0) : nil }
     default: fixed[command]
     }
   }

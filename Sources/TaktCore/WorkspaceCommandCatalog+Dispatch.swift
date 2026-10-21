@@ -140,8 +140,13 @@ extension WorkspaceCommandCatalog {
   }
 
   /// `ee`, `gh` — two bare letters, Checkvist's spelling. Not `up`, which is
-  /// two bare letters too but names a key.
+  /// two bare letters too but names a key. Or `-2`: a minus and a digit, the
+  /// priorities behind the back, as `!-2` writes them.
   public static func isSequence(_ key: String) -> Bool {
+    isLetterSequence(key) || (key.count == 2 && key.first == "-" && key.last!.isASCII && key.last!.isNumber)
+  }
+
+  static func isLetterSequence(_ key: String) -> Bool {
     key.count == 2 && key.allSatisfy { $0.isLetter && $0.isLowercase } && !keyNames.contains(key)
   }
 
@@ -160,7 +165,7 @@ extension WorkspaceCommandCatalog {
     case .timeline:
       return reachableFromFullPaneScreens.contains(command.id)
     case .sidebar, .done, .conditions:
-      return isChord(key) || isSequence(key) || regionBareKeys.contains(key)
+      return isChord(key) || isLetterSequence(key) || regionBareKeys.contains(key)
     case .inspector:
       return isChord(key) || regionBareKeys.contains(key)
     }
