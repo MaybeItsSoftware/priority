@@ -83,10 +83,10 @@ final class WorkspaceTaskEditor {
   }
 
   @discardableResult
-  func save(_ taskID: String, store: WorkspaceStore) -> Bool {
+  func save(_ taskID: String, store: WorkspaceStore, keepingDue: Bool = false) -> Bool {
     guard let draft = drafts[taskID] else { return false }
     do {
-      let committed = try store.saveTaskEditor(draft)
+      let committed = try store.saveTaskEditor(draft, keepingDue: keepingDue)
       drafts[taskID] = TaskEditorDraft(snapshot: committed)
       errors[taskID] = nil
       scheduleWrite()

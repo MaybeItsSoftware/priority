@@ -10,11 +10,21 @@ extension WorkspaceStore {
   /// Saves the editor as one step, refusing if the task changed since the
   /// draft's baseline was read: the Rust core's `editor::save_editor`.
   @discardableResult
-  public func saveTaskEditor(_ draft: TaskEditorDraft, now: Date = .now) throws -> TaskEditorSnapshot {
+  /// With `keepingDue` the deadline stays where it is when the start moves,
+  /// rather than following it (`TaskStartLater`'s "Keep the due date").
+  public func saveTaskEditor(
+    _ draft: TaskEditorDraft, keepingDue: Bool = false, now: Date = .now
+  ) throws -> TaskEditorSnapshot {
     let edit = try draft.validatedSnapshot()
+    let zone = TimeZone.current.identifier
     try coreWrite {
-      _ = try core.saveEditor(
-        edit: edit.core, baseline: draft.baseline.core, nowMs: now.coreMilliseconds, zone: TimeZone.current.identifier)
+      if keepingDue {
+        _ = try core.saveEditorKeepingDue(
+          edit: edit.core, baseline: draft.baseline.core, nowMs: now.coreMilliseconds, zone: zone)
+      } else {
+        _ = try core.saveEditor(
+          edit: edit.core, baseline: draft.baseline.core, nowMs: now.coreMilliseconds, zone: zone)
+      }
     }
     return try taskEditorSnapshot(for: edit.taskId)
   }

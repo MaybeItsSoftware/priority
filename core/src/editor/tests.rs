@@ -411,6 +411,41 @@ fn a_start_moved_off_today_moves_the_task_out_of_today() {
     assert_eq!(column(&connection, "p"), (None, None));
 }
 
+/// "Keep the due date": the start moves and a deadline that would have
+/// followed it stays put, pinned, so later moves leave it too.
+#[test]
+fn a_save_keeping_the_due_date_leaves_it_where_it_was() {
+    const DAY: i64 = 24 * HOUR;
+    let mut connection = workspace();
+    connection
+        .execute_batch(&format!(
+            "UPDATE tasks SET dueAt = '{}' WHERE id = 'p';
+             INSERT INTO task_metadata (taskId, startAt, updatedAt) VALUES ('p', '{}', '{T}');",
+            stored(NOW + 5 * DAY),
+            stored(NOW + DAY)
+        ))
+        .unwrap();
+    let baseline = snapshot(&connection, "p").unwrap();
+    let mut edit = baseline.clone();
+    edit.planning.as_mut().unwrap().start_at_ms = Some(NOW + 2 * DAY);
+    journalled(&mut connection, "Edit Task", |tx| {
+        save_editor_with(tx, &edit, &baseline, NOW, "Europe/London", true)
+    })
+    .unwrap();
+    assert_eq!(
+        snapshot(&connection, "p").unwrap().due_at_ms,
+        Some(NOW + 5 * DAY)
+    );
+    journalled(&mut connection, "Schedule", |tx| {
+        schedule_task(tx, "p", Some(NOW + 3 * DAY), NOW, "Europe/London")
+    })
+    .unwrap();
+    assert_eq!(
+        snapshot(&connection, "p").unwrap().due_at_ms,
+        Some(NOW + 5 * DAY)
+    );
+}
+
 #[test]
 fn a_deadline_follows_its_start_until_it_is_changed_on_its_own() {
     const DAY: i64 = 24 * HOUR;

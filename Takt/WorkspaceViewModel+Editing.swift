@@ -10,21 +10,35 @@ extension WorkspaceViewModel {
     taskEditor.open(task.id, store: store)
   }
 
-  /// Saves the inspector's draft — asking first when it moves a repeating
-  /// task onto the day it comes round again anyway.
+  /// Saves the inspector's draft — asking first what the deadline does when
+  /// it starts the task on a later day, and when it moves a repeating task
+  /// onto the day it comes round again anyway.
   func saveTaskEditor(_ task: WorkspaceTask) {
     if let draft = taskEditor.draft(for: task.id),
-      askAboutRecurrenceClash(draft, title: draft.values.title, save: { [weak self] in
-        self?.commitTaskEditor(task) ?? false
+      askAboutStartingLater(draft, title: draft.values.title, proceed: { [weak self] answered, keepingDue in
+        guard let self else { return }
+        taskEditor.edit(task.id) { $0 = answered.values }
+        saveAnsweredTaskEditor(task, keepingDue: keepingDue)
       }) {
       return
     }
-    commitTaskEditor(task)
+    saveAnsweredTaskEditor(task, keepingDue: false)
+  }
+
+  /// The rest of the save once the start's question is answered, or had none.
+  private func saveAnsweredTaskEditor(_ task: WorkspaceTask, keepingDue: Bool) {
+    if let draft = taskEditor.draft(for: task.id),
+      askAboutRecurrenceClash(draft, title: draft.values.title, save: { [weak self] in
+        self?.commitTaskEditor(task, keepingDue: keepingDue) ?? false
+      }) {
+      return
+    }
+    commitTaskEditor(task, keepingDue: keepingDue)
   }
 
   @discardableResult
-  private func commitTaskEditor(_ task: WorkspaceTask) -> Bool {
-    guard let store, taskEditor.save(task.id, store: store) else { return false }
+  private func commitTaskEditor(_ task: WorkspaceTask, keepingDue: Bool) -> Bool {
+    guard let store, taskEditor.save(task.id, store: store, keepingDue: keepingDue) else { return false }
     reloadOutline()
     reloadDailies()
     reloadFocus()

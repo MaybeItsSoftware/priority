@@ -86,6 +86,8 @@ extension FocusPanelView {
   private func cancel(_ overlay: WorkspaceOverlay) {
     if case .recurrenceClash(let request) = overlay {
       model.resolveRecurrenceClash(request, choice: .cancel)
+    } else if case .startLater(let request) = overlay {
+      model.resolveStartLater(request, choice: .cancel)
     } else {
       model.dismissOverlay()
     }

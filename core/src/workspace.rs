@@ -765,6 +765,20 @@ impl CoreWorkspace {
         })
     }
 
+    /// [`Self::save_editor`], keeping the deadline where it is when the start
+    /// moves rather than letting it follow: the Mac's "Keep the due date".
+    pub fn save_editor_keeping_due(
+        &self,
+        edit: EditorSnapshot,
+        baseline: EditorSnapshot,
+        now_ms: i64,
+        zone: String,
+    ) -> Result<EditorSnapshot, CoreError> {
+        journal::journalled(&mut self.lock(), "Edit Task", |tx| {
+            editor::save_editor_with(tx, &edit, &baseline, now_ms, &zone, true)
+        })
+    }
+
     /// Sets a task's title, notes, due time and estimate as one "Edit Task" step.
     #[allow(clippy::too_many_arguments)]
     pub fn update_task(

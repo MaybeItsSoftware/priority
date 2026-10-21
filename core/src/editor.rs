@@ -176,6 +176,20 @@ pub fn save_editor(
     now_ms: i64,
     zone: &str,
 ) -> Result<EditorSnapshot, CoreError> {
+    save_editor_with(transaction, edit, baseline, now_ms, zone, false)
+}
+
+/// [`save_editor`], saying what a moved start does to the deadline: with
+/// `keep_due` the deadline stays where it is, and is pinned there, rather
+/// than following the start. What the Mac's "Keep the due date" saves.
+pub fn save_editor_with(
+    transaction: &Transaction,
+    edit: &EditorSnapshot,
+    baseline: &EditorSnapshot,
+    now_ms: i64,
+    zone: &str,
+    keep_due: bool,
+) -> Result<EditorSnapshot, CoreError> {
     let current = snapshot(transaction, &edit.task_id)?;
     if &current != baseline {
         return Err(CoreError::EditorConflict);
@@ -188,6 +202,7 @@ pub fn save_editor(
         current.due_at_ms,
         now_ms,
         zone,
+        keep_due,
     )?;
     update_task_record(transaction, edit, now_ms)?;
     update_editor_metadata(transaction, &edit.task_id, &edit.metadata, now_ms)?;
@@ -234,6 +249,7 @@ pub fn update_task(
         previous.due_at_ms,
         now_ms,
         zone,
+        false,
     )?;
     update_task_record(transaction, &edit, now_ms)
 }
@@ -377,6 +393,7 @@ pub fn set_due_day(
         previous.due_at_ms,
         now_ms,
         zone,
+        false,
     )?;
     update_task_record(transaction, &edit, now_ms)
 }
@@ -401,6 +418,7 @@ pub fn schedule_task(
         previous.due_at_ms,
         now_ms,
         zone,
+        false,
     )?;
     // A deadline that followed the start is the task row's to write.
     update_task_record(transaction, &edit, now_ms)
@@ -421,7 +439,7 @@ pub(crate) fn plan_new_task(
     let mut planning = edit.planning.clone().unwrap_or_default();
     planning.start_at_ms = Some(start_at_ms);
     edit.planning = planning.normalized();
-    update_planning(transaction, &mut edit, None, None, now_ms, zone)
+    update_planning(transaction, &mut edit, None, None, now_ms, zone, false)
 }
 
 /// Copies a task's requirements, start and block rules (not its due date,
@@ -443,7 +461,7 @@ pub fn apply_planning_to_descendants(
             planning.due_date = own_due_date;
             planning
         });
-        update_planning(transaction, &mut saved, None, None, now_ms, zone)?;
+        update_planning(transaction, &mut saved, None, None, now_ms, zone, false)?;
     }
     Ok(())
 }
@@ -463,12 +481,14 @@ fn update_planning(
     previous_due_at_ms: Option<i64>,
     now_ms: i64,
     zone: &str,
+    keep_due: bool,
 ) -> Result<(), CoreError> {
     let zone = periodic::zone(zone);
     let current = stored_metadata(transaction, &edit.task_id)?;
     let was_pinned = current.as_ref().is_some_and(StoredMetadata::due_pinned);
     // Copying planning down to subtasks (no `previous`) moves no deadline.
     let pinned = match previous {
+        Some(_) if keep_due => true,
         Some(_) => follow_start(edit, previous, previous_due_at_ms, was_pinned, zone),
         None => was_pinned,
     } && (edit.due_at_ms.is_some()

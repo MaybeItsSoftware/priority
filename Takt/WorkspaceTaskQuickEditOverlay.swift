@@ -276,30 +276,61 @@ struct WorkspaceTaskQuickEditOverlay: View {
       let model = model
       let request = request
       let chosen = date
-      let held = draft
-      if model.askAboutRecurrenceClash(
+      let reopen: @MainActor () -> Void = {
+        model.presentOverlay(.quickEdit(WorkspaceTaskQuickEditRequest(task: request.task, kind: request.kind, date: chosen)))
+      }
+      if model.askAboutStartingLater(
         draft, title: request.task.title,
-        save: {
-          do {
-            try Self.commit(held, store: store, model: model)
-            return true
-          } catch {
-            model.errorMessage = error.localizedDescription
-            return false
-          }
+        proceed: { answered, keepingDue in
+          Self.finish(answered, keepingDue: keepingDue, title: request.task.title, store: store, model: model, reopen: reopen)
         },
-        cancel: {
-          model.presentOverlay(.quickEdit(WorkspaceTaskQuickEditRequest(task: request.task, kind: request.kind, date: chosen)))
-        }) {
+        cancel: reopen) {
         return
       }
-      try Self.commit(draft, store: store, model: model)
+      if Self.askAboutClash(draft, keepingDue: false, title: request.task.title, store: store, model: model, reopen: reopen) {
+        return
+      }
+      try Self.commit(draft, keepingDue: false, store: store, model: model)
       model.dismissOverlay()
     } catch { self.error = error.localizedDescription }
   }
 
-  private static func commit(_ draft: TaskEditorDraft, store: WorkspaceStore, model: WorkspaceViewModel) throws {
-    _ = try store.saveTaskEditor(draft)
+  /// The save once the start's question is answered: the clash's question
+  /// next, then the edit itself, any error the window's.
+  private static func finish(
+    _ draft: TaskEditorDraft, keepingDue: Bool, title: String,
+    store: WorkspaceStore, model: WorkspaceViewModel, reopen: @escaping @MainActor () -> Void
+  ) {
+    if askAboutClash(draft, keepingDue: keepingDue, title: title, store: store, model: model, reopen: reopen) { return }
+    do {
+      try commit(draft, keepingDue: keepingDue, store: store, model: model)
+    } catch {
+      model.errorMessage = error.localizedDescription
+    }
+  }
+
+  private static func askAboutClash(
+    _ draft: TaskEditorDraft, keepingDue: Bool, title: String,
+    store: WorkspaceStore, model: WorkspaceViewModel, reopen: @escaping @MainActor () -> Void
+  ) -> Bool {
+    model.askAboutRecurrenceClash(
+      draft, title: title,
+      save: {
+        do {
+          try commit(draft, keepingDue: keepingDue, store: store, model: model)
+          return true
+        } catch {
+          model.errorMessage = error.localizedDescription
+          return false
+        }
+      },
+      cancel: reopen)
+  }
+
+  private static func commit(
+    _ draft: TaskEditorDraft, keepingDue: Bool, store: WorkspaceStore, model: WorkspaceViewModel
+  ) throws {
+    _ = try store.saveTaskEditor(draft, keepingDue: keepingDue)
     model.taskEditor.refresh(store: store)
     model.reloadOutline(); model.reloadDailies(); model.reloadFocus(); model.reloadNextUp()
   }

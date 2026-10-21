@@ -305,8 +305,9 @@ extension WorkspaceViewModel {
     editTaskValues(of: task, change)
   }
 
-  /// One change saved straight away — asking first when it moves a
-  /// repeating task onto the day it comes round again anyway.
+  /// One change saved straight away — asking first what the deadline does
+  /// when it starts the task on a later day, and when it moves a repeating
+  /// task onto the day it comes round again anyway.
   func editTaskValues(of task: WorkspaceTask, _ change: (inout TaskEditorValues) -> Void) {
     guard let store else { return }
     var draft: TaskEditorDraft
@@ -317,11 +318,21 @@ extension WorkspaceViewModel {
       return
     }
     change(&draft.values)
+    if askAboutStartingLater(draft, title: task.title, proceed: { [weak self] answered, keepingDue in
+      self?.saveEditedValues(answered, of: task, keepingDue: keepingDue)
+    }) {
+      return
+    }
+    saveEditedValues(draft, of: task, keepingDue: false)
+  }
+
+  private func saveEditedValues(_ draft: TaskEditorDraft, of task: WorkspaceTask, keepingDue: Bool) {
+    guard let store else { return }
     let save: @MainActor () -> Bool = { [weak self, draft] in
       guard let self else { return false }
       var saved = false
       perform {
-        _ = try store.saveTaskEditor(draft)
+        _ = try store.saveTaskEditor(draft, keepingDue: keepingDue)
         saved = true
         self.reloadOutline(refreshSidebar: task.isList)
         self.reloadDailies()
