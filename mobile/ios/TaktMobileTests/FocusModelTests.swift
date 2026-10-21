@@ -111,6 +111,42 @@ final class FocusModelTests: XCTestCase {
     XCTAssertTrue(focus.conditionSections[0].isExclusive)
   }
 
+  /// What a place provides holds with it, "from Home", and a task needing
+  /// it is offered; switching one off is an override that a new place ends.
+  func testWhatASettingProvidesHoldsUntilSwitchedOffForNow() throws {
+    let home = try XCTUnwrap(model.createCondition(named: "Flat", isLocation: true))
+    let office = try XCTUnwrap(model.createCondition(named: "Office", isLocation: true))
+    let floor = try XCTUnwrap(model.createCondition(named: "Floor space", category: nil))
+    let quiet = try XCTUnwrap(model.createCondition(named: "Quiet", category: nil))
+    try model.store.setConditionProvides(id: home.id, provides: [floor.id, quiet.id])
+    let stretch = try add("Stretch")
+    let inspector = InspectorModel(taskID: stretch.id, draftsURL: FileManager.default.temporaryDirectory
+      .appending(path: "drafts-\(UUID().uuidString).json"))
+    inspector.load(model)
+    inspector.addRequirement(floor.id, model: model)
+    XCTAssertTrue(inspector.save(model))
+    focus.loadNow()
+    XCTAssertFalse(focus.ladder.contains { $0.id == stretch.id }, "no floor space yet")
+    XCTAssertTrue(focus.visibleConditions.contains { $0.id == home.id }, "what provides it is offered")
+
+    focus.toggleCondition(home)
+    focus.loadNow()
+    XCTAssertEqual(focus.conditionIDs, [home.id])
+    XCTAssertTrue(focus.heldIDs.isSuperset(of: [home.id, floor.id, quiet.id]))
+    XCTAssertEqual(focus.holdingNote(floor.id), "from Flat")
+    XCTAssertTrue(focus.ladder.contains { $0.id == stretch.id }, "offered without saying Floor space")
+
+    focus.toggleCondition(quiet)
+    XCTAssertEqual(focus.offIDs, [quiet.id])
+    XCTAssertFalse(focus.heldIDs.contains(quiet.id))
+    XCTAssertEqual(focus.holdingNote(quiet.id), "off for now")
+    XCTAssertEqual(try model.store.focusContext(in: model.workspace.id)?.offIDs, [quiet.id])
+
+    focus.toggleCondition(office)
+    XCTAssertEqual(focus.conditionIDs, [office.id])
+    XCTAssertTrue(focus.offIDs.isEmpty, "a new place ends the last one's overrides")
+  }
+
   func testAnExpiredContextIsSetAsideAndOfferedBack() throws {
     let office = try XCTUnwrap(model.createCondition(named: "Office", isLocation: true))
     focus.loadNow()

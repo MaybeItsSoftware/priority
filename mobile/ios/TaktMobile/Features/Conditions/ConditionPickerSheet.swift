@@ -19,11 +19,12 @@ final class NowConditionsModel {
 
   /// What "where you are" offers: what an open task needs, and whatever is on.
   var available: [TaskConditionSection] {
-    NowConditionsSheet.available(catalogue.value, active: focus?.conditionIDs ?? [])
+    NowConditionsSheet.available(catalogue.value, active: Set(focus.map { Array($0.holdings.keys) } ?? []))
   }
 
+  /// What holds, what the settings said provide included.
   var summary: String? {
-    ConditionPicker.nowSummary(catalogue.value.conditions, selected: focus?.conditionIDs ?? [])
+    ConditionPicker.nowSummary(catalogue.value.conditions, selected: focus?.heldIDs ?? [])
   }
 }
 
@@ -90,11 +91,15 @@ struct NowConditionsSheet: View {
 
   var body: some View {
     let value = catalogue.value
-    let offered = Self.available(value, active: focus.conditionIDs)
+    // Said, provided by a setting said, or switched off for now: offered,
+    // so it can be turned the other way.
+    let holdings = focus.holdings
+    let held = focus.heldIDs
+    let offered = Self.available(value, active: Set(holdings.keys))
     let list = ConditionPicker.list(
       offered: offered,
-      searchable: value.conditions.filter { !$0.isArchived || focus.conditionIDs.contains($0.id) },
-      all: value.conditions, query: query, isOn: { focus.conditionIDs.contains($0) }, exclusiveRadio: true)
+      searchable: value.conditions.filter { !$0.isArchived || holdings[$0.id] != nil },
+      all: value.conditions, query: query, isOn: { held.contains($0) }, exclusiveRadio: true)
     ConditionPickerSheet(
       title: "Where you are",
       identifier: "nowConditions",
@@ -104,11 +109,12 @@ struct NowConditionsSheet: View {
       emptyText: value.active.isEmpty
         ? "No conditions yet. Type one — Home, Campus, Laptop — to make it."
         : "No open task needs a condition. Search to turn one on anyway.",
+      detail: { focus.holdingNote($0.condition.id) ?? "" },
       count: { value.usage[$0.condition.id] },
       onToggle: { focus.toggleCondition($0.condition, among: value.conditions) },
       onCreate: create,
       leading: {
-        if !focus.conditionIDs.isEmpty {
+        if !focus.conditionIDs.isEmpty || !focus.offIDs.isEmpty {
           Button("Clear") { focus.clearConditions() }
             .accessibilityIdentifier("nowConditions.clear")
         }

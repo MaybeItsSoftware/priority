@@ -388,9 +388,9 @@ private struct FocusContextControls: View {
   }
 
   private var timeTitle: String {
-    guard let until = focus.availableUntil else { return "Any length" }
+    guard let until = focus.availableUntil else { return "Free time: any length" }
     let minutes = max(0, Int(until.timeIntervalSinceNow / 60))
-    return "\(minutes)m · until \(Format.time(until))"
+    return "Free time: \(minutes)m · until \(Format.time(until))"
   }
 
   private func add() {
@@ -403,15 +403,20 @@ private struct FocusContextControls: View {
   }
 
   /// A condition you can say holds; a pin under Location, where choosing one
-  /// replaces the last.
+  /// replaces the last. One a setting provides is on with where it comes
+  /// from ("from Home"); tapping it switches it off for now.
   private func chip(_ condition: TaskCondition, isExclusive: Bool) -> some View {
-    let isOn = focus.conditionIDs.contains(condition.id)
+    let isOn = focus.heldIDs.contains(condition.id)
+    let note = focus.holdingNote(condition.id)
     return Button {
       focus.toggleCondition(condition)
     } label: {
       HStack(spacing: theme.space.xs) {
         if isExclusive { Image(systemName: "mappin").imageScale(.small) }
         Text(condition.name)
+        if let note {
+          Text(note).font(theme.type.caption).foregroundStyle(theme.muted)
+        }
       }
       .font(theme.type.callout)
       .foregroundStyle(isOn ? theme.primary : theme.ink)
@@ -424,6 +429,7 @@ private struct FocusContextControls: View {
     }
     .buttonStyle(.plain)
     .accessibilityAddTraits(isOn ? .isSelected : [])
+    .accessibilityValue(note ?? "")
     .accessibilityIdentifier("focus.condition.\(condition.name)")
   }
 

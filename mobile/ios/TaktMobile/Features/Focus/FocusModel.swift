@@ -85,8 +85,16 @@ final class FocusModel {
   // The context is the workspace's (`focus_contexts`), shared with the Mac,
   // Android, the CLI and the agent through sync: every change is saved there,
   // and `restoreContext` reads it back after a write anywhere.
+  /// The conditions said to hold: a place chosen, a chip tapped.
   var conditionIDs: Set<String> = [] { didSet { if conditionIDs != oldValue { contextChanged() } } }
-  /// The end of the time you have, or nil for no limit.
+  /// The conditions a setting provides that were switched off for now —
+  /// the housemates are in, so Quiet is off at Home — kept until whatever
+  /// provides them is turned off or replaced.
+  var offIDs: Set<String> = [] { didSet { if offIDs != oldValue { contextChanged() } } }
+  /// Every condition in the workspace, for working out what the ones said
+  /// provide: read with the context, so the first ranking already has it.
+  @ObservationIgnored private(set) var allConditions: [TaskCondition] = []
+  /// The end of the free time you have, or nil for no limit.
   var availableUntil: Date? { didSet { if availableUntil != oldValue { contextChanged() } } }
   /// When the conditions you said were true stop being trusted — "at the
   /// office until 5". Past it, the context is set aside and the last one is
@@ -100,8 +108,34 @@ final class FocusModel {
   /// Moves when the context does, so the ladder is ranked again.
   private(set) var contextVersion = 0
   /// Set while the stored context is being put back, so putting it back is
-  /// not saved again as a new answer.
+  /// not saved again as a new answer, and while several of its parts change
+  /// as one.
   @ObservationIgnored private var isRestoringContext = false
+
+  /// Every condition said, provided or switched off for now, by id: the
+  /// core's `condition_holdings`, as on the Mac.
+  var holdings: [String: FocusConditionHolding] {
+    FocusConditionHoldings.holdings(conditionsKnown, set: conditionIDs, off: offIDs)
+  }
+
+  /// What holds now — said, plus what that provides, less what is off for
+  /// now — which every task is checked against.
+  var heldIDs: Set<String> {
+    FocusConditionHoldings.held(conditionsKnown, set: conditionIDs, off: offIDs)
+  }
+
+  /// "from Home" on a condition a setting provides, "off for now" on one
+  /// switched off; nil on one said directly or not at all.
+  func holdingNote(_ id: String) -> String? {
+    guard let holding = holdings[id], !holding.isSet, !holding.providedBy.isEmpty else { return nil }
+    if holding.isOff { return "off for now" }
+    let names = holding.providedBy.compactMap { provider in conditionsKnown.first { $0.id == provider }?.name }
+    return names.isEmpty ? nil : "from " + names.joined(separator: ", ")
+  }
+
+  private var conditionsKnown: [TaskCondition] {
+    snapshot.conditions.isEmpty ? allConditions : snapshot.conditions
+  }
 
   /// Whether the conditions on were said on an earlier day: a place left on
   /// overnight is probably not where you are. The core's rule, as the Mac's.
@@ -114,7 +148,7 @@ final class FocusModel {
   /// lapses mid-block should not be trusted past it.
   var context: FocusContext {
     let ends = [availableUntil, contextExpiresAt].compactMap { $0 }.min()
-    return FocusContext(conditionIDs: conditionIDs, endsAt: ends, mode: mode)
+    return FocusContext(conditionIDs: heldIDs, endsAt: ends, mode: mode)
   }
 
   // MARK: Ladder
@@ -214,11 +248,13 @@ final class FocusModel {
         saved = (try? store.focusContext(in: workspaceID)) ?? moved
       }
     }
+    allConditions = (try? store.conditions(in: workspaceID)) ?? allConditions
     guard let saved else { return }
     isRestoringContext = true
     defer { isRestoringContext = false }
     let before = contextVersion
     conditionIDs = saved.conditionIDs
+    offIDs = saved.offIDs
     availableUntil = saved.availableUntil
     contextExpiresAt = saved.expiresAt
     suggestedContextIDs = saved.suggestedIDs
@@ -236,21 +272,37 @@ final class FocusModel {
     guard !isRestoringContext else { return }
     let context = SavedFocusContext(
       conditionIDs: conditionIDs, availableUntil: availableUntil, expiresAt: contextExpiresAt,
-      mode: mode, suggestedIDs: suggestedContextIDs)
+      mode: mode, suggestedIDs: suggestedContextIDs, offIDs: offIDs)
     let workspaceID = model.workspace.id
     _ = try? model.store.saveFocusContext(context, in: workspaceID)
     conditionsSetAt = ((try? model.store.focusContext(in: workspaceID)) ?? nil)?.conditionsSetAt
   }
 
   /// Says `condition` holds now, or no longer does. `conditions` are the
-  /// ones to find the places among — the ladder's, unless the caller has
-  /// read its own, as the conditions sheet on Today does.
+  /// ones to find the places and what they provide among — the ladder's,
+  /// unless the caller has read its own, as the conditions sheet on Today
+  /// does. One place at a time: choosing a location replaces the last one,
+  /// and brings back what the last one's overrides switched off. Turning
+  /// off one a setting provides switches it off for now.
   func toggleCondition(_ condition: TaskCondition, among conditions: [TaskCondition]? = nil) {
-    suggestedContextIDs = []
-    // One place at a time: choosing a location replaces the last one.
-    conditionIDs = FocusContextSelection.toggling(
-      condition.id, isLocation: condition.isLocation, in: conditionIDs,
-      locationIDs: Set((conditions ?? snapshot.conditions).filter(\.isLocation).map(\.id)))
+    if let conditions { allConditions = conditions }
+    let known = conditions ?? conditionsKnown
+    let next = FocusConditionHoldings.switching(
+      condition.id, in: known.contains { $0.id == condition.id } ? known : known + [condition],
+      set: conditionIDs, off: offIDs)
+    setSaid(next.set, off: next.off, suggested: [])
+  }
+
+  /// The conditions said and those off for now, changed as one answer and
+  /// saved once.
+  private func setSaid(_ set: Set<String>, off: Set<String>, suggested: Set<String>) {
+    let changed = set != conditionIDs || off != offIDs || suggested != suggestedContextIDs
+    isRestoringContext = true
+    conditionIDs = set
+    offIDs = off
+    suggestedContextIDs = suggested
+    isRestoringContext = false
+    if changed { contextChanged() }
   }
 
   func setAvailable(minutes: Int?, now: Date = .now) {
@@ -267,22 +319,20 @@ final class FocusModel {
   /// in `monitorFocus`.
   func expireContextIfDue(now: Date = .now) {
     guard let expires = contextExpiresAt, expires <= now else { return }
-    if !conditionIDs.isEmpty { suggestedContextIDs = conditionIDs }
+    let suggested = conditionIDs.isEmpty ? suggestedContextIDs : conditionIDs
     contextExpiresAt = nil
-    conditionIDs = []
+    setSaid([], off: [], suggested: suggested)
     model.showToast("Your context expired")
   }
 
   /// Nothing holds any more: every condition off.
   func clearConditions() {
-    suggestedContextIDs = []
-    conditionIDs = []
+    setSaid([], off: [], suggested: [])
   }
 
   /// Puts back the conditions an expired context held.
   func confirmSuggestedContext() {
-    conditionIDs = suggestedContextIDs
-    suggestedContextIDs = []
+    setSaid(suggestedContextIDs, off: [], suggested: [])
   }
 
   func dismissSuggestedContext() {
@@ -298,11 +348,14 @@ final class FocusModel {
     model.createCondition(named: name, category: category)
   }
 
-  /// What "where you are" offers, under category headings: only the
-  /// conditions an open task requires, plus any that is on so it can be
-  /// turned off. The rule is the Rust core's, so the Mac and Android agree.
+  /// What "where you are" offers, under category headings, settings first:
+  /// only the conditions an open task requires and the settings that
+  /// provide them, plus any that is said, provided or off for now so it can
+  /// be turned the other way. The rule is the Rust core's, so the Mac and
+  /// Android agree.
   var conditionSections: [TaskConditionSection] {
-    TaskConditionSection.available(snapshot.conditions, required: snapshot.requiredConditionIDs, active: conditionIDs)
+    TaskConditionSection.available(
+      snapshot.conditions, required: snapshot.requiredConditionIDs, active: Set(holdings.keys))
   }
 
   var visibleConditions: [TaskCondition] { conditionSections.flatMap(\.conditions) }
@@ -325,7 +378,7 @@ final class FocusModel {
   func explanation(for rung: ScoredNextUp) -> String {
     guard rung.reason == .condition else { return rung.explanation }
     let names = rung.candidate.requirementGroups.map { group in
-      TaskRequirement.label(group: group.filter { TaskRequirement($0).isMet(available: conditionIDs) }) { id in
+      TaskRequirement.label(group: group.filter { TaskRequirement($0).isMet(available: heldIDs) }) { id in
         snapshot.conditions.first(where: { $0.id == id })?.name
       }
     }.joined(separator: " + ")
