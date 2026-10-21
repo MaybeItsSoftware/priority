@@ -260,6 +260,11 @@ pub fn update_task(
 /// A priority set or changed puts the task first among its siblings — row
 /// `:1` of its list — and a negative one last. Clearing one leaves it where
 /// it is.
+///
+/// Sending a task behind the back supersedes those already there: it takes
+/// the very back, and the open tasks at its level or behind it each move one
+/// step forward (-1 to -2, -2 to -3, -3 to -4), so the last one sent is the
+/// last of the day. -4 is as far forward as they go.
 pub fn update_editor_metadata(
     transaction: &Transaction,
     task_id: &str,
@@ -274,10 +279,36 @@ pub fn update_editor_metadata(
     if after != before {
         match after {
             Some(p) if p > 0 => crate::tasks::move_task_to_start(transaction, task_id, now_ms)?,
-            Some(_) => crate::tasks::move_task_to_end(transaction, task_id, now_ms)?,
+            Some(p) => {
+                supersede_behind_the_back(transaction, task_id, p, now_ms)?;
+                crate::tasks::move_task_to_end(transaction, task_id, now_ms)?
+            }
             None => {}
         }
     }
+    Ok(())
+}
+
+/// Moves the other open tasks at `priority` or further behind one step
+/// forward, as [`update_editor_metadata`] describes. Its own series is left
+/// alone: the priority is the series', shared with it.
+fn supersede_behind_the_back(
+    transaction: &Transaction,
+    task_id: &str,
+    priority: i64,
+    now_ms: i64,
+) -> Result<(), CoreError> {
+    if !(-3..=-1).contains(&priority) {
+        return Ok(());
+    }
+    transaction.execute(
+        "UPDATE task_metadata SET priority = priority - 1, updatedAt = ?3
+         WHERE priority BETWEEN -3 AND ?2
+           AND COALESCE(seriesTaskId, taskId) IS NOT
+               (SELECT COALESCE(seriesTaskId, taskId) FROM task_metadata WHERE taskId = ?1)
+           AND taskId IN (SELECT id FROM tasks WHERE status = 'open' AND archivedAt IS NULL)",
+        params![task_id, priority, stored(now_ms)],
+    )?;
     Ok(())
 }
 

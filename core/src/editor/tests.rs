@@ -604,7 +604,9 @@ fn a_negative_priority_moves_the_task_to_the_bottom_of_its_list() {
     assert_eq!(root_order(&connection), ["q", "r", "p"]);
     set_priority(&mut connection, "r", Some(-2));
     assert_eq!(root_order(&connection), ["q", "p", "r"]);
-    set_priority(&mut connection, "p", Some(-3));
+    // Sending r behind p's level moved p forward, to -4; setting that again
+    // is no change.
+    set_priority(&mut connection, "p", Some(-4));
     assert_eq!(root_order(&connection), ["q", "p", "r"]);
     // Out of range is no priority, and clearing does not move it.
     set_priority(&mut connection, "r", Some(-5));
@@ -646,4 +648,32 @@ fn setting_a_priority_moves_the_task_to_the_top_of_its_list() {
     assert_eq!(root_order(&connection), ["p", "r", "q"]);
     undo(&mut connection).unwrap();
     assert_eq!(root_order(&connection), ["r", "q", "p"]);
+}
+
+/// Sending a task behind the back takes the very back: the one sent there
+/// before moves a step forward, and so on down to -4.
+#[test]
+fn a_task_sent_to_the_back_supersedes_the_one_already_there() {
+    let mut connection = workspace();
+    for id in ["first", "second", "third"] {
+        connection
+            .execute_batch(&format!(
+                "INSERT INTO tasks (id, listId, title, status, sortOrder, itemKind, createdAt, updatedAt)
+                   VALUES ('{id}', 'l', '{id}', 'open', 0, 'task', '{T}', '{T}');"
+            ))
+            .unwrap();
+    }
+    let priority = |c: &Connection, id: &str| snapshot(c, id).unwrap().metadata.priority;
+    set_priority(&mut connection, "first", Some(-1));
+    set_priority(&mut connection, "second", Some(-1));
+    assert_eq!(priority(&connection, "first"), Some(-2));
+    assert_eq!(priority(&connection, "second"), Some(-1));
+    set_priority(&mut connection, "third", Some(-1));
+    assert_eq!(
+        ["first", "second", "third"].map(|id| priority(&connection, id)),
+        [Some(-3), Some(-2), Some(-1)]
+    );
+    // Setting one again at its own level moves nothing.
+    set_priority(&mut connection, "third", Some(-1));
+    assert_eq!(priority(&connection, "second"), Some(-2));
 }
