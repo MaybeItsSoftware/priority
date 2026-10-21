@@ -255,6 +255,10 @@ fn build(tool: &str, input: &Map<String, Value>, hint: &mut Hint) -> Option<()> 
         "workspace_task_conditions_set" => {
             hint.key("taskConditions").words("then tick what it needs");
         }
+        "workspace_condition_provides_set" => {
+            hint.key("conditionsProvides")
+                .words("on the condition, then tick what it provides");
+        }
         "workspace_context_set" => {
             hint.key("focusSetAvailable")
                 .words("then Space on each condition that holds");

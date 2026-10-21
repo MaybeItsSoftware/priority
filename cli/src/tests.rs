@@ -783,6 +783,7 @@ const EVERY_SUBCOMMAND: &[&[&str]] = &[
     &["ws", "conditions"],
     &["ws", "require", "T", "Home|Campus", "Mat"],
     &["ws", "here", "Campus", "--for", "30"],
+    &["ws", "provides", "Home", "Floor space", "Quiet"],
     &["ws", "block", "T", "B"],
     &["ws", "unblock", "T", "B"],
     &["ws", "filters"],
@@ -943,7 +944,7 @@ fn every_advertised_tool_is_actually_implemented() {
 }
 
 #[test]
-fn the_tool_surface_is_fifty_one_uniquely_named_tools() {
+fn the_tool_surface_is_fifty_two_uniquely_named_tools() {
     let definitions = tool_definitions();
     let mut names: Vec<&str> = definitions
         .iter()
@@ -953,7 +954,7 @@ fn the_tool_surface_is_fifty_one_uniquely_named_tools() {
     names.sort_unstable();
     names.dedup();
     assert_eq!(names.len(), total, "duplicate tool name");
-    assert_eq!(total, 51);
+    assert_eq!(total, 52);
 
     for definition in &definitions {
         assert!(

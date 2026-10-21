@@ -532,6 +532,9 @@ fn sample(tool: &str) -> Value {
         "agent_instructions_set" => json!({"scope": "list", "id": OTHER, "text": "x"}),
         "workspace_task_conditions_set" => json!({"task_id": TASK, "requires": ["Home"]}),
         "workspace_context_set" => json!({"on": ["Campus"]}),
+        "workspace_condition_provides_set" => {
+            json!({"condition": "Home", "provides": ["Quiet"]})
+        }
         "daily_add" => json!({"title": "D"}),
         "daily_update" | "daily_tick" => json!({"daily_id": "d"}),
         _ => json!({"task_id": TASK}),

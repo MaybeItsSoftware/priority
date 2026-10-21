@@ -71,9 +71,10 @@ workspace's uppercase UUIDs, not Checkvist's integers:
 | `workspace_task_blocker_add` | Make `task_id` wait on `blocked_by_task_id` (any list) until it is done; a cycle is refused | write |
 | `workspace_task_blocker_remove` | Stop `task_id` waiting on `blocked_by_task_id` | write |
 | `workspace_task_commit` | Commit to `task_id` on a `rule` (`daily` by default): a subtask carrying a habit, in Today on its days until the task is done; `title` defaults to "Work on …", `stacks_missed` keeps a missed day owed | write |
-| `workspace_conditions` | Conditions under their categories in the app's order, each with its open-task count; the context (what holds now, when it was said and whether that was an earlier day, the time available, goal, expiry, last context); with `condition`, the open tasks needing it | read |
+| `workspace_conditions` | Conditions under their categories in the app's order (settings first), each with its open-task count and what it provides; the context (what was said, everything that `holds` with where it comes from, what is `off_for_now`, when it was said and whether that was an earlier day, the time available, goal, expiry, last context); with `condition`, the open tasks needing it | read |
 | `workspace_task_conditions_set` | What a task requires: each item a condition or an array of alternatives, by name or id, and `not Home` or `!Home` for one that must not hold; `create_missing` makes new ones | write |
-| `workspace_context_set` | What holds now: `set`, `clear`, `on`, `off` (a place replaces the last place), `mode`, `available_minutes`, `expires_in_minutes`. Not an undo step; the app picks it up at once, and sync carries it to the other devices | write |
+| `workspace_condition_provides_set` | What a condition provides (`condition`, `provides`, by name or id; `create_missing` makes new ones): while it holds, they hold too. Not itself; one undo step | write |
+| `workspace_context_set` | What holds now: `set`, `clear`, `on`, `off` (a place replaces the last place; `off` on a provided condition switches it off until what provides it changes), `mode`, `available_minutes`, `expires_in_minutes`. Not an undo step; the app picks it up at once, and sync carries it to the other devices | write |
 | `workspace_filter_lists` | Filter lists (saved rule sets over every task): built-in Today and Everything first, then the user's, each with id, name, icon, a one-line summary, `match`, `show` and `rules` | read |
 | `workspace_filter_list_tasks` | The tasks a filter list (by id, `builtin:today` included, or name) shows now, evaluated by the Rust core in this machine's time zone, list by list | read |
 | `workspace_filter_list_create` | Create a filter list from a name, optional icon, `match` (all/any), `show` (open/done/all) and `rules` (`{field, op, value}`; the description lists the vocabulary) | write |
@@ -279,7 +280,7 @@ python3 scripts/mcp_smoke_check.py   # needs a Debug app build
 ```
 
 It drives both spellings above and checks they answer `initialize` and expose
-the same 51 tools — in particular that an old-style invocation, with
+the same 52 tools — in particular that an old-style invocation, with
 credentials in `env`, still reaches a working server. It reads no real data and
 needs no Checkvist credentials.
 

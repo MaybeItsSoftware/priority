@@ -69,6 +69,7 @@ pub const WRITE_TOOLS: &[&str] = &[
     "workspace_board_column_set",
     "workspace_board_column_delete",
     "workspace_task_conditions_set",
+    "workspace_condition_provides_set",
     "workspace_context_set",
     "agent_instructions_set",
 ];

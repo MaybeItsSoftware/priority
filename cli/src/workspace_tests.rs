@@ -2112,6 +2112,67 @@ fn conditions_are_listed_required_and_the_context_set() {
 }
 
 #[test]
+fn a_setting_provides_conditions_and_one_can_be_switched_off_for_now() {
+    let fixture = Fixture::new();
+    fixture
+        .db()
+        .execute_batch(&format!(
+            "INSERT INTO task_conditions (id, workspaceId, name, isLocation, isArchived, createdAt, updatedAt, category, sortOrder) VALUES
+               ('home', '{WORKSPACE}', 'Home', 1, 0, '{EARLIER}', '{EARLIER}', 'Location', 0),
+               ('library', '{WORKSPACE}', 'Library', 1, 0, '{EARLIER}', '{EARLIER}', 'Location', 1),
+               ('floor', '{WORKSPACE}', 'Floor space', 0, 0, '{EARLIER}', '{EARLIER}', NULL, 2),
+               ('quiet', '{WORKSPACE}', 'Quiet', 0, 0, '{EARLIER}', '{EARLIER}', NULL, 3);"
+        ))
+        .unwrap();
+    let set = fixture.call(
+        "workspace_condition_provides_set",
+        json!({ "condition": "Home", "provides": ["floor space", "Quiet", "Desk"], "create_missing": true }),
+    );
+    let names: Vec<&str> = set["provides"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|c| c["name"].as_str().unwrap())
+        .collect();
+    assert_eq!(names, vec!["Floor space", "Quiet", "Desk"]);
+    assert_eq!(fixture.journal().last().unwrap().0, "MCP: Edit Condition");
+    let itself = fixture
+        .try_call(
+            "workspace_condition_provides_set",
+            json!({ "condition": "Home", "provides": ["Home"] }),
+        )
+        .unwrap_err();
+    assert!(itself.contains("cannot provide itself"), "{itself}");
+
+    let read = fixture.call("workspace_conditions", json!({}));
+    assert_eq!(read["sections"][0]["setting"], json!(true));
+    // Saying Home: what it provides holds too, with where it comes from.
+    let home = fixture.call("workspace_context_set", json!({ "on": ["Home"] }));
+    let holds = |context: &Value| -> Vec<String> {
+        context["holds"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|c| c["name"].as_str().unwrap().to_string())
+            .collect()
+    };
+    assert_eq!(holds(&home), vec!["Home", "Floor space", "Quiet", "Desk"]);
+    assert_eq!(home["holds"][1]["from"], json!(["Home"]));
+    assert_eq!(home["holds"][1]["said"], json!(false));
+    // Housemates in: Quiet off for now, and it stays off while Home holds.
+    let noisy = fixture.call("workspace_context_set", json!({ "off": ["Quiet"] }));
+    assert_eq!(holds(&noisy), vec!["Home", "Floor space", "Desk"]);
+    assert_eq!(noisy["off_for_now"][0]["name"], json!("Quiet"));
+    let timed = fixture.call("workspace_context_set", json!({ "available_minutes": 30 }));
+    assert_eq!(timed["off_for_now"][0]["name"], json!("Quiet"));
+    // Somewhere else, and back: the override went with Home.
+    fixture.call("workspace_context_set", json!({ "on": ["Library"] }));
+    let back = fixture.call("workspace_context_set", json!({ "on": ["Home"] }));
+    assert_eq!(holds(&back), vec!["Home", "Floor space", "Quiet", "Desk"]);
+    assert_eq!(back["off_for_now"], json!([]));
+}
+
+#[test]
 fn clearing_who_and_when_drops_a_repeating_follow_up_too() {
     let fixture = Fixture::new();
     let task = fixture.add(PROJECTS, "Contract signed", None);

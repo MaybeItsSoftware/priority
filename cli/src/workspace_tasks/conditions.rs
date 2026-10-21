@@ -6,8 +6,11 @@
 //! order the tab shows, the open-task counts, a task's requirements and
 //! their checks, one place at a time, the stamp that makes a context stale.
 //! This adds the CLI's JSON, names for ids, and its refusals. Requiring a
-//! condition is an "MCP: Edit Conditions" undo step; saying what holds now
-//! is not an undo step at all, as it is not in the app.
+//! condition is an "MCP: Edit Conditions" undo step, and setting what a
+//! condition provides an "MCP: Edit Condition" one; saying what holds now
+//! is not an undo step at all, as it is not in the app. What holds is the
+//! core's too (`core/src/conditions/provides.rs`): what was said, everything
+//! that provides, less what was switched off for now.
 
 use super::{TaskRow, has_migration, map_core_error, map_write_error, task_row};
 use crate::error::{Result, ToolError};
@@ -22,6 +25,9 @@ use takt_core::rows::ConditionRow;
 
 /// What adds `focus_contexts` and the conditions' order.
 const CONTEXT_MIGRATION: &str = "v27_condition_order_and_context";
+
+/// What lets a condition provide others.
+const PROVIDES_MIGRATION: &str = "v34_condition_provides";
 
 /// A new context-set request: every field optional, applied in this order —
 /// `set` (or `clear`) replaces the conditions on, then `off` and `on`.
@@ -168,9 +174,40 @@ fn context_json(
     // This machine's zone, as the app reads the day in.
     let zone = iana_time_zone::get_timezone().unwrap_or_else(|_| "UTC".into());
     let stale = focus_context::focus_context_is_stale(context.clone(), now, zone);
+    let name = |id: &str| {
+        all.iter()
+            .find(|c| c.id == id)
+            .map_or_else(|| id.to_string(), |c| c.name.clone())
+    };
+    let holdings = core::holdings(all, &context.condition_ids, &context.off_ids);
+    let holds: Vec<Value> = holdings
+        .iter()
+        .filter(|holding| holding.holds)
+        .map(|holding| {
+            json!({
+                "id": holding.condition_id,
+                "name": name(&holding.condition_id),
+                "said": holding.is_set,
+                "from": holding.provided_by.iter().map(|id| name(id)).collect::<Vec<_>>(),
+            })
+        })
+        .collect();
+    let off: Vec<Value> = holdings
+        .iter()
+        .filter(|holding| holding.is_off)
+        .map(|holding| {
+            json!({
+                "id": holding.condition_id,
+                "name": name(&holding.condition_id),
+                "from": holding.provided_by.iter().map(|id| name(id)).collect::<Vec<_>>(),
+            })
+        })
+        .collect();
     Ok(json!({
         "on": names_of(all, &context.condition_ids),
-        "anywhere": context.condition_ids.is_empty(),
+        "holds": holds,
+        "off_for_now": off,
+        "anywhere": holdings.iter().all(|holding| !holding.holds),
         "set_at": local_ms(context.conditions_set_at_ms),
         "stale": stale,
         "available_until": local_ms(context.available_until_ms),
@@ -200,12 +237,14 @@ impl Workspace {
                 json!({
                     "category": section.title,
                     "one_at_a_time": section.is_exclusive,
+                    "setting": section.is_setting,
                     "conditions": section.conditions.iter().map(|c| json!({
                         "id": c.id,
                         "name": c.name,
                         "place": c.is_location,
                         "archived": c.is_archived,
                         "open_tasks": usage.get(&c.id).copied().unwrap_or(0),
+                        "provides": names_of(&all, &c.provides),
                     })).collect::<Vec<_>>(),
                 })
             })
@@ -299,6 +338,68 @@ impl Workspace {
         })
     }
 
+    /// Sets what a condition provides, replacing what it did: while it holds,
+    /// they hold too. Conditions by name or id; with `create_missing` a name
+    /// nothing has yet becomes a new condition (with no category) first.
+    /// Empty provides nothing.
+    pub fn set_condition_provides(
+        &self,
+        condition: &str,
+        provides: Vec<String>,
+        create_missing: bool,
+    ) -> Result<Value> {
+        {
+            let connection = self.open()?;
+            if !has_migration(&connection, PROVIDES_MIGRATION)? {
+                return Err(ToolError::new(format!(
+                    "This workspace predates conditions that provide others ({PROVIDES_MIGRATION}). \
+                     Open an up-to-date Takt once to migrate it."
+                )));
+            }
+        }
+        self.journalled("Edit Condition", |tx, _now| {
+            let now = Utc::now().timestamp_millis();
+            let (workspace_id, _) = super::workspace_row(tx)?;
+            let all = conditions_of(tx, &workspace_id)?;
+            let provider = resolve(&all, condition)?.clone();
+            let mut ids: Vec<String> = Vec::new();
+            for wanted in &provides {
+                let all = conditions_of(tx, &workspace_id)?;
+                let id = match resolve(&all, wanted) {
+                    Ok(found) => found.id.clone(),
+                    Err(_) if create_missing && !wanted.trim().is_empty() => {
+                        core::create_condition_in_category(tx, &workspace_id, wanted, None, now)
+                            .map_err(map_core_error)?
+                    }
+                    Err(error) => return Err(error),
+                };
+                if !ids.contains(&id) {
+                    ids.push(id);
+                }
+            }
+            let changed = core::set_condition_provides(tx, &provider.id, ids, now).map_err(
+                |error| match error {
+                    takt_core::CoreError::InvalidCondition => ToolError::new(
+                        "A condition cannot provide itself, or an archived condition it did not \
+                         provide already. workspace_conditions lists them.",
+                    ),
+                    other => map_core_error(other),
+                },
+            )?;
+            let all = conditions_of(tx, &workspace_id)?;
+            let saved = all
+                .iter()
+                .find(|c| c.id == provider.id)
+                .map(|c| c.provides.clone())
+                .unwrap_or_default();
+            Ok(json!({
+                "condition": { "id": provider.id, "name": provider.name },
+                "provides": names_of(&all, &saved),
+                "changed": changed,
+            }))
+        })
+    }
+
     /// Says what holds now. Not an undo step: where you are is not an edit.
     pub fn set_context(&self, edit: ContextEdit) -> Result<Value> {
         let mut connection = self.open_for_writing()?;
@@ -325,21 +426,36 @@ impl Workspace {
                 .collect()
         };
         let mut current = context.condition_ids.clone();
-        if edit.clear {
+        if edit.clear || edit.set.is_some() {
             current.clear();
-        }
-        let mut on = ids(&edit.on)?;
-        if let Some(set) = &edit.set {
-            current.clear();
-            on = ids(set)?.into_iter().chain(on).collect();
         }
         let places: Vec<String> = all
             .iter()
             .filter(|c| c.is_location)
             .map(|c| c.id.clone())
             .collect();
-        context.condition_ids =
-            focus_context::focus_context_changed(current, on, ids(&edit.off)?, places);
+        if let Some(set) = &edit.set {
+            current = focus_context::focus_context_changed(current, ids(set)?, Vec::new(), places);
+        }
+        // Off, then on, as the app's switches do: a provided condition
+        // turned off stays off until what provides it changes, and one
+        // turned on that is not provided is said to hold.
+        let mut said = core::ConditionsSaid {
+            condition_ids: current,
+            off_ids: if edit.clear || edit.set.is_some() {
+                Vec::new()
+            } else {
+                context.off_ids.clone()
+            },
+        };
+        for id in ids(&edit.off)? {
+            said = core::switched(&all, &said, &id, Some(false));
+        }
+        for id in ids(&edit.on)? {
+            said = core::switched(&all, &said, &id, Some(true));
+        }
+        context.condition_ids = said.condition_ids;
+        context.off_ids = said.off_ids;
         if edit.set.is_some() || edit.clear || !edit.on.is_empty() {
             context.suggested_ids.clear();
         }

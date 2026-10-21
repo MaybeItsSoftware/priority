@@ -1052,7 +1052,7 @@ fn workspace_tool_definitions() -> Vec<Value> {
         }),
         json!({
             "name": "workspace_conditions",
-            "description": "Conditions: the places and circumstances a task can require before it is offered (Home, Campus, Floor space), under their categories in the order the app shows them, each with how many open tasks need it. Location is one at a time. Also the context: which conditions hold now (on), when they were said (set_at; stale when that was an earlier day, so probably no longer true), the available-time window, goal and expiry, and the last context an expiry set aside. A task that needs a condition that is not on is held back from Today, next up and the focus panel: this is how to explain why. With condition (a name or id), also the open tasks that need it. workspace_tasks shows each task's requires.",
+            "description": "Conditions: the places and circumstances a task can require before it is offered (Home, Campus, Floor space), under their categories in the order the app shows them (settings first: Location, and any category whose conditions provide others), each with how many open tasks need it and what it provides. Location is one at a time. A condition can provide others: while Home holds, so do the Floor space, Desk and Quiet it provides. Also the context: which conditions were said to hold (on), everything that holds with where it comes from (holds: said, or from the settings that provide it — this is what tasks are checked against, negated requirements included), provided conditions switched off for now (off_for_now), when they were said (set_at; stale when that was an earlier day, so probably no longer true), the available-time window, goal and expiry, and the last context an expiry set aside. A task that needs a condition that is not on is held back from Today, next up and the focus panel: this is how to explain why. With condition (a name or id), also the open tasks that need it. workspace_tasks shows each task's requires.",
             "inputSchema": {
                 "type": "object",
                 "properties": {
@@ -1082,8 +1082,22 @@ fn workspace_tool_definitions() -> Vec<Value> {
             },
         }),
         json!({
+            "name": "workspace_condition_provides_set",
+            "description": "Set what a condition provides, replacing what it did: while it holds, they hold too, so a task needing Floor space is offered at Home or the Gym without anyone turning Floor space on. Location = Home might provide Floor space, Desk and Quiet; a tool on hand like Laptop, Typing and Big screen. Links chain (Home provides Desk, Desk provides Typing) and a loop is harmless. condition and provides by name or id; an empty array provides nothing. A condition cannot provide itself, nor an archived condition it did not already. With create_missing, a name no condition has yet becomes a new condition first. One undo step. Returns what it provides as saved.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "condition": { "type": "string", "description": "The condition that provides, by name or id." },
+                    "provides": { "type": "array", "items": { "type": "string" } },
+                    "create_missing": { "type": "boolean", "description": "Default: false." },
+                },
+                "required": ["condition", "provides"],
+                "additionalProperties": false,
+            },
+        }),
+        json!({
             "name": "workspace_context_set",
-            "description": "Say what holds now, as the app's Conditions tab does: which conditions are on (the user says where they are, or what they have), the time available, the goal and when the answer lapses. set replaces the conditions on; clear turns them all off; then off and on adjust. Turning a place on turns the other place off. Conditions by name or id. available_minutes and expires_in_minutes count from now; 0 removes the limit. The app picks the change up at once. Not an undo step. Returns the context as workspace_conditions reports it.",
+            "description": "Say what holds now, as the app's Conditions tab does: which conditions are on (the user says where they are, or what they have), the time available, the goal and when the answer lapses. set replaces the conditions on; clear turns them all off; then off and on adjust. Turning a place on turns the other place off. What a condition said to hold provides holds with it (workspace_condition_provides_set): off on a provided condition switches it off for now (housemates in: off Quiet), until whatever provides it is turned off or replaced, and on brings it back. Conditions by name or id. available_minutes and expires_in_minutes count from now; 0 removes the limit. The app picks the change up at once. Not an undo step. Returns the context as workspace_conditions reports it.",
             "inputSchema": {
                 "type": "object",
                 "properties": {

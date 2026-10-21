@@ -474,8 +474,20 @@ pub enum WsCommand {
         #[arg(long)]
         create: bool,
     },
+    /// Set what a condition provides: while it holds, they hold too
+    /// ("Home Floor\ space Quiet"). None provides nothing.
+    Provides {
+        /// The condition that provides, by name or id.
+        condition: String,
+        #[arg(num_args = 0.., value_name = "CONDITION")]
+        provided: Vec<String>,
+        /// Make a condition for a name nothing has yet.
+        #[arg(long)]
+        create: bool,
+    },
     /// Say what holds now: turn conditions on (a place replaces the last
-    /// place), off, or clear them, and set the time available.
+    /// place), off (a provided one stays off until what provides it
+    /// changes), or clear them, and set the time available.
     Here {
         /// Conditions to turn on, by name or id.
         #[arg(num_args = 0.., value_name = "CONDITION")]
@@ -1194,6 +1206,18 @@ fn resolve_workspace(
             }
             "workspace_task_conditions_set"
         }
+        WsCommand::Provides {
+            condition,
+            provided,
+            create,
+        } => {
+            arguments.insert("condition".into(), json!(condition));
+            arguments.insert("provides".into(), json!(provided));
+            if *create {
+                arguments.insert("create_missing".into(), json!(true));
+            }
+            "workspace_condition_provides_set"
+        }
         WsCommand::Here {
             conditions,
             only,
@@ -1388,6 +1412,19 @@ pub fn render(tool: &str, outcome: &ToolOutcome, as_json: bool) {
         | "workspace_task_blocker_add"
         | "workspace_task_blocker_remove" => render_workspace_dependencies(payload),
         "workspace_conditions" => render_conditions(payload),
+        "workspace_condition_provides_set" => {
+            let names: Vec<String> = payload["provides"]
+                .as_array()
+                .into_iter()
+                .flatten()
+                .map(|c| text_of(&c["name"]))
+                .collect();
+            if names.is_empty() {
+                println!("Provides nothing.");
+            } else {
+                println!("Provides {}", names.join(" · "));
+            }
+        }
         "workspace_task_conditions_set" => {
             let requires = payload["requires"].as_array().cloned().unwrap_or_default();
             if requires.is_empty() {
@@ -1963,6 +2000,15 @@ fn render_conditions(payload: &Value) {
                 },
                 text_of(&condition["id"])
             );
+            let provides: Vec<String> = condition["provides"]
+                .as_array()
+                .into_iter()
+                .flatten()
+                .map(|c| text_of(&c["name"]))
+                .collect();
+            if !provides.is_empty() {
+                println!("      provides {}", provides.join(" · "));
+            }
         }
     }
     println!();
@@ -1993,6 +2039,33 @@ fn render_context(context: &Value) {
         line.push_str("  — said on an earlier day; still true?");
     }
     println!("{line}");
+    let holds: Vec<String> = context["holds"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .filter(|c| c["said"] != json!(true))
+        .map(|c| {
+            let from: Vec<String> = c["from"]
+                .as_array()
+                .into_iter()
+                .flatten()
+                .map(text_of)
+                .collect();
+            format!("{} (from {})", text_of(&c["name"]), from.join(", "))
+        })
+        .collect();
+    if !holds.is_empty() {
+        println!("Provided: {}", holds.join(" · "));
+    }
+    let off: Vec<String> = context["off_for_now"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .map(|c| text_of(&c["name"]))
+        .collect();
+    if !off.is_empty() {
+        println!("Off for now: {}", off.join(" · "));
+    }
     if let Some(until) = context["available_until"].as_str() {
         println!("Time available until {until}");
     }

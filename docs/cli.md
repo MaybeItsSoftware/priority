@@ -289,6 +289,8 @@ takt ws require <TASK_ID> 'Home|Campus' Mat   # needs Home or Campus, and Mat; n
 takt ws require <TASK_ID> 'not Home'          # only away from Home ("!Home" too)
 takt ws here Campus --for 60                  # at Campus (the last place goes off), an hour free
 takt ws here --clear                          # anywhere
+takt ws provides Home 'Floor space' Quiet     # while Home holds, so do they; none clears
+takt ws here --off Quiet                      # a provided one off until Home goes
 takt ws new-folder Computer Science
 takt ws new-list Revision --folder <FOLDER_ID>
 takt ws move-list <LIST_ID> --folder <FOLDER_ID>

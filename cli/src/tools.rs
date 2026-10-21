@@ -715,6 +715,32 @@ impl Tools {
                 Ok(outcome(title, payload))
             }
 
+            "workspace_condition_provides_set" => {
+                let condition = required_string(arguments, "condition")?;
+                let provides = as_string_list(arguments.get("provides"))?.ok_or_else(|| {
+                    ToolError::new("provides is required: an array of conditions.")
+                })?;
+                let create = as_bool(arguments.get("create_missing"), false)?;
+                let payload = self
+                    .workspace
+                    .set_condition_provides(&condition, provides, create)?;
+                let names: Vec<&str> = payload["provides"]
+                    .as_array()
+                    .into_iter()
+                    .flatten()
+                    .filter_map(|c| c["name"].as_str())
+                    .collect();
+                let name = payload["condition"]["name"].as_str().unwrap_or("It");
+                let title = if payload["changed"] == json!(false) {
+                    format!("{name} already provided exactly that")
+                } else if names.is_empty() {
+                    format!("{name} provides nothing")
+                } else {
+                    format!("{name} provides {}", names.join(" · "))
+                };
+                Ok(outcome(title, payload))
+            }
+
             "workspace_context_set" => {
                 let edit = crate::workspace_tasks::ContextEdit {
                     set: as_string_list(arguments.get("set"))?,
@@ -726,7 +752,8 @@ impl Tools {
                     expires_in_minutes: as_optional_int(arguments.get("expires_in_minutes"))?,
                 };
                 let payload = self.workspace.set_context(edit)?;
-                let names: Vec<&str> = payload["on"]
+                // Everything that holds, what the settings provide included.
+                let names: Vec<&str> = payload["holds"]
                     .as_array()
                     .into_iter()
                     .flatten()
