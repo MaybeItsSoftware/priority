@@ -40,6 +40,47 @@ fn today(id: &str) -> Candidate {
     }
 }
 
+#[test]
+fn the_tasks_behind_the_back_end_the_day() {
+    let back = |id: &str, priority: i64| Candidate {
+        priority: Some(priority),
+        ..today(id)
+    };
+    let tasks = vec![
+        Candidate {
+            sort_order: 0,
+            ..back("last", -1)
+        },
+        Candidate {
+            sort_order: 1,
+            ..today("first")
+        },
+        Candidate {
+            sort_order: 2,
+            ..back("before-last", -3)
+        },
+        Candidate {
+            due_at_ms: Some(NOW - HOUR),
+            ..candidate("late")
+        },
+        Candidate {
+            priority: Some(-1),
+            ..candidate("running")
+        },
+    ];
+    let day = plan(&tasks, Some("running"), NOW, "UTC");
+    assert_eq!(
+        entries(&day),
+        [
+            ("running", "running"),
+            ("first", "planned"),
+            ("late", "overdue"),
+            ("before-last", "planned"),
+            ("last", "planned"),
+        ]
+    );
+}
+
 fn entries(plan: &[DayEntry]) -> Vec<(&str, &str)> {
     plan.iter()
         .map(|e| (e.id.as_str(), e.reason.as_str()))
@@ -147,6 +188,32 @@ fn workspace() -> Connection {
     }
     connection.execute_batch(&sql).unwrap();
     connection
+}
+
+/// Arranging the day by hand ranks its tasks, and the day re-sorts what is
+/// in Today by that rank, so a task sent to the back has to go after it.
+#[test]
+fn a_task_sent_to_the_back_ends_the_day_even_when_ranked_first() {
+    let connection = workspace();
+    connection
+        .execute_batch(&format!(
+            "UPDATE task_metadata SET focusRank = 0, priority = -1, updatedAt = '{T}' WHERE taskId = 't10';
+             UPDATE task_metadata SET focusRank = 1 WHERE taskId = 't11';"
+        ))
+        .unwrap();
+    let read = next_up(
+        &connection,
+        NOW,
+        "UTC",
+        &FocusContext::default(),
+        None,
+        None,
+    )
+    .unwrap();
+    assert_eq!(
+        entries(&read.day_plan),
+        [("t11", "planned"), ("t10", "planned")]
+    );
 }
 
 #[test]

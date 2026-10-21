@@ -57,7 +57,11 @@ pub fn next_up(
     let candidates = focus::candidates(connection, now_ms, zone)?;
     // The day is gathered from every candidate rather than from the ranked
     // ones: a task due today that a condition rules out is still today's.
-    let day_plan = roll_up_cards(connection, plan(&candidates, running_id, now_ms, zone))?;
+    let day_plan = behind_the_back_last(
+        roll_up_cards(connection, plan(&candidates, running_id, now_ms, zone))?,
+        &candidates,
+        running_id,
+    );
     let ranking = ranking::evaluate(&candidates, now_ms, zone, context);
     let ranked_count = ranking.ranked.len() as u64;
     let ranked = match ladder_limit {
@@ -87,6 +91,8 @@ pub fn next_up(
 /// Which tasks make up today, and why. `DayPlanSelector.plan`: the running
 /// task, then the Today column in its own order, then the overdue and the due
 /// today by deadline, then what starts today by start time. Each task once.
+/// A task sent behind the back (priority -1 to -4) goes after all of that,
+/// -4 first and -1 last, whatever brought it into the day.
 pub fn plan<'a>(
     candidates: &'a [Candidate],
     running_id: Option<&str>,
@@ -163,6 +169,30 @@ pub fn plan<'a>(
     for (candidate, _) in starting {
         claim(candidate, "startsToday");
     }
+    behind_the_back_last(entries, candidates, running_id)
+}
+
+/// Moves the tasks sent behind the back (priority -1 to -4) to the end of the
+/// day, -4 first and -1 last. A stable sort, so each keeps its place among
+/// those of its own priority. The running task stays first: it is what is
+/// happening. Run after anything else that orders the day, or that order
+/// puts them back.
+fn behind_the_back_last(
+    mut entries: Vec<DayEntry>,
+    candidates: &[Candidate],
+    running_id: Option<&str>,
+) -> Vec<DayEntry> {
+    let behind = |id: &str| -> Option<i64> {
+        if Some(id) == running_id {
+            return None;
+        }
+        candidates
+            .iter()
+            .find(|c| c.id == id)
+            .and_then(|c| c.priority)
+            .filter(|p| (-4..=-1).contains(p))
+    };
+    entries.sort_by_key(|e| behind(&e.id).map_or(0, |p| 10 + p));
     entries
 }
 
