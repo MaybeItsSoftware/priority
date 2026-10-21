@@ -776,12 +776,19 @@ impl Workspace {
                     Some(at) => stored_ms(at.as_deref()),
                     None => stored_ms(task.follow_up_at.as_deref()),
                 };
-                let every_days = every_days.unwrap_or(task.follow_up_every_days);
+                // Clearing the follow-up time clears its stored repeat with
+                // it, unless the same call names one (which is refused below).
+                let every_days = match (every_days, &follow_up_at) {
+                    (Some(days), _) => days,
+                    (None, Some(None)) => None,
+                    (None, _) => task.follow_up_every_days,
+                };
                 // A repeat chases a follow-up time; on its own it has nothing
                 // to repeat, and the core would drop it without a word.
                 if every_days.is_some() && follow_up.is_none() {
                     return Err(ToolError::new(
-                        "follow_up_every_days repeats a follow-up, and this task has no                          follow_up_at. Pass follow_up_at in the same call.",
+                        "follow_up_every_days repeats a follow-up, and this task has no \
+                         follow_up_at. Pass follow_up_at in the same call.",
                     ));
                 }
                 takt_core::waiting::set_waiting(
