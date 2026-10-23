@@ -37,9 +37,12 @@ struct WorkspaceQuickAskOverlay: View {
         context: request.task.title)
       FocusRule()
       Group {
-        if session.executablePath == nil && !session.isRunning {
+        // The panel's agent, which the next ask copies, not the last ask's.
+        if model.agent.executablePath == nil && !session.isRunning {
           WorkspaceOverlayHint(
-            text: "Claude Code isn't installed where Takt looked. The agent panel (\(panelKey)) sets it up.")
+            text:
+              "\(model.agent.clientSetting.displayName) isn't installed where Takt looked. "
+              + "The agent panel (\(panelKey)) sets it up.")
         } else if showsTranscript {
           transcript
         } else {
@@ -166,8 +169,8 @@ struct WorkspaceQuickAskOverlay: View {
   private func send() {
     let text = draft.trimmingCharacters(in: .whitespacesAndNewlines)
     guard !text.isEmpty, !isBusy else { return }
-    // Kept when there is no `claude` to send it to.
-    guard session.executablePath != nil else { return }
+    // Kept when there is no agent to send it to.
+    guard model.agent.executablePath != nil else { return }
     draft = ""
     selectedCard = nil
     model.sendQuickAsk(text, about: request.task)

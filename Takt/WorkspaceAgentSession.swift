@@ -3,13 +3,17 @@ import Observation
 import TaktCore
 import os
 
-/// One agent thread: the user's own Claude Code, headless, with Takt's MCP
-/// server as its only tool.
+/// One agent thread: the user's own coding agent, headless, with Takt's MCP
+/// server as its only tool. Which agent is `clientSetting` (Settings ▸ Agent,
+/// or the panel's header), read when a thread starts: a thread stays on the
+/// agent it started with, and the next one uses whatever is chosen then.
 ///
-/// The process is `claude -p` in stream-json mode (see `AgentInvocation` for
-/// the exact command line and why each flag is there). It stays up for the
-/// thread, so a follow-up is one more line on its stdin, and it goes when the
-/// thread does: Stop and New thread both end it.
+/// With Claude Code the process is `claude -p` in stream-json mode (see
+/// `AgentInvocation` for the exact command line and why each flag is there).
+/// It stays up for the thread, so a follow-up is one more line on its stdin,
+/// and it goes when the thread does: Stop and New thread both end it. Codex
+/// runs a process per turn instead (`AgentCodexInvocation`), each one resuming
+/// the thread by its id, and Stop and New thread forget the id.
 ///
 /// **Changes apply at once and each can be taken back.** The reads and the
 /// writes are pre-allowed on the command line, and every write shows as a
@@ -108,25 +112,68 @@ import os
   /// assistant with the next one.
   @ObservationIgnored private var undoneSinceLastMessage: [String] = []
 
+  /// The agent new threads run (`AgentClient.defaultsKey`). Read when a
+  /// thread starts, so changing it leaves a running thread where it is — and
+  /// says so in that thread's transcript.
+  var clientSetting = AgentClient.stored(UserDefaults.standard.string(forKey: AgentClient.defaultsKey)) {
+    didSet {
+      guard clientSetting != oldValue else { return }
+      UserDefaults.standard.set(clientSetting.rawValue, forKey: AgentClient.defaultsKey)
+      if isRunning, client != clientSetting {
+        items.append(
+          Item(
+            entry: .notice(
+              "New threads will use \(clientSetting.displayName). This one stays on \(client.displayName) "
+                + "until you start a new thread or stop it.",
+              isError: false)))
+      }
+    }
+  }
+
+  /// The agent this thread runs: the setting as it was when it started.
+  private(set) var client = AgentClient.stored(UserDefaults.standard.string(forKey: AgentClient.defaultsKey))
+
   /// "Ask before changing tasks" (Settings ▸ Agent). Off by default. Read
   /// when a thread starts, so it applies from the next one.
   var asksBeforeChangesSetting = UserDefaults.standard.bool(forKey: AgentToolPolicy.asksBeforeChangesKey) {
     didSet { UserDefaults.standard.set(asksBeforeChangesSetting, forKey: AgentToolPolicy.asksBeforeChangesKey) }
   }
 
-  /// A path to `claude` set by hand, tried before the usual install locations.
-  var userExecutablePath = UserDefaults.standard.string(forKey: AgentCLILocator.userPathDefaultsKey) ?? "" {
-    didSet { UserDefaults.standard.set(userExecutablePath, forKey: AgentCLILocator.userPathDefaultsKey) }
+  /// A path to each agent's binary set by hand, tried before the usual
+  /// install locations.
+  var userExecutablePaths: [AgentClient: String] = Dictionary(
+    uniqueKeysWithValues: AgentClient.allCases.map {
+      ($0, UserDefaults.standard.string(forKey: $0.userPathDefaultsKey) ?? "")
+    })
+  {
+    didSet {
+      for (client, path) in userExecutablePaths where path != oldValue[client] {
+        UserDefaults.standard.set(path, forKey: client.userPathDefaultsKey)
+      }
+    }
   }
 
-  var executableCandidates: [String] {
-    AgentCLILocator.candidates(userPath: userExecutablePath, homeDirectory: NSHomeDirectory())
+  /// The chosen agent's hand-set path.
+  var userExecutablePath: String {
+    get { userExecutablePaths[clientSetting] ?? "" }
+    set { userExecutablePaths[clientSetting] = newValue }
   }
+
+  func executableCandidates(for client: AgentClient) -> [String] {
+    AgentCLILocator.candidates(
+      userPath: userExecutablePaths[client], homeDirectory: NSHomeDirectory(), client: client)
+  }
+
+  /// Where `client` is installed, or nil when it is not.
+  func executablePath(for client: AgentClient) -> String? {
+    AgentCLILocator.resolve(
+      candidates: executableCandidates(for: client), isExecutable: FileManager.default.isExecutableFile)
+  }
+
+  var executableCandidates: [String] { executableCandidates(for: clientSetting) }
 
   /// The binary a new thread would launch, or nil when there is none.
-  var executablePath: String? {
-    AgentCLILocator.resolve(candidates: executableCandidates, isExecutable: FileManager.default.isExecutableFile)
-  }
+  var executablePath: String? { executablePath(for: clientSetting) }
 
   var pendingApproval: Item? {
     items.first { item in
@@ -135,9 +182,13 @@ import os
     }
   }
 
-  var isRunning: Bool { process != nil }
+  /// A thread is under way: Claude Code's process is up, or a Codex thread
+  /// has an id to resume between its turns' processes.
+  var isRunning: Bool { process != nil || codexThreadID != nil }
 
   @ObservationIgnored private var process: Process?
+  /// The Codex thread the next turn resumes; nil before its first turn.
+  private var codexThreadID: String?
   @ObservationIgnored private var input: FileHandle?
   @ObservationIgnored private var stderrTail = AgentOutputTail()
   /// Which process a line or an exit belongs to. A thread that was stopped can
@@ -168,7 +219,17 @@ import os
     let undone = AgentSystemPrompt.undone(undoneSinceLastMessage)
     undoneSinceLastMessage = []
     let message = (ledger.changes(blocks) + [undone, context, trimmed].compactMap { $0 }).joined(separator: "\n\n")
-    if write(AgentStreamEncoder.userMessage(message)) { isWorking = true }
+    let sent: Bool
+    switch client {
+    case .claudeCode:
+      sent = write(AgentStreamEncoder.userMessage(message))
+    case .codex:
+      // The whole message is the turn's stdin; closing it is what sends it.
+      sent = write(message)
+      try? input?.close()
+      input = nil
+    }
+    if sent { isWorking = true }
   }
 
   /// Lets one write run, with exactly the input the card showed. Only ever
@@ -216,7 +277,7 @@ import os
   /// still be read; the next message starts a fresh process with no memory
   /// of it.
   func stop() {
-    guard process != nil else { return }
+    guard isRunning else { return }
     let wasWorking = isWorking || pendingApproval != nil
     end()
     if wasWorking { items.append(Item(entry: .notice("Stopped.", isError: false))) }
@@ -250,11 +311,15 @@ import os
 
   // MARK: - The process
 
-  /// Launches `claude`. Returns false, with a notice saying why, when it
-  /// cannot — except for a missing `claude`, which the panel's setup state
-  /// already says in its place, with the paths it tried and a field for one.
+  /// Launches the agent: a new thread's, on the agent chosen now, or the next
+  /// turn of a Codex thread, on the agent it started with. Returns false, with
+  /// a notice saying why, when it cannot — except for a missing binary, which
+  /// the panel's setup state already says in its place, with the paths it
+  /// tried and a field for one.
   private func start() -> Bool {
-    guard let executable = executablePath else { return false }
+    let continuing = client == .codex && codexThreadID != nil
+    let client = continuing ? self.client : clientSetting
+    guard let executable = executablePath(for: client) else { return false }
     guard let helper = Self.mcpHelperPath() else {
       items.append(
         Item(
@@ -273,10 +338,18 @@ import os
 
     let process = Process()
     process.executableURL = URL(fileURLWithPath: executable)
-    let asks = asksBeforeChangesSetting
-    process.arguments = AgentInvocation.arguments(
-      helperPath: helper, systemPrompt: AgentSystemPrompt.text(today: .now, asksBeforeChanges: asks),
-      asksBeforeChanges: asks)
+    let asks = continuing ? asksBeforeChanges : asksBeforeChangesSetting
+    switch client {
+    case .claudeCode:
+      process.arguments = AgentInvocation.arguments(
+        helperPath: helper, systemPrompt: AgentSystemPrompt.text(today: .now, asksBeforeChanges: asks),
+        asksBeforeChanges: asks)
+    case .codex:
+      process.arguments = AgentCodexInvocation.arguments(
+        helperPath: helper,
+        systemPrompt: AgentSystemPrompt.text(today: .now, asksBeforeChanges: asks, canChange: !asks),
+        resumeThreadID: codexThreadID, asksBeforeChanges: asks)
+    }
     process.currentDirectoryURL = Self.workingDirectory()
     process.environment = Self.environment()
 
@@ -320,16 +393,23 @@ import os
     do {
       try process.run()
     } catch {
-      Self.log.error("Could not launch Claude Code: \(error.localizedDescription, privacy: .public)")
-      items.append(Item(entry: .notice("Could not start Claude Code: \(error.localizedDescription)", isError: true)))
+      Self.log.error("Could not launch \(client.displayName, privacy: .public): \(error.localizedDescription, privacy: .public)")
+      items.append(
+        Item(entry: .notice("Could not start \(client.displayName): \(error.localizedDescription)", isError: true)))
       return false
     }
-    Self.log.info("Started an agent thread with \(executable, privacy: .public)")
+    Self.log.info("Started an agent \(continuing ? "turn" : "thread", privacy: .public) with \(executable, privacy: .public)")
     self.process = process
     input = stdin.fileHandleForWriting
-    ledger = AgentContextLedger()
-    asksBeforeChanges = asks
-    undoneSinceLastMessage = []
+    if !continuing {
+      self.client = client
+      ledger = AgentContextLedger()
+      asksBeforeChanges = asks
+      undoneSinceLastMessage = []
+    }
+    // Codex numbers a turn's items from zero again, so the last turn's ids
+    // would match this one's.
+    if client == .codex { toolItems = [:] }
     stoppedOnPurpose = false
     return true
   }
@@ -341,6 +421,7 @@ import os
     if let process { Self.terminate(process) }
     process = nil
     input = nil
+    codexThreadID = nil
     isWorking = false
     toolItems = [:]
     withdrawPendingApprovals()
@@ -357,7 +438,7 @@ import os
     process.terminate()
     DispatchQueue.global(qos: .utility).asyncAfter(deadline: .now() + terminationGracePeriod) {
       guard process.isRunning else { return }
-      log.warning("Claude Code ignored SIGTERM for \(terminationGracePeriod)s; sending SIGKILL.")
+      log.warning("The agent ignored SIGTERM for \(terminationGracePeriod)s; sending SIGKILL.")
       kill(process.processIdentifier, SIGKILL)
     }
   }
@@ -370,11 +451,12 @@ import os
     withdrawPendingApprovals()
     guard !stoppedOnPurpose else { return }
     let detail = stderrTail.text.trimmingCharacters(in: .whitespacesAndNewlines)
-    Self.log.error("Claude Code exited with \(status); stderr: \(detail, privacy: .public)")
+    let name = client.displayName
+    Self.log.error("\(name, privacy: .public) exited with \(status); stderr: \(detail, privacy: .public)")
     items.append(
       Item(
         entry: .notice(
-          detail.isEmpty ? "Claude Code stopped (exit \(status))." : "Claude Code stopped: \(detail)",
+          detail.isEmpty ? "\(name) stopped (exit \(status))." : "\(name) stopped: \(detail)",
           isError: true)))
     adviseOn(detail)
   }
@@ -382,7 +464,7 @@ import os
   /// The fix, under a failure it is known for: the CLI says "Please run
   /// /login", and the panel has no terminal to run it in.
   private func adviseOn(_ failure: String) {
-    guard let advice = AgentFailureAdvice.advice(for: failure) else { return }
+    guard let advice = AgentFailureAdvice.advice(for: failure, client: client) else { return }
     items.append(Item(entry: .notice(advice, isError: false)))
   }
 
@@ -402,7 +484,7 @@ import os
       try input.write(contentsOf: Data(line.utf8))
       return true
     } catch {
-      Self.log.error("Could not write to Claude Code: \(error.localizedDescription, privacy: .public)")
+      Self.log.error("Could not write to the agent: \(error.localizedDescription, privacy: .public)")
       return false
     }
   }
@@ -425,7 +507,9 @@ import os
 
   private func receive(_ line: String, generation: Int) {
     guard generation == self.generation else { return }
-    for event in AgentStreamParser.events(fromLine: line) {
+    let events =
+      client == .codex ? AgentCodexStreamParser.events(fromLine: line) : AgentStreamParser.events(fromLine: line)
+    for event in events {
       handle(event)
     }
   }
@@ -434,11 +518,14 @@ import os
     switch event {
     case .started(let session, let model, _):
       Self.log.info("Agent session \(session, privacy: .public) on \(model ?? "the default model", privacy: .public)")
+      if client == .codex { codexThreadID = session }
 
     case .text(let text):
       items.append(Item(entry: .assistant(text)))
 
     case .toolUse(let use):
+      // Drawn once: Codex repeats a call with its result.
+      guard toolItems[use.id] == nil else { return }
       // Reads get a line of their own. A pre-allowed write gets its card now,
       // with what it is about to replace read before it runs. Any other
       // write's card is drawn by its permission request, which follows.
@@ -514,6 +601,12 @@ import os
         items.append(
           Item(entry: .notice(detail.isEmpty ? "The turn ended with \(result.subtype)." : detail, isError: true)))
         adviseOn(detail)
+      }
+      // A Codex turn's process exits by itself now; the thread lives on in
+      // its id, and the next message starts the next turn's.
+      if client == .codex {
+        process = nil
+        input = nil
       }
       onTurnFinished?()
       if endsAfterTurn { end() }

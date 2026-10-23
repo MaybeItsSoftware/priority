@@ -250,6 +250,8 @@ extension WorkspaceViewModel {
     case .windowOpenThemesFolder: UserThemeLibrary.shared.openFolder()
     case .windowReloadThemes: UserThemeLibrary.shared.reload(force: true)
     case .windowExportTheme: UserThemeLibrary.shared.exportCurrentTheme()
+    case .windowUseClaudeCode: useAgentClient(.claudeCode)
+    case .windowUseCodex: useAgentClient(.codex)
 
     // MARK: Timeline
     case .timelinePreviousDay: moveTimelineDay(by: -1)

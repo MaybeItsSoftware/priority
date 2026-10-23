@@ -70,6 +70,7 @@ final class WorkspaceCommandCatalogTests: XCTestCase {
         .planBoardRenameColumn,
         .planBoardAddColumnLeft, .planBoardAddColumnRight, .planBoardEditColumnRules,
         .planBoardMakeDefaultColumns, .planBoardResetColumns,
+        .windowUseClaudeCode, .windowUseCodex,
         .windowOpenKeymap, .windowReloadKeymap, .windowShowDiagnostics,
         .windowOpenThemesFolder, .windowReloadThemes, .windowExportTheme,
       ])

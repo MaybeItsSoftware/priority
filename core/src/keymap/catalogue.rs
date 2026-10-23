@@ -479,7 +479,13 @@ fn window() -> Vec<Spec> {
         c("windowToggleDoneRail", "Show or hide what you have finished", "Window", &["cmd+ctrl+d"])
             .note("The bottom dock's Done tab: opens it and takes the keyboard; again from inside it closes it"),
         c("windowToggleAgentPanel", "Show or hide the agent panel", "Window", &["cmd+shift+a", "cmd+ctrl+a"])
-            .note("Claude Code in the left dock: reads freely, asks before every change"),
+            .note("Your own Claude Code or Codex in the left dock: reads freely, each change shown with an Undo"),
+        // Which agent new threads run, for the palette; the panel's header
+        // and Settings ▸ Agent have the same choice.
+        c("windowUseClaudeCode", "Use agent: Claude Code", "Window", &[])
+            .note("New agent threads run Claude Code; a running thread keeps its agent"),
+        c("windowUseCodex", "Use agent: Codex", "Window", &[])
+            .note("New agent threads run Codex; a running thread keeps its agent"),
         c("windowToggleProgressDock", "Show or hide the bottom dock", "Window", &["cmd+j"])
             .note("Progress, Done and Timeline, on the tab it was on. ⌘J toggles the bottom dock, as in Zed"),
         c("windowCloseAllDocks", "Close all docks", "Window", &["cmd+option+y"])

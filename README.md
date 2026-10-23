@@ -130,7 +130,7 @@ So none of it is reachable only by something you already have to know.
 | `Cmd+F` / `Cmd+Shift+F` | Search |
 | `Cmd+P` / `gl` | Go to a list — opened empty, it lists the ones you were in most recently first. Every list and nested list, matched by the letters you type (`wsr` finds "Write the spring report"), with its folder beside it. Clicking the list's name at the top of the pane opens it too |
 | `Cmd+Ctrl+I` / `Cmd+Ctrl+D` | The right dock on its Inspector tab / the bottom dock on its Done tab, or put it away |
-| `Cmd+Shift+A` | The left dock's Agent tab — Claude Code, each change it makes shown with an Undo |
+| `Cmd+Shift+A` | The left dock's Agent tab — your Claude Code or Codex, each change it makes shown with an Undo |
 | `Cmd+J` | The bottom dock — Progress, Done and Timeline — on the tab it was on, with the keyboard in it on Done or Timeline, or put it away (Zed's bottom dock) |
 | `Cmd+R`, `r` or `Cmd+Alt+B` / `Cmd+Alt+Y` | The right dock, on the tab it was on and with the keyboard in it, or put it away / close all docks (Zed's) |
 | `Cmd+Shift+{` / `Cmd+Shift+}`, or `[` / `]` | In a dock, its previous / next tab — Inspector and Conditions on the right, Done and Timeline below — with the keyboard brought along (Zed's previous / next tab; on a task pane the same chords change list). `Ctrl+Tab` leaves it for the next region |
@@ -982,9 +982,14 @@ the bottom.
     undo/redo — rather than a bar along its foot; hover one for its name and
     key.
   - **Agent** (`Cmd+Shift+A`) is an assistant panel in the manner of Zed's: your
-    own Claude Code, run headless, with Takt's MCP server as its only
-    tools — no shell, no files, no web, and no API key (it uses your Claude
-    Code login). It **reads freely** — the lists, tasks, dailies, the day log
+    own **Claude Code** or **Codex**, run headless, with Takt's MCP server as
+    its only tools — no shell, no files, no web, and no API key (it uses your
+    own login). Choose which in **Settings ▸ Agent** (which also says which of
+    them are installed), from the chip glyph on the panel's tab bar, or with
+    **Use agent: Claude Code** / **Use agent: Codex** in the palette; the
+    choice is kept, and the quick ask uses it too. A thread keeps the agent it
+    started with — switching mid-thread says so in the transcript, and the
+    next thread (New thread, or after Stop) uses the new one. It **reads freely** — the lists, tasks, dailies, the day log
     and the focus timer — and each read shows as one muted line in the
     transcript. Its **changes apply straight away** — adding, editing,
     completing, moving or deleting anything — and each shows as a card saying
@@ -999,15 +1004,19 @@ the bottom.
     in Settings ▸ Agent (off by default; from the next thread): then every
     change stops as a card with **Approve** and **Deny**, Return approves with
     the card holding the keyboard and Esc denies, and stopping the thread
-    withdraws an unanswered card. Each message also tells it the tasks on
+    withdraws an unanswered card. Codex cannot stop to ask, so with that
+    setting on a Codex thread is given only the reads and says what it would
+    change instead. Each message also tells it the tasks on
     screen with their ids (the first 30), so "these" and "the top three"
     work. Return sends, Shift+Return is a new line, Esc hands the keyboard
     back to the tasks; the glyphs on the tab bar start a new thread and stop
     the current one. Every change is also an ordinary "MCP: …" step in the
-    Undo menu. If Claude Code is not installed where Takt
-    looks (`~/.local/bin`, `~/.claude/local`, Homebrew, `/usr/local/bin`), the
-    panel says so and takes a path; if it is not signed in, too old or out of
-    usage, the error says what to run. **Standing instructions** can be written
+    Undo menu. If the chosen agent is not installed where Takt
+    looks (for `claude`: `~/.local/bin`, `~/.claude/local`, Homebrew,
+    `/usr/local/bin`; for `codex`: Homebrew, `/usr/local/bin`, `~/.local/bin`,
+    `~/.npm-global/bin`), the panel says so, takes a path, and offers the
+    other agent if that one is installed; if it is not signed in, too old or
+    out of usage, the error says what to run. **Standing instructions** can be written
     for the whole account (Settings ▸ Agent), for a folder and for a list (in
     its settings, `oo`); a message carries the account's, then each enclosing
     folder's, then the list's, and only when they changed since the last

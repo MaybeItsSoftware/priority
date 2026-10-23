@@ -43,7 +43,7 @@ import Observation
       case .keyboard:
         "Global hotkeys, where Quick Add captures, and the window's keymap."
       case .agent:
-        "What the agent panel's assistant is told in every thread."
+        "Which agent the panel runs, and what it is told in every thread."
       case .plugins:
         "Plugins you installed yourself, as packages in the plugins folder."
       case .sync:
@@ -75,7 +75,7 @@ import Observation
       case .appearance:
         ["theme", "dark", "light", "font", "typeface", "text size", "colour", "color", "zed", "grape", "priority"]
       case .keyboard: ["hotkey", "shortcut", "quick add", "capture", "keymap", "keybinding"]
-      case .agent: ["claude", "assistant", "instructions", "context", "prompt", "ai"]
+      case .agent: ["claude", "codex", "client", "assistant", "instructions", "context", "prompt", "ai"]
       case .plugins: ["install", "package", "extension"]
       case .sync: ["account", "devices", "iphone", "android", "server", "password"]
       case .advanced: ["export", "markdown", "json", "backup", "diagnostics", "debug", "support"]

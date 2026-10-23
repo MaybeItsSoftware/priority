@@ -50,11 +50,11 @@ struct CelebrationPreview: View {
   var body: some View {
     VStack(alignment: .leading, spacing: theme.space.sm) {
       HStack(spacing: theme.space.sm) {
-        Picker("Occasion", selection: $occasion) {
-          ForEach(Occasion.allCases) { Text($0.title).tag($0) }
-        }
-        .labelsHidden()
-        .pickerStyle(.segmented)
+        // The house chips rather than the stock segmented control, whose
+        // bezel and accent are the system's.
+        ThemedSegmentedPicker(
+          selection: $occasion, options: Occasion.allCases.map { ThemedPickerOption($0.title, value: $0) })
+          .accessibilityLabel("Occasion")
         Button {
           play()
         } label: {

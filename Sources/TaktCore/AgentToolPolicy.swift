@@ -145,28 +145,20 @@ public enum AgentInvocation {
   }
 }
 
-/// Where the user's Claude Code is.
+/// Where the user's agent is.
 ///
 /// A GUI app does not see the shell's `PATH` — or its aliases, which is how
 /// `claude` is often spelled — so the binary is looked for where the installer
-/// puts it, after a path the user set by hand.
+/// puts it, after a path the user set by hand (`AgentClient.candidates`).
 public enum AgentCLILocator {
 
+  /// Claude Code's hand-set path, from before there was a choice of agent.
   public static let userPathDefaultsKey = "agentClaudeExecutablePathV1"
 
-  public static func candidates(userPath: String?, homeDirectory: String) -> [String] {
-    var candidates: [String] = []
-    if let trimmed = userPath?.trimmingCharacters(in: .whitespacesAndNewlines), !trimmed.isEmpty {
-      candidates.append((trimmed as NSString).expandingTildeInPath)
-    }
-    candidates += [
-      "\(homeDirectory)/.local/bin/claude",
-      "\(homeDirectory)/.claude/local/claude",
-      "/opt/homebrew/bin/claude",
-      "/usr/local/bin/claude",
-    ]
-    var seen = Set<String>()
-    return candidates.filter { seen.insert($0).inserted }
+  public static func candidates(
+    userPath: String?, homeDirectory: String, client: AgentClient = .claudeCode
+  ) -> [String] {
+    client.candidates(userPath: userPath, homeDirectory: homeDirectory)
   }
 
   public static func resolve(candidates: [String], isExecutable: (String) -> Bool) -> String? {
@@ -178,8 +170,12 @@ public enum AgentCLILocator {
 public enum AgentSystemPrompt {
 
   /// The system prompt for a thread. Replaces Claude Code's own, which is
-  /// about writing software with tools this process does not have.
-  public static func text(today: Date, timeZone: TimeZone = .current, asksBeforeChanges: Bool = false) -> String {
+  /// about writing software with tools this process does not have. With
+  /// `canChange` false the thread has only the reads: the user asks before
+  /// changes and the agent has no way to ask (`AgentClient.canAskBeforeChanges`).
+  public static func text(
+    today: Date, timeZone: TimeZone = .current, asksBeforeChanges: Bool = false, canChange: Bool = true
+  ) -> String {
     let formatter = DateFormatter()
     formatter.locale = Locale(identifier: "en_GB")
     formatter.timeZone = timeZone
@@ -200,7 +196,7 @@ public enum AgentSystemPrompt {
       truth; ids there are uppercase UUIDs. The task_* tools reach Checkvist, an optional \
       integration the user may not have set up. Use the read tools freely to answer questions.
 
-      \(asksBeforeChanges ? approvalRule : undoRule)
+      \(!canChange ? readOnlyRule : asksBeforeChanges ? approvalRule : undoRule)
 
       \(keysRule)
 
@@ -229,6 +225,15 @@ public enum AgentSystemPrompt {
     in one sentence what you are about to change, then call it with exactly that change. Make \
     one change per call, so each can be approved or declined on its own. If a change is \
     declined, do not retry it; ask what they would like instead.
+    """
+
+  /// The rule when the thread has no writes at all.
+  static let readOnlyRule = """
+    In this thread you can only read. The user wants to approve every change before it runs, \
+    and this agent has no way to ask them, so the tools that change things are switched off. \
+    If they ask for a change, say exactly what you would change, and that they can make it \
+    themselves or switch the agent to Claude Code (Settings ▸ Agent) to approve changes as you \
+    go.
     """
 
   /// The rule for writes when they apply at once.

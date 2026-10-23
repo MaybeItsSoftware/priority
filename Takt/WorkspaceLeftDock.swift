@@ -116,13 +116,15 @@ struct WorkspaceSidebarActions: View {
   }
 }
 
-/// The agent's actions: a new thread, and stop while one is running.
+/// The agent's actions: which agent, a new thread, and stop while one is
+/// running.
 struct WorkspaceAgentActions: View {
   @Environment(WorkspaceViewModel.self) private var model
   @Environment(\.theme) private var theme
 
   var body: some View {
     HStack(spacing: theme.space.xxs) {
+      clientMenu
       WorkspacePaneIconButton("stop.fill", title: "Stop", note: "Stop the assistant. Nothing waiting for approval runs") {
         model.agent.stop()
       }
@@ -133,5 +135,41 @@ struct WorkspaceAgentActions: View {
       }
       .disabled(model.agent.items.isEmpty && !model.agent.isRunning)
     }
+  }
+
+  /// The agent new threads run, ticked, each saying whether it is on this
+  /// Mac; the palette's "Use agent" commands are the same choice. While a
+  /// thread runs on another agent, a way to move to the chosen one now.
+  private var clientMenu: some View {
+    let agent = model.agent
+    return Menu {
+      Picker(
+        "Agent",
+        selection: Binding(get: { agent.clientSetting }, set: { model.useAgentClient($0) })
+      ) {
+        ForEach(AgentClient.allCases) { client in
+          Text(agent.executablePath(for: client) == nil ? "\(client.displayName) — not installed" : client.displayName)
+            .tag(client)
+        }
+      }
+      .pickerStyle(.inline)
+      if agent.isRunning, agent.client != agent.clientSetting {
+        Divider()
+        Button("New thread on \(agent.clientSetting.displayName)") {
+          agent.newThread()
+          model.focusAgentInput()
+        }
+      }
+      Divider()
+      Button("Agent Settings…") { AppDelegate.shared.menuSettings(pane: .agent) }
+    } label: {
+      WorkspacePaneIconGlyph(symbol: "cpu")
+    }
+    .menuStyle(.borderlessButton)
+    .menuIndicator(.hidden)
+    .fixedSize()
+    .help("Agent: \(agent.clientSetting.displayName) · which agent new threads run")
+    .accessibilityLabel("Agent")
+    .accessibilityValue(agent.clientSetting.displayName)
   }
 }
