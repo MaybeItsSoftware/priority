@@ -165,6 +165,12 @@ struct WorkspaceTaskDraftRow: View {
       model.endTaskDraft()
       return
     }
+    // A start on or after the due day is refused, as the editor refuses it;
+    // the text stays, with the reason beside it, for one of them to change.
+    guard TaskCapture.parse(text).problem == nil else {
+      NSSound.beep()
+      return
+    }
     model.taskDraftText = ""
     model.taskDraftSelection = nil
     model.submitAddField(named: text)

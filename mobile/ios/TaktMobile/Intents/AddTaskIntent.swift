@@ -13,7 +13,7 @@ import WidgetKit
 struct AddTaskIntent: AppIntent {
   static let title: LocalizedStringResource = "Add task to Takt"
   static let description = IntentDescription(
-    "Adds a task to Takt. Details typed on the end — 45m, #tag, @fri, !1 — are filed with it.")
+    "Adds a task to Takt. Details typed on the end — 45m, #tag, @fri, ^mon, !1 — are filed with it.")
 
   @Parameter(title: "Title", requestValueDialog: "What's the task?")
   var taskTitle: String

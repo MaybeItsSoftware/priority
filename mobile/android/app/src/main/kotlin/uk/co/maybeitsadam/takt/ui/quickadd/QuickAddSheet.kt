@@ -61,7 +61,7 @@ import uk.co.maybeitsadam.takt.ui.theme.Metrics
 import uk.co.maybeitsadam.takt.ui.theme.PIcons
 
 /**
- * Quick add: one field that reads `45m #work @fri !1` off the end of what you
+ * Quick add: one field that reads `45m #work ^mon @fri !1` off the end of what you
  * type and shows it as chips before you add, and where it goes. It stays open
  * after Add so a run of tasks can go in one sitting.
  */

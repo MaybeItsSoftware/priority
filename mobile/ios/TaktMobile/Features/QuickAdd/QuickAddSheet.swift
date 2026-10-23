@@ -93,11 +93,17 @@ struct QuickAddSheet: View {
         ForEach(Array(labels.enumerated()), id: \.offset) { _, label in
           Tag(text: label, tint: theme.primary, mono: true)
         }
+        // A start on or after the due day: not filed until one changes.
+        if let problem = capture.problem {
+          Tag(text: problem, tint: theme.danger)
+        }
       }
     }
     .animation(.snappy(duration: 0.15), value: labels)
     .accessibilityElement(children: .ignore)
-    .accessibilityLabel(labels.isEmpty ? "" : "Will set \(labels.joined(separator: ", "))")
+    .accessibilityLabel(
+      labels.isEmpty
+        ? "" : (["Will set \(labels.joined(separator: ", "))", capture.problem].compactMap { $0 }.joined(separator: ". ")))
     .accessibilityIdentifier("quickAdd.chips")
   }
 
@@ -136,5 +142,6 @@ struct QuickAddSheet: View {
 
 extension TaskCapture {
   /// The syntax, in one line under the field.
-  static let syntaxHintText = "End with 30m, @fri, #tag or !1 to set an estimate, due day, tag or priority."
+  static let syntaxHintText =
+    "End with 30m, @fri, ^mon, #tag or !1 to set an estimate, due day, start day, tag or priority."
 }

@@ -128,7 +128,7 @@ extension WorkspaceModel {
   // MARK: - Creating
 
   /// Creates a task from typed text, reading capture tokens (`45m #work
-  /// @fri !1`) off the end of the title.
+  /// ^mon @fri !1`) off the end of the title.
   @discardableResult
   func createTask(
     _ typed: String, listID: String, parentTaskID: String? = nil, adjacentTo adjacentID: String? = nil,

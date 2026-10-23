@@ -12,7 +12,8 @@ extension WorkspaceStore {
   /// preview of what would be read off it.
   ///
   /// `defaultDueAt` is the due date when the text names none — Today's field
-  /// passes the day, so what you add there is due on it. A date you typed wins.
+  /// passes the day, so what you add there is due on it. A date you typed wins,
+  /// and so does a start typed with `^mon` over `startAt`.
   public func createTask(
     capturing typed: String,
     listId: String,
@@ -28,7 +29,7 @@ extension WorkspaceStore {
     let capture = TaskCapture.parse(typed, now: now)
     return try createTask(
       listId: listId, title: capture.title, parentTaskId: parentTaskId, kanbanColumn: kanbanColumn,
-      startAt: startAt, atTop: atTop, adjacentTaskId: adjacentTaskId, above: above,
+      startAt: capture.startAt ?? startAt, atTop: atTop, adjacentTaskId: adjacentTaskId, above: above,
       dueAt: capture.dueAt ?? defaultDueAt, estimateSeconds: capture.estimateSeconds, tags: capture.tags,
       priority: capture.priority, waitingOn: capture.waitingOn, externalLinks: capture.links, now: now)
   }
@@ -49,7 +50,8 @@ extension WorkspaceStore {
     let capture = TaskCapture.parse(typed, now: now)
     let new = NewTask(
       listId: listId, title: capture.title, parentTaskId: parentTaskId, kind: WorkspaceItemKind.task.rawValue,
-      notes: "", kanbanColumn: nil, startAtMs: nil, dueAtMs: (dueAt ?? capture.dueAt)?.coreMilliseconds,
+      notes: "", kanbanColumn: nil, startAtMs: capture.startAt?.coreMilliseconds,
+      dueAtMs: (dueAt ?? capture.dueAt)?.coreMilliseconds,
       estimateSeconds: (estimateSeconds ?? capture.estimateSeconds).map(Int64.init), tags: capture.tags,
       priority: capture.priority.map(Int64.init), waitingOn: capture.waitingOn, externalLinks: capture.links, atTop: false,
       adjacentTaskId: nil, above: false)

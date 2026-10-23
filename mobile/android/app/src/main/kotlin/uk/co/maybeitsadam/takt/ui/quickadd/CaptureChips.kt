@@ -18,19 +18,19 @@ import uk.co.maybeitsadam.takt.ui.theme.TaktTheme
 import uk.co.maybeitsadam.takt.ui.theme.PIcons
 
 /**
- * A token's colour: the estimate is neutral, the due day azure, tags purple, priority its own
- * hue, and who it waits on amber, the colour of pending.
+ * A token's colour: the estimate is neutral, the start and due days azure, tags purple,
+ * priority its own hue, and who it waits on amber, the colour of pending.
  */
 @Composable
 fun captureChipColor(chip: CaptureChip): Color = when (chip.kind) {
     CaptureChipKind.ESTIMATE -> TaktTheme.colors.mutedText
-    CaptureChipKind.DUE -> TaktTheme.colors.primary
+    CaptureChipKind.START, CaptureChipKind.DUE -> TaktTheme.colors.primary
     CaptureChipKind.TAG -> TaktTheme.colors.categoricalPurple
     CaptureChipKind.PRIORITY -> priorityColor(chip.priority)
     CaptureChipKind.WAITING -> TaktTheme.colors.warning
 }
 
-/** The found tokens as squarish chips, read aloud as one sentence. */
+/** The found tokens as squarish chips, read aloud as one sentence; a refusal last, in danger. */
 @Composable
 fun CaptureChipRow(preview: CapturePreview, modifier: Modifier = Modifier) {
     Row(
@@ -47,10 +47,11 @@ fun CaptureChipRow(preview: CapturePreview, modifier: Modifier = Modifier) {
                 mono = chip.kind == CaptureChipKind.ESTIMATE || chip.kind == CaptureChipKind.PRIORITY,
                 leading = when (chip.kind) {
                     CaptureChipKind.ESTIMATE -> PIcons.Timer
-                    CaptureChipKind.DUE -> PIcons.Calendar
+                    CaptureChipKind.START, CaptureChipKind.DUE -> PIcons.Calendar
                     else -> null
                 },
             )
         }
+        preview.problem?.let { Tag(it, color = TaktTheme.colors.danger) }
     }
 }
