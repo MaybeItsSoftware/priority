@@ -937,6 +937,15 @@ struct DailyBadge: View {
   let isDoneToday: Bool
 
   var body: some View {
+    // The click target is a pane icon's square, taller than a line of text;
+    // laid out at no height of its own, so a row with a daily stands exactly
+    // as tall as one without.
+    Color.clear
+      .frame(width: theme.paneIconButtonSize, height: 1)
+      .overlay { badge }
+  }
+
+  private var badge: some View {
     Button {
       model.toggleDailyProgress(task)
     } label: {
