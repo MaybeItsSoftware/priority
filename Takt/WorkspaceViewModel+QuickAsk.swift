@@ -32,13 +32,14 @@ extension WorkspaceViewModel {
   }
 
   /// Sends `text` about `task` on a fresh quick-ask thread. The panel's
-  /// settings — where `claude` is, and whether changes wait for Approve — are
-  /// the quick thread's too.
+  /// settings — which agent, where it is, and whether changes wait for
+  /// Approve — are the quick thread's too.
   func sendQuickAsk(_ text: String, about task: WorkspaceTask) {
     guard !quickAgent.isWorking, quickAgent.pendingApproval == nil else { return }
     agentInstructions.saveAccount()
     quickAgent.newThread()
-    quickAgent.userExecutablePath = agent.userExecutablePath
+    quickAgent.clientSetting = agent.clientSetting
+    quickAgent.userExecutablePaths = agent.userExecutablePaths
     quickAgent.asksBeforeChangesSetting = agent.asksBeforeChangesSetting
     quickAgent.endsAfterTurn = true
     quickAgent.currentValues = { [weak self] tool, input in self?.agentCurrentValues(tool: tool, input: input) ?? [:] }

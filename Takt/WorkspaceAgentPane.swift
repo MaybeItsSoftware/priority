@@ -3,8 +3,9 @@ import TaktCore
 import TaktWorkspace
 import SwiftUI
 
-/// The agent panel: a conversation with the user's own Claude Code about their
-/// tasks, in the left dock.
+/// The agent panel: a conversation with the user's own coding agent — Claude
+/// Code or Codex, `WorkspaceAgentSession.clientSetting` — about their tasks, in
+/// the left dock.
 ///
 /// Zed's agent panel is the model — a transcript that reads top to bottom, the
 /// assistant's tool calls as quiet one-line entries in it, and a message field
@@ -26,7 +27,7 @@ struct WorkspaceAgentPane: View {
 
   var body: some View {
     VStack(spacing: 0) {
-      // Ahead of the transcript too: a message sent with no Claude Code leaves
+      // Ahead of the transcript too: a message sent with no agent leaves
       // a notice saying so, and the place to fix it has to stay on screen.
       if agent.executablePath == nil && !agent.isRunning {
         WorkspaceAgentSetup()
@@ -207,10 +208,12 @@ struct WorkspaceAgentPane: View {
   /// Room for about four lines before the field scrolls.
   static let inputHeight: CGFloat = 72
 
+  /// Names the agent the next message goes to: the thread's while one is
+  /// running, otherwise the one chosen.
   private var placeholder: String {
     if agent.pendingApproval != nil { return "Approve or deny the change above first" }
     if agent.isWorking { return "Working…" }
-    return "Ask about your tasks…"
+    return "Ask \((agent.isRunning ? agent.client : agent.clientSetting).displayName) about your tasks…"
   }
 
   private var hint: String {
@@ -554,21 +557,28 @@ private struct WorkspaceAgentCardButtonBody: View {
   }
 }
 
-/// Shown when no `claude` could be found: what the panel needs and how to
-/// give it one.
+/// Shown when the chosen agent could not be found: what the panel needs, how
+/// to give it one, and the other agent to switch to if that one is here.
 struct WorkspaceAgentSetup: View {
   @Environment(WorkspaceViewModel.self) private var model
   @Environment(\.theme) private var theme
   @State private var path = ""
 
   var body: some View {
+    let client = model.agent.clientSetting
     VStack(alignment: .leading, spacing: theme.space.md) {
-      Text("The agent panel runs Claude Code, which isn't installed where Takt looked.")
+      Text("The agent panel is set to run \(client.displayName), which isn't installed where Takt looked.")
         .font(theme.bodyFont())
         .foregroundStyle(theme.ink)
-      Text("Install it from claude.com/claude-code and sign in once in a terminal (`claude`), or give the path to an existing `claude` binary below. No API key is needed; it uses your Claude Code login.")
+      Text(client.installHint)
         .font(theme.captionFont)
         .foregroundStyle(theme.muted)
+      let installed = AgentClient.allCases.filter { $0 != client && model.agent.executablePath(for: $0) != nil }
+      ForEach(installed) { other in
+        Button("Use \(other.displayName) instead") { model.useAgentClient(other) }
+          .buttonStyle(WorkspaceAgentCardButtonStyle(tint: theme.primary))
+          .help("\(other.displayName) is installed · switch the panel to it")
+      }
       VStack(alignment: .leading, spacing: theme.space.xxs) {
         MicroLabel("Looked in")
         ForEach(model.agent.executableCandidates, id: \.self) { candidate in
@@ -580,7 +590,7 @@ struct WorkspaceAgentSetup: View {
         }
       }
       HStack(spacing: theme.space.xs) {
-        TextField("/path/to/claude", text: $path)
+        TextField("/path/to/\(client.executableName)", text: $path)
           .textFieldStyle(.plain)
           .font(theme.monoFont(size: theme.scale.caption))
           .padding(.horizontal, theme.space.sm)
@@ -603,6 +613,7 @@ struct WorkspaceAgentSetup: View {
     .padding(theme.listGutter)
     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
     .onAppear { path = model.agent.userExecutablePath }
+    .onChange(of: client) { _, _ in path = model.agent.userExecutablePath }
   }
 
   private func usePath() {

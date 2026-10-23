@@ -357,6 +357,21 @@ extension WorkspaceViewModel {
     agentInputFocusRequest += 1
   }
 
+  /// The agent new threads run, from Settings, the panel's header or the
+  /// palette's "Use agent" commands. The quick ask copies it at its next ask.
+  /// A thread already running stays where it is and says so in its
+  /// transcript; the status bar says what happens next either way, since the
+  /// palette is not where the panel is.
+  func useAgentClient(_ client: AgentClient) {
+    agent.clientSetting = client
+    let installed = agent.executablePath(for: client) != nil
+    let next = agent.isRunning && agent.client != client ? "from the next thread" : "from now on"
+    onStatusMessage?(
+      installed
+        ? "Agent: \(client.displayName), \(next)"
+        : "Agent: \(client.displayName), which isn't installed where Takt looks — the agent panel takes a path")
+  }
+
   /// The agent's message, with a line saying where the user is so "this
   /// list" and "this task" mean something. The standing instructions for
   /// there, and the tasks on screen, go with it whenever they differ from the

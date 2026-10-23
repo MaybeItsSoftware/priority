@@ -2,11 +2,12 @@ import SwiftUI
 import TaktCore
 import TaktWorkspace
 
-/// The Agent page: the standing instructions for the whole account, and where
-/// the narrower ones are written.
+/// The Agent page: which agent the panel runs, the standing instructions for
+/// the whole account, and where the narrower ones are written.
 extension SettingsView {
   @ViewBuilder
   var agentPane: some View {
+    agentClientSection
     let instructions = workspace.agentInstructions
     Section {
       AgentInstructionsField(
@@ -31,7 +32,10 @@ extension SettingsView {
     } footer: {
       Text(
         agent.asksBeforeChangesSetting
-          ? "Each change the agent wants to make waits for Approve. Takes effect from the next thread."
+          ? agent.clientSetting.canAskBeforeChanges
+            ? "Each change the agent wants to make waits for Approve. Takes effect from the next thread."
+            : "\(agent.clientSetting.displayName) cannot stop to ask, so with this on it only reads: it says what "
+              + "it would change and leaves the change to you. Takes effect from the next thread."
           : "The agent's changes apply straight away, each shown in the panel with an Undo. "
             + "Takes effect from the next thread.")
     }
@@ -51,6 +55,50 @@ extension SettingsView {
         SettingsHeader("Written for folders and lists")
       }
     }
+  }
+
+  /// Which agent the panel and the quick ask run, with whether each is on
+  /// this Mac. The panel's header has the same choice.
+  @ViewBuilder
+  private var agentClientSection: some View {
+    let agent = workspace.agent
+    Section {
+      SettingsRow("Agent", detail: agentClientDetail) {
+        ThemedMenuPicker(
+          "Agent",
+          selection: Binding(get: { agent.clientSetting }, set: { agent.clientSetting = $0 }),
+          options: AgentClient.allCases.map { client in
+            ThemedPickerOption(
+              agent.executablePath(for: client) == nil ? "\(client.displayName) — not installed" : client.displayName,
+              value: client)
+          })
+      }
+      ForEach(AgentClient.allCases) { client in
+        SettingsRow(client.displayName, detail: agent.executablePath(for: client) ?? "Not found where Takt looks") {
+          ThemedTag(
+            agent.executablePath(for: client) == nil ? "Not installed" : "Installed",
+            tint: agent.executablePath(for: client) == nil ? nil : theme.success)
+        }
+      }
+    } header: {
+      SettingsHeader("Agent")
+    } footer: {
+      Text(
+        "The panel runs your own agent, signed in as you, with Takt's tools and nothing else. "
+          + "A thread keeps the agent it started with; a change applies from the next thread. "
+          + "The palette's \"Use agent\" commands and the panel's header switch it too.")
+    }
+  }
+
+  private var agentClientDetail: String {
+    let agent = workspace.agent
+    if agent.isRunning, agent.client != agent.clientSetting {
+      return "The thread in the panel stays on \(agent.client.displayName) until you start a new one."
+    }
+    if agent.executablePath == nil {
+      return "\(agent.clientSetting.displayName) isn't installed where Takt looks. The agent panel takes a path to it."
+    }
+    return "Which coding agent the agent panel and quick ask (aa) run."
   }
 
   /// Every folder and list with instructions, folders first, by name.

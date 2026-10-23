@@ -2,9 +2,10 @@
 
 The left dock's **Agent** tab (`Cmd+Shift+A` as in Zed, or `Cmd+Ctrl+A`, or the sparkles glyph at the left
 of the status bar) is a conversation with an assistant about your tasks, laid
-out like Zed's agent panel. The assistant is the user's own **Claude Code**,
-run headless, the way Zed runs its external agents: no API key, no account of
-Takt's own, just the `claude` login already on the machine.
+out like Zed's agent panel. The assistant is the user's own **Claude Code** or
+**Codex**, run headless, the way Zed runs its external agents: no API key, no
+account of Takt's own, just the `claude` or `codex` login already on the
+machine. Which one is a setting (below, "Choosing the agent").
 
 The rule it is built around:
 
@@ -25,7 +26,9 @@ thread.
 
 | File | What it is |
 |---|---|
+| `Sources/TaktCore/AgentClient.swift` | The agents the panel can run, where each is looked for, and the stored choice |
 | `Sources/TaktCore/AgentStreamProtocol.swift` | The stream-json wire format: lines in to `AgentStreamEvent`s, and the user messages and `control_response`s out |
+| `Sources/TaktCore/AgentCodexProtocol.swift` | Codex's `exec --json` lines to the same `AgentStreamEvent`s, and the `codex exec` invocation |
 | `Sources/TaktCore/AgentToolPolicy.swift` | Which tools are pre-allowed, the exact `claude` invocation, where `claude` is looked for, the system prompt |
 | `Sources/TaktCore/AgentToolSummary.swift` | A tool call in words, for the change card and the read lines |
 | `Sources/TaktCore/AgentContext.swift` | The standing instructions' block and folder chain, and the ledger that sends a block only when it changed |
@@ -40,15 +43,42 @@ thread.
 | `Takt/WorkspaceQuickAskOverlay.swift` | The quick ask's popup (`aa`) |
 | `Takt/WorkspaceViewModel+QuickAsk.swift` | Its thread, subject and card keys |
 
-The first three are pure and tested in `corelogic-tests/AgentStreamProtocolTests.swift`
-and `AgentToolPolicyTests.swift`; the stream-json fixtures there are lines
-from a real session.
+The `Sources/TaktCore` files are pure and tested in `corelogic-tests/AgentStreamProtocolTests.swift`,
+`AgentToolPolicyTests.swift` and `AgentCodexProtocolTests.swift`; the fixtures
+there are lines from real sessions.
 
-## Finding Claude Code
+## Choosing the agent
+
+The panel runs one of the agents in `AgentClient`: **Claude Code** (the
+default, and the only one before there was a choice) or **Codex**. These are
+not the MCP client catalogue (`MCPClientCatalog`, Settings ▸ MCP): most of
+those — Claude Desktop, Cursor, VS Code, Zed — are editors with an agent
+inside, not a command the panel can start and talk to over a pipe.
+
+The choice is in three places, all the same setting
+(`WorkspaceAgentSession.clientSetting`, `UserDefaults` key `agentClientV1`):
+
+- **Settings ▸ Agent ▸ Agent**: a picker, with a row per agent saying whether
+  it is installed and where.
+- The **chip glyph** on the agent tab's bar: the same choice as a menu, a
+  "New thread on …" item while a thread runs on the other agent, and a way to
+  the settings page.
+- The palette's **Use agent: Claude Code** and **Use agent: Codex**
+  (`windowUseClaudeCode`, `windowUseCodex`; no default keys), which also say
+  in the status bar what happens next.
+
+It is read when a thread starts. A thread under way keeps the agent it
+started with, and switching says so in its transcript; the next thread — New
+thread, or the next message after Stop — uses the new one. The quick ask
+(`aa`) copies the panel's choice at each ask. When the chosen agent is not
+installed the setup state names it, takes a path to it, and offers the other
+one if that is installed.
+
+## Finding the agent
 
 A GUI app sees neither the shell's `PATH` nor its aliases — `claude` is often an
 alias — so the binary is looked for directly, first match wins
-(`AgentCLILocator`):
+(`AgentClient.candidates`). For Claude Code:
 
 1. A path set by hand in the panel's setup state
    (`UserDefaults` key `agentClaudeExecutablePathV1`)
@@ -56,15 +86,20 @@ alias — so the binary is looked for directly, first match wins
 3. `~/.claude/local/claude` (the old local install)
 4. `/opt/homebrew/bin/claude`, `/usr/local/bin/claude`
 
+For Codex: a path set by hand (`agentCodexExecutablePathV1`), then
+`/opt/homebrew/bin/codex`, `/usr/local/bin/codex`, `~/.local/bin/codex` and
+`~/.npm-global/bin/codex`.
+
 If none is executable the panel says so, lists the paths it tried, and takes a
 path. That setup state stays at the top of the panel, transcript or not, for as
-long as there is no `claude` to run.
+long as there is no binary to run.
 
-When Claude Code is there but fails — a turn ending in an error, or the
+When the agent is there but fails — a turn ending in an error, or the
 process dying with something on stderr — the panel shows the CLI's message and,
-for the failures it knows, the fix under it (`AgentFailureAdvice`): not signed
-in (run `claude` in Terminal and `/login`), too old for these flags (`claude
-update`), a usage limit, or no connection. The CLI's own wording is written for
+for the failures it knows, the fix under it (`AgentFailureAdvice`, worded for
+the agent that failed): not signed in (run `claude` in Terminal and `/login`,
+or `codex login`), too old for these flags (`claude update`, or upgrade
+Codex), a usage limit, or no connection. The CLI's own wording is written for
 a terminal the panel does not have.
 
 Takt's MCP server is found the way `Takt --mcp-server` finds it
@@ -74,6 +109,8 @@ at `Contents/Helpers/takt`, then an installed CLI. A build made with
 assistant, and the panel says that instead of starting.
 
 ## The invocation
+
+### Claude Code
 
 One process per thread, started on the first message, in an empty working
 directory of the app's own (`~/Library/Application Support/Takt/Agent`) so
@@ -134,6 +171,51 @@ The tasks on screen go with it too, top to bottom with their ids, capped at 30
 (`AgentSystemPrompt.visibleTasks`), so "these", "the top three" and
 "everything here" need no read first. Like the standing instructions below, the
 list is sent only when it differs from the last one this process was sent.
+
+### Codex
+
+Codex's headless mode is a process per turn, not per thread. The first message
+starts a thread; each later one resumes it by the id the first turn's
+`thread.started` line gave, from Codex's own session store
+(`AgentCodexInvocation`, in the same working directory):
+
+```text
+codex exec [resume <thread id>]
+  --json --skip-git-repo-check --ignore-user-config --ignore-rules
+  -c sandbox_mode="read-only" -c web_search="disabled"
+  -c developer_instructions="<AgentSystemPrompt.text>"
+  -c mcp_servers.takt.command="<helper>" -c mcp_servers.takt.args=["--mcp-server"]
+  -c mcp_servers.takt.enabled_tools=["task_lists",…]   (reads and writes; reads only when asking first)
+  -c mcp_servers.takt.default_tools_approval_mode="approve"
+  -c features.shell_tool=false -c features.unified_exec=false -c features.view_image=false
+  -c features.browser_use=false -c features.computer_use=false -c features.apps=false -c features.goals=false
+  -
+```
+
+The message is the process's stdin (the trailing `-`), closed once written;
+the turn streams back as `item.started` / `item.completed` lines and ends with
+`turn.completed` or `turn.failed`, which `AgentCodexStreamParser` turns into
+the same events as Claude Code's, so the cards, Undo and the rest are shared.
+Verified on Codex 0.156.
+
+- **`--ignore-user-config`** and **`--ignore-rules`** play
+  `--setting-sources ""`'s part: the user's `config.toml`, profiles and exec
+  rules do not apply. Sign-in is not config, so it holds.
+- **`sandbox_mode="read-only"`**, `web_search="disabled"` and the features
+  switched off leave no shell, browser, web search or file writes. They are
+  set with `-c` rather than `--disable`, which refuses a feature name the
+  installed Codex does not know.
+- **`enabled_tools`** is the only MCP server's tool list, and
+  **`default_tools_approval_mode="approve"`** approves them in advance:
+  headless Codex has no one to ask, and refuses every MCP call that needs
+  approval ("approval policy is never").
+- **Ask before changing tasks** cannot work the Claude Code way, for the same
+  reason: there is no control request to answer. With it on, a Codex thread is
+  given only the reads and told so (`AgentSystemPrompt.readOnlyRule`), and
+  describes changes instead of making them. Settings ▸ Agent says this under
+  the switch.
+- Codex keeps its sessions (`~/.codex/sessions`) — it needs them to resume —
+  so unlike Claude Code's, a Codex thread is written to disk.
 
 ## Standing instructions
 
@@ -432,3 +514,7 @@ The process stays alive with `--input-format stream-json`; a follow-up is one
 more user line on stdin, and the conversation carries on. Stop ends the
 process but keeps the transcript to read; the next message starts a fresh
 process with no memory of it. New thread clears both.
+
+A Codex thread is its id: each turn's process exits when the turn ends, and
+the next message resumes the id. Stop and New thread forget it, so the next
+message starts a new Codex thread, as it would a new Claude Code process.

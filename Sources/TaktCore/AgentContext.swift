@@ -137,28 +137,34 @@ extension AgentSystemPrompt {
   public static let noVisibleTasks = "[No tasks are on the user's screen now.]"
 }
 
-/// What to do about a failure Claude Code reported, in words the user can act
-/// on. The CLI's own messages are written for a terminal ("Please run
+/// What to do about a failure the agent reported, in words the user can act
+/// on. The CLIs' own messages are written for a terminal ("Please run
 /// /login"), and in the panel there is no terminal to run it in.
 public enum AgentFailureAdvice {
 
   /// The fix for `message` — a turn's error, or the stderr of a process that
   /// died — or nil when it is not one this knows.
-  public static func advice(for message: String) -> String? {
+  public static func advice(for message: String, client: AgentClient = .claudeCode) -> String? {
     let text = message.lowercased()
     func has(_ needles: String...) -> Bool { needles.contains(where: text.contains) }
-    if has("/login", "not logged in", "invalid api key", "please log in", "authentication", "oauth token") {
-      return "Claude Code is not signed in. Open Terminal, run `claude`, type `/login` and finish signing in, "
+    let name = client.displayName
+    if has("/login", "not logged in", "invalid api key", "please log in", "authentication", "oauth token", "codex login")
+    {
+      let command = client == .codex ? "`codex login`" : "`claude`, type `/login`"
+      return "\(name) is not signed in. Open Terminal, run \(command) and finish signing in, "
         + "then send your message again here."
     }
-    if has("unknown option", "unknown argument", "unrecognized option") {
-      return "This Claude Code is too old for the agent panel. Run `claude update` in Terminal, then start a new thread."
+    if has("unknown option", "unknown argument", "unrecognized option", "unexpected argument", "unknown configuration field")
+    {
+      let update = client == .codex ? "Update it (`brew upgrade codex` or `npm install -g @openai/codex`)" : "Run `claude update` in Terminal"
+      return "This \(name) is too old for the agent panel. \(update), then start a new thread."
     }
     if has("usage limit", "rate limit", "limit reached", "credit balance", "quota") {
-      return "Claude Code has hit a usage limit. Wait for it to reset (`claude` in Terminal says when), then try again."
+      let check = client == .codex ? "`codex` in Terminal says when" : "`claude` in Terminal says when"
+      return "\(name) has hit a usage limit. Wait for it to reset (\(check)), then try again."
     }
     if has("enotfound", "econnrefused", "econnreset", "connection error", "fetch failed", "network error") {
-      return "Claude Code could not reach Anthropic. Check the connection, then send the message again."
+      return "\(name) could not reach \(client.provider). Check the connection, then send the message again."
     }
     return nil
   }
