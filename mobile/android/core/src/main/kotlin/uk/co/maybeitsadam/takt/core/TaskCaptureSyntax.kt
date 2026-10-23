@@ -5,7 +5,8 @@ import java.time.ZoneId
 
 /**
  * What a typed task says about itself beyond its title:
- * `Write the release notes 45m #work @fri !1`, and `wait:Sam` for who it waits on.
+ * `Write the release notes 45m #work @fri !1`, `^mon` for the day it starts,
+ * and `wait:Sam` for who it waits on.
  *
  * Only trailing words are read, and only while every one of them is a token;
  * the first word is never read as a token. The reading is the Rust core's
@@ -15,8 +16,10 @@ import java.time.ZoneId
 data class TaskCapture(
     val title: String,
     val estimateSeconds: Int? = null,
-    /** The start of the day it is due. */
+    /** The start of the day it is due, from `@fri`. */
     val dueAt: Instant? = null,
+    /** The start of the day it starts, from `^mon`: filed as the editor's start is. */
+    val startAt: Instant? = null,
     val tags: List<String> = emptyList(),
     /** 1 to 4. */
     val priority: Int? = null,
@@ -24,12 +27,14 @@ data class TaskCapture(
     val waitingOn: String? = null,
     /** Addresses typed or pasted at the end, filed as the task's links (docs/links.md). */
     val links: List<String> = emptyList(),
+    /** Why it would not be filed as read, in the editor's words: a start on or after the due day. */
+    val problem: String? = null,
 ) {
     val hasDetails: Boolean
-        get() = estimateSeconds != null || dueAt != null || tags.isNotEmpty() || priority != null ||
-            waitingOn != null || links.isNotEmpty()
+        get() = estimateSeconds != null || dueAt != null || startAt != null || tags.isNotEmpty() ||
+            priority != null || waitingOn != null || links.isNotEmpty()
 
-    /** Short labels for what was found: `45m`, `Fri 3 Oct`, `#work`, `!1`, `waiting on Sam`. */
+    /** Short labels for what was found: `45m`, `starts Mon 5 Oct`, `due Fri 9 Oct`, `#work`, `!1`, `waiting on Sam`. */
     fun detailLabels(now: Instant = Instant.now(), zone: ZoneId = ZoneId.systemDefault()): List<String> =
         uniffi.takt_core.captureDetailLabels(core, now.coreMillis, zone.coreName)
 
@@ -38,10 +43,12 @@ data class TaskCapture(
             title = title,
             estimateSeconds = estimateSeconds?.toLong(),
             dueAtMs = dueAt?.coreMillis,
+            startAtMs = startAt?.coreMillis,
             tags = tags,
             priority = priority?.toLong(),
             waitingOn = waitingOn,
             links = links,
+            problem = problem,
         )
 
     companion object {
@@ -52,10 +59,12 @@ data class TaskCapture(
                 title = core.title,
                 estimateSeconds = core.estimateSeconds?.toInt(),
                 dueAt = core.dueAtMs?.let(Instant::ofEpochMilli),
+                startAt = core.startAtMs?.let(Instant::ofEpochMilli),
                 tags = core.tags,
                 priority = core.priority?.toInt(),
                 waitingOn = core.waitingOn,
                 links = core.links,
+                problem = core.problem,
             )
         }
     }

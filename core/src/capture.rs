@@ -5,7 +5,9 @@
 //!
 //! Typing `Write the release notes 45m #work @fri !1` into an add field files
 //! a task called "Write the release notes" with a 45-minute estimate, the tag
-//! `work`, due on Friday, at priority 1.
+//! `work`, due on Friday, at priority 1. `^mon` is the day it starts, which
+//! files it under Today or This week as a start set in the editor does;
+//! `write essay ^mon @fri` starts on Monday and is due on Friday.
 //!
 //! Only the *trailing* words are read, and only while every one of them is a
 //! token. The first word from the end that is not one stops the scan, so a
@@ -35,8 +37,10 @@ pub struct CaptureParts {
     /// as typed when none were.
     pub title: String,
     pub estimate_seconds: Option<i64>,
-    /// The start of the day it is due, in the caller's zone.
+    /// The start of the day it is due, in the caller's zone, from `@fri`.
     pub due_at_ms: Option<i64>,
+    /// The start of the day it starts, in the caller's zone, from `^mon`.
+    pub start_at_ms: Option<i64>,
     pub tags: Vec<String>,
     /// 1 to 4, the range the workspace stores.
     pub priority: Option<i64>,
@@ -45,12 +49,18 @@ pub struct CaptureParts {
     /// Addresses typed or pasted at the end, filed as the task's links
     /// (`links::link_from_text`): a Drive file, an Obsidian note, a page.
     pub links: Vec<String>,
+    /// What filing it as read would be refused for, in the editor's words:
+    /// a start on or after the day it is due. Both days are kept, so the
+    /// field can show them and the problem together; the task is not filed
+    /// until one of them changes.
+    pub problem: Option<String>,
 }
 
 impl CaptureParts {
     fn has_details(&self) -> bool {
         self.estimate_seconds.is_some()
             || self.due_at_ms.is_some()
+            || self.start_at_ms.is_some()
             || !self.tags.is_empty()
             || self.priority.is_some()
             || self.waiting_on.is_some()
@@ -63,6 +73,7 @@ impl CaptureParts {
 enum Token {
     Estimate(i64),
     Due(i64),
+    Start(i64),
     Tag(String),
     Priority(i64),
     Waiting(String),
@@ -116,6 +127,12 @@ pub fn parse(text: &str, now_ms: i64, zone: Tz) -> CaptureParts {
                 }
                 capture.due_at_ms = Some(at);
             }
+            Token::Start(at) => {
+                if capture.start_at_ms.is_some() {
+                    break;
+                }
+                capture.start_at_ms = Some(at);
+            }
             Token::Priority(value) => {
                 if capture.priority.is_some() {
                     break;
@@ -151,11 +168,20 @@ pub fn parse(text: &str, now_ms: i64, zone: Tz) -> CaptureParts {
     capture.title = words.join(" ");
     capture.tags = tags;
     capture.links = links;
+    // The editor's rule, `editor::update_planning`: the start must come
+    // before the deadline, which for a due day read here is its first moment.
+    if let (Some(start), Some(due)) = (capture.start_at_ms, capture.due_at_ms)
+        && start >= due
+    {
+        capture.problem = Some(crate::CoreError::InvalidSchedule.to_string());
+    }
     capture
 }
 
 /// Short labels for what was found, in the order the field shows them:
-/// `45m`, `Fri 3 Oct`, `#work`, `!1`, `waiting on Sam`.
+/// `45m`, `starts Mon 29 Sep`, `due Fri 3 Oct`, `#work`, `!1`, `waiting on
+/// Sam`. The problem, if there is one, is not among them: the field shows it
+/// apart, as a warning.
 #[uniffi::export]
 pub fn capture_detail_labels(capture: CaptureParts, now_ms: i64, zone: String) -> Vec<String> {
     detail_labels(&capture, now_ms, periodic::zone(&zone))
@@ -166,8 +192,11 @@ pub fn detail_labels(capture: &CaptureParts, now_ms: i64, zone: Tz) -> Vec<Strin
     if let Some(seconds) = capture.estimate_seconds {
         labels.push(duration_label(seconds));
     }
+    if let Some(start) = capture.start_at_ms {
+        labels.push(format!("starts {}", day_label(start, now_ms, zone)));
+    }
     if let Some(due) = capture.due_at_ms {
-        labels.push(due_label(due, now_ms, zone));
+        labels.push(format!("due {}", day_label(due, now_ms, zone)));
     }
     labels.extend(capture.tags.iter().map(|tag| format!("#{tag}")));
     if let Some(priority) = capture.priority {
@@ -199,16 +228,16 @@ pub fn duration_label(seconds: i64) -> String {
     }
 }
 
-/// `Today`, `Tomorrow`, `Fri 2 Oct`, or `1 Mar 2027` in another year, as
-/// `DateFormatter` writes them in `en_GB`.
-fn due_label(due_ms: i64, now_ms: i64, zone: Tz) -> String {
-    let day = local(due_ms, zone).date_naive();
+/// `today`, `tomorrow`, `Fri 2 Oct`, or `1 Mar 2027` in another year, as
+/// `DateFormatter` writes them in `en_GB`, to follow "starts" or "due".
+fn day_label(at_ms: i64, now_ms: i64, zone: Tz) -> String {
+    let day = local(at_ms, zone).date_naive();
     let today = local(now_ms, zone).date_naive();
     if day == today {
-        return "Today".into();
+        return "today".into();
     }
     if Some(day) == today.succ_opt() {
-        return "Tomorrow".into();
+        return "tomorrow".into();
     }
     if day.year() == today.year() {
         day.format("%a %-d %b").to_string()
@@ -235,12 +264,17 @@ fn token(word: &str, now_ms: i64, zone: Tz) -> Option<Token> {
     if let Some(seconds) = estimate(&lower) {
         return Some(Token::Estimate(seconds));
     }
-    // `^` is Checkvist's due marker (`^fri`, `^tomorrow`), so hands used to it
-    // type the same thing here.
-    if let Some(rest) = lower.strip_prefix('@').or_else(|| lower.strip_prefix('^'))
+    // `@` is the day it is due and `^` the day it starts: the caret points up
+    // at where the work begins. (Checkvist reads `^` as due; here it is not.)
+    if let Some(rest) = lower.strip_prefix('@')
         && let Some(at) = due(rest, now_ms, zone)
     {
         return Some(Token::Due(at));
+    }
+    if let Some(rest) = lower.strip_prefix('^')
+        && let Some(at) = due(rest, now_ms, zone)
+    {
+        return Some(Token::Start(at));
     }
     if let Some(tag) = tag(word) {
         return Some(Token::Tag(tag));

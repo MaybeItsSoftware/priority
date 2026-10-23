@@ -825,6 +825,8 @@ internal object IntegrityCheckingUniffiLib {
     ): Int
     external fun uniffi_takt_core_checksum_func_day_log_weekly_buckets(
     ): Int
+    external fun uniffi_takt_core_checksum_func_day_start_day_key(
+    ): Int
     external fun uniffi_takt_core_checksum_func_editor_minutes_text(
     ): Int
     external fun uniffi_takt_core_checksum_func_editor_parse_minutes(
@@ -1130,6 +1132,14 @@ internal object IntegrityCheckingUniffiLib {
     external fun uniffi_takt_core_checksum_method_coreworkspace_reset_board_columns(
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_set_board_columns(
+    ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_adopt_day_start_hour(
+    ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_apply_day_start(
+    ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_day_start_settings(
+    ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_set_day_start_settings(
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_export_workspace(
     ): Int
@@ -1643,6 +1653,14 @@ internal object UniffiLib {
     ): Unit
     external fun uniffi_takt_core_fn_method_coreworkspace_set_board_columns(`ptr`: Long,`key`: RustBuffer.ByValue,`columns`: RustBuffer.ByValue,`movingTaskIds`: RustBuffer.ByValue,`toColumn`: RustBuffer.ByValue,`label`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
+    external fun uniffi_takt_core_fn_method_coreworkspace_adopt_day_start_hour(`ptr`: Long,`hour`: Int,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Byte
+    external fun uniffi_takt_core_fn_method_coreworkspace_apply_day_start(`ptr`: Long,`workspaceId`: RustBuffer.ByValue,`nowMs`: Long,`zone`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): Byte
+    external fun uniffi_takt_core_fn_method_coreworkspace_day_start_settings(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_method_coreworkspace_set_day_start_settings(`ptr`: Long,`settings`: RustBuffer.ByValue,`nowMs`: Long,`zone`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): Byte
     external fun uniffi_takt_core_fn_method_coreworkspace_export_workspace(`ptr`: Long,`workspaceId`: RustBuffer.ByValue,`format`: RustBuffer.ByValue,`exportedAtMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_method_coreworkspace_create_filter_list(`ptr`: Long,`workspaceId`: RustBuffer.ByValue,`name`: RustBuffer.ByValue,`icon`: RustBuffer.ByValue,`colorHex`: RustBuffer.ByValue,`definition`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
@@ -2217,6 +2235,8 @@ internal object UniffiLib {
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_func_day_log_weekly_buckets(`events`: RustBuffer.ByValue,`boundary`: RustBuffer.ByValue,`endingOnMs`: Long,`weeks`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_day_start_day_key(`hour`: Int,`nowMs`: Long,`zone`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_func_editor_minutes_text(`seconds`: Long,`wholeMinutesPlainly`: Byte,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_func_editor_parse_minutes(`raw`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
@@ -2631,7 +2651,7 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
     if ((lib.uniffi_takt_core_checksum_func_capture_date_time() and 0xFFFF) != 17198) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if ((lib.uniffi_takt_core_checksum_func_capture_detail_labels() and 0xFFFF) != 1360) {
+    if ((lib.uniffi_takt_core_checksum_func_capture_detail_labels() and 0xFFFF) != 21718) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_func_capture_due() and 0xFFFF) != 51257) {
@@ -2821,6 +2841,9 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_func_day_log_weekly_buckets() and 0xFFFF) != 50056) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_day_start_day_key() and 0xFFFF) != 17942) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_func_editor_minutes_text() and 0xFFFF) != 55346) {
@@ -3280,6 +3303,18 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_set_board_columns() and 0xFFFF) != 22012) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_adopt_day_start_hour() and 0xFFFF) != 54795) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_apply_day_start() and 0xFFFF) != 48277) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_day_start_settings() and 0xFFFF) != 5494) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_set_day_start_settings() and 0xFFFF) != 4505) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_export_workspace() and 0xFFFF) != 22213) {
@@ -4971,6 +5006,28 @@ public interface CoreWorkspaceInterface {
     fun `setBoardColumns`(`key`: kotlin.String, `columns`: List<BoardColumn>, `movingTaskIds`: List<kotlin.String>, `toColumn`: kotlin.String?, `label`: kotlin.String, `nowMs`: kotlin.Long)
     
     /**
+     * Brings in an hour kept before the account had one; whether it did.
+     */
+    fun `adoptDayStartHour`(`hour`: kotlin.Int, `nowMs`: kotlin.Long): kotlin.Boolean
+    
+    /**
+     * Starts the day if it has changed since the last reset; whether the
+     * context was reset. Every client calls it when it evaluates.
+     */
+    fun `applyDayStart`(`workspaceId`: kotlin.String, `nowMs`: kotlin.Long, `zone`: kotlin.String): kotlin.Boolean
+    
+    /**
+     * How each day starts.
+     */
+    fun `dayStartSettings`(): DayStartSettings
+    
+    /**
+     * Stores how each day starts; whether anything changed. Not an undo
+     * step, like the rest of what holds now.
+     */
+    fun `setDayStartSettings`(`settings`: DayStartSettings, `nowMs`: kotlin.Long, `zone`: kotlin.String): kotlin.Boolean
+    
+    /**
      * The workspace `workspace_id` written out as `format`, stamped
      * `exported_at_ms`; absent when there is no such workspace.
      */
@@ -6397,6 +6454,84 @@ open class CoreWorkspace: Disposable, AutoCloseable, CoreWorkspaceInterface
 }
     }
     
+    
+
+    
+    /**
+     * Brings in an hour kept before the account had one; whether it did.
+     */
+    @Throws(CoreException::class)override fun `adoptDayStartHour`(`hour`: kotlin.Int, `nowMs`: kotlin.Long): kotlin.Boolean {
+            return FfiConverterBoolean.lift(
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_adopt_day_start_hour(
+        it,
+        
+        FfiConverterInt.lower(`hour`),
+        FfiConverterLong.lower(`nowMs`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * Starts the day if it has changed since the last reset; whether the
+     * context was reset. Every client calls it when it evaluates.
+     */
+    @Throws(CoreException::class)override fun `applyDayStart`(`workspaceId`: kotlin.String, `nowMs`: kotlin.Long, `zone`: kotlin.String): kotlin.Boolean {
+            return FfiConverterBoolean.lift(
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_apply_day_start(
+        it,
+        
+        FfiConverterString.lower(`workspaceId`),
+        FfiConverterLong.lower(`nowMs`),
+        FfiConverterString.lower(`zone`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * How each day starts.
+     */
+    @Throws(CoreException::class)override fun `dayStartSettings`(): DayStartSettings {
+            return FfiConverterTypeDayStartSettings.lift(
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_day_start_settings(
+        it,
+        _status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * Stores how each day starts; whether anything changed. Not an undo
+     * step, like the rest of what holds now.
+     */
+    @Throws(CoreException::class)override fun `setDayStartSettings`(`settings`: DayStartSettings, `nowMs`: kotlin.Long, `zone`: kotlin.String): kotlin.Boolean {
+            return FfiConverterBoolean.lift(
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_set_day_start_settings(
+        it,
+        
+        FfiConverterTypeDayStartSettings.lower(`settings`),
+        FfiConverterLong.lower(`nowMs`),
+        FfiConverterString.lower(`zone`),_status)
+}
+    }
+    )
+    }
     
 
     
@@ -11739,9 +11874,14 @@ data class CaptureParts (
     var `estimateSeconds`: kotlin.Long?
     , 
     /**
-     * The start of the day it is due, in the caller's zone.
+     * The start of the day it is due, in the caller's zone, from `@fri`.
      */
     var `dueAtMs`: kotlin.Long?
+    , 
+    /**
+     * The start of the day it starts, in the caller's zone, from `^mon`.
+     */
+    var `startAtMs`: kotlin.Long?
     , 
     var `tags`: List<kotlin.String>
     , 
@@ -11760,6 +11900,14 @@ data class CaptureParts (
      * (`links::link_from_text`): a Drive file, an Obsidian note, a page.
      */
     var `links`: List<kotlin.String>
+    , 
+    /**
+     * What filing it as read would be refused for, in the editor's words:
+     * a start on or after the day it is due. Both days are kept, so the
+     * field can show them and the problem together; the task is not filed
+     * until one of them changes.
+     */
+    var `problem`: kotlin.String?
     
 ){
     
@@ -11779,10 +11927,12 @@ public object FfiConverterTypeCaptureParts: FfiConverterRustBuffer<CaptureParts>
             FfiConverterString.read(buf),
             FfiConverterOptionalLong.read(buf),
             FfiConverterOptionalLong.read(buf),
+            FfiConverterOptionalLong.read(buf),
             FfiConverterSequenceString.read(buf),
             FfiConverterOptionalLong.read(buf),
             FfiConverterOptionalString.read(buf),
             FfiConverterSequenceString.read(buf),
+            FfiConverterOptionalString.read(buf),
         )
     }
 
@@ -11790,20 +11940,24 @@ public object FfiConverterTypeCaptureParts: FfiConverterRustBuffer<CaptureParts>
             FfiConverterString.allocationSize(value.`title`) +
             FfiConverterOptionalLong.allocationSize(value.`estimateSeconds`) +
             FfiConverterOptionalLong.allocationSize(value.`dueAtMs`) +
+            FfiConverterOptionalLong.allocationSize(value.`startAtMs`) +
             FfiConverterSequenceString.allocationSize(value.`tags`) +
             FfiConverterOptionalLong.allocationSize(value.`priority`) +
             FfiConverterOptionalString.allocationSize(value.`waitingOn`) +
-            FfiConverterSequenceString.allocationSize(value.`links`)
+            FfiConverterSequenceString.allocationSize(value.`links`) +
+            FfiConverterOptionalString.allocationSize(value.`problem`)
     )
 
     override fun write(value: CaptureParts, buf: ByteBuffer) {
             FfiConverterString.write(value.`title`, buf)
             FfiConverterOptionalLong.write(value.`estimateSeconds`, buf)
             FfiConverterOptionalLong.write(value.`dueAtMs`, buf)
+            FfiConverterOptionalLong.write(value.`startAtMs`, buf)
             FfiConverterSequenceString.write(value.`tags`, buf)
             FfiConverterOptionalLong.write(value.`priority`, buf)
             FfiConverterOptionalString.write(value.`waitingOn`, buf)
             FfiConverterSequenceString.write(value.`links`, buf)
+            FfiConverterOptionalString.write(value.`problem`, buf)
     }
 }
 
@@ -15415,6 +15569,71 @@ public object FfiConverterTypeDayLogRecord: FfiConverterRustBuffer<DayLogRecord>
             FfiConverterOptionalLong.write(value.`durationSeconds`, buf)
             FfiConverterOptionalSequenceLong.write(value.`plannedTaskIds`, buf)
             FfiConverterOptionalString.write(value.`dailyId`, buf)
+    }
+}
+
+
+
+/**
+ * How each day starts, as the account keeps it.
+ */
+data class DayStartSettings (
+    /**
+     * Whether the context goes back to `condition_ids` when the day changes.
+     */
+    var `resets`: kotlin.Boolean
+    , 
+    /**
+     * The hour the day changes, 0 to 23. Also where the daily log's days
+     * begin.
+     */
+    var `hour`: kotlin.Int
+    , 
+    /**
+     * The conditions each day starts with, sorted; empty starts it with
+     * nothing on.
+     */
+    var `conditionIds`: List<kotlin.String>
+    , 
+    /**
+     * The last day reset, `yyyy-MM-dd`; none before the first.
+     */
+    var `lastResetDay`: kotlin.String?
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeDayStartSettings: FfiConverterRustBuffer<DayStartSettings> {
+    override fun read(buf: ByteBuffer): DayStartSettings {
+        return DayStartSettings(
+            FfiConverterBoolean.read(buf),
+            FfiConverterInt.read(buf),
+            FfiConverterSequenceString.read(buf),
+            FfiConverterOptionalString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: DayStartSettings) = (
+            FfiConverterBoolean.allocationSize(value.`resets`) +
+            FfiConverterInt.allocationSize(value.`hour`) +
+            FfiConverterSequenceString.allocationSize(value.`conditionIds`) +
+            FfiConverterOptionalString.allocationSize(value.`lastResetDay`)
+    )
+
+    override fun write(value: DayStartSettings, buf: ByteBuffer) {
+            FfiConverterBoolean.write(value.`resets`, buf)
+            FfiConverterInt.write(value.`hour`, buf)
+            FfiConverterSequenceString.write(value.`conditionIds`, buf)
+            FfiConverterOptionalString.write(value.`lastResetDay`, buf)
     }
 }
 
@@ -32393,7 +32612,9 @@ public object FfiConverterMapStringTypeSyncValue: FfiConverterRustBuffer<Map<kot
 
         /**
          * Short labels for what was found, in the order the field shows them:
-         * `45m`, `Fri 3 Oct`, `#work`, `!1`, `waiting on Sam`.
+         * `45m`, `starts Mon 29 Sep`, `due Fri 3 Oct`, `#work`, `!1`, `waiting on
+         * Sam`. The problem, if there is one, is not among them: the field shows it
+         * apart, as a warning.
          */ fun `captureDetailLabels`(`capture`: CaptureParts, `nowMs`: kotlin.Long, `zone`: kotlin.String): List<kotlin.String> {
             return FfiConverterSequenceString.lift(
     uniffiRustCall() { _status ->
@@ -33424,6 +33645,23 @@ public object FfiConverterMapStringTypeSyncValue: FfiConverterRustBuffer<Map<kot
         FfiConverterTypeDayLogBoundary.lower(`boundary`),
         FfiConverterLong.lower(`endingOnMs`),
         FfiConverterLong.lower(`weeks`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * `yyyy-MM-dd` for the day containing `now_ms`, days changing at `hour`
+         * in `zone`: which day a reset would count as.
+         */ fun `dayStartDayKey`(`hour`: kotlin.Int, `nowMs`: kotlin.Long, `zone`: kotlin.String): kotlin.String {
+            return FfiConverterString.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_day_start_day_key(
+    
+        
+        FfiConverterInt.lower(`hour`),
+        FfiConverterLong.lower(`nowMs`),
+        FfiConverterString.lower(`zone`),_status)
 }
     )
     }

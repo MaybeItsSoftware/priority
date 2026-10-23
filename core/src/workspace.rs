@@ -1732,7 +1732,7 @@ impl CoreWorkspace {
 impl CoreWorkspace {
     /// Runs a write outside the undo journal, in its own immediate
     /// transaction: the focus clock, and passes nobody asked for.
-    fn unjournalled<T>(
+    pub(crate) fn unjournalled<T>(
         &self,
         work: impl FnOnce(&rusqlite::Transaction) -> Result<T, CoreError>,
     ) -> Result<T, CoreError> {

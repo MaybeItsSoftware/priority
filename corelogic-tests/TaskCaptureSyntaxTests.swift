@@ -27,11 +27,28 @@ final class TaskCaptureSyntaxTests: XCTestCase {
     XCTAssertEqual(parse("  Write the release notes "), TaskCapture(title: "Write the release notes"))
   }
 
-  func testCheckvistsCaretMarksADueDayToo() {
+  func testTheCaretMarksTheDayItStarts() {
     let capture = parse("Ring the bank ^fri")
     XCTAssertEqual(capture.title, "Ring the bank")
+    XCTAssertEqual(capture.startAt, date(2026, 10, 2))
+    XCTAssertNil(capture.dueAt)
+    XCTAssertTrue(capture.hasDetails)
+    XCTAssertNil(parse("Ring the bank @fri").startAt)
+  }
+
+  func testAStartAndADueDayTogether() {
+    let capture = parse("write essay ^tue @fri")
+    XCTAssertEqual(capture.title, "write essay")
+    XCTAssertEqual(capture.startAt, date(2026, 9, 29))
     XCTAssertEqual(capture.dueAt, date(2026, 10, 2))
-    XCTAssertEqual(parse("Ring the bank ^fri").dueAt, parse("Ring the bank @fri").dueAt)
+    XCTAssertNil(capture.problem)
+    XCTAssertEqual(
+      capture.detailLabels(now: now, calendar: calendar), ["starts today", "due Fri 2 Oct"])
+    // Monday comes after Friday: both kept, with the editor's refusal.
+    let backwards = parse("write essay ^mon @fri")
+    XCTAssertEqual(backwards.startAt, date(2026, 10, 5))
+    XCTAssertEqual(backwards.dueAt, date(2026, 10, 2))
+    XCTAssertEqual(backwards.problem, "Start must be before the deadline.")
   }
 
   func testEveryKindOfTokenAtTheEnd() {
@@ -123,13 +140,14 @@ final class TaskCaptureSyntaxTests: XCTestCase {
   func testLabelsNameWhatWasFound() {
     XCTAssertEqual(
       parse("Write notes 1h30m @tomorrow #work !2").detailLabels(now: now, calendar: calendar),
-      ["1h 30m", "Tomorrow", "#work", "!2"])
-    XCTAssertEqual(parse("Book flights @2026-10-02").detailLabels(now: now, calendar: calendar), ["Fri 2 Oct"])
-    XCTAssertEqual(parse("Renew passport @2027-03-01").detailLabels(now: now, calendar: calendar), ["1 Mar 2027"])
+      ["1h 30m", "due tomorrow", "#work", "!2"])
+    XCTAssertEqual(parse("Book flights @2026-10-02").detailLabels(now: now, calendar: calendar), ["due Fri 2 Oct"])
+    XCTAssertEqual(
+      parse("Renew passport @2027-03-01").detailLabels(now: now, calendar: calendar), ["due 1 Mar 2027"])
   }
 
   func testWaitColonFilesItAsWaitingOnSomeone() {
-    let capture = parse("Contract signed wait:Sam ^fri")
+    let capture = parse("Contract signed wait:Sam @fri")
     XCTAssertEqual(capture.title, "Contract signed")
     XCTAssertEqual(capture.waitingOn, "Sam")
     XCTAssertEqual(capture.dueAt, date(2026, 10, 2))

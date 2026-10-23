@@ -6,7 +6,9 @@ import TaktRustCore
 /// Typing `Write the release notes 45m #work @fri !1` into the add field files
 /// a task called "Write the release notes" with a 45-minute estimate, the tag
 /// `work`, due on Friday, at priority 1 — the four things you would otherwise
-/// open the task again to set, straight after creating it, every time.
+/// open the task again to set, straight after creating it, every time. `^mon`
+/// is the day it starts rather than the day it is due, so `write essay ^mon
+/// @fri` starts on Monday and is due on Friday.
 ///
 /// Only the *trailing* words are read, and only while every one of them is a
 /// token. The first word from the end that is not one stops the scan, so a
@@ -27,6 +29,9 @@ public struct TaskCapture: Equatable, Sendable {
   /// The start of the day it is due, the same instant the `Due today` and
   /// `Due tomorrow` commands write.
   public var dueAt: Date?
+  /// The start of the day it starts, from `^mon`: filed as the editor's
+  /// start is, which moves a task in Today or This week to where it belongs.
+  public var startAt: Date?
   public var tags: [String]
   /// 1 to 4, the range the workspace stores.
   public var priority: Int?
@@ -37,23 +42,29 @@ public struct TaskCapture: Equatable, Sendable {
   /// a page — filed as the task's links. An address alone names the task
   /// for what it points at. See docs/links.md.
   public var links: [String]
+  /// Why it would not be filed as read, in the editor's words: a start on
+  /// or after the day it is due. The field shows it beside the days.
+  public var problem: String?
 
   public init(
-    title: String, estimateSeconds: Int? = nil, dueAt: Date? = nil, tags: [String] = [],
-    priority: Int? = nil, waitingOn: String? = nil, links: [String] = []
+    title: String, estimateSeconds: Int? = nil, dueAt: Date? = nil, startAt: Date? = nil, tags: [String] = [],
+    priority: Int? = nil, waitingOn: String? = nil, links: [String] = [], problem: String? = nil
   ) {
     self.title = title
     self.estimateSeconds = estimateSeconds
     self.dueAt = dueAt
+    self.startAt = startAt
     self.tags = tags
     self.priority = priority
     self.waitingOn = waitingOn
     self.links = links
+    self.problem = problem
   }
 
   /// Whether anything beyond the title was found.
   public var hasDetails: Bool {
-    estimateSeconds != nil || dueAt != nil || !tags.isEmpty || priority != nil || waitingOn != nil || !links.isEmpty
+    estimateSeconds != nil || dueAt != nil || startAt != nil || !tags.isEmpty || priority != nil
+      || waitingOn != nil || !links.isEmpty
   }
 
   /// Parses `text` as typed into an add field. See the type for the rules.
@@ -65,7 +76,8 @@ public struct TaskCapture: Equatable, Sendable {
   }
 
   /// Short labels for what was found, in the order the field shows them:
-  /// `45m`, `Fri 3 Oct`, `#work`, `!1`.
+  /// `45m`, `starts Mon 28 Sep`, `due Fri 3 Oct`, `#work`, `!1`. Not the
+  /// problem, which the field shows apart.
   public func detailLabels(now: Date = .now, calendar: Calendar = .current) -> [String] {
     captureDetailLabels(capture: core, nowMs: now.rankingMilliseconds, zone: calendar.timeZone.identifier)
   }
@@ -90,14 +102,16 @@ public struct TaskCapture: Equatable, Sendable {
   init(_ core: CaptureParts) {
     self.init(
       title: core.title, estimateSeconds: core.estimateSeconds.map { Int($0) },
-      dueAt: core.dueAtMs.map { Date(rankingMilliseconds: $0) }, tags: core.tags,
-      priority: core.priority.map { Int($0) }, waitingOn: core.waitingOn, links: core.links)
+      dueAt: core.dueAtMs.map { Date(rankingMilliseconds: $0) },
+      startAt: core.startAtMs.map { Date(rankingMilliseconds: $0) }, tags: core.tags,
+      priority: core.priority.map { Int($0) }, waitingOn: core.waitingOn, links: core.links, problem: core.problem)
   }
 
   var core: CaptureParts {
     CaptureParts(
       title: title, estimateSeconds: estimateSeconds.map { Int64($0) }, dueAtMs: dueAt?.rankingMilliseconds,
-      tags: tags, priority: priority.map { Int64($0) }, waitingOn: waitingOn, links: links)
+      startAtMs: startAt?.rankingMilliseconds, tags: tags, priority: priority.map { Int64($0) },
+      waitingOn: waitingOn, links: links, problem: problem)
   }
 }
 
