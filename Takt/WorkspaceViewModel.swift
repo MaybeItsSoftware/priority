@@ -690,8 +690,13 @@ enum WorkspaceSidebarItem: Identifiable {
       taskDraftText = ""
       taskDraftSelection = nil
       taskDraftColumnID = nil
+      todayDraftAfterID = nil
     }
   }
+  /// On Today, the planned task a new one is typed under and will be ranked
+  /// straight after, so Return adds beside where you are rather than at the
+  /// foot of the day. Nil there means the foot.
+  var todayDraftAfterID: String?
   /// What is typed in the draft row. Held here rather than in the row, which
   /// is rebuilt whenever the task it is drawn beside changes — and dropped
   /// when that task leaves the pane — so a rebuilt row picks up where the

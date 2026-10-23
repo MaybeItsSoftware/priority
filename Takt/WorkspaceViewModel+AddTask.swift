@@ -1,4 +1,5 @@
 import Foundation
+import TaktCore
 import TaktWorkspace
 
 /// The title bar's add field: where a typed task lands, and what the field
@@ -32,11 +33,29 @@ extension WorkspaceViewModel {
       // Today's own field put what you typed on today, in the list on
       // screen. The title bar does the same while Today is up, so losing that
       // field lost nothing: a task added here is on the day you are reading.
-      createBoardTask(named: title, in: todayColumn)
+      let after = todayDraftAfterID
+      if let created = createBoardTask(named: title, in: todayColumn), let after {
+        rankOnToday(created.id, after: after)
+        // A row left open for the next task follows the one just added.
+        if isDraftingTask { todayDraftAfterID = created.id }
+      }
     } else if taskInsertionReference != nil || addsToScopedList {
       if viewMode == .board { createBoardTask(named: title) } else { createTask(named: title) }
     } else {
       createInboxTask(named: title)
+    }
+  }
+
+  /// Writes the day's planned order with `taskID` straight after `after`, so
+  /// a task typed under another stays there rather than at the foot.
+  private func rankOnToday(_ taskID: String, after: String) {
+    guard let store else { return }
+    var planned = todayPlan.filter { $0.reason == .planned && $0.id != taskID }.map(\.id)
+    guard let index = planned.firstIndex(of: after) else { return }
+    planned.insert(taskID, at: index + 1)
+    perform {
+      try store.arrangeDay(orderedTaskIds: planned)
+      reloadNextUp()
     }
   }
 

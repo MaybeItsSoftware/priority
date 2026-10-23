@@ -295,6 +295,10 @@ struct DayView: View {
               if !surface.isPanel && row.outline.depth > 0 && model.draftsBeside(row.id, above: false) {
                 WorkspaceTaskDraftRow(depth: row.outline.depth)
                   .id("takt:draft")
+              } else if !surface.isPanel && row.outline.depth == 0 && model.draftsAfterOnToday(row.id) {
+                // Return on a planned task adds the next one beneath it.
+                WorkspaceTaskDraftRow(namesDestination: true)
+                  .id("takt:draft")
               }
             }
             if isDrafting {

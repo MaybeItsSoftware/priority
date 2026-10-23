@@ -78,7 +78,12 @@ extension WorkspaceViewModel {
       && !(above && taskInsertionIsChild)
   }
 
-  var draftsAtEnd: Bool { isDraftingTask && taskInsertionReference == nil }
+  var draftsAtEnd: Bool { isDraftingTask && taskInsertionReference == nil && todayDraftAfterID == nil }
+
+  /// Whether Today's draft is drawn under this planned task.
+  func draftsAfterOnToday(_ taskID: String) -> Bool {
+    isDraftingTask && taskInsertionReference == nil && todayDraftAfterID == taskID
+  }
 
   func requestRelativeTaskComposerFocus(
     above: Bool = false, child: Bool = false, reference: WorkspaceTask? = nil
@@ -93,6 +98,11 @@ extension WorkspaceViewModel {
     taskInsertionReference = reference
     taskInsertionAbove = above
     taskInsertionIsChild = child
+    todayDraftAfterID = viewMode == .today && reference == nil && !above && !child
+      ? selectedTask.flatMap { task in
+        todayPlan.contains { $0.id == task.id && $0.reason == .planned } ? task.id : nil
+      }
+      : nil
   }
 
   func requestKeyboardFocus(_ area: WorkspaceFocusArea, onTitle: Bool = true) {
