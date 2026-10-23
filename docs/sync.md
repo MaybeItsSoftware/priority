@@ -285,6 +285,28 @@ Nothing is lost — an older editor keeps the member when it saves the task
 without touching its conditions — but removing the "missing" condition there
 removes the requirement.
 
+How each day starts came with no migration: four `preferences` rows,
+which already sync per row (`core/src/day_start.rs`). `dayStart.resets`
+("true" or "false"), `dayStart.hour` (0 to 23, the hour the day changes —
+the Mac's daily log hour, `dailyLogRolloverHour`, is brought in once when
+the account has none, and follows the account after that),
+`dayStart.conditionIds` (a JSON array of condition ids) and
+`dayStart.lastReset` (`yyyy-MM-dd`, the last day a device reset what holds).
+Every client calls the core's `apply_day_start` when it evaluates — at
+launch, on coming to the front, after a pull, and the Mac every half minute
+— and the first call after the hour writes the starting set into
+`focus_contexts` and stamps `dayStart.lastReset`, so the next device to look
+sees the day already started and does nothing. A context saved since the day
+began (`focus_contexts.updatedAt`) is never overwritten: something said on
+another device at 06:00 and pulled before this one's first look stands. Two
+devices that both reset before hearing from each other write the same set,
+and the last-writer rule settles the identical rows. Day keys are read in
+each device's own zone, and one a zone behind leaves a day it reads as still
+to come. Changing the settings stamps today as reset, so a change never
+resets there and then. A client built before it ignores the rows and never
+resets; on it the context simply carries over, and a reset another device
+made reaches it as an ordinary context change.
+
 The following are not synced: the undo journal (`undo_control`, `change_log`), the FTS index
 (rebuilt by its own triggers as synced rows land), `grdb_migrations`, and the
 sync tables themselves. Day-log files stay per device. Theme *files* do

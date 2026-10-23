@@ -71,6 +71,7 @@ pub const WRITE_TOOLS: &[&str] = &[
     "workspace_task_conditions_set",
     "workspace_condition_provides_set",
     "workspace_context_set",
+    "workspace_day_start_set",
     "agent_instructions_set",
 ];
 

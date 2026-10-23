@@ -82,6 +82,18 @@ struct NowConditionsSheet: View {
   @Bindable var focus: FocusModel
   @State private var catalogue = StoreQuery(ConditionsCatalogue.empty)
   @State private var query = ""
+  /// How each day starts, shown here and set on the Mac or with `takt ws
+  /// day-start`.
+  @State private var dayStart: DayStart?
+
+  /// "Each day starts at 04:00 with Home", or nil while what holds carries over.
+  static func dayStartSummary(_ day: DayStart?, conditions: [TaskCondition]) -> String? {
+    guard let day, day.resets else { return nil }
+    let names = conditions.filter { day.conditionIDs.contains($0.id) && !$0.isArchived }.map(\.name)
+    let hour = String(format: "%02d:00", day.hour)
+    return names.isEmpty
+      ? "Each day starts at \(hour) with nothing on" : "Each day starts at \(hour) with \(names.joined(separator: " · "))"
+  }
 
   /// The core's rule, as Focus's chips: what an open task needs, plus whatever is on.
   static func available(_ catalogue: ConditionsCatalogue, active: Set<String>) -> [TaskConditionSection] {
@@ -125,9 +137,16 @@ struct NowConditionsSheet: View {
             .font(theme.type.caption)
             .foregroundStyle(theme.muted)
         }
+        if let summary = Self.dayStartSummary(dayStart, conditions: value.conditions) {
+          Label(summary, systemImage: "sunrise")
+            .font(theme.type.caption)
+            .foregroundStyle(theme.muted)
+            .accessibilityIdentifier("nowConditions.dayStart")
+        }
       })
     .task(id: model.revision) {
       focus.restoreContext()
+      dayStart = try? model.store.dayStart()
       let workspaceID = model.workspace.id
       await catalogue.load(model.store) { store in try ConditionsCatalogue.load(store: store, workspaceID: workspaceID) }
     }

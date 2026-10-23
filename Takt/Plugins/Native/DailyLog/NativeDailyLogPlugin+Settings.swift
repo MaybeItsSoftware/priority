@@ -47,7 +47,8 @@ private struct DailyLogPluginSettingsView: View {
       SettingsRow(
         "Day starts at",
         detail: "Work finished before this hour counts towards the previous day. "
-          + "Midnight is rarely the right answer."
+          + "Midnight is rarely the right answer. Every device's day changes then, "
+          + "and so do the conditions, if the Conditions tab starts each day afresh."
       ) {
         Picker("Day starts at", selection: rolloverBinding) {
           ForEach(0..<24, id: \.self) { hour in

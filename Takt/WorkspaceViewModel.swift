@@ -1057,6 +1057,11 @@ enum WorkspaceSidebarItem: Identifiable {
   /// The last answer of `conditionHoldings`, and what it was worked out from.
   @ObservationIgnored var conditionHoldingsCache: ConditionHoldingsCache?
   var suggestedContextIDs: Set<String> = []
+  /// How each day starts — the hour it changes and the conditions it starts
+  /// with — as the account keeps it, read again whenever the context is.
+  var dayStart = DayStart()
+  /// When the clock last asked whether the day had changed.
+  @ObservationIgnored var lastDayStartCheck = Date.distantPast
   /// The Conditions tab's cursor; nil is its first row.
   var conditionsCursor: WorkspaceConditionsStop?
   /// The condition whose name is being edited in its row, if any.

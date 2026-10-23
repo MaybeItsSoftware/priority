@@ -10,7 +10,7 @@ final class AgentToolPolicyTests: XCTestCase {
     let read = Set(AgentToolPolicy.readOnlyTools)
     let write = Set(AgentToolPolicy.writeTools)
     XCTAssertTrue(read.isDisjoint(with: write))
-    XCTAssertEqual(read.count + write.count, 51)
+    XCTAssertEqual(read.count + write.count, 53)
     XCTAssertTrue(read.contains("agent_instructions_get"))
     XCTAssertTrue(write.contains("agent_instructions_set"), "saving instructions is a change")
   }

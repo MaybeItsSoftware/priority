@@ -291,6 +291,9 @@ takt ws here Campus --for 60                  # at Campus (the last place goes o
 takt ws here --clear                          # anywhere
 takt ws provides Home 'Floor space' Quiet     # while Home holds, so do they; none clears
 takt ws here --off Quiet                      # a provided one off until Home goes
+takt ws day-start Home --hour 4               # each day starts at 04:00 with Home on
+takt ws day-start --nothing                   # each day starts with nothing on
+takt ws day-start --off                       # what holds carries over; bare day-start shows it
 takt ws new-folder Computer Science
 takt ws new-list Revision --folder <FOLDER_ID>
 takt ws move-list <LIST_ID> --folder <FOLDER_ID>

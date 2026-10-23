@@ -506,6 +506,22 @@ the status bar's indicator and the tab show it in the warning colour, with
   you are wins. A context said on an earlier day is flagged as possibly
   stale on every device. A context that expires is offered back with **Use
   again** (`Shift+U`).
+- **Start each day**: **Afresh** (`Space`, or `←`/`→`) says that when the day
+  changes, what holds goes back to what each day starts with — you start at
+  Home every day — with nothing switched off for now and no free time set;
+  off, what holds carries over. **Day changes at** (`←`/`→`, 04:00 unless you
+  move it) is the hour, the same one the daily log counts days from, so moving
+  it here moves it there (and the daily log's **Day starts at** moves it
+  here); the account keeps it, so every device changes day at the same hour.
+  **Start with** (`Return` or `p`) opens the conditions picker on the set each
+  day starts with: tick Home, a laptop; one place at most. It happens once a
+  day, on whichever device looks first after the hour — the Mac checks every
+  half minute and when it comes to the front, the phones when they open or come
+  back, the CLI and the agent when they read or set what holds — and a device
+  that was closed for days resets once when it opens. Something you said since
+  the day changed is kept, on any device. Changing these never resets there
+  and then; the first is at the next change of day. `takt ws day-start` and
+  `workspace_day_start_set` read and set them.
 - **Conditions**: a new-condition row (`a` or `Cmd+N` puts the caret in it,
   `Return` makes the condition, filed under the category in the menu beside
   it — from a condition's row, that condition's category; `t` on the row
@@ -533,7 +549,7 @@ the status bar's indicator and the tab show it in the warning colour, with
   `Shift+Z` every category; folds are remembered per workspace. Archived
   conditions are apart, under a folded **Archived** heading at the foot: `z`
   or `Return` on it shows them.
-- `↑`/`↓` (or `j`/`k`) walk both halves with one cursor; `Esc` or `←` hands
+- `↑`/`↓` (or `j`/`k`) walk every half with one cursor; `Esc` or `←` hands
   the keyboard back to the work and leaves the dock open, `r` puts it away.
 - **In the inspector**: the Conditions row's **Add condition** does
   what `cc` does with the mouse, its conditions under their category

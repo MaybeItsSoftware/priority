@@ -53,10 +53,13 @@ extension WorkspaceViewModel {
   /// once first, so the conditions are known. A context saved only in the
   /// old preferences key is moved into the workspace the first time. One
   /// that expired while the app was away is set aside, offered back with
-  /// "Use again". Returns whether anything changed.
+  /// "Use again". A day that has changed since the last reset starts
+  /// first, with the conditions it starts with (`startDayIfDue`). Returns
+  /// whether anything changed.
   @discardableResult
   func restoreFocusContext() -> Bool {
     guard let store, let workspace else { return false }
+    startDayIfDue()
     var saved = (try? store.focusContext(in: workspace.id)) ?? nil
     var needsSaving = false
     if saved == nil, let key = legacyFocusContextKey, let ids = UserDefaults.standard.stringArray(forKey: key) {
@@ -347,7 +350,14 @@ extension WorkspaceViewModel {
     focusMonitorObservers.append(NotificationCenter.default.addObserver(
       forName: NSApplication.didBecomeActiveNotification, object: nil, queue: .main
     ) { [weak self] _ in
-      MainActor.assumeIsolated { self?.reloadNextUp() }
+      // Back at the Mac after the night: the day may have changed.
+      MainActor.assumeIsolated { self?.restoreFocusContext(); self?.reloadNextUp() }
+    })
+    focusMonitorObservers.append(NotificationCenter.default.addObserver(
+      forName: .dayChangeHourChanged, object: nil, queue: .main
+    ) { [weak self] note in
+      let hour = note.userInfo?["hour"] as? Int
+      MainActor.assumeIsolated { if let hour { self?.dayChangeHourChangedElsewhere(hour) } }
     })
   }
 
@@ -362,6 +372,7 @@ extension WorkspaceViewModel {
       focusContext.conditionIDs = []; contextOffIDs = []; contextExpiresAt = nil; contextConditionsSetAt = nil
       saveCurrentContext(); reloadNextUp()
     }
+    checkDayStart(now: now)
     let clockJump = synchroniseFocusClock(now: now)
     let zoneChanged = lastFocusTimeZone != TimeZone.current.identifier
     if clockJump || zoneChanged || (nextFocusEvaluationAt.map { $0 <= now } ?? false) { reloadNextUp() }

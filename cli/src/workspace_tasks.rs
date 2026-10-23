@@ -61,7 +61,7 @@ mod conditions;
 mod filters;
 mod instructions;
 pub use board::ColumnEdit;
-pub use conditions::ContextEdit;
+pub use conditions::{ContextEdit, DayStartEdit};
 pub use filters::{FilterEdit, rule_catalog_text, rule_fields};
 pub use instructions::instruction_scope;
 

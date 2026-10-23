@@ -10,7 +10,10 @@
 //! condition provides an "MCP: Edit Condition" one; saying what holds now
 //! is not an undo step at all, as it is not in the app. What holds is the
 //! core's too (`core/src/conditions/provides.rs`): what was said, everything
-//! that provides, less what was switched off for now.
+//! that provides, less what was switched off for now. How each day starts —
+//! the hour it changes and the conditions it starts with — is the core's
+//! too (`core/src/day_start.rs`): reading or setting what holds starts the
+//! day first if it has changed, as opening the app does.
 
 use super::{TaskRow, has_migration, map_core_error, map_write_error, task_row};
 use crate::error::{Result, ToolError};
@@ -20,6 +23,7 @@ use rusqlite::{Connection, TransactionBehavior};
 use serde_json::{Value, json};
 use std::collections::HashMap;
 use takt_core::conditions as core;
+use takt_core::day_start::{self, DayStartSettings};
 use takt_core::focus_context::{self, StoredFocusContext};
 use takt_core::rows::ConditionRow;
 
@@ -42,6 +46,30 @@ pub struct ContextEdit {
     pub available_minutes: Option<i64>,
     /// Minutes from now the conditions stop being trusted; 0 for never.
     pub expires_in_minutes: Option<i64>,
+}
+
+/// A new day-start request: each field left out keeps what it was.
+#[derive(Debug, Default)]
+pub struct DayStartEdit {
+    pub resets: Option<bool>,
+    pub hour: Option<i64>,
+    /// The conditions each day starts with, by name or id; replaces them.
+    pub conditions: Option<Vec<String>>,
+}
+
+/// This machine's zone, as the app reads the day in.
+fn zone() -> String {
+    iana_time_zone::get_timezone().unwrap_or_else(|_| "UTC".into())
+}
+
+/// How each day starts, in JSON.
+fn day_start_json(settings: &DayStartSettings, all: &[ConditionRow]) -> Value {
+    json!({
+        "resets": settings.resets,
+        "hour": settings.hour,
+        "starts_with": names_of(all, &settings.condition_ids),
+        "last_reset_day": settings.last_reset_day,
+    })
 }
 
 fn conditions_of(connection: &Connection, workspace_id: &str) -> Result<Vec<ConditionRow>> {
@@ -171,9 +199,8 @@ fn context_json(
         .unwrap_or_default();
     let expired = stored.expires_at_ms.is_some_and(|expiry| expiry <= now);
     let context = focus_context::focus_context_in_force(stored, now);
-    // This machine's zone, as the app reads the day in.
-    let zone = iana_time_zone::get_timezone().unwrap_or_else(|_| "UTC".into());
-    let stale = focus_context::focus_context_is_stale(context.clone(), now, zone);
+    let stale = focus_context::focus_context_is_stale(context.clone(), now, zone());
+    let day = day_start::settings(connection).map_err(map_core_error)?;
     let name = |id: &str| {
         all.iter()
             .find(|c| c.id == id)
@@ -215,6 +242,7 @@ fn context_json(
         "expired": expired,
         "mode": context.mode,
         "last_context": names_of(all, &context.suggested_ids),
+        "day_start": day_start_json(&day, all),
     }))
 }
 
@@ -223,6 +251,9 @@ impl Workspace {
     /// open tasks need it and how many of those it is holding back; what
     /// holds now; and, for one `condition`, the open tasks that need it.
     pub fn conditions(&self, condition: Option<&str>) -> Result<Value> {
+        // A day that has changed starts first, as it would on opening the
+        // app; a workspace that cannot be written is read as it stands.
+        let _ = self.start_day_if_due();
         let connection = self.open()?;
         let (workspace_id, _) = super::workspace_row(&connection)?;
         let all = conditions_of(&connection, &workspace_id)?;
@@ -415,6 +446,8 @@ impl Workspace {
         let (workspace_id, _) = super::workspace_row(&tx)?;
         let all = conditions_of(&tx, &workspace_id)?;
         let now = Utc::now().timestamp_millis();
+        // What you say now is said of today: yesterday's answer goes first.
+        day_start::apply(&tx, &workspace_id, now, &zone()).map_err(map_core_error)?;
         let stored = focus_context::load(&tx, &workspace_id)
             .map_err(map_core_error)?
             .unwrap_or_default();
@@ -480,6 +513,87 @@ impl Workspace {
             focus_context::save(&tx, &workspace_id, &context, now).map_err(map_core_error)?;
         let mut payload = context_json(&tx, &workspace_id, &all)?;
         tx.commit().map_err(map_write_error)?;
+        payload["changed"] = json!(changed);
+        Ok(payload)
+    }
+
+    /// Starts the day if it has changed since the last reset. Whether the
+    /// context was reset.
+    fn start_day_if_due(&self) -> Result<bool> {
+        let mut connection = self.open_for_writing()?;
+        if !has_migration(&connection, CONTEXT_MIGRATION)? {
+            return Ok(false);
+        }
+        let tx = connection
+            .transaction_with_behavior(TransactionBehavior::Immediate)
+            .map_err(map_write_error)?;
+        let (workspace_id, _) = super::workspace_row(&tx)?;
+        let reset = day_start::apply(&tx, &workspace_id, Utc::now().timestamp_millis(), &zone())
+            .map_err(map_core_error)?;
+        tx.commit().map_err(map_write_error)?;
+        Ok(reset)
+    }
+
+    /// Sets how each day starts: whether what holds goes back each day to
+    /// the conditions it starts with, the hour the day changes, and those
+    /// conditions. Naming conditions switches the reset on unless `resets`
+    /// says otherwise. Not an undo step, like the rest of what holds now.
+    /// Today counts as started: the first reset is at the next change. With
+    /// nothing to change, reports how each day starts.
+    pub fn set_day_start(&self, edit: DayStartEdit) -> Result<Value> {
+        let mut connection = self.open_for_writing()?;
+        let tx = connection
+            .transaction_with_behavior(TransactionBehavior::Immediate)
+            .map_err(map_write_error)?;
+        let (workspace_id, _) = super::workspace_row(&tx)?;
+        let all = conditions_of(&tx, &workspace_id)?;
+        let mut settings = day_start::settings(&tx).map_err(map_core_error)?;
+        if let Some(hour) = edit.hour {
+            if !(0..=23).contains(&hour) {
+                return Err(ToolError::new(format!(
+                    "hour is 0 to 23, the hour the day changes, not {hour}."
+                )));
+            }
+            settings.hour = hour as i32;
+        }
+        if let Some(names) = &edit.conditions {
+            let mut ids = Vec::new();
+            for name in names {
+                let found = resolve(&all, name)?;
+                if found.is_archived {
+                    return Err(ToolError::new(format!(
+                        "{} is archived: restore it before starting the day with it.",
+                        found.name
+                    )));
+                }
+                ids.push(found.id.clone());
+            }
+            // One place at most, the last named, as saying where you are.
+            let places: Vec<String> = all
+                .iter()
+                .filter(|c| c.is_location)
+                .map(|c| c.id.clone())
+                .collect();
+            settings.condition_ids = ids.iter().fold(Vec::new(), |current, id| {
+                focus_context::focus_context_changed(
+                    current,
+                    vec![id.clone()],
+                    Vec::new(),
+                    places.clone(),
+                )
+            });
+            settings.resets = true;
+        }
+        if let Some(resets) = edit.resets {
+            settings.resets = resets;
+        }
+        let now = Utc::now().timestamp_millis();
+        let asked = edit.resets.is_some() || edit.hour.is_some() || edit.conditions.is_some();
+        let changed =
+            asked && day_start::save(&tx, &settings, now, &zone()).map_err(map_core_error)?;
+        let saved = day_start::settings(&tx).map_err(map_core_error)?;
+        tx.commit().map_err(map_write_error)?;
+        let mut payload = day_start_json(&saved, &all);
         payload["changed"] = json!(changed);
         Ok(payload)
     }

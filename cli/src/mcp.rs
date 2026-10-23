@@ -1052,7 +1052,7 @@ fn workspace_tool_definitions() -> Vec<Value> {
         }),
         json!({
             "name": "workspace_conditions",
-            "description": "Conditions: the places and circumstances a task can require before it is offered (Home, Campus, Floor space), under their categories in the order the app shows them (settings first: Location, and any category whose conditions provide others), each with how many open tasks need it and what it provides. Location is one at a time. A condition can provide others: while Home holds, so do the Floor space, Desk and Quiet it provides. Also the context: which conditions were said to hold (on), everything that holds with where it comes from (holds: said, or from the settings that provide it — this is what tasks are checked against, negated requirements included), provided conditions switched off for now (off_for_now), when they were said (set_at; stale when that was an earlier day, so probably no longer true), the available-time window, goal and expiry, and the last context an expiry set aside. A task that needs a condition that is not on is held back from Today, next up and the focus panel: this is how to explain why. With condition (a name or id), also the open tasks that need it. workspace_tasks shows each task's requires.",
+            "description": "Conditions: the places and circumstances a task can require before it is offered (Home, Campus, Floor space), under their categories in the order the app shows them (settings first: Location, and any category whose conditions provide others), each with how many open tasks need it and what it provides. Location is one at a time. A condition can provide others: while Home holds, so do the Floor space, Desk and Quiet it provides. Also the context: which conditions were said to hold (on), everything that holds with where it comes from (holds: said, or from the settings that provide it — this is what tasks are checked against, negated requirements included), provided conditions switched off for now (off_for_now), when they were said (set_at; stale when that was an earlier day, so probably no longer true), the available-time window, goal and expiry, the last context an expiry set aside, and how each day starts (day_start: whether it resets, the hour the day changes, the conditions it starts with, the last day it reset). Reading starts the day first if it has changed since the last reset, as opening the app does. A task that needs a condition that is not on is held back from Today, next up and the focus panel: this is how to explain why. With condition (a name or id), also the open tasks that need it. workspace_tasks shows each task's requires.",
             "inputSchema": {
                 "type": "object",
                 "properties": {
@@ -1097,7 +1097,7 @@ fn workspace_tool_definitions() -> Vec<Value> {
         }),
         json!({
             "name": "workspace_context_set",
-            "description": "Say what holds now, as the app's Conditions tab does: which conditions are on (the user says where they are, or what they have), the time available, the goal and when the answer lapses. set replaces the conditions on; clear turns them all off; then off and on adjust. Turning a place on turns the other place off. What a condition said to hold provides holds with it (workspace_condition_provides_set): off on a provided condition switches it off for now (housemates in: off Quiet), until whatever provides it is turned off or replaced, and on brings it back. Conditions by name or id. available_minutes and expires_in_minutes count from now; 0 removes the limit. The app picks the change up at once. Not an undo step. Returns the context as workspace_conditions reports it.",
+            "description": "Say what holds now, as the app's Conditions tab does: which conditions are on (the user says where they are, or what they have), the time available, the goal and when the answer lapses. set replaces the conditions on; clear turns them all off; then off and on adjust. Turning a place on turns the other place off. What a condition said to hold provides holds with it (workspace_condition_provides_set): off on a provided condition switches it off for now (housemates in: off Quiet), until whatever provides it is turned off or replaced, and on brings it back. Conditions by name or id. available_minutes and expires_in_minutes count from now; 0 removes the limit. The app picks the change up at once. Not an undo step. A day that has changed since the last reset starts first (workspace_day_start_set), so what you set is today's. Returns the context as workspace_conditions reports it.",
             "inputSchema": {
                 "type": "object",
                 "properties": {
@@ -1108,6 +1108,19 @@ fn workspace_tool_definitions() -> Vec<Value> {
                     "mode": { "type": "string", "enum": ["progress", "finish"] },
                     "available_minutes": { "type": "integer", "minimum": 0 },
                     "expires_in_minutes": { "type": "integer", "minimum": 0 },
+                },
+                "additionalProperties": false,
+            },
+        }),
+        json!({
+            "name": "workspace_day_start_set",
+            "description": "Set how each day starts, for every device: at the hour the day changes (local time, 0 to 23, 4 by default — the daily log's days change then too), what holds goes back to the conditions each day starts with (Home), with nothing switched off for now, no time window and no expiry. It happens once a day, on whichever device looks first after the change, including one that was closed for days; something said since the day changed is kept. resets turns it on or off (off: what holds carries over); conditions replaces the starting set, by name or id, one place at most, and naming any turns the reset on; an empty array starts each day with nothing on. Fields left out keep what they were; with none, it only reports. Today counts as started, so the first reset is at the next change of day. Not an undo step. Returns the settings as saved.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "resets": { "type": "boolean" },
+                    "hour": { "type": "integer", "minimum": 0, "maximum": 23 },
+                    "conditions": { "type": "array", "items": { "type": "string" } },
                 },
                 "additionalProperties": false,
             },

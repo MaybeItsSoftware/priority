@@ -16,6 +16,13 @@ public enum ConditionsPaneRow: Hashable, Sendable {
   case finishOnly
   /// When what you have said stops counting.
   case expiry
+  /// Whether each day starts afresh: Space turns it on or off.
+  case dayStart
+  /// The hour the day changes: `←`/`→` step it.
+  case dayStartHour
+  /// The conditions each day starts with: Return ticks them. Only while
+  /// each day starts afresh.
+  case dayStartConditions
   /// The new-condition row: Return puts the caret in its field.
   case add
   /// A condition in the "Conditions" half: rename, file, move, merge.
@@ -29,7 +36,9 @@ public enum ConditionsPaneRow: Hashable, Sendable {
   public var conditionID: String? {
     switch self {
     case .available(let id), .condition(let id): id
-    case .location, .time, .finishOnly, .expiry, .add, .folded, .archived: nil
+    case .location, .time, .finishOnly, .expiry, .dayStart, .dayStartHour, .dayStartConditions, .add, .folded,
+      .archived:
+      nil
     }
   }
 
@@ -48,6 +57,9 @@ public enum ConditionsPaneRow: Hashable, Sendable {
     case .time: "time"
     case .finishOnly: "finishOnly"
     case .expiry: "expiry"
+    case .dayStart: "dayStart"
+    case .dayStartHour: "dayStartHour"
+    case .dayStartConditions: "dayStartConditions"
     case .available(let id): "available.\(id)"
     case .add: "add"
     case .condition(let id): "condition.\(id)"
@@ -75,18 +87,22 @@ public enum ConditionsPaneLayout {
   /// Top to bottom: where you are (with `hasPlaces`), your free time and
   /// whether to finish within it (only with `hasTimeLimit`), the other
   /// conditions you can say hold — the other settings first, as the core
-  /// orders them — and when it all expires, the new-condition row,
+  /// orders them — and when it all expires; with `dayStart`, how each day
+  /// starts (what it starts with only when `startsAfresh`); the new-condition row,
   /// then each heading's conditions — or, folded, the heading alone — and
   /// last the archived heading (when there are any) and, shown, the archived
   /// conditions under it.
   public static func rows(
     available: [String], sections: [Section], folded: Set<String>,
-    archived: [String], showsArchived: Bool, hasPlaces: Bool = false, hasTimeLimit: Bool = false
+    archived: [String], showsArchived: Bool, hasPlaces: Bool = false, hasTimeLimit: Bool = false,
+    dayStart: Bool = false, startsAfresh: Bool = false
   ) -> [ConditionsPaneRow] {
     var rows: [ConditionsPaneRow] = hasPlaces ? [.location] : []
     rows += hasTimeLimit ? [.time, .finishOnly] : [.time]
     rows += available.map(ConditionsPaneRow.available)
-    rows += [.expiry, .add]
+    rows.append(.expiry)
+    if dayStart { rows += startsAfresh ? [.dayStart, .dayStartHour, .dayStartConditions] : [.dayStart, .dayStartHour] }
+    rows.append(.add)
     for section in sections where !section.conditionIDs.isEmpty {
       if folded.contains(section.id) {
         rows.append(.folded(section.id))
@@ -109,8 +125,10 @@ public enum ConditionsPaneLayout {
   ) -> ConditionsPaneRow {
     guard let cursor else { return rows.first ?? .add }
     if rows.contains(cursor) { return cursor }
-    // Clearing the time takes its finish row with it.
+    // Clearing the time takes its finish row with it, and no longer
+    // starting each day afresh the row of what it starts with.
     if cursor == .finishOnly, rows.contains(.time) { return .time }
+    if cursor == .dayStartConditions, rows.contains(.dayStart) { return .dayStart }
     if let id = cursor.conditionID {
       if rows.contains(.condition(id)) { return .condition(id) }
       if let section = sections.first(where: { $0.conditionIDs.contains(id) }), rows.contains(.folded(section.id)) {
@@ -132,7 +150,7 @@ public enum ConditionsPaneLayout {
     switch row {
     case .folded(let id): sections.first { $0.id == id }
     case .condition(let id), .available(let id): sections.first { $0.conditionIDs.contains(id) }
-    case .location, .time, .finishOnly, .expiry, .add, .archived: nil
+    case .location, .time, .finishOnly, .expiry, .dayStart, .dayStartHour, .dayStartConditions, .add, .archived: nil
     }
   }
 }

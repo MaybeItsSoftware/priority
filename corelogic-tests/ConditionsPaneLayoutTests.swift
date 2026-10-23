@@ -27,6 +27,20 @@ final class ConditionsPaneLayoutTests: XCTestCase {
       ConditionsPaneLayout.rows(available: [], sections: [], folded: [], archived: [], showsArchived: true), [.time, .expiry, .add])
   }
 
+  /// How each day starts sits after the expiry, before the second half; what
+  /// it starts with only while it starts afresh, and a cursor left there
+  /// when it stops lands on the switch.
+  func testHowEachDayStartsFollowsTheExpiry() {
+    let off = ConditionsPaneLayout.rows(
+      available: [], sections: [], folded: [], archived: [], showsArchived: false, dayStart: true)
+    XCTAssertEqual(off, [.time, .expiry, .dayStart, .dayStartHour, .add])
+    let on = ConditionsPaneLayout.rows(
+      available: [], sections: [], folded: [], archived: [], showsArchived: false, dayStart: true, startsAfresh: true)
+    XCTAssertEqual(on, [.time, .expiry, .dayStart, .dayStartHour, .dayStartConditions, .add])
+    XCTAssertEqual(ConditionsPaneLayout.landing(.dayStartConditions, in: off, sections: []), .dayStart)
+    XCTAssertNil(ConditionsPaneRow.dayStartHour.conditionID)
+  }
+
   func testACursorWhoseRowWentLandsOnTheSameCondition() {
     let folded = ConditionsPaneLayout.rows(
       available: [], sections: sections, folded: ["location"], archived: ["old"], showsArchived: false)

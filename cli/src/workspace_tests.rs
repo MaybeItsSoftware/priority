@@ -2173,6 +2173,79 @@ fn a_setting_provides_conditions_and_one_can_be_switched_off_for_now() {
 }
 
 #[test]
+fn each_day_starts_with_the_conditions_set_for_it() {
+    let fixture = Fixture::new();
+    fixture
+        .db()
+        .execute_batch(&format!(
+            "INSERT INTO task_conditions (id, workspaceId, name, isLocation, isArchived, createdAt, updatedAt, category, sortOrder) VALUES
+               ('home', '{WORKSPACE}', 'Home', 1, 0, '{EARLIER}', '{EARLIER}', 'Location', 0),
+               ('library', '{WORKSPACE}', 'Library', 1, 0, '{EARLIER}', '{EARLIER}', 'Location', 1),
+               ('laptop', '{WORKSPACE}', 'Laptop', 0, 0, '{EARLIER}', '{EARLIER}', NULL, 2);"
+        ))
+        .unwrap();
+    // Nothing set: the defaults, and reading writes nothing.
+    let read = fixture.call("workspace_day_start_set", json!({}));
+    assert_eq!(read["resets"], json!(false));
+    assert_eq!(read["hour"], json!(4));
+    assert_eq!(read["changed"], json!(false));
+
+    // Two places named: the last is kept, as saying where you are keeps one.
+    let set = fixture.call(
+        "workspace_day_start_set",
+        json!({ "conditions": ["Library", "laptop", "Home"], "hour": 5 }),
+    );
+    assert_eq!(set["resets"], json!(true));
+    assert_eq!(set["hour"], json!(5));
+    let names: Vec<&str> = set["starts_with"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|c| c["name"].as_str().unwrap())
+        .collect();
+    assert_eq!(names, vec!["Home", "Laptop"]);
+    // Today counts as started: setting it reset nothing.
+    assert!(set["last_reset_day"].is_string());
+    let here = fixture.call("workspace_context_set", json!({ "on": ["Library"] }));
+    assert_eq!(here["on"][0]["name"], json!("Library"));
+    assert_eq!(here["day_start"]["resets"], json!(true));
+
+    // As if the last reset was yesterday and Library was said then: the next
+    // read starts the day at Home.
+    fixture
+        .db()
+        .execute_batch(
+            "UPDATE preferences SET value = '2000-01-01' WHERE key = 'dayStart.lastReset';
+             UPDATE focus_contexts SET updatedAt = '2000-01-01 12:00:00.000';",
+        )
+        .unwrap();
+    let morning = fixture.call("workspace_conditions", json!({}));
+    let on: Vec<&str> = morning["context"]["on"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|c| c["name"].as_str().unwrap())
+        .collect();
+    assert_eq!(on, vec!["Home", "Laptop"]);
+    assert_ne!(
+        morning["context"]["day_start"]["last_reset_day"],
+        json!("2000-01-01")
+    );
+
+    let wrong = fixture
+        .try_call("workspace_day_start_set", json!({ "hour": 24 }))
+        .unwrap_err();
+    assert!(wrong.contains("0 to 23"), "{wrong}");
+    let off = fixture.call("workspace_day_start_set", json!({ "resets": false }));
+    assert_eq!(off["resets"], json!(false));
+    assert_eq!(
+        off["starts_with"][0]["name"],
+        json!("Home"),
+        "kept for next time"
+    );
+}
+
+#[test]
 fn clearing_who_and_when_drops_a_repeating_follow_up_too() {
     let fixture = Fixture::new();
     let task = fixture.add(PROJECTS, "Contract signed", None);

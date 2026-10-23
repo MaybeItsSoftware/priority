@@ -29,7 +29,8 @@ extension WorkspaceViewModel {
     switch stop {
     case .folded(let id): return sections.first { $0.id == id }
     case .condition(let id), .available(let id): return sections.first { $0.conditions.contains { $0.id == id } }
-    case .location, .time, .finishOnly, .expiry, .add, .archived: return nil
+    case .location, .time, .finishOnly, .expiry, .dayStart, .dayStartHour, .dayStartConditions, .add, .archived:
+      return nil
     }
   }
 

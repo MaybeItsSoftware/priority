@@ -511,6 +511,23 @@ pub enum WsCommand {
         #[arg(long, value_name = "MINUTES")]
         expires: Option<i64>,
     },
+    /// How each day starts: at the hour the day changes, what holds goes back
+    /// to these conditions ("Home"). With nothing, shows how it starts.
+    DayStart {
+        /// The conditions each day starts with, by name or id; replaces them
+        /// and turns the reset on.
+        #[arg(num_args = 0.., value_name = "CONDITION")]
+        conditions: Vec<String>,
+        /// The hour the day changes, 0 to 23.
+        #[arg(long)]
+        hour: Option<i64>,
+        /// Start each day with nothing on.
+        #[arg(long, conflicts_with = "conditions")]
+        nothing: bool,
+        /// Stop resetting: what holds carries over from one day to the next.
+        #[arg(long, conflicts_with_all = ["conditions", "nothing"])]
+        off: bool,
+    },
     /// Delete a task and its subtree.
     Rm { task_id: String },
     /// Filter lists — Today, Everything and your own — with their rules.
@@ -1247,6 +1264,26 @@ fn resolve_workspace(
             }
             "workspace_context_set"
         }
+        WsCommand::DayStart {
+            conditions,
+            hour,
+            nothing,
+            off,
+        } => {
+            if *nothing {
+                arguments.insert("conditions".into(), json!([]));
+                arguments.insert("resets".into(), json!(true));
+            } else if !conditions.is_empty() {
+                arguments.insert("conditions".into(), json!(conditions));
+            }
+            if *off {
+                arguments.insert("resets".into(), json!(false));
+            }
+            if let Some(hour) = hour {
+                arguments.insert("hour".into(), json!(hour));
+            }
+            "workspace_day_start_set"
+        }
         WsCommand::Rm { task_id } => {
             arguments.insert("task_id".into(), json!(task_id));
             "workspace_task_delete"
@@ -1441,6 +1478,7 @@ pub fn render(tool: &str, outcome: &ToolOutcome, as_json: bool) {
             }
         }
         "workspace_context_set" => render_context(payload),
+        "workspace_day_start_set" => render_day_start(payload),
         "workspace_filter_lists" => {
             for filter in payload["filter_lists"].as_array().into_iter().flatten() {
                 render_filter_list(filter);
@@ -2015,6 +2053,29 @@ fn render_conditions(payload: &Value) {
     render_context(&payload["context"]);
 }
 
+fn render_day_start(day: &Value) {
+    let hour = day["hour"].as_i64().unwrap_or(4);
+    let names: Vec<String> = day["starts_with"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .map(|c| text_of(&c["name"]))
+        .collect();
+    if day["resets"] != json!(true) {
+        println!("The day changes at {hour:02}:00; what holds carries over.");
+    } else if names.is_empty() {
+        println!("Each day starts at {hour:02}:00 with nothing on.");
+    } else {
+        println!(
+            "Each day starts at {hour:02}:00 with {}.",
+            names.join(" · ")
+        );
+    }
+    if let Some(day) = day["last_reset_day"].as_str() {
+        println!("Last started afresh on {day}.");
+    }
+}
+
 fn render_context(context: &Value) {
     if let Some(note) = context["note"].as_str() {
         println!("{note}");
@@ -2083,6 +2144,9 @@ fn render_context(context: &Value) {
         .collect();
     if !last.is_empty() {
         println!("Last context: {}", last.join(" · "));
+    }
+    if context["day_start"]["resets"] == json!(true) {
+        render_day_start(&context["day_start"]);
     }
 }
 
