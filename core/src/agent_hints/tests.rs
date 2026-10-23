@@ -532,6 +532,7 @@ fn sample(tool: &str) -> Value {
         "agent_instructions_set" => json!({"scope": "list", "id": OTHER, "text": "x"}),
         "workspace_task_conditions_set" => json!({"task_id": TASK, "requires": ["Home"]}),
         "workspace_context_set" => json!({"on": ["Campus"]}),
+        "workspace_day_start_set" => json!({"resets": true, "conditions": ["Home"]}),
         "workspace_condition_provides_set" => {
             json!({"condition": "Home", "provides": ["Quiet"]})
         }

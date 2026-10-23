@@ -263,6 +263,10 @@ fn build(tool: &str, input: &Map<String, Value>, hint: &mut Hint) -> Option<()> 
             hint.key("focusSetAvailable")
                 .words("then Space on each condition that holds");
         }
+        "workspace_day_start_set" => {
+            hint.key("focusSetAvailable")
+                .words("then set it under Start each day");
+        }
         "agent_instructions_set" => {
             if input.get("scope").and_then(Value::as_str) != Some("list") {
                 return None;
