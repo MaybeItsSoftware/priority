@@ -42,6 +42,13 @@ final class WorkspaceTodayTests: XCTestCase {
     let dated = try store.createTask(capturing: "Ring the bank @tomorrow", listId: work.id, defaultDueAt: today)
     XCTAssertNotNil(dated.dueAt)
     XCTAssertNotEqual(dated.dueAt, today, "a date typed in the title wins")
+
+    // A typed start drops the default: starting tomorrow isn't due today,
+    // which the core would refuse.
+    let later = try store.createTask(
+      capturing: "Ring the bank ^tomorrow", listId: work.id, kanbanColumn: NextUpSelector.todayColumnID,
+      defaultDueAt: today)
+    XCTAssertNil(later.dueAt)
   }
 
   func testATypedTaskCarriesItsDetails() throws {

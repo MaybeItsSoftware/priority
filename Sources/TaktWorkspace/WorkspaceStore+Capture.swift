@@ -13,7 +13,9 @@ extension WorkspaceStore {
   ///
   /// `defaultDueAt` is the due date when the text names none — Today's field
   /// passes the day, so what you add there is due on it. A date you typed wins,
-  /// and so does a start typed with `^mon` over `startAt`.
+  /// and so does a start typed with `^mon` over `startAt`. A typed start drops
+  /// the default: a task starting tomorrow is not due today, and the core
+  /// would refuse a start after its deadline.
   public func createTask(
     capturing typed: String,
     listId: String,
@@ -30,7 +32,8 @@ extension WorkspaceStore {
     return try createTask(
       listId: listId, title: capture.title, parentTaskId: parentTaskId, kanbanColumn: kanbanColumn,
       startAt: capture.startAt ?? startAt, atTop: atTop, adjacentTaskId: adjacentTaskId, above: above,
-      dueAt: capture.dueAt ?? defaultDueAt, estimateSeconds: capture.estimateSeconds, tags: capture.tags,
+      dueAt: capture.dueAt ?? (capture.startAt == nil ? defaultDueAt : nil),
+      estimateSeconds: capture.estimateSeconds, tags: capture.tags,
       priority: capture.priority, waitingOn: capture.waitingOn, externalLinks: capture.links, now: now)
   }
 
