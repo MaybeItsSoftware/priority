@@ -767,6 +767,33 @@ impl Tools {
                 Ok(outcome(title, payload))
             }
 
+            "workspace_day_start_set" => {
+                let edit = crate::workspace_tasks::DayStartEdit {
+                    resets: match arguments.get("resets") {
+                        None | Some(Value::Null) => None,
+                        value => Some(as_bool(value, false)?),
+                    },
+                    hour: as_optional_int(arguments.get("hour"))?,
+                    conditions: as_string_list(arguments.get("conditions"))?,
+                };
+                let payload = self.workspace.set_day_start(edit)?;
+                let names: Vec<&str> = payload["starts_with"]
+                    .as_array()
+                    .into_iter()
+                    .flatten()
+                    .filter_map(|c| c["name"].as_str())
+                    .collect();
+                let hour = payload["hour"].as_i64().unwrap_or(4);
+                let title = if payload["resets"] != json!(true) {
+                    format!("Each day carries on from the last; the day changes at {hour:02}:00")
+                } else if names.is_empty() {
+                    format!("Each day starts at {hour:02}:00 with nothing on")
+                } else {
+                    format!("Each day starts at {hour:02}:00 with {}", names.join(" · "))
+                };
+                Ok(outcome(title, payload))
+            }
+
             "workspace_folder_create" => {
                 let name = required_string(arguments, "name")?;
                 let parent = as_id(arguments.get("parent_folder_id"));

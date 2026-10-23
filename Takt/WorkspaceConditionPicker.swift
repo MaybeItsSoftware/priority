@@ -6,11 +6,13 @@ struct WorkspaceConditionPickerRequest: Identifiable {
   /// What the ticks are for: a task that exists, saved as each is ticked,
   /// one still being typed in the add field, whose ticks wait in its slot
   /// until Return files them with it, or a condition, whose ticks are what
-  /// it provides — `p` in the Conditions tab.
+  /// it provides — `p` in the Conditions tab — or the conditions each day
+  /// starts with, from "Start each day" in the same tab.
   enum Target {
     case task(WorkspaceTask)
     case draft(title: String, groups: Binding<[[String]]>)
     case provides(TaskCondition)
+    case dayStart
   }
 
   let id = UUID()
@@ -19,12 +21,14 @@ struct WorkspaceConditionPickerRequest: Identifiable {
   init(task: WorkspaceTask) { target = .task(task) }
   init(draftTitle: String, groups: Binding<[[String]]>) { target = .draft(title: draftTitle, groups: groups) }
   init(provides condition: TaskCondition) { target = .provides(condition) }
+  init(dayStart: Void) { target = .dayStart }
 
   var title: String {
     switch target {
     case .task(let task): task.title
     case .draft(let title, _): title.isEmpty ? "New task" : title
     case .provides(let condition): condition.name
+    case .dayStart: "Start each day"
     }
   }
 
@@ -32,6 +36,16 @@ struct WorkspaceConditionPickerRequest: Identifiable {
   var provider: TaskCondition? {
     if case .provides(let condition) = target { return condition }
     return nil
+  }
+
+  /// Whether the ticks are a plain set — what a condition provides, what
+  /// each day starts with — rather than a task's requirements, with their
+  /// "not" and either-or.
+  var ticksASet: Bool {
+    switch target {
+    case .provides, .dayStart: true
+    case .task, .draft: false
+    }
   }
 }
 
@@ -47,7 +61,9 @@ struct WorkspaceConditionPickerRequest: Identifiable {
 ///
 /// Opened on a condition (`p` in the Conditions tab), the same list ticks
 /// what that condition provides: Home, Floor space and Quiet. There is no
-/// "not" there, and the condition itself is not offered.
+/// "not" there, and the condition itself is not offered. Opened on "Start
+/// each day", it ticks the conditions every day starts with, one place at
+/// most.
 struct WorkspaceConditionPicker: View {
   @Environment(WorkspaceViewModel.self) private var model
   @Environment(\.theme) private var theme
@@ -61,8 +77,8 @@ struct WorkspaceConditionPicker: View {
   /// The task's requirements, read when the picker opens and again after
   /// every tick, so the boxes show what was saved rather than what was meant.
   @State private var groups: [[String]]?
-  /// What the condition provides, when the picker is for one: read when it
-  /// opens and again after every tick.
+  /// What the condition provides, when the picker is for one, or what each
+  /// day starts with: read when it opens and again after every tick.
   @State private var provided: [String] = []
   /// Whether the last key moved the cursor rather than typed. Space ticks
   /// then, or with nothing typed; otherwise it is a space in the name,
@@ -79,6 +95,7 @@ struct WorkspaceConditionPicker: View {
     let provider = request.provider
     let offered = TaskConditionSection.sections(model.focusConditions.filter {
       if let provider { return $0.id != provider.id && (!$0.isArchived || provided.contains($0.id)) }
+      if request.ticksASet { return !$0.isArchived || provided.contains($0.id) }
       return !$0.isArchived || TaskRequirementToggle.requires($0.id, in: groups)
     }).flatMap(\.conditions)
     let needle = query.trimmingCharacters(in: .whitespaces)
@@ -108,7 +125,7 @@ struct WorkspaceConditionPicker: View {
     VStack(spacing: 0) {
       WorkspaceOverlayField(
         symbol: "location",
-        prompt: request.provider == nil ? "Needs… or type a new condition" : "Provides… or type a new condition",
+        prompt: prompt,
         text: $query, context: request.title)
       FocusRule()
       if items.isEmpty && new == nil {
@@ -155,7 +172,7 @@ struct WorkspaceConditionPicker: View {
         }
       }
       WorkspaceOverlayFooter(
-        hints: request.provider == nil
+        hints: !request.ticksASet
           ? "↑↓ choose · space or ↩ tick · ! not · ⌘↩ manage · esc done"
           : "↑↓ choose · space or ↩ tick · esc done",
         trailing: summary)
@@ -163,6 +180,7 @@ struct WorkspaceConditionPicker: View {
     .onAppear {
       groups = currentGroups
       if let provider = request.provider { provided = model.providedIDs(of: provider) }
+      if case .dayStart = request.target { provided = Array(model.dayStart.conditionIDs) }
     }
     .onChange(of: query) { _, _ in
       selection = nil
@@ -189,7 +207,7 @@ struct WorkspaceConditionPicker: View {
       // row it ticks "not"; on the new-condition row it is typed.
       case "shift+1", "!":
         let index = selection ?? 0
-        guard request.provider == nil, conditions.indices.contains(index) else { return false }
+        guard !request.ticksASet, conditions.indices.contains(index) else { return false }
         choose(index, negated: true)
         return true
       case "cmd+enter":
@@ -203,8 +221,8 @@ struct WorkspaceConditionPicker: View {
   }
 
   private func row(_ condition: TaskCondition, count: Int) -> some View {
-    let requirement = request.provider == nil ? TaskRequirementToggle.requirement(of: condition.id, in: groups) : nil
-    let isRequired = requirement != nil || (request.provider != nil && provided.contains(condition.id))
+    let requirement = !request.ticksASet ? TaskRequirementToggle.requirement(of: condition.id, in: groups) : nil
+    let isRequired = requirement != nil || (request.ticksASet && provided.contains(condition.id))
     let isNegated = requirement?.isNegated == true
     return HStack(spacing: theme.space.sm) {
       Image(systemName: isNegated ? "minus.square.fill" : isRequired ? "checkmark.square.fill" : "square")
@@ -255,6 +273,10 @@ struct WorkspaceConditionPicker: View {
   /// What the task needs, as the footer's count: "Needs Home + Floor space";
   /// for a condition, what it provides.
   private var summary: String? {
+    if case .dayStart = request.target {
+      let names = model.focusConditions.filter { provided.contains($0.id) }.map(\.name)
+      return names.isEmpty ? "Starts with nothing on" : "Starts with " + names.joined(separator: ", ")
+    }
     if request.provider != nil {
       let names = model.focusConditions.filter { provided.contains($0.id) }.map(\.name)
       return names.isEmpty ? "Provides nothing" : "Provides " + names.joined(separator: ", ")
@@ -268,7 +290,15 @@ struct WorkspaceConditionPicker: View {
     switch request.target {
     case .task(let task): model.requirementGroups(of: task)
     case .draft(_, let groups): groups.wrappedValue
-    case .provides: nil
+    case .provides, .dayStart: nil
+    }
+  }
+
+  private var prompt: String {
+    switch request.target {
+    case .task, .draft: "Needs… or type a new condition"
+    case .provides: "Provides… or type a new condition"
+    case .dayStart: "Each day starts with… or type a new condition"
     }
   }
 
@@ -285,6 +315,11 @@ struct WorkspaceConditionPicker: View {
         // "Garden" the moment it is named.
         guard let condition = model.createCondition(name: name, category: nil) else { return }
         provided = model.toggleProvided(condition.id, by: provider)
+        return
+      }
+      if case .dayStart = request.target {
+        guard let condition = model.createCondition(name: name, category: nil) else { return }
+        provided = model.toggleDayStartCondition(condition.id)
         return
       }
       if case .task(let task) = request.target {
@@ -306,6 +341,8 @@ struct WorkspaceConditionPicker: View {
       groups = binding.wrappedValue
     case .provides(let provider):
       provided = model.toggleProvided(conditionID, by: provider)
+    case .dayStart:
+      provided = model.toggleDayStartCondition(conditionID)
     }
   }
 }

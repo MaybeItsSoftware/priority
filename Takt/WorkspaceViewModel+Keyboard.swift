@@ -256,9 +256,10 @@ extension WorkspaceViewModel {
   }
 
   /// Saves an in-row title edit. Trailing tokens are read the way the add
-  /// field reads them — `45m`, `@fri` or `^fri`, `#tag`, `!1` — and set the
-  /// estimate, due day, tags (added to the ones it has) and priority, all as
-  /// one undo step with the new title.
+  /// field reads them — `45m`, `@fri`, `^mon`, `#tag`, `!1` — and set the
+  /// estimate, due day, start, tags (added to the ones it has) and priority,
+  /// all as one undo step with the new title. A start on or after the due
+  /// day is refused as the editor refuses it.
   func commitTaskTitleEdit(_ task: WorkspaceTask, text: String) {
     editingTaskTitleID = nil
     returnKeyboardToBoardAfterTitleEdit()
@@ -268,6 +269,7 @@ extension WorkspaceViewModel {
     editTaskValues(of: task) { values in
       values.title = capture.title
       if let dueAt = capture.dueAt { values.dueAt = dueAt; values.dueDate = nil }
+      if let startAt = capture.startAt { values.startAt = startAt }
       if let seconds = capture.estimateSeconds { values.estimateMinutes = String(seconds / 60) }
       if let priority = capture.priority { values.priority = priority }
       if !capture.tags.isEmpty {

@@ -40,11 +40,47 @@ fn a_plain_title_is_left_exactly_as_typed() {
 }
 
 #[test]
-fn checkvists_caret_marks_a_due_day_too() {
+fn the_caret_marks_the_day_it_starts() {
     let capture = p("Ring the bank ^fri");
     assert_eq!(capture.title, "Ring the bank");
+    assert_eq!(capture.start_at_ms, Some(day(2026, 10, 2)));
+    assert_eq!(capture.due_at_ms, None);
+    assert_eq!(capture.problem, None);
+    assert_eq!(p("Ring the bank @fri").start_at_ms, None);
+    // Every date word `@` reads.
+    assert_eq!(p("Plan ^tomorrow").start_at_ms, Some(day(2026, 9, 30)));
+    assert_eq!(p("Plan ^2026-10-08").start_at_ms, Some(day(2026, 10, 8)));
+    // Not a date: the title's.
+    assert_eq!(p("Raise x^2"), title("Raise x^2"));
+}
+
+#[test]
+fn a_start_and_a_due_day_together() {
+    let capture = p("write essay ^mon @fri");
+    assert_eq!(capture.title, "write essay");
+    assert_eq!(capture.start_at_ms, Some(day(2026, 10, 5)));
     assert_eq!(capture.due_at_ms, Some(day(2026, 10, 2)));
-    assert_eq!(capture.due_at_ms, p("Ring the bank @fri").due_at_ms);
+    // Monday is after Friday: kept as typed, with the editor's refusal.
+    assert_eq!(
+        capture.problem.as_deref(),
+        Some("Start must be before the deadline.")
+    );
+    let fine = p("write essay ^tue @fri 2h");
+    assert_eq!(fine.start_at_ms, Some(day(2026, 9, 29)));
+    assert_eq!(fine.due_at_ms, Some(day(2026, 10, 2)));
+    assert_eq!(fine.estimate_seconds, Some(2 * 3600));
+    assert_eq!(fine.problem, None);
+    // Either order.
+    assert_eq!(
+        p("write essay @fri ^tue").start_at_ms,
+        p("write essay ^tue @fri").start_at_ms
+    );
+    // The same day: due at its first moment, so the start is not before it.
+    assert!(p("Ship ^fri @fri").problem.is_some());
+    // A second start ends the scan, as a second of any kind does.
+    let twice = p("Draft ^mon ^tue");
+    assert_eq!(twice.title, "Draft ^mon");
+    assert_eq!(twice.start_at_ms, Some(day(2026, 9, 29)));
 }
 
 #[test]
@@ -201,18 +237,23 @@ fn labels_name_what_was_found() {
     let labels = |text: &str| detail_labels(&p(text), now(), Tz::UTC);
     assert_eq!(
         labels("Write notes 1h30m @tomorrow #work !2"),
-        vec!["1h 30m", "Tomorrow", "#work", "!2"]
+        vec!["1h 30m", "due tomorrow", "#work", "!2"]
     );
-    assert_eq!(labels("Book flights @2026-10-02"), vec!["Fri 2 Oct"]);
-    assert_eq!(labels("Renew passport @2027-03-01"), vec!["1 Mar 2027"]);
-    assert_eq!(labels("Ring @today"), vec!["Today"]);
+    assert_eq!(labels("Book flights @2026-10-02"), vec!["due Fri 2 Oct"]);
+    assert_eq!(labels("Renew passport @2027-03-01"), vec!["due 1 Mar 2027"]);
+    assert_eq!(labels("Ring @today"), vec!["due today"]);
     assert_eq!(labels("Ask 2h wait:Sam"), vec!["2h", "waiting on Sam"]);
-    assert_eq!(labels("Plan @2026-09-03"), vec!["Thu 3 Sep"]);
+    assert_eq!(labels("Plan @2026-09-03"), vec!["due Thu 3 Sep"]);
+    assert_eq!(
+        labels("write essay ^mon @2026-10-09 3h"),
+        vec!["3h", "starts Mon 5 Oct", "due Fri 9 Oct"]
+    );
+    assert_eq!(labels("Start ^today"), vec!["starts today"]);
 }
 
 #[test]
 fn wait_colon_files_it_as_waiting_on_someone() {
-    let capture = p("Contract signed wait:Sam ^fri");
+    let capture = p("Contract signed wait:Sam @fri");
     assert_eq!(capture.title, "Contract signed");
     assert_eq!(capture.waiting_on.as_deref(), Some("Sam"));
     assert_eq!(capture.due_at_ms, Some(day(2026, 10, 2)));

@@ -225,20 +225,23 @@ struct TitleBarAddTextField: NSViewRepresentable {
   }
 }
 
-/// What a typed task will be filed with beyond its title — `45m`, `Fri 2 Oct`,
-/// `#work`, `!1` — shown as the field is typed, so the trailing-word parse in
-/// `TaskCapture` is never a surprise after Return.
+/// What a typed task will be filed with beyond its title — `45m`, `starts
+/// Mon 5 Oct`, `due Fri 9 Oct`, `#work`, `!1` — shown as the field is typed,
+/// so the trailing-word parse in `TaskCapture` is never a surprise after
+/// Return.
 ///
 /// Each label is plain text in the mono face, as the slots' values are, in
 /// the primary hue because it is information, not a warning. No box: the
-/// strip after it already rules off the fields.
+/// strip after it already rules off the fields. The one warning — a start
+/// on or after the due day, which Return will not file — follows them in
+/// the danger hue, in the editor's words.
 struct TaskCapturePreview: View {
   @Environment(\.theme) private var theme
   let capture: TaskCapture
 
   /// One sentence on the syntax, for the tooltips of the places that parse it.
   static let syntaxHint =
-    "End it with 30m, @fri (or ^fri), #tag or !1 to set its estimate, due day, tags or priority."
+    "End it with 30m, @fri, ^mon, #tag or !1 to set its estimate, due day, start day, tags or priority."
 
   var body: some View {
     let labels = capture.detailLabels()
@@ -249,9 +252,16 @@ struct TaskCapturePreview: View {
           .foregroundStyle(theme.primary)
           .lineLimit(1)
       }
+      if let problem = capture.problem {
+        Text(problem)
+          .font(InlineField<EmptyView>.font(theme))
+          .foregroundStyle(theme.danger)
+          .lineLimit(1)
+      }
     }
     .fixedSize()
     .accessibilityElement(children: .ignore)
-    .accessibilityLabel("Will set \(labels.joined(separator: ", "))")
+    .accessibilityLabel(
+      ["Will set \(labels.joined(separator: ", "))", capture.problem].compactMap { $0 }.joined(separator: ". "))
   }
 }

@@ -19,7 +19,7 @@ class CapturePreviewTest {
         assertEquals(
             listOf(
                 CaptureChip("45m", CaptureChipKind.ESTIMATE),
-                CaptureChip("Tomorrow", CaptureChipKind.DUE),
+                CaptureChip("due tomorrow", CaptureChipKind.DUE),
                 CaptureChip("#work", CaptureChipKind.TAG),
                 CaptureChip("#launch", CaptureChipKind.TAG),
                 CaptureChip("!1", CaptureChipKind.PRIORITY, priority = 1),
@@ -27,7 +27,7 @@ class CapturePreviewTest {
             preview.chips,
         )
         assertTrue(preview.canAdd)
-        assertEquals("Will set 45m, Tomorrow, #work, #launch, !1", preview.spoken)
+        assertEquals("Will set 45m, due tomorrow, #work, #launch, !1", preview.spoken)
     }
 
     @Test
@@ -50,7 +50,25 @@ class CapturePreviewTest {
         val preview = CapturePreview.of("Call #mum about 1h plans @fri", now, utc)
         assertEquals("Call #mum about 1h plans", preview.title)
         assertEquals(listOf(CaptureChipKind.DUE), preview.chips.map { it.kind })
-        assertEquals("Today", preview.chips.single().label)
+        assertEquals("due today", preview.chips.single().label)
+    }
+
+    @Test
+    fun aStartAndADueDayAreTwoChips() {
+        val preview = CapturePreview.of("write essay ^fri @2026-10-09", now, utc)
+        assertEquals(
+            listOf(CaptureChip("starts today", CaptureChipKind.START), CaptureChip("due Fri 9 Oct", CaptureChipKind.DUE)),
+            preview.chips,
+        )
+        assertTrue(preview.canAdd)
+    }
+
+    @Test
+    fun aStartAfterTheDueDayCannotBeAdded() {
+        val preview = CapturePreview.of("write essay ^mon @fri", now, utc)
+        assertEquals("Start must be before the deadline.", preview.problem)
+        assertFalse(preview.canAdd)
+        assertEquals("Will set starts Mon 5 Oct, due today. Start must be before the deadline.", preview.spoken)
     }
 
     @Test

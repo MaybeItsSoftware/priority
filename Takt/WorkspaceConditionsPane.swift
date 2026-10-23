@@ -12,12 +12,16 @@ import SwiftUI
 /// condition nothing waits on is not asked about. What a setting provides
 /// shows as on, "from Home"; turning it off switches it off for now, until
 /// the setting changes. Then when to stop trusting the answer.
+/// **Start each day** is how what holds begins each day: afresh or carried
+/// over, the hour the day changes, and the conditions it starts with.
 /// **Conditions** is every condition, by category: add one, rename it in its
 /// row, file it under a category, choose what it provides, archive it, and
 /// see how many open tasks need it.
 ///
-/// `↑` `↓` walk both halves; `←` `→` step where you are, your free time and
-/// when it is forgotten, and typing a number sets the time. Space turns a
+/// `↑` `↓` walk every half; `←` `→` step where you are, your free time,
+/// when it is forgotten, starting afresh and the hour the day changes, and
+/// typing a number sets the time. Return or `p` on "Start with" ticks what
+/// each day starts with. Space turns a
 /// condition on or off, Return or F2 renames (on the new-condition row,
 /// puts the caret in its field), `t` files it under a category and `⇧T`
 /// renames the category, `p` chooses what it provides, `⌥↑`/`⌥↓` move it
@@ -37,6 +41,8 @@ struct WorkspaceConditionsPane: View {
       ScrollView {
         VStack(alignment: .leading, spacing: 0) {
           availableNow(cursor: cursor, hasKeyboard: hasKeyboard)
+          FocusRule()
+          startEachDay(cursor: cursor, hasKeyboard: hasKeyboard)
           FocusRule()
           conditions(cursor: cursor, hasKeyboard: hasKeyboard, counts: counts)
         }
@@ -210,6 +216,57 @@ struct WorkspaceConditionsPane: View {
     case .endOfDay: "At midnight"
     }
   }
+
+  // MARK: - Start each day
+
+  /// Afresh or carried over, the hour the day changes — the daily log's,
+  /// the same on every device — and, afresh, what it starts with.
+  @ViewBuilder
+  private func startEachDay(cursor: WorkspaceConditionsStop, hasKeyboard: Bool) -> some View {
+    WorkspaceConditionsSectionHeader(title: "Start each day") { EmptyView() }
+    WorkspaceConditionsSettingRow(
+      title: "Afresh", stop: .dayStart, isCursor: cursor == .dayStart,
+      hasKeyboard: hasKeyboard && cursor == .dayStart,
+      note: "When the day changes, what holds goes back to what each day starts with; off, it carries over"
+    ) {
+      Toggle("", isOn: Binding(get: { model.dayStart.resets }, set: { model.setDayStartResets($0) }))
+        .labelsHidden()
+        .toggleStyle(.themedSwitch)
+    }
+    .id(WorkspaceConditionsStop.dayStart.anchor)
+    WorkspaceConditionsSettingRow(
+      title: "Day changes at", stop: .dayStartHour, isCursor: cursor == .dayStartHour,
+      hasKeyboard: hasKeyboard && cursor == .dayStartHour,
+      note: "On every device, and for the daily log: work before this hour counts towards the day before"
+    ) {
+      ThemedMenu(Self.hourText(model.dayStart.hour)) {
+        ForEach(0..<24, id: \.self) { hour in
+          Button(Self.hourText(hour)) { model.setDayStartHour(hour) }
+        }
+      }
+    }
+    .id(WorkspaceConditionsStop.dayStartHour.anchor)
+    if model.dayStart.resets {
+      WorkspaceConditionsSettingRow(
+        title: "Start with", stop: .dayStartConditions, isCursor: cursor == .dayStartConditions,
+        hasKeyboard: hasKeyboard && cursor == .dayStartConditions, steps: false,
+        note: "Return or P ticks the conditions each day starts with, one place at most"
+      ) {
+        Button { model.presentDayStartPicker() } label: {
+          Text(model.dayStartSummary ?? "Nothing on")
+            .foregroundStyle(model.dayStartSummary == nil ? theme.dim : theme.ink)
+            .lineLimit(1)
+            .truncationMode(.tail)
+        }
+        .buttonStyle(.plain)
+      }
+      .id(WorkspaceConditionsStop.dayStartConditions.anchor)
+    }
+    Color.clear.frame(height: theme.space.sm)
+  }
+
+  /// `04:00`, as the daily log's settings write it.
+  private static func hourText(_ hour: Int) -> String { String(format: "%02d:00", hour) }
 
   // MARK: - Conditions
 
@@ -481,6 +538,8 @@ private struct WorkspaceConditionsSettingRow<Value: View>: View {
   let stop: WorkspaceConditionsStop
   let isCursor: Bool
   let hasKeyboard: Bool
+  /// Whether `←` `→` step the value, which the chevrons say on the cursor.
+  var steps = true
   let note: String
   @ViewBuilder var value: Value
 
@@ -491,9 +550,9 @@ private struct WorkspaceConditionsSettingRow<Value: View>: View {
         .foregroundStyle(theme.ink)
         .lineLimit(1)
       Spacer(minLength: theme.space.sm)
-      if isCursor { Image(systemName: "chevron.left").foregroundStyle(theme.dim) }
+      if isCursor && steps { Image(systemName: "chevron.left").foregroundStyle(theme.dim) }
       value
-      if isCursor { Image(systemName: "chevron.right").foregroundStyle(theme.dim) }
+      if isCursor && steps { Image(systemName: "chevron.right").foregroundStyle(theme.dim) }
     }
     .font(theme.captionFont)
     .frame(maxWidth: .infinity, alignment: .leading)

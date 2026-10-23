@@ -11,9 +11,10 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import uk.co.maybeitsadam.takt.data.workspace.reconcileHabits
 import uk.co.maybeitsadam.takt.data.workspace.reconcileWaitingFollowUps
+import uk.co.maybeitsadam.takt.data.workspace.startDayIfDue
 
 /**
- * Runs the board's two engines while the app is in the foreground: once as it
+ * Runs the board's engines while the app is in the foreground: once as it
  * comes forward (so whatever came due while it was away, or that sync just
  * brought, lands straight away), then every [INTERVAL_MILLIS].
  *
@@ -29,6 +30,12 @@ import uk.co.maybeitsadam.takt.data.workspace.reconcileWaitingFollowUps
  * follow-up within half a minute of its time. Each pass is a single read
  * when nothing is due; and since both devices give a follow-up the same id,
  * one made here while the Mac also made it merges on sync.
+ *
+ * The day start (`startDayIfDue`) puts what holds back to the conditions each
+ * day starts with once the day has changed, so a phone opened in the morning,
+ * or left open overnight, starts the day at Home. It runs first, so the habits
+ * and Today are read against the new day's conditions. One read when not due;
+ * the core resets once a day, whichever device looks first.
  */
 class ForegroundEngines(private val container: AppContainer) {
     private var job: Job? = null
@@ -52,6 +59,13 @@ class ForegroundEngines(private val container: AppContainer) {
         job = container.scope.launch {
             val repository = container.repository()
             while (isActive) {
+                try {
+                    repository.startDayIfDue()
+                } catch (cancelled: CancellationException) {
+                    throw cancelled
+                } catch (error: Exception) {
+                    Log.w(TAG, "Couldn't start the day", error)
+                }
                 try {
                     repository.reconcileHabits()
                 } catch (cancelled: CancellationException) {

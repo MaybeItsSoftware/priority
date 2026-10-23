@@ -35,7 +35,7 @@ extension WorkspaceViewModel {
       available: selectableFocusConditions.filter { !$0.isLocation }.map(\.id), sections: conditionsLayoutSections,
       folded: foldedConditionSections, archived: archivedConditions.map(\.id),
       showsArchived: showsArchivedConditions, hasPlaces: !availablePlaces.isEmpty,
-      hasTimeLimit: availableUntil != nil)
+      hasTimeLimit: availableUntil != nil, dayStart: true, startsAfresh: dayStart.resets)
   }
 
   /// The places "Available now" steps through on its Location row.
@@ -55,7 +55,8 @@ extension WorkspaceViewModel {
   }
 
   /// `←`/`→` on "Available now": the place, a quarter of an hour of time,
-  /// finishing or not, when it expires, and a condition off or on.
+  /// finishing or not, when it expires, and a condition off or on; on
+  /// "Start each day", afresh or not and the hour the day changes.
   private func adjustConditionsStop(by step: Int, now: Date = .now) {
     switch conditionsCursorStop {
     case .location:
@@ -80,7 +81,9 @@ extension WorkspaceViewModel {
         heldConditionIDs.contains(id) != (step > 0)
       else { return }
       toggleFocusCondition(condition, on: step > 0)
-    case .add, .condition, .folded, .archived: break
+    case .dayStart: setDayStartResets(step > 0)
+    case .dayStartHour: setDayStartHour(dayStart.hour + step)
+    case .add, .condition, .folded, .archived, .dayStartConditions: break
     }
   }
 
@@ -147,6 +150,12 @@ extension WorkspaceViewModel {
   /// The tab's own commands. `key` is the one that asked, which the
   /// cursor's motion reads to know which way to go.
   func runConditionsCommand(_ id: WorkspaceCommandID, key: String? = nil) {
+    guard !runDayStartCommand(id) else { return }
+    runConditionsRowCommand(id, key: key)
+  }
+
+  /// Every command but "Start each day"'s.
+  private func runConditionsRowCommand(_ id: WorkspaceCommandID, key: String?) {
     switch id {
     case .motionConditionsSelect: if let key { moveConditionsCursor(key) }
     case .conditionsAdjust:
@@ -202,7 +211,8 @@ extension WorkspaceViewModel {
   private func editConditionsStop() {
     switch conditionsCursorStop {
     case .time: beginTypingAvailableTime()
-    case .location, .finishOnly, .expiry: break
+    case .location, .finishOnly, .expiry, .dayStart, .dayStartHour: break
+    case .dayStartConditions: presentDayStartPicker()
     case .add: conditionsAddFieldRequest += 1
     case .available(let id), .condition(let id):
       conditionsCursor = .condition(id)

@@ -167,6 +167,15 @@ fun NowConditionsSheet(onDismiss: () -> Unit) {
                     Text("Set on an earlier day — still true?", style = TaktTheme.type.small, color = colors.mutedText)
                 }
             }
+            // Read-only here: how each day starts is set on the Mac or with `takt ws day-start`.
+            state.dayStartSummary?.let {
+                Text(
+                    it,
+                    style = TaktTheme.type.small,
+                    color = colors.mutedText,
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = Metrics.lg),
+                )
+            }
         },
         detail = { row -> state.note(row.condition.id) },
         count = { row -> state.usage[row.condition.id] },

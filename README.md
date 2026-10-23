@@ -202,7 +202,8 @@ afterwards:
 | Ending | Sets |
 | --- | --- |
 | `30m`, `1h`, `1.5h`, `1h30m` | The estimate (up to a day) |
-| `@today`, `@tomorrow`, `@fri`, `@3d`, `@2w`, `@2026-10-02` | The day it is due — a weekday means the next one, today included. `^` works as well as `@`, as in Checkvist (`^fri`) |
+| `@today`, `@tomorrow`, `@fri`, `@3d`, `@2w`, `@2026-10-02` | The day it is due — a weekday means the next one, today included |
+| `^mon`, `^tomorrow`, `^2026-10-05` — any of the same days | The day it starts: a task in Today or This week moves to the one that day belongs to, as a start set in the editor moves it. With a due day too, the start must come first — `^mon @fri` the same week is fine, `^mon @fri` when Monday comes after Friday is shown in red and not filed until one changes. (Checkvist reads `^` as due; Takt does not.) |
 | `#work` | A tag — it has to start with a letter, so `#12` stays in the title |
 | `!1`–`!4` | The priority — 1 is the most urgent, 4 the least. A task added with one goes to the top of its list |
 | `!-1`–`!-4` | A priority behind every task that has none — `!-1` the very back, `!-2` just before it. A task added with one goes to the bottom of its list |
@@ -211,7 +212,9 @@ afterwards:
 
 `Write the release notes 45m #work @fri !1` files a task called "Write the
 release notes", estimated at 45 minutes, tagged `work`, due on Friday, at
-priority 1 — the most urgent.
+priority 1 — the most urgent. `write essay ^mon @fri` starts on Monday and is
+due on Friday; the chips beside the field say *starts Mon 5 Oct* and *due Fri
+9 Oct*.
 
 In the add field and the quick-capture panel, `⌘⌫` deletes the word before the
 caret, as `⌥⌫` does, rather than the whole line.
@@ -219,8 +222,8 @@ caret, as `⌥⌫` does, rather than the whole line.
 The same endings work when you **edit a title in place**. In the outline,
 `F2`, `ee` or a click on the task already selected turns its title into a field
 in the row, as in Checkvist; `ea` starts typing at the end of the title and `ei`
-at the start, as vim's `a` and `i` do: type ` ^fri !2` after the title and Return, and the
-title stays as it was while the due day and priority change. Tags are added to
+at the start, as vim's `a` and `i` do: type ` @fri !2` after the title and Return, and the
+title stays as it was while the due day and priority change (` ^mon` moves its start). Tags are added to
 the ones the task has. Escape puts the title back; clicking away saves.
 
 In the row that opens for a new task (`Return`, `Shift+Return`), `Tab` makes it a
@@ -503,6 +506,22 @@ the status bar's indicator and the tab show it in the warning colour, with
   you are wins. A context said on an earlier day is flagged as possibly
   stale on every device. A context that expires is offered back with **Use
   again** (`Shift+U`).
+- **Start each day**: **Afresh** (`Space`, or `←`/`→`) says that when the day
+  changes, what holds goes back to what each day starts with — you start at
+  Home every day — with nothing switched off for now and no free time set;
+  off, what holds carries over. **Day changes at** (`←`/`→`, 04:00 unless you
+  move it) is the hour, the same one the daily log counts days from, so moving
+  it here moves it there (and the daily log's **Day starts at** moves it
+  here); the account keeps it, so every device changes day at the same hour.
+  **Start with** (`Return` or `p`) opens the conditions picker on the set each
+  day starts with: tick Home, a laptop; one place at most. It happens once a
+  day, on whichever device looks first after the hour — the Mac checks every
+  half minute and when it comes to the front, the phones when they open or come
+  back, the CLI and the agent when they read or set what holds — and a device
+  that was closed for days resets once when it opens. Something you said since
+  the day changed is kept, on any device. Changing these never resets there
+  and then; the first is at the next change of day. `takt ws day-start` and
+  `workspace_day_start_set` read and set them.
 - **Conditions**: a new-condition row (`a` or `Cmd+N` puts the caret in it,
   `Return` makes the condition, filed under the category in the menu beside
   it — from a condition's row, that condition's category; `t` on the row
@@ -530,7 +549,7 @@ the status bar's indicator and the tab show it in the warning colour, with
   `Shift+Z` every category; folds are remembered per workspace. Archived
   conditions are apart, under a folded **Archived** heading at the foot: `z`
   or `Return` on it shows them.
-- `↑`/`↓` (or `j`/`k`) walk both halves with one cursor; `Esc` or `←` hands
+- `↑`/`↓` (or `j`/`k`) walk every half with one cursor; `Esc` or `←` hands
   the keyboard back to the work and leaves the dock open, `r` puts it away.
 - **In the inspector**: the Conditions row's **Add condition** does
   what `cc` does with the mouse, its conditions under their category

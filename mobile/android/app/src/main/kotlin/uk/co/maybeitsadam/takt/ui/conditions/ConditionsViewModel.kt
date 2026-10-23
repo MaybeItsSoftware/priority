@@ -26,6 +26,7 @@ import uk.co.maybeitsadam.takt.data.workspace.ConditionGroups
 import uk.co.maybeitsadam.takt.data.workspace.ConditionHoldings
 import uniffi.takt_core.ConditionHolding
 import uk.co.maybeitsadam.takt.data.workspace.emptyFocusContext
+import uk.co.maybeitsadam.takt.data.workspace.observeDayStart
 import uk.co.maybeitsadam.takt.ui.today.minuteTicks
 
 /** The conditions, how many open tasks need each, and which hold now. */
@@ -44,8 +45,21 @@ data class ConditionsState(
     val holdings: ImmutableMap<String, ConditionHolding> = persistentMapOf(),
     /** Said on an earlier day: probably not where you are now. The core's rule. */
     val isStale: Boolean = false,
+    /** How each day starts, as the account keeps it; set on the Mac or the CLI. */
+    val dayStart: uniffi.takt_core.DayStartSettings? = null,
     val isLoaded: Boolean = false,
 ) {
+    /**
+     * One line on how each day starts: "Each day starts at 04:00 with Home",
+     * or null while what holds carries over.
+     */
+    val dayStartSummary: String? get() {
+        val day = dayStart?.takeIf { it.resets } ?: return null
+        val names = conditions.filter { it.id in day.conditionIds && !it.isArchived }.map { it.name }
+        val hour = "%02d:00".format(day.hour)
+        return if (names.isEmpty()) "Each day starts at $hour with nothing on" else "Each day starts at $hour with ${names.joinToString(" · ")}"
+    }
+
     val live: List<TaskCondition> get() = conditions.filter { !it.isArchived }
 
     /** What "where you are" offers: what an open task needs, and whatever is on. The core's rule. */
@@ -70,8 +84,9 @@ class ConditionsViewModel(private val container: AppContainer) : ViewModel() {
             repo.observeConditions(workspace),
             repo.observeConditionUsage(workspace),
             repo.observeFocusContext(workspace),
+            repo.observeDayStart(),
             minuteTicks(),
-        ) { conditions, usage, saved, _ ->
+        ) { conditions, usage, saved, dayStart, _ ->
             val now = Instant.now()
             val context = saved?.let { uniffi.takt_core.focusContextInForce(it, now.toEpochMilli()) } ?: emptyFocusContext()
             val said = context.conditionIds.toSet()
@@ -84,6 +99,7 @@ class ConditionsViewModel(private val container: AppContainer) : ViewModel() {
                 held = ConditionHoldings.held(conditions, said, off).toImmutableSet(),
                 holdings = ConditionHoldings.holdings(conditions, said, off).toImmutableMap(),
                 isStale = uniffi.takt_core.focusContextIsStale(context, now.toEpochMilli(), ZoneId.systemDefault().id),
+                dayStart = dayStart,
                 isLoaded = true,
             )
         }

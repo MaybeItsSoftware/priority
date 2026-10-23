@@ -25,6 +25,7 @@ pub mod conditions;
 pub mod conversions;
 pub mod dailies;
 pub mod day_log;
+pub mod day_start;
 pub mod dependencies;
 pub mod editor;
 pub mod editor_draft;

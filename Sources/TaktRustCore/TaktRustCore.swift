@@ -1008,6 +1008,28 @@ public protocol CoreWorkspaceProtocol: AnyObject, Sendable {
     func setBoardColumns(key: String, columns: [BoardColumn], movingTaskIds: [String], toColumn: String?, label: String, nowMs: Int64) throws 
     
     /**
+     * Brings in an hour kept before the account had one; whether it did.
+     */
+    func adoptDayStartHour(hour: Int32, nowMs: Int64) throws  -> Bool
+    
+    /**
+     * Starts the day if it has changed since the last reset; whether the
+     * context was reset. Every client calls it when it evaluates.
+     */
+    func applyDayStart(workspaceId: String, nowMs: Int64, zone: String) throws  -> Bool
+    
+    /**
+     * How each day starts.
+     */
+    func dayStartSettings() throws  -> DayStartSettings
+    
+    /**
+     * Stores how each day starts; whether anything changed. Not an undo
+     * step, like the rest of what holds now.
+     */
+    func setDayStartSettings(settings: DayStartSettings, nowMs: Int64, zone: String) throws  -> Bool
+    
+    /**
      * The workspace `workspace_id` written out as `format`, stamped
      * `exported_at_ms`; absent when there is no such workspace.
      */
@@ -2352,6 +2374,64 @@ open func setBoardColumns(key: String, columns: [BoardColumn], movingTaskIds: [S
         FfiConverterInt64.lower(nowMs),uniffiCallStatus
     )
 }
+}
+    
+    /**
+     * Brings in an hour kept before the account had one; whether it did.
+     */
+open func adoptDayStartHour(hour: Int32, nowMs: Int64)throws  -> Bool  {
+    return try  FfiConverterBool.lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_adopt_day_start_hour(
+            self.uniffiCloneHandle(),
+        FfiConverterInt32.lower(hour),
+        FfiConverterInt64.lower(nowMs),uniffiCallStatus
+    )
+})
+}
+    
+    /**
+     * Starts the day if it has changed since the last reset; whether the
+     * context was reset. Every client calls it when it evaluates.
+     */
+open func applyDayStart(workspaceId: String, nowMs: Int64, zone: String)throws  -> Bool  {
+    return try  FfiConverterBool.lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_apply_day_start(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(workspaceId),
+        FfiConverterInt64.lower(nowMs),
+        FfiConverterString.lower(zone),uniffiCallStatus
+    )
+})
+}
+    
+    /**
+     * How each day starts.
+     */
+open func dayStartSettings()throws  -> DayStartSettings  {
+    return try  FfiConverterTypeDayStartSettings_lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_day_start_settings(
+            self.uniffiCloneHandle(),uniffiCallStatus
+    )
+})
+}
+    
+    /**
+     * Stores how each day starts; whether anything changed. Not an undo
+     * step, like the rest of what holds now.
+     */
+open func setDayStartSettings(settings: DayStartSettings, nowMs: Int64, zone: String)throws  -> Bool  {
+    return try  FfiConverterBool.lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_set_day_start_settings(
+            self.uniffiCloneHandle(),
+        FfiConverterTypeDayStartSettings_lower(settings),
+        FfiConverterInt64.lower(nowMs),
+        FfiConverterString.lower(zone),uniffiCallStatus
+    )
+})
 }
     
     /**
@@ -6736,9 +6816,13 @@ public struct CaptureParts: Equatable, Hashable {
     public var title: String
     public var estimateSeconds: Int64?
     /**
-     * The start of the day it is due, in the caller's zone.
+     * The start of the day it is due, in the caller's zone, from `@fri`.
      */
     public var dueAtMs: Int64?
+    /**
+     * The start of the day it starts, in the caller's zone, from `^mon`.
+     */
+    public var startAtMs: Int64?
     public var tags: [String]
     /**
      * 1 to 4, the range the workspace stores.
@@ -6753,6 +6837,13 @@ public struct CaptureParts: Equatable, Hashable {
      * (`links::link_from_text`): a Drive file, an Obsidian note, a page.
      */
     public var links: [String]
+    /**
+     * What filing it as read would be refused for, in the editor's words:
+     * a start on or after the day it is due. Both days are kept, so the
+     * field can show them and the problem together; the task is not filed
+     * until one of them changes.
+     */
+    public var problem: String?
 
     // Default memberwise initializers are never public by default, so we
     // declare one manually.
@@ -6762,8 +6853,11 @@ public struct CaptureParts: Equatable, Hashable {
          * as typed when none were.
          */title: String, estimateSeconds: Int64?, 
         /**
-         * The start of the day it is due, in the caller's zone.
-         */dueAtMs: Int64?, tags: [String], 
+         * The start of the day it is due, in the caller's zone, from `@fri`.
+         */dueAtMs: Int64?, 
+        /**
+         * The start of the day it starts, in the caller's zone, from `^mon`.
+         */startAtMs: Int64?, tags: [String], 
         /**
          * 1 to 4, the range the workspace stores.
          */priority: Int64?, 
@@ -6773,14 +6867,22 @@ public struct CaptureParts: Equatable, Hashable {
         /**
          * Addresses typed or pasted at the end, filed as the task's links
          * (`links::link_from_text`): a Drive file, an Obsidian note, a page.
-         */links: [String]) {
+         */links: [String], 
+        /**
+         * What filing it as read would be refused for, in the editor's words:
+         * a start on or after the day it is due. Both days are kept, so the
+         * field can show them and the problem together; the task is not filed
+         * until one of them changes.
+         */problem: String?) {
         self.title = title
         self.estimateSeconds = estimateSeconds
         self.dueAtMs = dueAtMs
+        self.startAtMs = startAtMs
         self.tags = tags
         self.priority = priority
         self.waitingOn = waitingOn
         self.links = links
+        self.problem = problem
     }
 
     
@@ -6802,10 +6904,12 @@ public struct FfiConverterTypeCaptureParts: FfiConverterRustBuffer {
                 title: FfiConverterString.read(from: &buf), 
                 estimateSeconds: FfiConverterOptionInt64.read(from: &buf), 
                 dueAtMs: FfiConverterOptionInt64.read(from: &buf), 
+                startAtMs: FfiConverterOptionInt64.read(from: &buf), 
                 tags: FfiConverterSequenceString.read(from: &buf), 
                 priority: FfiConverterOptionInt64.read(from: &buf), 
                 waitingOn: FfiConverterOptionString.read(from: &buf), 
-                links: FfiConverterSequenceString.read(from: &buf)
+                links: FfiConverterSequenceString.read(from: &buf), 
+                problem: FfiConverterOptionString.read(from: &buf)
         )
     }
 
@@ -6813,10 +6917,12 @@ public struct FfiConverterTypeCaptureParts: FfiConverterRustBuffer {
         FfiConverterString.write(value.title, into: &buf)
         FfiConverterOptionInt64.write(value.estimateSeconds, into: &buf)
         FfiConverterOptionInt64.write(value.dueAtMs, into: &buf)
+        FfiConverterOptionInt64.write(value.startAtMs, into: &buf)
         FfiConverterSequenceString.write(value.tags, into: &buf)
         FfiConverterOptionInt64.write(value.priority, into: &buf)
         FfiConverterOptionString.write(value.waitingOn, into: &buf)
         FfiConverterSequenceString.write(value.links, into: &buf)
+        FfiConverterOptionString.write(value.problem, into: &buf)
     }
 }
 
@@ -11540,6 +11646,99 @@ public func FfiConverterTypeDayLogRecord_lift(_ buf: RustBuffer) throws -> DayLo
 #endif
 public func FfiConverterTypeDayLogRecord_lower(_ value: DayLogRecord) -> RustBuffer {
     return FfiConverterTypeDayLogRecord.lower(value)
+}
+
+
+/**
+ * How each day starts, as the account keeps it.
+ */
+public struct DayStartSettings: Equatable, Hashable {
+    /**
+     * Whether the context goes back to `condition_ids` when the day changes.
+     */
+    public var resets: Bool
+    /**
+     * The hour the day changes, 0 to 23. Also where the daily log's days
+     * begin.
+     */
+    public var hour: Int32
+    /**
+     * The conditions each day starts with, sorted; empty starts it with
+     * nothing on.
+     */
+    public var conditionIds: [String]
+    /**
+     * The last day reset, `yyyy-MM-dd`; none before the first.
+     */
+    public var lastResetDay: String?
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(
+        /**
+         * Whether the context goes back to `condition_ids` when the day changes.
+         */resets: Bool, 
+        /**
+         * The hour the day changes, 0 to 23. Also where the daily log's days
+         * begin.
+         */hour: Int32, 
+        /**
+         * The conditions each day starts with, sorted; empty starts it with
+         * nothing on.
+         */conditionIds: [String], 
+        /**
+         * The last day reset, `yyyy-MM-dd`; none before the first.
+         */lastResetDay: String?) {
+        self.resets = resets
+        self.hour = hour
+        self.conditionIds = conditionIds
+        self.lastResetDay = lastResetDay
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension DayStartSettings: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeDayStartSettings: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> DayStartSettings {
+        return
+            try DayStartSettings(
+                resets: FfiConverterBool.read(from: &buf), 
+                hour: FfiConverterInt32.read(from: &buf), 
+                conditionIds: FfiConverterSequenceString.read(from: &buf), 
+                lastResetDay: FfiConverterOptionString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: DayStartSettings, into buf: inout [UInt8]) {
+        FfiConverterBool.write(value.resets, into: &buf)
+        FfiConverterInt32.write(value.hour, into: &buf)
+        FfiConverterSequenceString.write(value.conditionIds, into: &buf)
+        FfiConverterOptionString.write(value.lastResetDay, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeDayStartSettings_lift(_ buf: RustBuffer) throws -> DayStartSettings {
+    return try FfiConverterTypeDayStartSettings.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeDayStartSettings_lower(_ value: DayStartSettings) -> RustBuffer {
+    return FfiConverterTypeDayStartSettings.lower(value)
 }
 
 
@@ -29071,7 +29270,9 @@ public func captureDateTime(text: String, nowMs: Int64, zone: String, defaultHou
 }
 /**
  * Short labels for what was found, in the order the field shows them:
- * `45m`, `Fri 3 Oct`, `#work`, `!1`, `waiting on Sam`.
+ * `45m`, `starts Mon 29 Sep`, `due Fri 3 Oct`, `#work`, `!1`, `waiting on
+ * Sam`. The problem, if there is one, is not among them: the field shows it
+ * apart, as a warning.
  */
 public func captureDetailLabels(capture: CaptureParts, nowMs: Int64, zone: String) -> [String]  {
     return try!  FfiConverterSequenceString.lift(try! rustCall() {
@@ -29903,6 +30104,20 @@ public func dayLogWeeklyBuckets(events: [DayLogRecord], boundary: DayLogBoundary
         FfiConverterTypeDayLogBoundary_lower(boundary),
         FfiConverterInt64.lower(endingOnMs),
         FfiConverterInt64.lower(weeks),uniffiCallStatus
+    )
+})
+}
+/**
+ * `yyyy-MM-dd` for the day containing `now_ms`, days changing at `hour`
+ * in `zone`: which day a reset would count as.
+ */
+public func dayStartDayKey(hour: Int32, nowMs: Int64, zone: String) -> String  {
+    return try!  FfiConverterString.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_day_start_day_key(
+        FfiConverterInt32.lower(hour),
+        FfiConverterInt64.lower(nowMs),
+        FfiConverterString.lower(zone),uniffiCallStatus
     )
 })
 }
@@ -31684,7 +31899,7 @@ private let initializationResult: InitializationResult = {
     if (uniffi_takt_core_checksum_func_capture_date_time() != 17198) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_takt_core_checksum_func_capture_detail_labels() != 1360) {
+    if (uniffi_takt_core_checksum_func_capture_detail_labels() != 21718) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_func_capture_due() != 51257) {
@@ -31874,6 +32089,9 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_func_day_log_weekly_buckets() != 50056) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_day_start_day_key() != 17942) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_func_editor_minutes_text() != 55346) {
@@ -32333,6 +32551,18 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_method_coreworkspace_set_board_columns() != 22012) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_adopt_day_start_hour() != 54795) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_apply_day_start() != 48277) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_day_start_settings() != 5494) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_set_day_start_settings() != 4505) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_method_coreworkspace_export_workspace() != 22213) {

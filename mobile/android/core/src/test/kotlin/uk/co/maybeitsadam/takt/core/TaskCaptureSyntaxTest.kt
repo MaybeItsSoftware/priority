@@ -96,10 +96,27 @@ class TaskCaptureSyntaxTest {
 
     @Test fun labelsNameWhatWasFound() {
         assertEquals(
-            listOf("1h 30m", "Tomorrow", "#work", "!2"),
+            listOf("1h 30m", "due tomorrow", "#work", "!2"),
             parse("Write notes 1h30m @tomorrow #work !2").detailLabels(now, UTC),
         )
-        assertEquals(listOf("Fri 2 Oct"), parse("Book flights @2026-10-02").detailLabels(now, UTC))
-        assertEquals(listOf("1 Mar 2027"), parse("Renew passport @2027-03-01").detailLabels(now, UTC))
+        assertEquals(listOf("due Fri 2 Oct"), parse("Book flights @2026-10-02").detailLabels(now, UTC))
+        assertEquals(listOf("due 1 Mar 2027"), parse("Renew passport @2027-03-01").detailLabels(now, UTC))
+    }
+
+    @Test fun theCaretIsTheDayItStarts() {
+        val capture = parse("write essay ^tue @fri")
+        assertEquals("write essay", capture.title)
+        assertEquals(date(2026, 9, 29), capture.startAt)
+        assertEquals(date(2026, 10, 2), capture.dueAt)
+        assertEquals(null, capture.problem)
+        assertEquals(listOf("starts today", "due Fri 2 Oct"), capture.detailLabels(now, UTC))
+        assertEquals(null, parse("Ring the bank ^fri").dueAt)
+    }
+
+    @Test fun aStartAfterTheDueDayIsKeptWithTheEditorsRefusal() {
+        val capture = parse("write essay ^mon @fri")
+        assertEquals(date(2026, 10, 5), capture.startAt)
+        assertEquals(date(2026, 10, 2), capture.dueAt)
+        assertEquals("Start must be before the deadline.", capture.problem)
     }
 }

@@ -338,9 +338,9 @@ struct WorkspaceFoldButton: View {
 
 /// A task's title as a field in its own row, for editing in place.
 ///
-/// The trailing tokens the add field reads work here too — `45m`, `@fri` or
-/// `^fri`, `#tag`, `!1` — and the same chips preview what they will set, so
-/// changing a due day is typing ` ^fri` and Return. Return saves, Escape puts
+/// The trailing tokens the add field reads work here too — `45m`, `@fri`,
+/// `^mon`, `#tag`, `!1` — and the same chips preview what they will set, so
+/// changing a due day is typing ` @fri` and Return, and a start ` ^mon`. Return saves, Escape puts
 /// the title back, and clicking away saves, as the sidebar's rename does.
 struct WorkspaceTaskTitleField: View {
   @Environment(\.theme) private var theme

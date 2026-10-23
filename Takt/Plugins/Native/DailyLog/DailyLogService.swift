@@ -18,7 +18,10 @@ import TaktCore
 /// nonisolated). Only the method that drives `NSOpenPanel` needs the actor.
 final class DailyLogService {
   private static let bookmarkDefaultsKey = "dailyLogFolderBookmark"
-  private static let rolloverHourDefaultsKey = "dailyLogRolloverHour"
+  /// Where this Mac keeps the hour the day changes. The account keeps it
+  /// too (the core's `day_start`), for the phones and the conditions'
+  /// daily reset; `WorkspaceViewModel+DayStart` keeps the two the same.
+  static let rolloverHourDefaultsKey = "dailyLogRolloverHour"
   private static let fileNameFormatDefaultsKey = "dailyLogNoteFileNameFormat"
   private static let folderFormatDefaultsKey = "dailyLogNoteFolderFormat"
   private static let createsMissingNotesDefaultsKey = "dailyLogCreatesMissingNotes"
@@ -283,7 +286,13 @@ final class DailyLogService {
       }
       return min(23, max(0, defaults.integer(forKey: Self.rolloverHourDefaultsKey)))
     }
-    set { defaults.set(min(23, max(0, newValue)), forKey: Self.rolloverHourDefaultsKey) }
+    set {
+      let hour = min(23, max(0, newValue))
+      defaults.set(hour, forKey: Self.rolloverHourDefaultsKey)
+      // Set here, by hand: the account follows, so every device's day — and
+      // the conditions' reset — changes at the same hour.
+      NotificationCenter.default.post(name: .dayChangeHourChanged, object: nil, userInfo: ["hour": hour])
+    }
   }
 
   var boundary: DayBoundary {
@@ -647,4 +656,10 @@ enum DailyLogError: LocalizedError {
         "No daily note at \(path). Create it in Obsidian, or turn on \"Create missing notes\"."
     }
   }
+}
+
+extension Notification.Name {
+  /// The hour the day changes was set in the daily log's settings; `hour`
+  /// in the user info.
+  static let dayChangeHourChanged = Notification.Name("TaktDayChangeHourChanged")
 }

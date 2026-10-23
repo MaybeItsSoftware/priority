@@ -360,14 +360,25 @@ final class WorkspaceModel {
     engineWatch = nil
   }
 
-  /// The habit engine puts each habit due today in its column, takes out one
-  /// that is done or was dropped at the end of its day, and ends habits that
-  /// expired; the waiting engine makes due follow-ups. Neither is an undo
-  /// step, and each is one read when there is nothing to do. Returns whether
-  /// either wrote, after which every query re-reads.
+  /// The day start puts what holds back to the conditions each day starts
+  /// with once the day has changed (the core's `day_start`, once a day on
+  /// whichever device looks first), so the phone opened in the morning
+  /// starts at Home; then the habit engine puts each habit due today in its
+  /// column, takes out one that is done or was dropped at the end of its
+  /// day, and ends habits that expired; the waiting engine makes due
+  /// follow-ups. None is an undo step, and each is one read when there is
+  /// nothing to do. Returns whether any wrote, after which every query
+  /// re-reads.
   @discardableResult
   func runForegroundEngines(now: Date = .now) -> Bool {
     var changed = false
+    do {
+      if try store.dayStart().isDue(at: now) {
+        changed = try store.applyDayStart(in: workspace.id, now: now) || changed
+      }
+    } catch {
+      logger.error("Couldn't start the day: \(error.localizedDescription, privacy: .public)")
+    }
     do {
       changed = try store.reconcileHabits(now: now) || changed
     } catch {

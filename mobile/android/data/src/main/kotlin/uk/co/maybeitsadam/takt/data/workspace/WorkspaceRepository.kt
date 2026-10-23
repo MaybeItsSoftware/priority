@@ -924,7 +924,7 @@ class WorkspaceRepository(
 
     // region Capture and repeats (WorkspaceStore+Capture.swift, WorkspaceStore+Periodic.swift)
 
-    /** `createTask` for typed text: `45m #work @fri !1` on the end is filed with the task in one undo step. */
+    /** `createTask` for typed text: `45m #work ^mon @fri !1` on the end is filed with the task in one undo step. */
     suspend fun createTask(
         capturing: String,
         listId: String,
@@ -939,7 +939,8 @@ class WorkspaceRepository(
         val capture = TaskCapture.parse(capturing, now, zone)
         return createTask(
             listId = listId, title = capture.title, parentTaskId = parentTaskId, kanbanColumn = kanbanColumn,
-            startAt = startAt, atTop = atTop, adjacentTaskId = adjacentTaskId, above = above, dueAt = capture.dueAt,
+            startAt = capture.startAt ?: startAt, atTop = atTop, adjacentTaskId = adjacentTaskId, above = above,
+            dueAt = capture.dueAt,
             estimateSeconds = capture.estimateSeconds, tags = capture.tags, priority = capture.priority,
             waitingOn = capture.waitingOn, externalLinks = capture.links, now = now,
         )

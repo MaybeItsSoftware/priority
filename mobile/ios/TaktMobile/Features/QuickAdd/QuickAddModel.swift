@@ -31,10 +31,14 @@ final class QuickAddModel {
   /// What the field will file, read the way the store will read it.
   func capture(now: Date = .now) -> TaskCapture { TaskCapture.parse(text, now: now) }
 
-  /// The chips under the field: estimate, due day, tags, priority.
+  /// The chips under the field: estimate, start, due day, tags, priority.
   func chips(now: Date = .now) -> [String] { capture(now: now).detailLabels(now: now) }
 
   var canAdd: Bool { !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+
+  /// Whether what is typed would be refused: a start on or after the due
+  /// day. The field keeps it, with the reason, until one of them changes.
+  var isRefused: Bool { capture().problem != nil }
 
   /// Every list, each followed by the lists nested in it.
   static func destinations(in structure: WorkspaceStructure) -> [QuickAddDestination] {
@@ -88,7 +92,7 @@ final class QuickAddModel {
   /// step — and clears the field for the next one.
   @discardableResult
   func add(_ model: WorkspaceModel) -> WorkspaceTask? {
-    guard canAdd, let destination = destination(in: model) else { return nil }
+    guard canAdd, !isRefused, let destination = destination(in: model) else { return nil }
     let parentTaskID = model.navigation.quickAddParentTaskID.flatMap { parent in
       destination.listID == model.task(parent)?.listId && destination.parentTaskID == nil ? parent : nil
     } ?? destination.parentTaskID
