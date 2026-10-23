@@ -23,7 +23,7 @@ extension SettingsView {
 
     let agent = workspace.agent
     Section {
-      Toggle(
+      SettingsToggleRow(
         "Ask before changing tasks",
         isOn: Binding(get: { agent.asksBeforeChangesSetting }, set: { agent.asksBeforeChangesSetting = $0 }))
     } header: {
