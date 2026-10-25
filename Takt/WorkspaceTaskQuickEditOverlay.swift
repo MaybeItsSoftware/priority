@@ -182,8 +182,9 @@ struct WorkspaceTaskQuickEditOverlay: View {
           Text(calendar.veryShortWeekdaySymbols[(calendar.firstWeekday - 1 + index) % 7])
             .microLabel(theme)
         }
-        ForEach(0..<42, id: \.self) { index in
-          let day = gridDay(index)
+        // Keyed by date: keyed by index, the first week shared ids with the
+        // weekday initials above and went missing.
+        ForEach((0..<42).map(gridDay), id: \.self) { day in
           Text(day, format: .dateTime.day())
             .font(theme.numeralFont(theme.scale.body, weight: .regular))
             .frame(maxWidth: .infinity).padding(.vertical, theme.space.xs)
