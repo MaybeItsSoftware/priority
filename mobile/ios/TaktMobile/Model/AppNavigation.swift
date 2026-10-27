@@ -138,6 +138,8 @@ final class AppNavigation {
   var selectedTaskID: String?
   /// The task whose inspector sheet is up (iPhone).
   var inspectedTaskID: String?
+  /// The task whose fullscreen notes editor is up.
+  var notesEditorTaskID: String?
   var isQuickAddPresented = false
   /// Where quick add files the task when it was opened from a list or a
   /// task: nil means the Inbox.
@@ -207,5 +209,10 @@ final class AppNavigation {
   func inspect(_ taskID: String, isPad: Bool) {
     selectedTaskID = taskID
     if !isPad { inspectedTaskID = taskID }
+  }
+
+  /// Opens the fullscreen notes editor for a task.
+  func editNotes(_ taskID: String) {
+    notesEditorTaskID = taskID
   }
 }

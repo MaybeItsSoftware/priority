@@ -33,7 +33,8 @@ struct WorkspaceBoardColumnMenu: View {
       .menuKey(.planBoardResetColumns, on: .board)
       .disabled(model.boardColumnSource != .own)
     Divider()
-    Button("Delete Column…", role: .destructive) { model.requestDeleteBoardColumn(column) }
+    let isEmpty = model.tasks(in: column).isEmpty
+    Button(isEmpty ? "Delete Column" : "Delete Column…", role: .destructive) { model.requestDeleteBoardColumn(column) }
       .menuKey(.planBoardRemoveColumn, on: .board)
       .disabled(model.editableBoardColumns.count <= 1)
   }
@@ -107,8 +108,17 @@ struct WorkspaceDeleteColumnOverlay: View {
 
   private var keepsTasks: Bool { column.map(model.boardColumnKeepsTasksWhenDeleted) ?? true }
 
+  private var hasTasks: Bool {
+    guard let column else { return false }
+    return !model.tasks(in: column).isEmpty
+  }
+
+  private var asksWhereTasksGo: Bool {
+    !keepsTasks && hasTasks
+  }
+
   private var targets: [WorkspaceKanbanColumn] {
-    keepsTasks ? [] : model.boardColumnDeletionTargets(for: columnID)
+    asksWhereTasksGo ? model.boardColumnDeletionTargets(for: columnID) : []
   }
 
   var body: some View {
@@ -119,7 +129,7 @@ struct WorkspaceDeleteColumnOverlay: View {
         .padding(.horizontal, theme.listGutter)
         .padding(.vertical, theme.space.sm)
       FocusRule()
-      if keepsTasks {
+      if !asksWhereTasksGo {
         Text(keepNote)
           .font(theme.captionFont)
           .foregroundStyle(theme.muted)
@@ -144,7 +154,7 @@ struct WorkspaceDeleteColumnOverlay: View {
           .buttonStyle(.plain)
         }
       }
-      WorkspaceOverlayFooter(hints: keepsTasks ? "↩ delete · esc cancel" : "↑↓ choose · ↩ delete · esc cancel")
+      WorkspaceOverlayFooter(hints: asksWhereTasksGo ? "↑↓ choose · ↩ delete · esc cancel" : "↩ delete · esc cancel")
     }
     .overlayKeys(model, id: overlayID) { key in
       if let offset = WorkspaceOverlayStep.offset(for: key) {
@@ -159,11 +169,12 @@ struct WorkspaceDeleteColumnOverlay: View {
 
   private var heading: String {
     let title = column?.title ?? "column"
-    return keepsTasks ? "Delete “\(title)”?" : "Delete “\(title)” — move its tasks to"
+    return asksWhereTasksGo ? "Delete “\(title)” — move its tasks to" : "Delete “\(title)”?"
   }
 
   private var keepNote: String {
     guard let column else { return "" }
+    if !hasTasks { return "This column is empty." }
     if column.isRuleColumn {
       return "Its tasks are the ones its rules match; they go back to the columns they are filed in."
     }

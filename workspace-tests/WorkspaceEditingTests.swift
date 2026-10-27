@@ -259,4 +259,35 @@ final class WorkspaceEditingTests: XCTestCase {
     }
     XCTAssertEqual(try store.inbox(in: workspaceID)?.name, "Inbox")
   }
+
+  func testClearingDueDateAndStartDateKicksTaskOutOfTodayAndThisWeek() throws {
+    let now = Date.now
+    let todayTask = try store.createTask(listId: inboxID, title: "Today task", startAt: now)
+    try store.setKanbanColumn("today", for: todayTask.id)
+    XCTAssertEqual(try store.kanbanColumn(for: todayTask.id), "today")
+
+    // Clearing start kicks it out of today
+    try store.scheduleTask(id: todayTask.id, startAt: nil, now: now)
+    XCTAssertNil(try store.kanbanColumn(for: todayTask.id))
+
+    // Set to today with due date
+    try store.setKanbanColumn("today", for: todayTask.id)
+    try store.updateTask(id: todayTask.id, title: "Today task", notes: "", dueAt: now, estimateSeconds: nil, now: now)
+    XCTAssertEqual(try store.kanbanColumn(for: todayTask.id), "today")
+
+    // Clearing due date kicks it out of today
+    try store.updateTask(id: todayTask.id, title: "Today task", notes: "", dueAt: nil, estimateSeconds: nil, now: now)
+    XCTAssertNil(try store.kanbanColumn(for: todayTask.id))
+
+    // A task in this-week
+    let weekTask = try store.createTask(listId: inboxID, title: "Week task")
+    try store.setKanbanColumn("this-week", for: weekTask.id)
+    XCTAssertEqual(try store.kanbanColumn(for: weekTask.id), "this-week")
+
+    // Setting a start date then clearing it kicks it out of this-week
+    let thursday = Calendar.current.date(byAdding: .day, value: 2, to: now) ?? now
+    try store.scheduleTask(id: weekTask.id, startAt: thursday, now: now)
+    try store.scheduleTask(id: weekTask.id, startAt: nil, now: now)
+    XCTAssertNil(try store.kanbanColumn(for: weekTask.id))
+  }
 }

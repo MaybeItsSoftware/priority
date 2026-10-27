@@ -605,23 +605,27 @@ fn update_planning(
         Some(stored) => stored.planning()?,
         None => None,
     };
-    if current_planning == edit.planning && was_pinned == pinned {
-        return Ok(());
+    if current_planning != edit.planning || was_pinned != pinned {
+        let json = stored_planning_json(&planning, pinned);
+        let start = planning.start_at_ms.map(stored);
+        transaction.execute(
+            "INSERT INTO task_metadata (taskId, tagsJSON, externalLinksJSON, startAt, planningJSON, updatedAt)
+             VALUES (?1, '[]', '[]', ?2, ?3, ?4)
+             ON CONFLICT(taskId) DO UPDATE SET
+               startAt = excluded.startAt, planningJSON = excluded.planningJSON, updatedAt = excluded.updatedAt",
+            params![edit.task_id, start, json, stored(now_ms)],
+        )?;
     }
-    let json = stored_planning_json(&planning, pinned);
-    let start = planning.start_at_ms.map(stored);
-    transaction.execute(
-        "INSERT INTO task_metadata (taskId, tagsJSON, externalLinksJSON, startAt, planningJSON, updatedAt)
-         VALUES (?1, '[]', '[]', ?2, ?3, ?4)
-         ON CONFLICT(taskId) DO UPDATE SET
-           startAt = excluded.startAt, planningJSON = excluded.planningJSON, updatedAt = excluded.updatedAt",
-        params![edit.task_id, start, json, stored(now_ms)],
-    )?;
-    let previous_start = current_planning.and_then(|p| p.start_at_ms);
-    if let Some(start) = planning.start_at_ms
-        && Some(start) != previous_start
-    {
-        refile_by_start(transaction, &edit.task_id, start, now_ms, zone)?;
+    if changed_schedule {
+        refile_by_schedule(
+            transaction,
+            &edit.task_id,
+            planning.start_at_ms,
+            edit.due_at_ms,
+            planning.due_date.as_deref(),
+            now_ms,
+            zone,
+        )?;
     }
     Ok(())
 }
@@ -702,19 +706,25 @@ fn follow_start(
     false
 }
 
-/// Moves a task between Today and This week when its start moves to a day
-/// the column it stands in no longer means: a start on or before today is
-/// Today's, one later this week (weeks start on Monday, as capture's
-/// `nextweek` does) This week's, and anything later files it nowhere, back
-/// in the first column. Only a task in one of those two columns moves; one
-/// in progress, waiting or filed anywhere else stays put, and so does one
-/// in the backlog, which a start does not plan. Leaving Today drops the
-/// task's place in the day. This week is used only if the task's list board
-/// draws it; otherwise the task is filed nowhere.
-fn refile_by_start(
+/// Moves a task between Today and This week, or kicks it out, when its
+/// start or deadline changes:
+/// - A start on or before today is Today's, one later this week (weeks start on
+///   Monday, as capture's `nextweek` does) This week's, and anything later
+///   files it nowhere, back in the first column.
+/// - With no start, a deadline on or before today is Today's, one later this
+///   week This week's, and anything later files it nowhere.
+/// - With neither start nor deadline, the task is filed nowhere.
+/// Only a task in one of those two columns moves; one in progress, waiting or
+/// filed anywhere else stays put, and so does one in the backlog, which a
+/// schedule does not plan. Leaving Today drops the task's place in the day.
+/// This week is used only if the task's list board draws it; otherwise the
+/// task is filed nowhere.
+fn refile_by_schedule(
     transaction: &Transaction,
     task_id: &str,
-    start_ms: i64,
+    start_at_ms: Option<i64>,
+    due_at_ms: Option<i64>,
+    due_date: Option<&str>,
     now_ms: i64,
     zone: chrono_tz::Tz,
 ) -> Result<(), CoreError> {
@@ -723,12 +733,33 @@ fn refile_by_start(
         return Ok(());
     };
     let today = habits::local_day(now_ms, zone);
-    let day = habits::local_day(start_ms, zone);
     let next_monday = today + Duration::days(7 - i64::from(today.weekday().num_days_from_monday()));
-    let target = if day <= today {
-        Some(TODAY_COLUMN_ID)
-    } else if day < next_monday && draws_this_week(transaction, task_id)? {
-        Some(THIS_WEEK_COLUMN_ID)
+    let target = if let Some(start_ms) = start_at_ms {
+        let day = habits::local_day(start_ms, zone);
+        if day <= today {
+            Some(TODAY_COLUMN_ID)
+        } else if day < next_monday && draws_this_week(transaction, task_id)? {
+            Some(THIS_WEEK_COLUMN_ID)
+        } else {
+            None
+        }
+    } else if let Some(due_day) = due_date.and_then(calendar_date).map(|dt| dt.date()) {
+        if due_day <= today {
+            Some(TODAY_COLUMN_ID)
+        } else if due_day < next_monday && draws_this_week(transaction, task_id)? {
+            Some(THIS_WEEK_COLUMN_ID)
+        } else {
+            None
+        }
+    } else if let Some(due_ms) = due_at_ms {
+        let due_day = habits::local_day(due_ms, zone);
+        if due_day <= today {
+            Some(TODAY_COLUMN_ID)
+        } else if due_day < next_monday && draws_this_week(transaction, task_id)? {
+            Some(THIS_WEEK_COLUMN_ID)
+        } else {
+            None
+        }
     } else {
         None
     };

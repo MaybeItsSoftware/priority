@@ -57,11 +57,12 @@ extension WorkspaceViewModel {
     guard isDraftingTask else { return }
     let reference = taskInsertionReference
     let above = taskInsertionAbove && !taskInsertionIsChild
+    let todayAfter = todayDraftAfterID
     endTaskDraft()
     let rows = navigationRowIDs()
     guard !rows.isEmpty else { return }
     // With no reference the row is at the foot of the pane: nothing below it.
-    guard let reference, let index = rows.firstIndex(of: reference.id) else {
+    guard let refID = reference?.id ?? todayAfter, let index = rows.firstIndex(of: refID) else {
       if offset < 0 { selectedTaskID = rows.last }
       return
     }
@@ -92,7 +93,7 @@ extension WorkspaceViewModel {
     // drawn under an unfolded task — a new task there is another of its
     // parent's subtasks, as Return in Checkvist adds a sibling.
     let reference = viewMode == .today
-      ? selectedTask.flatMap { !child && dayTreeParentID(of: $0.id) != nil ? $0 : nil }
+      ? selectedTask.flatMap { (child || dayTreeParentID(of: $0.id) != nil) ? $0 : nil }
       : reference ?? selectedTask
     requestTaskComposerFocus()
     taskInsertionReference = reference
@@ -171,6 +172,10 @@ extension WorkspaceViewModel {
       indentBoardTaskDraft()
       return
     }
+    if viewMode == .today {
+      indentTodayTaskDraft()
+      return
+    }
     guard viewMode == .outline, !taskInsertionAbove else { return }
     // A draft at the foot of the list follows the last row on screen, so Tab
     // there puts it inside that one.
@@ -189,12 +194,74 @@ extension WorkspaceViewModel {
       taskInsertionIsChild = false
       return
     }
+    if viewMode == .today {
+      outdentTodayTaskDraft()
+      return
+    }
     guard viewMode == .outline, let reference = taskInsertionReference else { return }
     if taskInsertionIsChild {
       taskInsertionIsChild = false
     } else if let parentID = reference.parentTaskId, parentID != scopeTaskID,
       let parent = task(withID: parentID), outlineRows.contains(where: { $0.id == parentID }) {
       taskInsertionReference = parent
+      taskInsertionAbove = false
+    }
+  }
+
+  /// Today's Tab: the task above the draft — the planned task or subtask it
+  /// follows, or the day's last task at the foot — becomes the new task's
+  /// parent.
+  private func indentTodayTaskDraft() {
+    guard !taskInsertionAbove, !taskInsertionIsChild else { return }
+    if taskInsertionReference != nil {
+      taskInsertionIsChild = true
+      return
+    }
+    if let afterID = todayDraftAfterID {
+      guard let target = task(withID: afterID) ?? dayTree.first(where: { $0.id == afterID })?.task else { return }
+      taskInsertionReference = target
+      taskInsertionAbove = false
+      taskInsertionIsChild = true
+      todayDraftAfterID = nil
+      return
+    }
+    guard let last = dayTree.last?.task else { return }
+    taskInsertionReference = last
+    taskInsertionAbove = false
+    taskInsertionIsChild = true
+    todayDraftAfterID = nil
+  }
+
+  /// Today's ⇧Tab: back out a level — from inside the task above to beside it,
+  /// and from beside a subtask to after its parent.
+  private func outdentTodayTaskDraft() {
+    guard let reference = taskInsertionReference else { return }
+    if taskInsertionIsChild {
+      taskInsertionIsChild = false
+      if dayTreeParentID(of: reference.id) == nil {
+        if todayPlan.contains(where: { $0.id == reference.id && $0.reason == .planned }) {
+          todayDraftAfterID = reference.id
+          taskInsertionReference = nil
+        }
+      }
+    } else if let parentID = dayTreeParentID(of: reference.id) ?? reference.parentTaskId,
+      let parent = task(withID: parentID) ?? dayTree.first(where: { $0.id == parentID })?.task {
+      if dayTreeParentID(of: parent.id) == nil && todayPlan.contains(where: { $0.id == parent.id && $0.reason == .planned }) {
+        todayDraftAfterID = parent.id
+        taskInsertionReference = nil
+        taskInsertionAbove = false
+      } else {
+        taskInsertionReference = parent
+        taskInsertionAbove = false
+      }
+    } else {
+      if todayPlan.contains(where: { $0.id == reference.id && $0.reason == .planned }) {
+        todayDraftAfterID = reference.id
+        taskInsertionReference = nil
+      } else {
+        taskInsertionReference = nil
+        todayDraftAfterID = nil
+      }
       taskInsertionAbove = false
     }
   }

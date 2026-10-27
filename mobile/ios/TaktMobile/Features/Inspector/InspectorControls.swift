@@ -67,24 +67,36 @@ struct InspectorRow<Content: View>: View {
 }
 
 /// A group of rows under a sentence-case label, closed by a hairline.
-struct InspectorSection<Content: View>: View {
+struct InspectorSection<Content: View, Accessory: View>: View {
   @Environment(\.theme) private var theme
   let title: String
+  @ViewBuilder var accessory: Accessory
   @ViewBuilder var content: Content
 
-  init(_ title: String, @ViewBuilder content: () -> Content) {
+  init(_ title: String, @ViewBuilder accessory: () -> Accessory, @ViewBuilder content: () -> Content) {
     self.title = title
+    self.accessory = accessory()
     self.content = content()
   }
 
   var body: some View {
     VStack(alignment: .leading, spacing: theme.space.sm) {
-      SectionLabel(title)
+      HStack {
+        SectionLabel(title)
+        Spacer()
+        accessory
+      }
       content
     }
     .padding(.horizontal, theme.space.lg)
     .padding(.vertical, theme.space.md)
     .overlay(alignment: .bottom) { Hairline(role: .borderMuted) }
+  }
+}
+
+extension InspectorSection where Accessory == EmptyView {
+  init(_ title: String, @ViewBuilder content: () -> Content) {
+    self.init(title, accessory: { EmptyView() }, content: content)
   }
 }
 

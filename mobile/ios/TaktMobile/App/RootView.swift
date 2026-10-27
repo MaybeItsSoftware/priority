@@ -45,6 +45,12 @@ struct RootView: View {
     .sheet(item: pendingBlock) { pending in
       BlockQualityPrompt(pending: pending).environment(model)
     }
+    .fullScreenCover(item: notesEditorTask) { item in
+      NavigationStack {
+        TaskNotesEditor(taskID: item.id)
+      }
+      .environment(model)
+    }
     .modifier(ListsPresenters())
     .recurrenceClashDialog(model)
     .overlay(alignment: .bottom) { ToastView() }
@@ -76,6 +82,12 @@ struct RootView: View {
     Binding(
       get: { model.navigation.movingTaskID.map(IdentifiedString.init) },
       set: { model.navigation.movingTaskID = $0?.id })
+  }
+
+  private var notesEditorTask: Binding<IdentifiedString?> {
+    Binding(
+      get: { model.navigation.notesEditorTaskID.map(IdentifiedString.init) },
+      set: { model.navigation.notesEditorTaskID = $0?.id })
   }
 }
 

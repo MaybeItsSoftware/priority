@@ -111,7 +111,7 @@ scheduler and has Settings ask for a sign-in. The session (never the
 password) is kept outside the database, sealed with a Keystore key in
 `SyncCredentialStore`.
 
-The default server is `https://takt-sync.up.railway.app`. Build against
+The default server is `https://api.takt.maybeitssoftware.co.uk`. Build against
 another with `./gradlew -PprioritySyncServer=https://… :app:assembleDebug`;
 Settings → Sync can also be pointed elsewhere under "Use a different server".
 The Supabase project is `-PprioritySupabaseUrl=…` and `-PprioritySupabaseKey=…`

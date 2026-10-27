@@ -110,6 +110,12 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     workspace.asksHowEachBlockWent = { [weak checkvistManager] in
       checkvistManager?.preferences.scoresEachFocusBlock ?? true
     }
+    workspace.focusNotificationsEnabled = { [weak checkvistManager] in
+      checkvistManager?.preferences.focusNotificationsEnabled ?? true
+    }
+    workspace.focusNotificationSoundEnabled = { [weak checkvistManager] in
+      checkvistManager?.preferences.focusNotificationSoundEnabled ?? true
+    }
     workspace.onFocusFloatRequested = { [weak self] in
       guard let self, let workspace = self.workspace else { return }
       self.focusPanelController.show(model: workspace)

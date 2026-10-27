@@ -86,6 +86,12 @@ import TaktCore
   var showTaskBreadcrumbContext: Bool {
     didSet { preferencesStore.set(showTaskBreadcrumbContext, for: .showTaskBreadcrumbContext) }
   }
+  var focusNotificationsEnabled: Bool {
+    didSet { preferencesStore.set(focusNotificationsEnabled, for: .focusNotificationsEnabled) }
+  }
+  var focusNotificationSoundEnabled: Bool {
+    didSet { preferencesStore.set(focusNotificationSoundEnabled, for: .focusNotificationSoundEnabled) }
+  }
 
   init(preferencesStore: PreferencesStore) {
     self.preferencesStore = preferencesStore
@@ -130,6 +136,8 @@ import TaktCore
       FocusRunSurface(rawValue: preferencesStore.int(.focusRunSurfaceRawValue, default: 0)) ?? .panel
     self.quickCaptureListID = preferencesStore.string(.quickCaptureListID)
     self.showTaskBreadcrumbContext = preferencesStore.bool(.showTaskBreadcrumbContext, default: false)
+    self.focusNotificationsEnabled = preferencesStore.bool(.focusNotificationsEnabled, default: true)
+    self.focusNotificationSoundEnabled = preferencesStore.bool(.focusNotificationSoundEnabled, default: true)
 
     // Move untouched installs from the old, opt-in Shift-Option-B capture to
     // the product default. A customised binding is never rewritten.

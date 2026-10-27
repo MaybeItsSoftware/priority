@@ -361,9 +361,8 @@ struct WorkspaceTimelineScreen: View {
       model.reportKeyboardFocus(.timeline)
     }
     .commandHelp(.timelineReveal, note: "\(summary.title) · \(summary.blocks == 1 ? "1 block" : "\(summary.blocks) blocks")")
-    .contextMenu {
-      Button("Open where it lives") { model.revealTimelineTask(summary.id) }
-        .commandShortcut(.timelineReveal)
+    .houseContextMenu {
+      houseMenuItem("Open where it lives", command: .timelineReveal, on: .outline) { model.revealTimelineTask(summary.id) }
     }
     .accessibilityElement(children: .combine)
     .accessibilityAddTraits(.isButton)

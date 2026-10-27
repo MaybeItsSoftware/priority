@@ -377,7 +377,16 @@ extension WorkspaceViewModel {
     let zoneChanged = lastFocusTimeZone != TimeZone.current.identifier
     if clockJump || zoneChanged || (nextFocusEvaluationAt.map { $0 <= now } ?? false) { reloadNextUp() }
     lastFocusTimeZone = TimeZone.current.identifier
-    guard let session = activeFocusSession, session.pausedAt == nil, session.activeTaskId != nil else { return }
+    guard let session = activeFocusSession else { return }
+    if session.phase == .onBreak {
+      if let breakEndsAt = session.breakEndsAt, breakEndsAt <= now,
+        breakFinishedNotifiedBlockID != session.activeBlockId {
+        breakFinishedNotifiedBlockID = session.activeBlockId
+        notifyBreakFinished(session: session)
+      }
+      return
+    }
+    guard session.pausedAt == nil, session.activeTaskId != nil else { return }
     if now.timeIntervalSince(lastFocusCheckpointAt) >= 30 {
       perform(mirrors: false) { try store?.checkpointFocusSession(id: session.id, now: now); reloadFocus() }
       lastFocusCheckpointAt = now
@@ -389,6 +398,36 @@ extension WorkspaceViewModel {
       // has been put away, which is where a running block lives.
       let surface: FocusCompletionSurface = hasOrdinaryWindow?() == true ? .window : .panel
       requestFocusCompletion(now: now, completeTask: false, from: surface)
+      notifyFocusBlockFinished(session: session)
+    }
+  }
+
+  func notifyFocusBlockFinished(session: FocusSession) {
+    let taskTitle = activeFocusTask?.title ?? session.activeTaskId.flatMap { task(withID: $0)?.title }
+    guard let notification = FocusNotificationPolicy.blockFinishedNotification(
+      taskTitle: taskTitle,
+      enabled: focusNotificationsEnabled(),
+      playSound: focusNotificationSoundEnabled()
+    ) else { return }
+    dispatchFocusNotification(notification)
+  }
+
+  func notifyBreakFinished(session: FocusSession) {
+    let nextTaskTitle = activeFocusTask?.title ?? session.activeTaskId.flatMap { task(withID: $0)?.title }
+      ?? focusQueue.first?.task.title
+    guard let notification = FocusNotificationPolicy.breakFinishedNotification(
+      taskTitle: nextTaskTitle,
+      enabled: focusNotificationsEnabled(),
+      playSound: focusNotificationSoundEnabled()
+    ) else { return }
+    dispatchFocusNotification(notification)
+  }
+
+  func dispatchFocusNotification(_ notification: FocusNotification) {
+    if let custom = focusNotificationDispatcher {
+      custom(notification)
+    } else {
+      FocusNotificationManager.shared.dispatch(notification)
     }
   }
 }

@@ -108,9 +108,23 @@ fn only_a_whole_address_is_a_link() {
         Some("https://a.example/x")
     );
     assert!(link_from_text("obsidian://open?vault=Life".into()).is_some());
+    assert!(link_from_text("file:///Users/me/Documents/doc.pdf".into()).is_some());
     assert!(link_from_text("see https://a.example".into()).is_none());
     assert!(link_from_text("ftp://a.example".into()).is_none());
     assert!(link_from_text("https://".into()).is_none());
+}
+
+#[test]
+fn file_links_read_filename_and_folder() {
+    let file = d("file:///Users/me/Documents/notes.pdf");
+    assert_eq!(file.title, "notes.pdf");
+    assert_eq!(file.icon, "pdf");
+    assert!(!file.is_folder);
+
+    let folder = d("file:///Users/me/Projects/takt/");
+    assert_eq!(folder.title, "takt");
+    assert_eq!(folder.icon, "folder");
+    assert!(folder.is_folder);
 }
 
 #[test]

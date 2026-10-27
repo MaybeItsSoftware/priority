@@ -1,6 +1,7 @@
 import TaktCore
 import TaktWorkspace
 import SwiftUI
+import UniformTypeIdentifiers
 
 /// The outline, as a view of its own. (The inspector, which was split out
 /// alongside it, now lives in the right dock — `WorkspaceRightDock.swift`.)
@@ -90,6 +91,11 @@ struct WorkspaceOutlinePane: View {
         // left the outline the one pane not on the theme's paper.
         .scrollContentBackground(.hidden)
         .background(theme.paper)
+        .onDrop(of: [UTType.fileURL.identifier], isTargeted: nil) { providers in
+          WorkspaceFileDrop.handleFileDrop(providers: providers) { url in
+            model.createTaskWithDroppedURL(url)
+          }
+        }
         .simultaneousGesture(TapGesture().onEnded { model.reportKeyboardFocus(.tasks) })
       }
     } else {
@@ -174,6 +180,7 @@ struct WorkspaceOutlineRow: View {
   var isBlocked = false
   /// Open with its start still to come: drawn greyed too.
   var isBuried = false
+  @State private var isFileDropTargeted = false
 
   var body: some View {
     // The selected row grows to show its whole title and every badge line;
@@ -262,11 +269,23 @@ struct WorkspaceOutlineRow: View {
     .onDrag { WorkspaceTaskDrag.provider(for: item.task.id) }
     .workspaceSelection(isSelected: isSelected, hasKeyboard: hasKeyboard)
     .onTapGesture { model.selectTask(item.task) }
-    .contextMenu { WorkspaceItemActions(task: item.task) }
-    .onDrop(of: [WorkspaceTaskDrag.typeIdentifier], isTargeted: Binding(
-      get: { model.dragDestinationListID == item.task.id },
-      set: { model.dragDestinationListID = $0 ? item.task.id : nil }
+    .houseContextMenu {
+      makeTaskContextMenu(task: item.task, model: model)
+    }
+    .onDrop(of: [WorkspaceTaskDrag.typeIdentifier, UTType.fileURL.identifier], isTargeted: Binding(
+      get: { (model.dragDestinationListID == item.task.id && item.task.isList) || isFileDropTargeted },
+      set: { isTargeted in
+        isFileDropTargeted = isTargeted
+        if item.task.isList {
+          model.dragDestinationListID = isTargeted ? item.task.id : nil
+        }
+      }
     )) { providers in
+      if WorkspaceFileDrop.handleFileDrop(providers: providers, onURL: { url in
+        model.linkDroppedURL(url, to: item.task)
+      }) {
+        return true
+      }
       guard item.task.isList else { return false }
       return WorkspaceTaskDrag.readItemID(from: providers) { payload in
         model.moveDroppedItem(payload, toListID: item.task.listId, parentTaskID: item.task.id)
@@ -274,7 +293,7 @@ struct WorkspaceOutlineRow: View {
     }
     .overlay(RoundedRectangle(cornerRadius: theme.rowRadius)
       .strokeBorder(
-        model.dragDestinationListID == item.task.id && item.task.isList ? theme.primary : .clear,
+        isFileDropTargeted ? theme.primary : ((model.dragDestinationListID == item.task.id && item.task.isList) ? theme.primary : .clear),
         lineWidth: theme.borders.emphasis))
   }
 }

@@ -60,6 +60,7 @@ import uk.co.maybeitsadam.takt.data.workspace.TaskEditorField
 import uk.co.maybeitsadam.takt.data.workspace.TaskEditorValues
 import uk.co.maybeitsadam.takt.ui.components.Format
 import uk.co.maybeitsadam.takt.ui.components.Hairline
+import uk.co.maybeitsadam.takt.ui.components.IconAction
 import uk.co.maybeitsadam.takt.ui.components.MonoText
 import uk.co.maybeitsadam.takt.ui.components.PButton
 import uk.co.maybeitsadam.takt.ui.lists.WaitingBadge
@@ -105,7 +106,19 @@ internal fun InspectorBody(
         WhenSection(values, today, zone, problem(TaskEditorField.START_AT), edit)
         PlanSection(values, task, around, problem(TaskEditorField.ESTIMATE_MINUTES), edit)
 
-        InspectorSection("Notes") {
+        var fullscreenNotes by rememberSaveable(task.id) { mutableStateOf(false) }
+
+        InspectorSection(
+            label = "Notes",
+            action = {
+                IconAction(
+                    PIcons.Expand,
+                    contentDescription = "Expand notes",
+                    tint = TaktTheme.colors.primary,
+                    onClick = { fullscreenNotes = true },
+                )
+            },
+        ) {
             ChalkField(
                 values.notes,
                 onValueChange = { text -> edit { it.copy(notes = text) } },
@@ -115,6 +128,15 @@ internal fun InspectorBody(
                 keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
                 modifier = Modifier.testTag("inspector_notes"),
                 contentDescription = "Notes",
+            )
+        }
+
+        if (fullscreenNotes) {
+            FullscreenNotesEditor(
+                taskTitle = task.title,
+                notes = values.notes,
+                onNotesChange = { text -> edit { it.copy(notes = text) } },
+                onDismiss = { fullscreenNotes = false },
             )
         }
 

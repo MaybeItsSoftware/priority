@@ -98,10 +98,15 @@ extension WorkspaceViewModel {
 
   // MARK: - Deleting
 
-  /// Asks where the column's tasks go, then deletes it.
+  /// Asks where the column's tasks go, then deletes it — or deletes directly
+  /// if the column is already empty.
   func requestDeleteBoardColumn(_ column: WorkspaceKanbanColumn) {
     guard editableBoardColumns.count > 1 else {
       errorMessage = "A board keeps at least one column."
+      return
+    }
+    if tasks(in: column).isEmpty {
+      deleteKanbanColumn(column.id, movingTasksTo: nil)
       return
     }
     presentOverlay(.deleteBoardColumn(column.id))

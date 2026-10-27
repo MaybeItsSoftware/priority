@@ -85,6 +85,10 @@ final class PreferencesStore {
     /// user asks: see `CelebrationSound`, which exists because the haptic
     /// reaches only Force Touch trackpads.
     case completionSoundEnabled
+    /// Whether notifications are posted when a focus block reaches its planned length or a break ends.
+    case focusNotificationsEnabled
+    /// Whether focus notifications play a sound.
+    case focusNotificationSoundEnabled
   }
 
   private let defaults: UserDefaults

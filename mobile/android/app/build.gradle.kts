@@ -20,7 +20,7 @@ val keystoreProperties = Properties().apply {
 // same key in gradle.properties) builds an app that points somewhere else;
 // Settings can still be told another server at run time.
 val prioritySyncServer = (findProperty("prioritySyncServer") as String?)?.trim()?.takeIf { it.isNotEmpty() }
-    ?: "https://takt-sync.up.railway.app"
+    ?: "https://api.takt.maybeitssoftware.co.uk"
 
 // Accounts are Supabase Auth users (docs/sync.md). The publishable key is made
 // to ship in apps. Each can be pointed elsewhere with a gradle property.

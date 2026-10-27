@@ -12,13 +12,14 @@ import TaktWorkspace
 /// goes in the field under "Use a different server"; it has to trust the same
 /// Supabase project, since that is who the apps sign in with.
 public enum SyncServer {
-  public static let defaultURL = URL(string: "https://takt-sync.up.railway.app")!
+  public static let defaultURL = URL(string: "https://api.takt.maybeitssoftware.co.uk")!
 
-  /// Where the default was before the product was renamed from Priority to
-  /// Takt: the same server under its old address. A device signed in there is
-  /// signed in to the default, not to a server of its own, so it is moved
-  /// along with it rather than left on an address that may not last.
-  public static let legacyDefaultURLs = [URL(string: "https://priority-sync.up.railway.app")!]
+  /// Where the default was before: the hosted server on Railway, and before that
+  /// under Priority. A device signed in there is moved along to the new domain.
+  public static let legacyDefaultURLs = [
+    URL(string: "https://takt-sync.up.railway.app")!,
+    URL(string: "https://priority-sync.up.railway.app")!,
+  ]
 
   /// `url`, or the default if `url` is one of its old addresses.
   public static func current(_ url: URL) -> URL {

@@ -288,13 +288,24 @@ struct DayView: View {
           // boxes is a second separator doing the hairline's job.
           LazyVStack(spacing: 0) {
             ForEach(rows) { row in
+              if !surface.isPanel && model.draftsBeside(row.id, above: true) {
+                WorkspaceTaskDraftRow(
+                  depth: row.outline.depth,
+                  namesDestination: row.outline.depth == 0
+                )
+                .id("takt:draft")
+              }
               view(for: row)
                 .id(row.id)
               // Return on a subtask drawn under an unfolded task adds the
-              // next of its parent's subtasks, typed in place beneath it.
-              if !surface.isPanel && row.outline.depth > 0 && model.draftsBeside(row.id, above: false) {
-                WorkspaceTaskDraftRow(depth: row.outline.depth)
-                  .id("takt:draft")
+              // next of its parent's subtasks, typed in place beneath it;
+              // Tab indents it under the task above.
+              if !surface.isPanel && model.draftsBeside(row.id, above: false) {
+                WorkspaceTaskDraftRow(
+                  depth: row.outline.depth + (model.taskInsertionIsChild ? 1 : 0),
+                  namesDestination: row.outline.depth == 0 && !model.taskInsertionIsChild
+                )
+                .id("takt:draft")
               } else if !surface.isPanel && row.outline.depth == 0 && model.draftsAfterOnToday(row.id) {
                 // Return on a planned task adds the next one beneath it.
                 WorkspaceTaskDraftRow(namesDestination: true)

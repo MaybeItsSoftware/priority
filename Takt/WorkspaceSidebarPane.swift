@@ -244,8 +244,8 @@ struct WorkspaceSidebarPane: View {
         rowID: "row:everything"))
     .accessibilityLabel("Everything, all lists")
     .commandHelp(.goEverything, note: "Everything, all lists")
-    .contextMenu {
-      Button("New Filter List…") { model.requestNewFilterList() }
+    .houseContextMenu {
+      houseMenuItem("New Filter List…") { model.requestNewFilterList() }
     }
   }
 }
@@ -404,7 +404,7 @@ struct WorkspaceFilterListRow: View {
         rowID: sidebarID))
     .accessibilityLabel("\(filter.name), filter list")
     .help(filter.definition.summary)
-    .contextMenu { WorkspaceSidebarContextMenu(target: .filterList(filter), rowID: sidebarID) }
+    .houseContextMenu { makeSidebarContextMenu(target: .filterList(filter), rowID: sidebarID, model: model) }
     .workspaceIconPicker(rowID: sidebarID, target: .filterList(filter))
   }
 }

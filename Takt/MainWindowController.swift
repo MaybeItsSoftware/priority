@@ -183,6 +183,9 @@ final class MainWindowController: NSObject, NSWindowDelegate {
       // A delete the panel asked for is the panel's; a key here lets it go.
       self.workspace.noteKey(on: .window)
       self.shortcutShiftTap.keyPressed()
+      if self.workspace.activeContextMenu != nil {
+        if self.workspace.handleContextMenuKey(event) { return nil }
+      }
       if self.workspace.windowOverlay != nil {
         self.workspace.desktopShortcutSequence.reset()
         // Nothing an overlay leaves unconsumed reaches the workspace behind
@@ -263,13 +266,21 @@ final class MainWindowController: NSObject, NSWindowDelegate {
       matching: [.leftMouseDown, .rightMouseDown, .otherMouseDown]
     ) { [weak self] event in
       guard let self, let window = self.window, event.window === window,
-        window.attachedSheet == nil, self.workspace.windowOverlay != nil,
-        let content = window.contentView else {
+        window.attachedSheet == nil, let content = window.contentView else {
         return event
       }
       var point = content.convert(event.locationInWindow, from: nil)
       // SwiftUI's global space runs top-down from the content's top-left.
       if !content.isFlipped { point.y = content.bounds.height - point.y }
+
+      if self.workspace.activeContextMenu != nil {
+        if let menu = self.workspace.contextMenuFrame, menu.contains(point) {
+          return event
+        }
+        self.workspace.dismissContextMenu()
+      }
+
+      guard self.workspace.windowOverlay != nil else { return event }
       if let panel = self.workspace.overlayPanelFrame, panel.contains(point) {
         return event
       }

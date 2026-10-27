@@ -393,13 +393,12 @@ extension WorkspaceViewModel {
     if let task = selectedTask { openFirstLink(of: task) }
   }
 
-  /// Opens the task's first link that is a web page or an Obsidian note.
+  /// Opens the task's first link: web page, Obsidian note, file, or folder.
   func openFirstLink(of task: WorkspaceTask) {
     guard let store,
       let snapshot = try? store.taskEditorSnapshot(for: task.id),
-      let link = snapshot.metadata.externalLinks.first, let url = URL(string: link),
-      ["https", "http", "obsidian"].contains(url.scheme?.lowercased() ?? "")
+      let link = snapshot.metadata.externalLinks.first
     else { return }
-    NSWorkspace.shared.open(url)
+    openLink(link)
   }
 }

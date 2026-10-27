@@ -1,6 +1,7 @@
 import TaktWorkspace
 import TaktCore
 import SwiftUI
+import UniformTypeIdentifiers
 
 struct LocalTaskInspector: View {
   @Environment(WorkspaceViewModel.self) private var model
@@ -20,6 +21,7 @@ struct LocalTaskInspector: View {
   @State private var editStart: TaskEditorValues?
   /// The last press or step handed to one stop.
   @State private var stopRequest: InspectorStopRequest?
+  @State private var isDropTargeted = false
 
   var body: some View {
     // A stack, not a Group: a Group hands its modifiers to each child, and
@@ -62,6 +64,15 @@ struct LocalTaskInspector: View {
     }
     .onChange(of: model.inspectorKeyRequest) { _, request in handle(request.action) }
     .onDisappear { model.taskEditor.flush() }
+    .onDrop(of: [UTType.fileURL.identifier], isTargeted: $isDropTargeted) { providers in
+      WorkspaceFileDrop.handleFileDrop(providers: providers) { url in
+        model.linkDroppedURL(url, to: task)
+      }
+    }
+    .overlay(
+      RoundedRectangle(cornerRadius: theme.panelRadius)
+        .strokeBorder(isDropTargeted ? theme.primary : Color.clear, lineWidth: theme.borders.emphasis)
+    )
   }
 
   static let titleStop = "title"

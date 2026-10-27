@@ -41,9 +41,21 @@ public struct WorkspaceTaskLink: Equatable, Hashable, Sendable {
   }
 
   /// The address in `text` if the whole of it, trimmed, is one a task can
-  /// link to (`http`, `https` or `obsidian`); nil otherwise.
+  /// link to (`http`, `https`, `obsidian`, `file` or an existing local path); nil otherwise.
   public static func address(in text: String) -> String? {
-    linkFromText(text: text)
+    let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+    if trimmed.hasPrefix("/") || trimmed.hasPrefix("~/") {
+      let expanded = (trimmed as NSString).expandingTildeInPath
+      var isDir: ObjCBool = false
+      if FileManager.default.fileExists(atPath: expanded, isDirectory: &isDir) {
+        var url = URL(fileURLWithPath: expanded)
+        if isDir.boolValue && !url.path.hasSuffix("/") {
+          url.appendPathComponent("")
+        }
+        return url.absoluteString
+      }
+    }
+    return linkFromText(text: trimmed)
   }
 
   /// The address that opens `path` in the Obsidian vault named `vault`; a

@@ -34,6 +34,7 @@ final class FocusPanelKeysTests: XCTestCase {
     XCTAssertEqual(action("f2"), .edit(.title))
     XCTAssertEqual(action("dd"), .edit(.due))
     XCTAssertEqual(action("cmd+d"), .edit(.due))
+    XCTAssertEqual(action("ds"), .edit(.start))
     XCTAssertEqual(action("option+s"), .edit(.start))
     XCTAssertEqual(action("option+t"), .edit(.estimate))
     XCTAssertEqual(action("nn"), .edit(.notes))

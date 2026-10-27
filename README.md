@@ -687,10 +687,10 @@ the field the arrows only choose, so you can keep refining a search.
 | `Tab` / `gf` | Start, or queue behind the running block; on a nested list's row, go into it |
 | `ee` / `F2` | Edit the title |
 | `dd` / `Cmd+D` | Edit the due date |
-| `Alt+S` / `Alt+T` | Edit the start date / the time estimate |
+| `ds` / `Alt+T` | Edit the start date / the time estimate |
 | `nn`, `tt`, `dr` | Edit the notes, the tags, how it repeats |
 | `td` / `tm` / `cd` | Due today / tomorrow / clear the due date |
-| `cs` | Clear the start date, so a buried task is back among its siblings at once. `⌫` in the `⌥S` editor does the same |
+| `cs` | Clear the start date, so a buried task is back among its siblings at once. `⌫` in the `ds` editor does the same |
 | `1`–`4` / `0` | Set the priority (which moves the task to the top of its list) / clear it |
 | `-` / `-1`–`-4` | Send it to the back (priority −1, which moves it to the bottom of its list) / set −1 to −4 |
 | `cc` | Conditions: what the task needs |

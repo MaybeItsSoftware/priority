@@ -17,6 +17,7 @@ struct TaskInspector: View {
   @FocusState private var focused: Field?
   @State private var showsConditions = false
   @State private var choosesConditions = false
+  @State private var showsFullscreenNotes = false
 
   enum Field: Hashable { case title, notes, estimate, tags, recurrence, links, minimumBlock }
 
@@ -82,6 +83,12 @@ struct TaskInspector: View {
     .recurrenceClashDialog(model, on: .inspector)
     .sheet(isPresented: $showsConditions) { ConditionsSheet().environment(model) }
     .sheet(isPresented: $choosesConditions) { TaskConditionsSheet(inspector: inspector).environment(model) }
+    .fullScreenCover(isPresented: $showsFullscreenNotes) {
+      NavigationStack {
+        TaskNotesEditor(inspector: inspector, taskTitle: inspector.task?.title)
+      }
+      .environment(model)
+    }
     .accessibilityIdentifier("inspector")
   }
 
@@ -168,6 +175,17 @@ struct TaskInspector: View {
 
   private func notes(_ values: TaskEditorValues) -> some View {
     InspectorSection("Notes") {
+      Button {
+        showsFullscreenNotes = true
+      } label: {
+        Image(systemName: "arrow.up.left.and.arrow.down.right")
+          .font(theme.type.caption)
+          .foregroundStyle(theme.primary)
+      }
+      .buttonStyle(.plain)
+      .accessibilityLabel("Fullscreen notes")
+      .accessibilityIdentifier("inspector.notes.fullscreen")
+    } content: {
       TextField("Add notes", text: binding(\.notes), axis: .vertical)
         .lineLimit(3...12)
         .focused($focused, equals: .notes)

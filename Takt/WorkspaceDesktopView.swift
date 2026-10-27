@@ -27,6 +27,7 @@ struct WorkspaceDesktopView: View {
       // while an overlay is up. A click outside the panel is caught by the
       // window's mouse monitor.
       .overlay(alignment: .top) { WorkspaceOverlayHost() }
+      .overlay { HouseContextMenuHost() }
       // The focus clock's housekeeping is not here: the model runs it from
       // `startFocusMonitor()`, because starting a block closes this window.
     }
@@ -203,21 +204,21 @@ struct WorkspaceDesktopView: View {
         .focused($focusedArea, equals: .tasks)
         .focusEffectDisabled()
         // Right-clicking the pane's empty space; a row's own menu wins.
-        .contextMenu { WorkspacePaneContextMenu(surface: .today).environment(model) }
+        .houseContextMenu { makePaneContextMenu(surface: .today, column: nil, model: model) }
     case .board:
       // Each column carries its own, which knows where a new task goes.
       WorkspaceKanbanBoard()
         .environment(model)
     case .outline:
       WorkspaceOutlinePane()
-        .contextMenu { WorkspacePaneContextMenu(surface: .outline).environment(model) }
+        .houseContextMenu { makePaneContextMenu(surface: .outline, column: nil, model: model) }
     case .matrix:
       WorkspaceMatrixDashboard()
         .environment(model)
         .focusable()
         .focused($focusedArea, equals: .tasks)
         .focusEffectDisabled()
-        .contextMenu { WorkspacePaneContextMenu(surface: .matrix).environment(model) }
+        .houseContextMenu { makePaneContextMenu(surface: .matrix, column: nil, model: model) }
     }
   }
 }

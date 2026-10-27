@@ -1,6 +1,7 @@
 import SwiftUI
 import TaktCore
 import TaktWorkspace
+import UniformTypeIdentifiers
 
 /// The task a link is being found for.
 struct WorkspaceLinkRequest: Identifiable {
@@ -37,11 +38,12 @@ struct WorkspaceLinkPicker: View {
 
   /// Which sources the rows come from; Tab steps through them.
   private enum Scope: CaseIterable {
-    case everything, obsidian, drive
+    case everything, files, obsidian, drive
 
     var label: String {
       switch self {
       case .everything: "All"
+      case .files: "Files"
       case .obsidian: "Obsidian"
       case .drive: "Drive"
       }
@@ -50,11 +52,13 @@ struct WorkspaceLinkPicker: View {
 
   private enum Row: Identifiable {
     case address(String)
+    case chooseFile
     case candidate(LinkCandidate)
 
     var id: String {
       switch self {
       case .address(let url): "address:\(url)"
+      case .chooseFile: "choose-file"
       case .candidate(let candidate): candidate.id
       }
     }
@@ -78,7 +82,7 @@ struct WorkspaceLinkPicker: View {
   var body: some View {
     VStack(spacing: 0) {
       WorkspaceOverlayField(
-        symbol: "link", prompt: "Link… find a note or a Drive file, or paste an address", text: $query,
+        symbol: "link", prompt: "Link… note, Drive file, local file/folder, or address", text: $query,
         context: request.task.title)
       FocusRule()
       scopeStrip
@@ -140,6 +144,12 @@ struct WorkspaceLinkPicker: View {
         return false
       }
     }
+    .onDrop(of: [.fileURL], isTargeted: nil) { providers in
+      WorkspaceFileDrop.handleFileDrop(providers: providers) { url in
+        model.linkDroppedURL(url, to: request.task)
+        model.dismissOverlay()
+      }
+    }
   }
 
   private struct DriveQuery: Hashable {
@@ -156,20 +166,27 @@ struct WorkspaceLinkPicker: View {
         return "Drive search is off: switch it on in Settings → Links, or paste a Drive address."
       case .drive: return "Type part of a Drive file's name."
       case .obsidian: return "Type part of a note's or a folder's name."
+      case .files: return "Browse files and folders in Finder or paste a file path."
       case .everything:
         return canSearchDrive
-          ? "Type to find a note or a Drive file, or paste any address."
-          : "Type to find a note in your vaults, or paste any address — a Drive file, a page."
+          ? "Type to find a note, browse files, or paste any address."
+          : "Type to find a note, browse files, or paste any address — Drive, web, local file."
       }
     }
-    return isSearchingDrive ? "Searching…" : "Nothing matches. Paste an address to link it as it is."
+    return isSearchingDrive ? "Searching…" : "Nothing matches. Paste an address or file path to link it."
   }
 
   private var rows: [Row] {
     var rows: [Row] = []
     if let url = WorkspaceTaskLink.address(in: query), !existing.contains(url) { rows.append(.address(url)) }
-    if scope != .drive { rows += obsidianMatches.map(Row.candidate) }
-    if scope != .obsidian { rows += driveResults.filter { !existing.contains($0.url) }.map(Row.candidate) }
+    if scope == .everything || scope == .files {
+      let q = query.lowercased().trimmingCharacters(in: .whitespaces)
+      if q.isEmpty || "choose file or folder browse local".contains(q) || "files".contains(q) {
+        rows.append(.chooseFile)
+      }
+    }
+    if scope != .drive && scope != .files { rows += obsidianMatches.map(Row.candidate) }
+    if scope != .obsidian && scope != .files { rows += driveResults.filter { !existing.contains($0.url) }.map(Row.candidate) }
     return rows
   }
 
@@ -274,6 +291,19 @@ struct WorkspaceLinkPicker: View {
           .truncationMode(.middle)
       }
       .overlayRow(isSelected: isSelected)
+    case .chooseFile:
+      HStack(spacing: theme.space.sm) {
+        Image(systemName: "folder.badge.plus")
+          .foregroundStyle(theme.primary)
+        Text("Choose file or folder from file system…")
+          .font(theme.bodyFont())
+          .foregroundStyle(theme.ink)
+        Spacer()
+        Text("Browse")
+          .font(theme.captionFont)
+          .foregroundStyle(theme.muted)
+      }
+      .overlayRow(isSelected: isSelected)
     case .candidate(let candidate):
       HStack(alignment: isSelected ? .firstTextBaseline : .center, spacing: theme.space.sm) {
         Image(systemName: candidateSymbol(candidate))
@@ -301,6 +331,9 @@ struct WorkspaceLinkPicker: View {
     switch row {
     case .address(let url):
       failure = model.addLink(url, to: request.task)
+    case .chooseFile:
+      pickFileOrFolder()
+      return
     case .candidate(let candidate):
       failure = model.addLink(
         candidate.url, title: candidate.source == .drive ? candidate.title : nil, mimeType: candidate.mimeType,
@@ -311,6 +344,28 @@ struct WorkspaceLinkPicker: View {
       return
     }
     model.dismissOverlay()
+  }
+
+  private func pickFileOrFolder() {
+    let panel = NSOpenPanel()
+    panel.canChooseFiles = true
+    panel.canChooseDirectories = true
+    panel.allowsMultipleSelection = false
+    panel.prompt = "Link"
+    panel.message = "Choose a file or folder to link to this task"
+    if panel.runModal() == .OK, let url = panel.url {
+      let isDir = (try? url.resourceValues(forKeys: [.isDirectoryKey]))?.isDirectory ?? false
+      var finalURL = url
+      if isDir && !finalURL.path.hasSuffix("/") {
+        finalURL.appendPathComponent("")
+      }
+      let err = model.addLink(finalURL.absoluteString, title: url.lastPathComponent, to: request.task)
+      if let err {
+        error = err
+      } else {
+        model.dismissOverlay()
+      }
+    }
   }
 }
 
@@ -325,6 +380,7 @@ struct WorkspaceLinksInspectorSection: View {
   let addresses: Binding<String>
   @State private var links: [WorkspaceTaskLink] = []
   @State private var editsAddresses = false
+  @State private var isDropTargeted = false
 
   private struct ReloadKey: Hashable {
     let taskID: String
@@ -354,6 +410,10 @@ struct WorkspaceLinksInspectorSection: View {
           .buttonStyle(InspectorValueButtonStyle())
           .inspectorStop("link.\(index)", press: { model.openLink(link.url) })
           .help(link.url)
+          .houseContextMenu {
+            makeLinkContextMenu(link: link, task: task, model: model)
+          }
+          LinkMenuButton(link: link, task: task, index: index)
           InspectorClearButton(label: "Remove the link to \(link.title)", stop: "link.\(index).remove") {
             model.removeLink(link.url, from: task)
           }
@@ -364,6 +424,10 @@ struct WorkspaceLinksInspectorSection: View {
           .buttonStyle(InspectorValueButtonStyle(tone: .dim))
           .inspectorStop("link.add", press: { model.presentLinkPicker() })
           .commandHelp(.taskAddLink, note: "A note in your vaults, a file in Drive, or any address")
+        Button("Choose file…") { model.pickFileLink(for: task) }
+          .buttonStyle(InspectorValueButtonStyle(tone: .dim))
+          .inspectorStop("link.file", press: { model.pickFileLink(for: task) })
+          .help("Link a file or folder from the file system")
         if !links.isEmpty {
           Button(editsAddresses ? "Done" : "Edit addresses") { editsAddresses.toggle() }
             .buttonStyle(InspectorValueButtonStyle(tone: .dim))
@@ -374,6 +438,15 @@ struct WorkspaceLinksInspectorSection: View {
         InspectorTextEditor(add: "Add links", text: addresses, stop: "links", minHeight: 44, maxHeight: 90)
       }
     }
+    .onDrop(of: [.fileURL], isTargeted: $isDropTargeted) { providers in
+      WorkspaceFileDrop.handleFileDrop(providers: providers) { url in
+        model.linkDroppedURL(url, to: task)
+      }
+    }
+    .overlay(
+      RoundedRectangle(cornerRadius: theme.panelRadius)
+        .strokeBorder(isDropTargeted ? theme.primary : Color.clear, lineWidth: theme.borders.emphasis)
+    )
     .task(id: ReloadKey(taskID: task.id, revision: model.taskContentRevision)) {
       links = model.links(of: task)
     }
@@ -394,5 +467,37 @@ struct WorkspaceLinkMark: View {
         .help("Has links — gx opens the first")
         .accessibilityLabel("Has links")
     }
+  }
+}
+
+/// The options button (•••) beside a link row presenting the link's actions menu.
+private struct LinkMenuButton: View {
+  @Environment(WorkspaceViewModel.self) private var model
+  @Environment(\.theme) private var theme
+  let link: WorkspaceTaskLink
+  let task: WorkspaceTask
+  let index: Int
+
+  var body: some View {
+    GeometryReader { geo in
+      Button {
+        presentMenu(at: geo)
+      } label: {
+        Image(systemName: "ellipsis")
+          .font(theme.captionFont)
+          .frame(width: theme.scale.body, height: theme.scale.body)
+      }
+      .buttonStyle(InspectorValueButtonStyle(tone: .dim))
+      .inspectorStop("link.\(index).options", press: { presentMenu(at: geo) })
+      .help("Link options")
+    }
+    .frame(width: theme.scale.body, height: theme.scale.body)
+  }
+
+  private func presentMenu(at geo: GeometryProxy) {
+    let frame = geo.frame(in: .global)
+    let pt = CGPoint(x: frame.minX - 100, y: frame.maxY + 2)
+    let items = makeLinkContextMenu(link: link, task: task, model: model)
+    model.presentContextMenu(at: pt, items: items)
   }
 }

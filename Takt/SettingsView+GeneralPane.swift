@@ -56,6 +56,19 @@ extension SettingsView {
     } header: {
       SettingsHeader("Running a block")
     }
+
+    Section {
+      SettingsToggleRow(
+        "Focus notifications",
+        detail: "Post a notification when a focus block reaches its planned length or a break ends.",
+        isOn: preferenceBinding(\.focusNotificationsEnabled))
+      SettingsToggleRow(
+        "Play sound with notifications",
+        detail: "Play a sound alongside focus notifications.",
+        isOn: preferenceBinding(\.focusNotificationSoundEnabled))
+    } header: {
+      SettingsHeader("Notifications")
+    }
   }
 
   /// What completing something looks like. A set of alternatives to choose

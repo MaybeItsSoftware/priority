@@ -146,7 +146,7 @@ fn task() -> Vec<Spec> {
         c("taskEditNotes", "Edit the notes", "Task", &["nn", "cmd+ctrl+n"]),
         c("taskEditTags", "Edit the tags", "Task", &["tt", "cmd+ctrl+t"]),
         c("taskEditRecurrence", "Edit how it repeats", "Task", &["dr", "cmd+ctrl+r"]),
-        c("taskEditStart", "Edit the start date", "Task", &["option+s"]),
+        c("taskEditStart", "Edit the start date", "Task", &["ds", "option+s"]),
         c("taskEditEstimate", "Edit the time estimate", "Task", &["option+t"]),
         c("taskDueToday", "Due today", "Task", &["td", "cmd+option+t"]),
         c("taskDueTomorrow", "Due tomorrow", "Task", &["tm", "cmd+shift+t"]),

@@ -307,7 +307,7 @@ fn due_start_priority_and_estimate_are_their_keys() {
             json!({"task_id": TASK, "start": "2026-10-20", "estimate_minutes": 45})
         )
         .as_deref(),
-        Some("[option+s] then type “2026-10-20” · [option+t] then type “45”")
+        Some("[ds] then type “2026-10-20” · [option+t] then type “45”")
     );
     assert_eq!(
         render(
@@ -315,7 +315,7 @@ fn due_start_priority_and_estimate_are_their_keys() {
             json!({"task_id": TASK, "start": null, "estimate_minutes": null})
         )
         .as_deref(),
-        Some("[option+s] then clear it · [option+t] then clear it")
+        Some("[ds] then clear it · [option+t] then clear it")
     );
     // "Due friday, and make it urgent": two steps.
     assert_eq!(

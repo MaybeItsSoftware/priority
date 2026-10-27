@@ -29,7 +29,7 @@ struct WorkspaceSidebarListRow: View {
         case .after: model.placeDroppedItem(payload, before: nil, inFolderID: list.folderId)
         }
       }
-      .contextMenu { WorkspaceSidebarContextMenu(target: .list(list), rowID: "list:\(list.id)") }
+      .houseContextMenu { makeSidebarContextMenu(target: .list(list), rowID: "list:\(list.id)", model: model) }
       .workspaceIconPicker(rowID: "list:\(list.id)", target: .list(list))
   }
 }
@@ -100,7 +100,7 @@ struct WorkspaceNestedListRow: View {
     .focusable().focusEffectDisabled()
     .background(WorkspaceSidebarSelectionBackground(
       isCurrent: model.isCurrentSidebarRow(task.id), rowID: rowID))
-    .contextMenu { WorkspaceSidebarContextMenu(target: .nestedList(task), rowID: rowID) }
+    .houseContextMenu { makeSidebarContextMenu(target: .nestedList(task), rowID: rowID, model: model) }
     .workspaceIconPicker(rowID: rowID, target: .nestedList(task))
     .onDrag { WorkspaceTaskDrag.provider(for: task.id) }
     .background(
@@ -185,7 +185,7 @@ struct WorkspaceFolderRow: View {
       case .after: model.placeDroppedItem(payload, before: nil, inFolderID: folder.parentFolderId)
       }
     }
-    .contextMenu { WorkspaceSidebarContextMenu(target: .folder(folder), rowID: "folder:\(folder.id)") }
+    .houseContextMenu { makeSidebarContextMenu(target: .folder(folder), rowID: "folder:\(folder.id)", model: model) }
     .workspaceIconPicker(rowID: "folder:\(folder.id)", target: .folder(folder))
   }
 }

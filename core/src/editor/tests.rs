@@ -427,6 +427,97 @@ fn a_start_moved_off_today_moves_the_task_out_of_today() {
     assert_eq!(column(&connection, "p"), (None, None));
 }
 
+#[test]
+fn clearing_due_date_and_start_date_kicks_a_task_out_of_this_week_and_today() {
+    // NOW is Tuesday 14 November 2023, 22:13 UTC.
+    const DAY: i64 = 24 * HOUR;
+    let mut connection = workspace();
+    connection
+        .execute_batch(&format!(
+            "INSERT INTO tasks (id, listId, title, sortOrder, createdAt, updatedAt) VALUES
+               ('today_start', 'l', 'T1', 1, '{T}', '{T}'),
+               ('week_start', 'l', 'T2', 2, '{T}', '{T}'),
+               ('today_due', 'l', 'T3', 3, '{T}', '{T}'),
+               ('week_due', 'l', 'T4', 4, '{T}', '{T}'),
+               ('both_today', 'l', 'T5', 5, '{T}', '{T}'),
+               ('both_week', 'l', 'T6', 6, '{T}', '{T}');
+             INSERT INTO task_metadata (taskId, kanbanColumn, startAt, focusRank, updatedAt) VALUES
+               ('today_start', 'today', '{due_today}', 1, '{T}'),
+               ('week_start', 'this-week', '{due_week}', NULL, '{T}'),
+               ('today_due', 'today', NULL, 2, '{T}'),
+               ('week_due', 'this-week', NULL, NULL, '{T}'),
+               ('both_today', 'today', '{due_today}', 3, '{T}'),
+               ('both_week', 'this-week', '{due_week}', NULL, '{T}'),
+               ('c', 'in-progress', '{due_today}', NULL, '{T}');
+             UPDATE tasks SET dueAt = '{due_today}' WHERE id = 'today_due';
+             UPDATE tasks SET dueAt = '{due_week}' WHERE id = 'week_due';
+             UPDATE tasks SET dueAt = '{due_today}' WHERE id = 'both_today';
+             UPDATE tasks SET dueAt = '{due_week}' WHERE id = 'both_week';",
+            T = T,
+            due_today = stored(NOW),
+            due_week = stored(NOW + 2 * DAY),
+        ))
+        .unwrap();
+
+    let column = |c: &Connection, id: &str| -> (Option<String>, Option<i64>) {
+        c.query_row(
+            "SELECT kanbanColumn, focusRank FROM task_metadata WHERE taskId = ?1",
+            [id],
+            |row| Ok((row.get(0)?, row.get(1)?)),
+        )
+        .unwrap()
+    };
+
+    // 1. Task in today with start cleared -> kicked out.
+    journalled(&mut connection, "Schedule Task", |tx| {
+        schedule_task(tx, "today_start", None, NOW, "UTC")
+    })
+    .unwrap();
+    assert_eq!(column(&connection, "today_start"), (None, None));
+
+    // 2. Task in this-week with start cleared -> kicked out.
+    journalled(&mut connection, "Schedule Task", |tx| {
+        schedule_task(tx, "week_start", None, NOW, "UTC")
+    })
+    .unwrap();
+    assert_eq!(column(&connection, "week_start"), (None, None));
+
+    // 3. Task in today with due cleared -> kicked out.
+    journalled(&mut connection, "Set Due", |tx| {
+        set_due_day(tx, "today_due", None, NOW, "UTC")
+    })
+    .unwrap();
+    assert_eq!(column(&connection, "today_due"), (None, None));
+
+    // 4. Task in this-week with due cleared -> kicked out.
+    journalled(&mut connection, "Set Due", |tx| {
+        set_due_day(tx, "week_due", None, NOW, "UTC")
+    })
+    .unwrap();
+    assert_eq!(column(&connection, "week_due"), (None, None));
+
+    // 5. Task with both in today: clearing start and due via save_editor kicks it out.
+    let baseline = snapshot(&connection, "both_today").unwrap();
+    let mut edit = baseline.clone();
+    edit.due_at_ms = None;
+    if let Some(planning) = edit.planning.as_mut() {
+        planning.start_at_ms = None;
+        planning.due_date = None;
+    }
+    journalled(&mut connection, "Save Editor", |tx| {
+        save_editor(tx, &edit, &baseline, NOW, "UTC")
+    })
+    .unwrap();
+    assert_eq!(column(&connection, "both_today"), (None, None));
+
+    // 6. Task in in-progress: clearing dates leaves it in in-progress.
+    journalled(&mut connection, "Schedule Task", |tx| {
+        schedule_task(tx, "c", None, NOW, "UTC")
+    })
+    .unwrap();
+    assert_eq!(column(&connection, "c"), (Some("in-progress".into()), None));
+}
+
 /// "Keep the due date": the start moves and a deadline that would have
 /// followed it stays put, pinned, so later moves leave it too.
 #[test]

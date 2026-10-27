@@ -99,7 +99,7 @@ pub fn obsidian_link_url(vault: String, path: String, is_folder: bool) -> String
 
 pub(crate) fn parse_link(word: &str) -> Option<&str> {
     let lower = word.to_ascii_lowercase();
-    let rest = ["https://", "http://", "obsidian://"]
+    let rest = ["https://", "http://", "obsidian://", "file://"]
         .iter()
         .find_map(|scheme| lower.strip_prefix(scheme))?;
     if rest.is_empty() || word.chars().any(char::is_whitespace) {
@@ -117,6 +117,9 @@ fn describe(url: &str, title: Option<&str>, mime_type: Option<&str>) -> TaskLink
     let lower = url.to_ascii_lowercase();
     if lower.starts_with("obsidian://") {
         return describe_obsidian(url, named, mime);
+    }
+    if lower.starts_with("file://") {
+        return describe_file(url, named, mime);
     }
     let host = host(url);
     if host == "docs.google.com" || host == "drive.google.com" {
@@ -247,6 +250,68 @@ fn describe_obsidian(url: &str, named: Option<&str>, mime: Option<String>) -> Ta
             place.join(" · ")
         },
         icon: if is_folder { "folder" } else { "note" }.into(),
+        mime_type: mime,
+        is_folder,
+    }
+}
+
+fn describe_file(url: &str, named: Option<&str>, mime: Option<String>) -> TaskLink {
+    let raw = after_scheme(url);
+    let decoded = decode(raw);
+    let clean = decoded.trim_end_matches('/');
+    let is_folder = raw.ends_with('/')
+        || std::path::Path::new(&decoded).is_dir()
+        || mime.as_deref() == Some("folder")
+        || mime.as_deref() == Some("inode/directory");
+    let filename = clean.rsplit('/').next().unwrap_or(clean);
+    let parent = clean.rsplit_once('/').map(|(p, _)| p).unwrap_or("");
+    let home = std::env::var("HOME").unwrap_or_default();
+    let display_parent = if !home.is_empty() && parent.starts_with(&home) {
+        format!("~{}", &parent[home.len()..])
+    } else {
+        parent.to_string()
+    };
+    let icon = if is_folder {
+        "folder"
+    } else {
+        let ext = std::path::Path::new(clean)
+            .extension()
+            .and_then(|e| e.to_str())
+            .unwrap_or("")
+            .to_ascii_lowercase();
+        match ext.as_str() {
+            "pdf" => "pdf",
+            "png" | "jpg" | "jpeg" | "gif" | "webp" | "svg" | "heic" => "image",
+            "doc" | "docx" | "pages" | "txt" | "rtf" | "md" => "doc",
+            "xls" | "xlsx" | "numbers" | "csv" => "sheet",
+            "ppt" | "pptx" | "key" => "slides",
+            _ => icon_for_mime(mime.as_deref()).unwrap_or("file"),
+        }
+    };
+    let title = named.map(str::to_string).unwrap_or_else(|| {
+        if filename.is_empty() {
+            if is_folder {
+                "Folder".into()
+            } else {
+                "File".into()
+            }
+        } else {
+            filename.to_string()
+        }
+    });
+    let subtitle = if !display_parent.is_empty() {
+        display_parent
+    } else if is_folder {
+        "Folder".to_string()
+    } else {
+        "File".to_string()
+    };
+    TaskLink {
+        url: url.to_string(),
+        kind: LinkKind::Web,
+        title,
+        subtitle,
+        icon: icon.into(),
         mime_type: mime,
         is_folder,
     }

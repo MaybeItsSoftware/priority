@@ -112,7 +112,9 @@ struct TaskContextMenu: View {
       if let onNewChild { onNewChild() } else { model.navigation.quickAddParentTaskID = taskID; model.navigation.isQuickAddPresented = true }
     case .taskRename:
       if let onRename { onRename() } else { model.navigation.inspect(taskID, isPad: isPad) }
-    case .taskEditDue, .taskEditStart, .taskEditEstimate, .taskEditNotes, .taskEditTags,
+    case .taskEditNotes:
+      model.navigation.editNotes(taskID)
+    case .taskEditDue, .taskEditStart, .taskEditEstimate, .taskEditTags,
       .taskEditRecurrence, .taskToggleInspector:
       model.navigation.inspect(taskID, isPad: isPad)
     case .taskDueToday: model.setDue(taskID, daysFromToday: 0)

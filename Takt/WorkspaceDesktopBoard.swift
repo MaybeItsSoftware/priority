@@ -281,7 +281,7 @@ struct WorkspaceKanbanColumnView: View {
         Spacer()
       }
       .contentShape(Rectangle())
-      .contextMenu { WorkspaceBoardColumnMenu(column: column).environment(model) }
+      .houseContextMenu { makeBoardColumnContextMenu(column: column, model: model) }
 
       }
       .padding([.horizontal, .top], WorkspaceBoardMetrics.columnPadding(theme))
@@ -371,9 +371,14 @@ struct WorkspaceKanbanColumnView: View {
       }
     })
     // The column's empty space; a card's own menu is nearer and wins over it.
-    .contextMenu { WorkspacePaneContextMenu(surface: .board, column: column).environment(model) }
-    .onDrop(of: [WorkspaceTaskDrag.typeIdentifier], isTargeted: $isDropTargeted) { providers in
-      WorkspaceTaskDrag.readTaskID(from: providers) { taskID in
+    .houseContextMenu { makePaneContextMenu(surface: .board, column: column, model: model) }
+    .onDrop(of: [WorkspaceTaskDrag.typeIdentifier, UTType.fileURL.identifier], isTargeted: $isDropTargeted) { providers in
+      if WorkspaceFileDrop.handleFileDrop(providers: providers, onURL: { url in
+        model.createTaskWithDroppedURL(url, inKanbanColumn: column)
+      }) {
+        return true
+      }
+      return WorkspaceTaskDrag.readTaskID(from: providers) { taskID in
         guard let task = model.task(withID: taskID), model.isTaskVisibleOnBoard(task) else { return }
         model.moveTask(task, toKanbanColumn: column)
       }
@@ -472,7 +477,9 @@ struct WorkspaceKanbanCard: View {
         handleCardKey(press)
       }
       .accessibilityElement(children: .contain)
-      .contextMenu { WorkspaceItemActions(task: task) }
+      .houseContextMenu {
+        makeTaskContextMenu(task: task, model: model)
+      }
   }
 
   private var cardSurface: some View {
@@ -538,7 +545,12 @@ struct WorkspaceKanbanCard: View {
     }
     .contentShape(Rectangle())
     .onDrag { WorkspaceTaskDrag.provider(for: task.id) }
-    .onDrop(of: [WorkspaceTaskDrag.typeIdentifier], isTargeted: $isDropTargeted) { providers in
+    .onDrop(of: [WorkspaceTaskDrag.typeIdentifier, UTType.fileURL.identifier], isTargeted: $isDropTargeted) { providers in
+      if WorkspaceFileDrop.handleFileDrop(providers: providers, onURL: { url in
+        model.linkDroppedURL(url, to: task)
+      }) {
+        return true
+      }
       if task.isList {
         return WorkspaceTaskDrag.readItemID(from: providers) { payload in
           model.moveDroppedItem(payload, toListID: task.listId, parentTaskID: task.id)
@@ -853,17 +865,21 @@ struct WorkspaceKanbanCard: View {
     }
     .contentShape(Rectangle())
     .onDrag { WorkspaceTaskDrag.provider(for: item.task.id) }
-    .contextMenu {
-      WorkspaceItemActions(task: item.task)
-      // The row used to carry this as an always-visible menu of its own; in
-      // the context menu it costs the tree no width.
-      Menu("Move to Column") {
-        ForEach(model.boardColumns) { destination in
-          Button(destination.title) { model.moveTask(item.task, toKanbanColumn: destination) }
-        }
+    .houseContextMenu {
+      model.selectTask(item.task)
+      var items = makeTaskContextMenu(task: item.task, model: model)
+      let columnItems = model.boardColumns.map { destination in
+        houseMenuItem(destination.title) { model.moveTask(item.task, toKanbanColumn: destination) }
       }
+      items.append(.submenu(HouseSubmenu(title: "Move to Column", items: columnItems)))
+      return items
     }
-    .onDrop(of: [WorkspaceTaskDrag.typeIdentifier], isTargeted: nil) { providers in
+    .onDrop(of: [WorkspaceTaskDrag.typeIdentifier, UTType.fileURL.identifier], isTargeted: nil) { providers in
+      if WorkspaceFileDrop.handleFileDrop(providers: providers, onURL: { url in
+        model.linkDroppedURL(url, to: item.task)
+      }) {
+        return true
+      }
       guard item.task.isList else { return false }
       return WorkspaceTaskDrag.readItemID(from: providers) { payload in
         model.moveDroppedItem(payload, toListID: item.task.listId, parentTaskID: item.task.id)

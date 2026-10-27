@@ -178,7 +178,9 @@ final class SyncTransportTests: XCTestCase {
     XCTAssertEqual(SyncServer.url(from: "http://localhost:8080"), URL(string: "http://localhost:8080"))
     XCTAssertNil(SyncServer.url(from: ""))
     XCTAssertNil(SyncServer.url(from: "ftp://example.com"))
-    XCTAssertEqual(SyncServer.defaultURL.absoluteString, "https://takt-sync.up.railway.app")
+    XCTAssertEqual(SyncServer.defaultURL.absoluteString, "https://api.takt.maybeitssoftware.co.uk")
+    XCTAssertEqual(SyncServer.current(URL(string: "https://takt-sync.up.railway.app")!), SyncServer.defaultURL)
+    XCTAssertEqual(SyncServer.current(URL(string: "https://priority-sync.up.railway.app")!), SyncServer.defaultURL)
     XCTAssertTrue(SyncServer.isAuthCallback(URL(string: "takt://auth-callback?code=abc")!))
     XCTAssertFalse(SyncServer.isAuthCallback(URL(string: "takt://today")!))
     // The scheme from before the rename is no longer the app's.

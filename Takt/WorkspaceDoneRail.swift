@@ -1,6 +1,7 @@
 import TaktCore
 import TaktWorkspace
 import SwiftUI
+import UniformTypeIdentifiers
 
 /// The right-hand rail of finished work.
 ///
@@ -136,6 +137,7 @@ private struct WorkspaceDoneRow: View, Equatable {
   let listName: String?
   let isCursor: Bool
   let hasKeyboard: Bool
+  @State private var isDropTargeted = false
 
   nonisolated static func == (lhs: WorkspaceDoneRow, rhs: WorkspaceDoneRow) -> Bool {
     lhs.task == rhs.task && lhs.listName == rhs.listName && lhs.isCursor == rhs.isCursor
@@ -187,12 +189,19 @@ private struct WorkspaceDoneRow: View, Equatable {
       model.reportKeyboardFocus(.done)
     }
     .commandHelp(.doneReveal, note: task.title)
-    .contextMenu {
-      Button("Open where it lives") { model.revealDoneTask(task) }
-        .commandShortcut(.doneReveal)
-      Button("Put back on the list") { model.reopenDoneTask(task) }
-        .commandShortcut(.doneReopen)
+    .houseContextMenu {
+      houseMenuItem("Open where it lives", command: .doneReveal, on: .outline) { model.revealDoneTask(task) }
+      houseMenuItem("Put back on the list", command: .doneReopen, on: .outline) { model.reopenDoneTask(task) }
     }
+    .onDrop(of: [UTType.fileURL.identifier], isTargeted: $isDropTargeted) { providers in
+      WorkspaceFileDrop.handleFileDrop(providers: providers) { url in
+        model.linkDroppedURL(url, to: task)
+      }
+    }
+    .overlay(
+      RoundedRectangle(cornerRadius: theme.rowRadius)
+        .strokeBorder(isDropTargeted ? theme.primary : Color.clear, lineWidth: theme.borders.emphasis)
+    )
     .accessibilityElement(children: .combine)
     .accessibilityLabel(task.title)
     .accessibilityAddTraits(.isButton)

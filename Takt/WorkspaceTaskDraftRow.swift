@@ -112,10 +112,12 @@ struct WorkspaceTaskDraftRow: View {
 
   /// The row's own keys, ahead of the capture syntax, in the tooltip rather
   /// than along the row: a hint line under every draft would be one more row
-  /// in a list of tasks. Tab only means something in the outline and on the board.
+  /// in a list of tasks.
   private var keysHint: String {
     var keys = ["↩ add", "esc close"]
-    if model.viewMode == .outline || model.viewMode == .board { keys.append("⇥ ⇧⇥ indent, outdent") }
+    if model.viewMode == .outline || model.viewMode == .board || model.viewMode == .today {
+      keys.append("⇥ ⇧⇥ indent, outdent")
+    }
     keys.append("↑ ↓ back to the tasks")
     return "\(keys.joined(separator: " · ")). \(TaskCapturePreview.syntaxHint)"
   }

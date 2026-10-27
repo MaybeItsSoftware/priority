@@ -38,8 +38,7 @@ extension WorkspaceViewModel {
     case .matrix:
       return TaskDraftSurroundings(rows: boardTasks.map { TaskDraftRow(id: $0.id) })
     case .today:
-      // Today draws the draft only at the foot of the day.
-      return nil
+      return TaskDraftSurroundings(rows: dayTree.map { TaskDraftRow(id: $0.id, parentID: $0.row.parentID) })
     }
   }
 
@@ -55,7 +54,7 @@ extension WorkspaceViewModel {
     case .board:
       current = boardColumns.first { $0.id == previous.columnID }.map { tasks(in: $0) } ?? []
     case .matrix: current = boardTasks
-    case .today: return
+    case .today: current = dayTree.map(\.task)
     }
     let rows = viewMode == .outline
       ? current.map { TaskDraftRow(id: $0.id, parentID: $0.parentTaskId) }

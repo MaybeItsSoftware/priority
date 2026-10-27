@@ -616,6 +616,14 @@ enum WorkspaceSidebarItem: Identifiable {
   /// moment of asking rather than stored, so changing the preference takes
   /// effect on the next block rather than the next launch.
   @ObservationIgnored var asksHowEachBlockWent: () -> Bool = { true }
+  /// Whether focus session notifications are enabled. Read at the moment of
+  /// dispatching so preference changes take effect immediately.
+  @ObservationIgnored var focusNotificationsEnabled: () -> Bool = { true }
+  /// Whether focus notifications should play a sound.
+  @ObservationIgnored var focusNotificationSoundEnabled: () -> Bool = { true }
+  /// Custom notification dispatcher for tests or custom handling. When nil,
+  /// `FocusNotificationManager.shared` handles dispatch.
+  @ObservationIgnored var focusNotificationDispatcher: ((FocusNotification) -> Void)?
   /// The list the quick-add hotkey captures into, by id. Empty, or a list
   /// that no longer exists, is the inbox. Read at the moment of capture, like
   /// the preference above.
@@ -643,6 +651,18 @@ enum WorkspaceSidebarItem: Identifiable {
   /// The main window's title strip, in the same space, so a click in it
   /// while an overlay is up still reaches the mode strip or moves the window.
   @ObservationIgnored var titleStripFrame: CGRect?
+  /// The active right-click context menu drawn in house style.
+  var activeContextMenu: HouseContextMenuState?
+  @ObservationIgnored var contextMenuFrame: CGRect?
+
+  func presentContextMenu(at point: CGPoint, items: [HouseMenuItem]) {
+    activeContextMenu = HouseContextMenuState(point: point, items: items)
+  }
+
+  func dismissContextMenu() {
+    activeContextMenu = nil
+    contextMenuFrame = nil
+  }
   var searchQuery = "" { didSet { refreshSearchResults() } }
   var searchIncludesCompleted = false { didSet { refreshSearchResults() } }
   /// Written only by `refreshSearchResults()`; internal rather than
@@ -1097,6 +1117,7 @@ enum WorkspaceSidebarItem: Identifiable {
   var allowsQueueResume = false
   var lastFocusCheckpointAt = Date.distantPast
   var focusExpiryPromptedBlockID: String?
+  var breakFinishedNotifiedBlockID: String?
   var lastFocusClockAt = Date.now
   var lastFocusUptime = ProcessInfo.processInfo.systemUptime
   var lastFocusTimeZone = TimeZone.current.identifier

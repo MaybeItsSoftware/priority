@@ -54,6 +54,7 @@ fun InspectorSection(
     label: String,
     modifier: Modifier = Modifier,
     detail: String? = null,
+    action: (@Composable () -> Unit)? = null,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     Column(modifier.fillMaxWidth()) {
@@ -63,7 +64,11 @@ fun InspectorSection(
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(label, style = TaktTheme.type.label, color = TaktTheme.colors.mutedText, modifier = Modifier.weight(1f))
-                if (detail != null) Text(detail, style = TaktTheme.type.monoSmall, color = TaktTheme.colors.dimText)
+                if (action != null) {
+                    action()
+                } else if (detail != null) {
+                    Text(detail, style = TaktTheme.type.monoSmall, color = TaktTheme.colors.dimText)
+                }
             }
             content()
         }

@@ -177,7 +177,9 @@ Goal: match the low-friction focus flow of Blitzit and add Super Productivity-st
 - Restore an active session correctly after relaunch, including timer elapsed time.
   *Each block is now timed from its own start rather than the session's, so a queued
   task is no longer credited the previous task's sitting.*
-- Add local notifications and optional sound; notifications must degrade safely when permission is denied.
+- ~~Add local notifications and optional sound; notifications must degrade safely when permission is denied.~~ Done:
+  dispatched via UNUserNotificationCenter when a focus block reaches planned length or a break ends, with
+  configurable notifications and sound preferences.
 
 ### Time tracking and review
 
